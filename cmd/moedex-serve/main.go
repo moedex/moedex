@@ -8,8 +8,13 @@
 //
 // Usage:
 //
-//	moedex-serve -shard-dir DIR -http :8080         # long-running daemon
-//	moedex-serve -shard-dir DIR -q PATTERN [-regex]  # one-shot query
+//	moedex-serve -shard-dir DIR -http :8080         # retrieval daemon (HTTP)
+//	moedex-serve -shard-dir DIR -q PATTERN [-regex]  # one-shot retrieval query
+//	moedex-serve -shard-dir DIR -mcp                 # ranked agent context (MCP/stdio)
+//
+// Dense arm (optional, -mcp only): set MOEDEX_EMBED_URL and MOEDEX_EMBED_MODEL to
+// light up embedding-based retrieval. Without them the ranker is pure-lexical +
+// symbol arm with zero external dependencies.
 package main
 
 import (
@@ -24,25 +29,36 @@ import (
 	"syscall"
 	"time"
 
+	"moedex/internal/mcp"
 	"moedex/internal/search"
 	"moedex/internal/server"
 )
 
 func main() {
 	shardDir := flag.String("shard-dir", os.Getenv("MOEDEX_SHARD_DIR"), "directory of prebuilt *.idx shards")
-	httpAddr := flag.String("http", "", "if set, serve the HTTP API on this address (e.g. :8080)")
-	q := flag.String("q", "", "one-shot query (mutually exclusive with -http)")
+	httpAddr := flag.String("http", "", "if set, serve the retrieval HTTP API on this address (e.g. :8080)")
+	mcpMode := flag.Bool("mcp", false, "serve ranked agent context over MCP (stdio)")
+	q := flag.String("q", "", "one-shot retrieval query")
 	isRegex := flag.Bool("regex", false, "treat -q as a regular expression (default: literal)")
 	limit := flag.Int("limit", 0, "cap matches printed/returned (0 = no cap)")
+	topK := flag.Int("top-k", 20, "default ranked results per MCP query")
 	flag.Parse()
 
 	if *shardDir == "" {
 		fmt.Fprintln(os.Stderr, "moedex-serve: -shard-dir is required (or set MOEDEX_SHARD_DIR)")
 		os.Exit(2)
 	}
-	if *httpAddr == "" && *q == "" {
-		fmt.Fprintln(os.Stderr, "moedex-serve: provide -http ADDR (daemon) or -q PATTERN (one-shot)")
+	if !*mcpMode && *httpAddr == "" && *q == "" {
+		fmt.Fprintln(os.Stderr, "moedex-serve: provide -mcp (agent context), -http ADDR (retrieval daemon), or -q PATTERN (one-shot)")
 		os.Exit(2)
+	}
+
+	if *mcpMode {
+		if err := runMCP(*shardDir, *topK); err != nil {
+			fmt.Fprintf(os.Stderr, "moedex-serve: %v\n", err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	start := time.Now()
@@ -63,6 +79,33 @@ func main() {
 		fmt.Fprintf(os.Stderr, "moedex-serve: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// runMCP builds the corpus ranker and serves ranked, token-budgeted context over
+// MCP stdio — the agent-facing surface. The dense arm lights up only when
+// MOEDEX_EMBED_URL is configured.
+func runMCP(shardDir string, topK int) error {
+	start := time.Now()
+	cfg := server.RankConfig{TopK: topK}
+
+	// Optional dense arm, mirroring moedex-mcp. Building embeddings over the whole
+	// corpus needs the embedding service; on any failure we fall back to lexical.
+	if url := os.Getenv("MOEDEX_EMBED_URL"); url != "" {
+		fmt.Fprintf(os.Stderr, "moedex-serve: MOEDEX_EMBED_URL=%s set, but corpus-wide dense embedding is a follow-up; running lexical+symbol\n", url)
+	} else {
+		fmt.Fprintln(os.Stderr, "moedex-serve: dense arm disabled (set MOEDEX_EMBED_URL to enable); ranking lexical+symbol")
+	}
+
+	rc, err := server.OpenRank(shardDir, cfg)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "moedex-serve: corpus ranker ready — %d blobs, %d docs, %d symbol blobs in %s\n",
+		rc.NumBlobs(), rc.NumDocs(), rc.NumSymbolBlobs(), time.Since(start).Round(time.Millisecond))
+
+	srv := mcp.NewServer(rc)
+	fmt.Fprintln(os.Stderr, "moedex-serve: MCP ready on stdio")
+	return srv.Serve(context.Background(), os.Stdin, os.Stdout)
 }
 
 // runOneShot executes a single query and prints repo/relpath:line, one per line.

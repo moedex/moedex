@@ -65,6 +65,15 @@ type Ranker struct {
 	emb   embed.Embedder // optional; nil disables the dense arm
 	syms  *symbol.Index  // optional; nil disables the symbol-name arm
 	cfg   Config
+
+	// tokenCandidates makes the lexical arm generate candidates from the token
+	// index (ti.Docs) instead of the trigram index. The corpus ranker sets this:
+	// its content-only index carries no positional postings, so the trigram path
+	// would yield nothing. The two paths are equivalent for BM25 — every blob with
+	// tf>0 for a term is in ti.Docs(term) — so this changes only WHERE candidates
+	// come from, not which blobs ultimately score. Default false preserves the
+	// single-index trigram path exactly.
+	tokenCandidates bool
 }
 
 // New builds a Ranker. store and emb may both be nil to disable the dense arm.
@@ -78,6 +87,19 @@ func New(ix *index.Index, ti *tokenindex.TokenIndex, store *embed.Store, emb emb
 // that powers the symbol-name ranking arm. nil leaves ranking exactly as it was
 // before this arm existed (lexical + optional dense only).
 func (r *Ranker) SetSymbols(s *symbol.Index) { r.syms = s }
+
+// SetDense installs (or clears, when either is nil) the dense arm's embedding
+// store and embedder. Symmetric with SetSymbols; lets a caller light up the
+// dense arm without reconstructing the ranker.
+func (r *Ranker) SetDense(store *embed.Store, emb embed.Embedder) {
+	r.store = store
+	r.emb = emb
+}
+
+// UseTokenCandidates switches lexical candidate generation to the token index
+// (see Ranker.tokenCandidates). Required for the corpus ranker, whose index has
+// no positional postings.
+func (r *Ranker) UseTokenCandidates(v bool) { r.tokenCandidates = v }
 
 // Rank scores query and returns up to topK results, best fused score first.
 func (r *Ranker) Rank(ctx context.Context, q string, topK int) ([]RankedResult, error) {
@@ -207,6 +229,9 @@ func (r *Ranker) lexicalArm(terms []string) []lexScore {
 // candidate generation but still participate in BM25 scoring. If no term yields
 // a usable trigram query, every blob is a candidate (sound fallback).
 func (r *Ranker) candidateBlobs(terms []string) []uint64 {
+	if r.tokenCandidates {
+		return r.tokenCandidateBlobs(terms)
+	}
 	seen := map[uint64]bool{}
 	used := false
 	for _, t := range terms {
@@ -228,6 +253,26 @@ func (r *Ranker) candidateBlobs(terms []string) []uint64 {
 			all[i] = uint64(i)
 		}
 		return all
+	}
+	out := make([]uint64, 0, len(seen))
+	for b := range seen {
+		out = append(out, b)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
+	return out
+}
+
+// tokenCandidateBlobs unions ti.Docs over the query terms — the blobs that
+// actually contain each term. This is the exact BM25 candidate set and needs no
+// trigram index. A term too short or absent simply contributes nothing; if no
+// term matches any document, the result is empty (BM25 would score nothing
+// anyway), so there is no all-blobs fallback to do.
+func (r *Ranker) tokenCandidateBlobs(terms []string) []uint64 {
+	seen := map[uint64]bool{}
+	for _, t := range terms {
+		for _, b := range r.ti.Docs(t) {
+			seen[b] = true
+		}
 	}
 	out := make([]uint64, 0, len(seen))
 	for b := range seen {

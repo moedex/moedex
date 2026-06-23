@@ -20,10 +20,10 @@
 //  2. Each word run is further split on case boundaries to break apart
 //     camelCase / PascalCase / acronym-prefixed identifiers. Within a run a new
 //     subtoken starts at:
-//       - a lower→upper transition (fooBar  -> foo, Bar), and
-//       - the last upper in an UPPER→upper-lower transition, i.e. an acronym
-//         followed by a word (HTTPServer -> HTTP, Server; SslAPIClient with run
-//         "SslAPIClient" -> Ssl, API, Client).
+//     - a lower→upper transition (fooBar  -> foo, Bar), and
+//     - the last upper in an UPPER→upper-lower transition, i.e. an acronym
+//     followed by a word (HTTPServer -> HTTP, Server; SslAPIClient with run
+//     "SslAPIClient" -> Ssl, API, Client).
 //     Digits stay attached to the alphabetic piece they border (utf8Decode is
 //     one subtoken; v2 stays v2; sha256sum stays sha256sum). Digit/letter
 //     boundaries do NOT split, matching how identifiers like base64 read as one
@@ -77,6 +77,7 @@
 package tokenindex
 
 import (
+	"sort"
 	"unicode"
 	"unicode/utf8"
 
@@ -264,4 +265,23 @@ func (ti *TokenIndex) TermFreq(term string, blob uint64) int {
 		return 0
 	}
 	return post[blob]
+}
+
+// Docs returns the blob IDs that contain term, in ascending order. term must
+// already be a single canonical token. Returns nil if the term is absent. This
+// is the inverted-index candidate set BM25 ranking actually needs — exact (every
+// returned blob has tf>0), so a ranker can generate candidates from the same
+// index it scores against instead of from a separate trigram index. (Used by the
+// corpus ranker, whose content-only index carries no positional postings.)
+func (ti *TokenIndex) Docs(term string) []uint64 {
+	post := ti.postings[term]
+	if len(post) == 0 {
+		return nil
+	}
+	out := make([]uint64, 0, len(post))
+	for blob := range post {
+		out = append(out, blob)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
+	return out
 }
