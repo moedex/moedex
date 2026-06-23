@@ -79,7 +79,7 @@ func main() {
 		runOneShot(corpus, *q, *isRegex, *limit)
 		return
 	}
-	if err := runHTTP(corpus, *httpAddr); err != nil {
+	if err := runHTTP(corpus, *httpAddr, *shardDir); err != nil {
 		fmt.Fprintf(os.Stderr, "moedex-serve: %v\n", err)
 		os.Exit(1)
 	}
@@ -126,8 +126,39 @@ func runMCP(shardDir string, topK int, embedKind, onnxRuntime string) error {
 	fmt.Fprintf(os.Stderr, "moedex-serve: corpus ranker ready — %d blobs, %d docs, %d symbol blobs, %d dense chunks (%s) in %s\n",
 		rc.NumBlobs(), rc.NumDocs(), rc.NumSymbolBlobs(), rc.DenseChunks(), denseSrc, time.Since(start).Round(time.Millisecond))
 
-	srv := mcp.NewServer(rc)
-	fmt.Fprintln(os.Stderr, "moedex-serve: MCP ready on stdio")
+	// Serve through a hot-swappable holder so a SIGHUP can rebuild the ranked
+	// corpus (reusing the embedder; the persisted embedding sidecar makes warm
+	// reloads cheap, and a refreshed shard set re-embeds) without dropping a
+	// request. A failed reload keeps the current ranker.
+	holder := newRankHolder(rc)
+	hup := make(chan os.Signal, 1)
+	signal.Notify(hup, syscall.SIGHUP)
+	go func() {
+		for range hup {
+			t0 := time.Now()
+			fmt.Fprintln(os.Stderr, "moedex-serve: SIGHUP — rebuilding ranked corpus")
+			nrc, err := server.OpenRank(ctx, shardDir, cfg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "moedex-serve: reload failed (%v); keeping current ranker\n", err)
+				continue
+			}
+			old := holder.swap(nrc)
+			go old.retire()
+			src := "none"
+			if nrc.DenseChunks() > 0 {
+				if nrc.DenseFromCache() {
+					src = "cached"
+				} else {
+					src = "built"
+				}
+			}
+			fmt.Fprintf(os.Stderr, "moedex-serve: reloaded ranker — %d blobs, %d symbol blobs, %d dense chunks (%s) in %s\n",
+				nrc.NumBlobs(), nrc.NumSymbolBlobs(), nrc.DenseChunks(), src, time.Since(t0).Round(time.Millisecond))
+		}
+	}()
+
+	srv := mcp.NewServer(holder)
+	fmt.Fprintln(os.Stderr, "moedex-serve: MCP ready on stdio (SIGHUP to reload)")
 	return srv.Serve(ctx, os.Stdin, os.Stdout)
 }
 
@@ -198,27 +229,55 @@ func runOneShot(c *server.Corpus, pattern string, isRegex bool, limit int) {
 	fmt.Fprintf(os.Stderr, "moedex-serve: %d match(es)\n", len(matches))
 }
 
-// runHTTP serves the corpus over a minimal JSON API until SIGINT/SIGTERM.
-func runHTTP(c *server.Corpus, addr string) error {
+// runHTTP serves the corpus over a minimal JSON API until SIGINT/SIGTERM. A
+// SIGHUP re-opens shardDir and hot-swaps the served corpus without dropping any
+// in-flight request (see reload.go); a failed reload keeps the current corpus.
+func runHTTP(c *server.Corpus, addr, shardDir string) error {
+	holder := newCorpusHolder(c)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok\n"))
 	})
 	mux.HandleFunc("/stats", func(w http.ResponseWriter, r *http.Request) {
+		snap := holder.acquire()
+		defer snap.release()
 		writeJSON(w, http.StatusOK, map[string]any{
-			"shards": c.NumShards(),
-			"blobs":  c.NumBlobs(),
+			"shards": snap.c.NumShards(),
+			"blobs":  snap.c.NumBlobs(),
 		})
 	})
 	mux.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
-		handleSearch(c, w, r)
+		snap := holder.acquire()
+		defer snap.release()
+		handleSearch(snap.c, w, r)
 	})
 
 	srv := &http.Server{Addr: addr, Handler: mux}
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.ListenAndServe() }()
-	fmt.Fprintf(os.Stderr, "moedex-serve: HTTP listening on %s\n", addr)
+	fmt.Fprintf(os.Stderr, "moedex-serve: HTTP listening on %s (SIGHUP to reload)\n", addr)
+
+	// SIGHUP -> reload. Processed one at a time on its own goroutine so reloads
+	// never overlap and never block request serving.
+	hup := make(chan os.Signal, 1)
+	signal.Notify(hup, syscall.SIGHUP)
+	go func() {
+		for range hup {
+			start := time.Now()
+			fmt.Fprintln(os.Stderr, "moedex-serve: SIGHUP — reloading shards")
+			nc, err := server.Open(shardDir)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "moedex-serve: reload failed (%v); keeping current corpus\n", err)
+				continue
+			}
+			old := holder.swap(nc)
+			go old.retire() // unmap the previous corpus once its readers drain
+			fmt.Fprintf(os.Stderr, "moedex-serve: reloaded %d shards, %d blobs in %s\n",
+				nc.NumShards(), nc.NumBlobs(), time.Since(start).Round(time.Millisecond))
+		}
+	}()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)

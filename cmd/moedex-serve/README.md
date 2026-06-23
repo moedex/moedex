@@ -65,7 +65,8 @@ corpus must not be queried (the memory is unmapped); `Close` is idempotent.
 ## Retrieval daemon (`-http`)
 
 A minimal JSON API backed by `server.Corpus`. It runs until `SIGINT`/`SIGTERM`,
-then shuts down gracefully (5 s drain).
+then shuts down gracefully (5 s drain); `SIGHUP` hot-reloads the shards (see
+[Hot reload](#hot-reload-sighup)).
 
 ### `GET /search`
 
@@ -256,9 +257,27 @@ Under the hood:
 
 Because shards are flushed at a content-byte threshold, the shard numbering of a
 rebuilt region is reassigned per build — treat shard IDs as opaque, not stable
-across rebuilds. The daemon does not hot-reload: run `refresh` (e.g. from cron),
-then restart `moedex-serve` to pick up the new shards. A refresh changes the shard
-set, so the dense embedding cache is rebuilt on the next `-mcp` start.
+across rebuilds.
+
+### Hot reload (SIGHUP)
+
+The daemon reloads its shards live, without dropping a request or restarting.
+Send it `SIGHUP`:
+
+```sh
+moedex-index refresh -shard-dir /path/to/shards   # update shards on disk
+kill -HUP "$(pgrep -f 'moedex-serve.*shards')"     # daemon re-opens them
+```
+
+On `SIGHUP` the daemon opens a fresh view of the shard dir in the background and
+atomically swaps it in only on success; in-flight queries keep running against
+the previous generation, which is released once they drain (so the mmap is never
+unmapped under an active read). A reload that fails to open keeps the current
+generation serving. In `-mcp` mode the reload rebuilds the BM25 + symbol indices
+and the dense arm too: it reuses the in-process embedder, so a reload over an
+unchanged shard set reloads the persisted embedding sidecar instantly, while a
+refreshed (changed) shard set re-embeds. This makes the steady-state loop a cron
+job: `moedex-index refresh && kill -HUP <pid>`.
 
 ## Build-tag summary
 
