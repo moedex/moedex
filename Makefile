@@ -17,7 +17,7 @@ WORK       ?= $(CURDIR)/.parity-work
 
 GOBIN := $(shell go env GOPATH)/bin
 
-.PHONY: verify parity setup build vet test roundtrip health clean
+.PHONY: verify parity setup build vet test roundtrip health clean build-dense test-dense
 
 ## verify: master gate — everything must pass for DoD.
 verify: health roundtrip parity
@@ -61,6 +61,21 @@ setup:
 	go install github.com/sourcegraph/zoekt/cmd/zoekt@latest
 	@echo "installed into $(GOBIN)"
 
+## build-dense: build moedex-serve with the in-process ONNX embedder (-tags onnx).
+## Embeds the st-codesearch-distilroberta code model (int8, ~78MB) into the binary.
+## The default build stays pure-Go with zero ML deps; only this target pulls them
+## in. Run requires the ONNX Runtime shared library at run time (ONNXRUNTIME_LIB_PATH).
+build-dense:
+	@echo "=== go build -tags onnx ./cmd/moedex-serve ==="
+	go build -tags onnx -o moedex-serve-dense ./cmd/moedex-serve
+	@echo "built ./moedex-serve-dense (run with -mcp -embed onnx; set ONNXRUNTIME_LIB_PATH)"
+
+## test-dense: run the onnx-tagged embedder test. Skips if the runtime lib is
+## absent. Set ONNXRUNTIME_LIB_PATH to the libonnxruntime shared library.
+test-dense:
+	@echo "=== go test -tags onnx ./internal/embed/ ==="
+	go test -tags onnx ./internal/embed/ -count=1
+
 clean:
-	rm -f test.log
+	rm -f test.log moedex-serve-dense
 	rm -rf "$(WORK)" "$${TMPDIR:-/tmp}/moedex-parity"

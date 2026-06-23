@@ -3,3 +3,7 @@
 .parity-work-p3-latency
 .parity-work-p3-rerun-latency
 .parity-work-p4-twofilters-latency
+
+# built daemon binaries
+/moedex-serve
+/moedex-serve-dense

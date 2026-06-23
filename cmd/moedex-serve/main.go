@@ -25,10 +25,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
 
+	"moedex/internal/embed"
 	"moedex/internal/mcp"
 	"moedex/internal/search"
 	"moedex/internal/server"
@@ -42,6 +44,8 @@ func main() {
 	isRegex := flag.Bool("regex", false, "treat -q as a regular expression (default: literal)")
 	limit := flag.Int("limit", 0, "cap matches printed/returned (0 = no cap)")
 	topK := flag.Int("top-k", 20, "default ranked results per MCP query")
+	embedKind := flag.String("embed", "auto", "dense embedder for -mcp: auto|onnx|http|none (auto = onnx if -onnx-runtime/ONNXRUNTIME_LIB_PATH set, else http if MOEDEX_EMBED_URL set, else none)")
+	onnxRuntime := flag.String("onnx-runtime", os.Getenv("ONNXRUNTIME_LIB_PATH"), "path to the ONNX Runtime shared library (in-process embedder; requires -tags onnx build)")
 	flag.Parse()
 
 	if *shardDir == "" {
@@ -54,7 +58,7 @@ func main() {
 	}
 
 	if *mcpMode {
-		if err := runMCP(*shardDir, *topK); err != nil {
+		if err := runMCP(*shardDir, *topK, *embedKind, *onnxRuntime); err != nil {
 			fmt.Fprintf(os.Stderr, "moedex-serve: %v\n", err)
 			os.Exit(1)
 		}
@@ -83,29 +87,93 @@ func main() {
 
 // runMCP builds the corpus ranker and serves ranked, token-budgeted context over
 // MCP stdio — the agent-facing surface. The dense arm lights up only when
-// MOEDEX_EMBED_URL is configured.
-func runMCP(shardDir string, topK int) error {
+// MOEDEX_EMBED_URL is configured; building it embeds the whole corpus at boot.
+func runMCP(shardDir string, topK int, embedKind, onnxRuntime string) error {
+	ctx := context.Background()
 	start := time.Now()
 	cfg := server.RankConfig{TopK: topK}
 
-	// Optional dense arm, mirroring moedex-mcp. Building embeddings over the whole
-	// corpus needs the embedding service; on any failure we fall back to lexical.
-	if url := os.Getenv("MOEDEX_EMBED_URL"); url != "" {
-		fmt.Fprintf(os.Stderr, "moedex-serve: MOEDEX_EMBED_URL=%s set, but corpus-wide dense embedding is a follow-up; running lexical+symbol\n", url)
-	} else {
-		fmt.Fprintln(os.Stderr, "moedex-serve: dense arm disabled (set MOEDEX_EMBED_URL to enable); ranking lexical+symbol")
+	// Choose the dense embedder. On any build/connect failure we fall back cleanly
+	// to lexical+symbol. Embeddings are persisted next to the shards so subsequent
+	// boots load instead of re-embedding the whole corpus.
+	dense, err := configureDenseArm(&cfg, shardDir, embedKind, onnxRuntime)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "moedex-serve: dense arm setup failed (%v); ranking lexical+symbol\n", err)
+		cfg.Emb, dense = nil, false
+	}
+	if !dense {
+		fmt.Fprintln(os.Stderr, "moedex-serve: dense arm disabled; ranking lexical+symbol")
 	}
 
-	rc, err := server.OpenRank(shardDir, cfg)
+	rc, err := server.OpenRank(ctx, shardDir, cfg)
+	if err != nil && dense {
+		// Dense build failed (service down, bad model, etc.): degrade to lexical.
+		fmt.Fprintf(os.Stderr, "moedex-serve: dense arm failed (%v); falling back to lexical+symbol\n", err)
+		cfg.Emb = nil
+		rc, err = server.OpenRank(ctx, shardDir, cfg)
+	}
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "moedex-serve: corpus ranker ready — %d blobs, %d docs, %d symbol blobs in %s\n",
-		rc.NumBlobs(), rc.NumDocs(), rc.NumSymbolBlobs(), time.Since(start).Round(time.Millisecond))
+	denseSrc := "none"
+	if rc.DenseChunks() > 0 {
+		if rc.DenseFromCache() {
+			denseSrc = "cached"
+		} else {
+			denseSrc = "built"
+		}
+	}
+	fmt.Fprintf(os.Stderr, "moedex-serve: corpus ranker ready — %d blobs, %d docs, %d symbol blobs, %d dense chunks (%s) in %s\n",
+		rc.NumBlobs(), rc.NumDocs(), rc.NumSymbolBlobs(), rc.DenseChunks(), denseSrc, time.Since(start).Round(time.Millisecond))
 
 	srv := mcp.NewServer(rc)
 	fmt.Fprintln(os.Stderr, "moedex-serve: MCP ready on stdio")
-	return srv.Serve(context.Background(), os.Stdin, os.Stdout)
+	return srv.Serve(ctx, os.Stdin, os.Stdout)
+}
+
+// configureDenseArm picks the dense embedder per `kind` and wires it (plus the
+// persisted embedding cache path) into cfg. Returns dense=false with no error
+// when the dense arm is intentionally off; returns an error only when a
+// requested embedder could not be constructed.
+func configureDenseArm(cfg *server.RankConfig, shardDir, kind, onnxRuntime string) (bool, error) {
+	url := os.Getenv("MOEDEX_EMBED_URL")
+	if kind == "auto" {
+		switch {
+		case onnxRuntime != "":
+			kind = "onnx"
+		case url != "":
+			kind = "http"
+		default:
+			kind = "none"
+		}
+	}
+
+	cfg.StorePath = filepath.Join(shardDir, "corpus-embeddings.store")
+	switch kind {
+	case "none":
+		cfg.StorePath = ""
+		return false, nil
+	case "onnx":
+		emb, err := embed.NewONNXEmbedder(onnxRuntime)
+		if err != nil {
+			return false, err
+		}
+		cfg.Emb = emb
+		cfg.EmbedModel = "st-codesearch-distilroberta-onnx"
+		fmt.Fprintf(os.Stderr, "moedex-serve: dense arm = in-process st-codesearch-distilroberta (onnx, code-trained); embedding cache %s\n", cfg.StorePath)
+		return true, nil
+	case "http":
+		if url == "" {
+			return false, fmt.Errorf("embed=http but MOEDEX_EMBED_URL is unset")
+		}
+		model := os.Getenv("MOEDEX_EMBED_MODEL")
+		cfg.Emb = embed.NewHTTPEmbedder(url, model)
+		cfg.EmbedModel = model
+		fmt.Fprintf(os.Stderr, "moedex-serve: dense arm = http %s (model %q); embedding cache %s\n", url, model, cfg.StorePath)
+		return true, nil
+	default:
+		return false, fmt.Errorf("unknown -embed %q (want auto|onnx|http|none)", kind)
+	}
 }
 
 // runOneShot executes a single query and prints repo/relpath:line, one per line.
