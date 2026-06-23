@@ -167,6 +167,9 @@ func Build(cfg Config) (*Built, error) {
 	}
 
 	start := time.Now()
+	// mb accumulates repo->shard membership + per-repo git HEAD so a freshness
+	// sidecar manifest can be written after the build (see manifest.go).
+	mb := newManifestBuilder(cfg.Root, shardDir)
 	var (
 		ix         = index.New()
 		shardBytes int64
@@ -183,6 +186,7 @@ func Build(cfg Config) (*Built, error) {
 			return fmt.Errorf("save shard %d: %w", shardIdx, err)
 		}
 		b.Shards = append(b.Shards, path)
+		mb.flushed()
 		cfg.logf("  flushed shard %d: %d blobs, %.1f MB content", shardIdx, ix.NumBlobs(), float64(shardBytes)/1e6)
 		shardIdx++
 		ix = index.New()
@@ -199,6 +203,8 @@ func Build(cfg Config) (*Built, error) {
 			continue
 		}
 		b.IngestedRepos++
+		head, _ := ingest.Head(repo) // "" if unreadable; recorded as-is
+		mb.recordHead(repo, filepath.Base(repo), head)
 		for _, f := range files {
 			id, isNew := b.FT.add(f.Repo, f.RelPath, f.AbsPath)
 			if !isNew {
@@ -211,6 +217,7 @@ func Build(cfg Config) (*Built, error) {
 			b.Pool.observe(f.Content)
 			b.ContentBytes += int64(len(f.Content))
 			shardBytes += int64(len(f.Content))
+			mb.noteBlob(repo, int64(len(f.Content)))
 			anyInShard = true
 		}
 		if shardBytes >= cfg.ShardBytes {
@@ -221,6 +228,13 @@ func Build(cfg Config) (*Built, error) {
 	}
 	if err := flushShard(); err != nil {
 		return nil, err
+	}
+
+	// Emit the freshness manifest alongside the shards. Non-fatal on write
+	// error: the index itself is already persisted and usable.
+	manifest := mb.finalize(b.Shards, time.Now())
+	if err := WriteManifest(filepath.Join(shardDir, ManifestName), manifest); err != nil {
+		cfg.logf("WARNING: failed to write freshness manifest: %v", err)
 	}
 
 	b.NumFiles = b.FT.Len()
