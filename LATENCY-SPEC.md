@@ -191,6 +191,49 @@ enumeration plus min-repeat analysis (`[0-9]{4}`-style constraints). Singleton
 Unicode class queries that can match one 2-byte rune intentionally remain `All` in
 the trigram-only model.
 
+**Parking note 2026-06-23 — known performance issue, not a correctness issue.**
+Two additional line-filter experiments were implemented and measured:
+
+- Folded literal line filters can now use `AND` over up to three clean
+  case-variant trigram positions, instead of a single trigram position.
+- Bounded non-folded Unicode char classes now get a verification-time rune-class
+  line filter (e.g. `[é-ü]`, `[α-ω]+`); large/category classes such as
+  `\p{Greek}` remain unfiltered.
+
+Validation before the full profile: `go test ./internal/search`, `go test -race
+./internal/search`, `go test ./...`, and a 10-repo parity smoke all passed; the
+full-corpus P4 profile also stayed clean at **0 under-approx / 0 over-approx**.
+The P4 run was intentionally `-no-rg -no-zoekt`, so the harness exits nonzero
+only because ripgrep was skipped.
+
+Full-corpus P4 profile (`P4-TWOFILTERS-LATENCY-REPORT.md`,
+`P4-twofilters-full-latency.csv`, 953.6 MB, 60,883 files, 1,000 queries):
+
+| metric | P3 fold-fix baseline | P4 two-filter experiment |
+|---|---:|---:|
+| scan wall | 9m41.479s | 10m56.033s |
+| p50 | 195.23ms | 200.986ms |
+| p95 | 3.237015s | 3.888145s |
+| max | 18.988212s | 14.558232s |
+| `h` p95 | 7.319609s | 8.149498s |
+| `g` p95 | 1.620182s | 1.805824s |
+| `i` max | 16.190453s | 14.558232s |
+
+Readout: this is **fast enough to park**, but P4 is not a clear latency win. The
+multi-position folded filter can slash RE2-entering lines (for example
+`LinesView|Computes` now reaches only 26k RE2 lines) yet still spend 9s scanning
+~22M candidate lines through several `bytes.Contains` checks. The residual tail is
+now dominated by prefilter cost over huge candidate-line sets, unavoidable
+sub-trigram full scans, and deliberately unfiltered classes such as `\p{Greek}`.
+
+Go-forward if this is reopened: first add a filter cost model or adaptive fallback
+before adding more line-filter predicates. Likely candidates are (1) cap
+multi-position folded filters by candidate-line count or measured literal
+selectivity, (2) consider reverting to one folded trigram when candidates are
+very broad, and (3) only then consider a larger 1-2 byte posting index for
+sub-trigram literals. Do not chase Phase 4 until a user-facing latency requirement
+justifies it.
+
 ### Phase 4 — Deferred (only if Phases 1-3 miss target)
 - SIMD posting-list intersection kernel (`[[moedex-research-roadmap]]`) — helps
   candidate selection, not the verify scan; lower priority, tail is scan-bound.
