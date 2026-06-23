@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 
+	"moedex/internal/embed"
 	"moedex/internal/index"
 	"moedex/internal/ingest"
 	"moedex/internal/rank"
@@ -36,22 +37,39 @@ type Report struct {
 
 // Runner evaluates a ranker over a gold set. It owns a built index + token
 // index so the same corpus can be reused across many gold queries.
+//
+// The ranker is (re)built from the parts the Runner holds. EnableDense and
+// EnableSymbols mutate those parts and rebuild, so either arm can be enabled in
+// either order and both survive — a single Runner can be lexical-only, +dense,
+// +symbol, or full hybrid depending on which Enable* methods the caller invokes.
 type Runner struct {
-	ix *index.Index
-	ti *tokenindex.TokenIndex
-	r  *rank.Ranker
+	ix    *index.Index
+	ti    *tokenindex.TokenIndex
+	store *embed.Store   // dense arm; nil = lexical only
+	emb   embed.Embedder // dense arm; nil = lexical only
+	syms  *symbol.Index  // symbol-name arm; nil = off
+	r     *rank.Ranker
 }
 
 // NewRunner builds a Runner around an already-populated index. It constructs the
 // token index and a pure-lexical ranker (nil dense arm — no embedding server
 // needed). Use BuildIndexFromCorpus or BuildIndexFromFiles to populate ix.
 func NewRunner(ix *index.Index) *Runner {
-	ti := tokenindex.Build(ix)
-	return &Runner{
+	run := &Runner{
 		ix: ix,
-		ti: ti,
-		// nil store + nil emb => pure-lexical ranking, the slice-1 baseline.
-		r: rank.New(ix, ti, nil, nil, rank.Config{}),
+		ti: tokenindex.Build(ix),
+	}
+	run.rebuild()
+	return run
+}
+
+// rebuild reconstructs the ranker from the Runner's current parts (store, emb,
+// syms). A nil store+emb is the pure-lexical slice-1 baseline; the symbol arm is
+// re-installed if present so it is not lost when the dense arm is toggled.
+func (run *Runner) rebuild() {
+	run.r = rank.New(run.ix, run.ti, run.store, run.emb, rank.Config{})
+	if run.syms != nil {
+		run.r.SetSymbols(run.syms)
 	}
 }
 
@@ -61,9 +79,32 @@ func NewRunner(ix *index.Index) *Runner {
 // file has a recognized extractor, where the arm is a no-op). Lets a caller
 // measure ranking with vs. without the symbol arm by using two runners.
 func (run *Runner) EnableSymbols() int {
-	syms := symbol.BuildMulti(run.ix)
-	run.r.SetSymbols(syms)
-	return syms.NumBlobs()
+	run.syms = symbol.BuildMulti(run.ix)
+	run.rebuild()
+	return run.syms.NumBlobs()
+}
+
+// EnableDense builds a chunk-embedding Store over the runner's corpus using the
+// supplied Embedder and wires it (plus the embedder) into the ranker as the
+// dense (cosine) RRF arm. It mirrors EnableSymbols so a caller can measure
+// ranking with vs. without the dense arm by toggling it on one or two runners.
+//
+// The embedder is a parameter rather than constructed internally because the
+// production embedder (embed.NewHTTPEmbedder) needs a local embedding server,
+// while hermetic tests pass a deterministic fake — keeping internal/eval free of
+// a network dependency. Returns the number of embedded chunks (0 when the corpus
+// produced no chunks, where the arm is a no-op).
+//
+// linesPerChunk/overlap mirror embed.BuildStore's chunking parameters.
+func (run *Runner) EnableDense(ctx context.Context, e embed.Embedder, linesPerChunk, overlap int) (int, error) {
+	store, err := embed.BuildStore(ctx, run.ix, e, linesPerChunk, overlap)
+	if err != nil {
+		return 0, err
+	}
+	run.store = store
+	run.emb = e
+	run.rebuild()
+	return store.Len(), nil
 }
 
 // BuildIndexFromFiles indexes a slice of ingested files into a fresh index.

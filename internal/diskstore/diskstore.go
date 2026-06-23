@@ -156,6 +156,24 @@ func Load(path string) (*index.Index, error) {
 	return index.Restore(blobs, postings), nil
 }
 
+// LoadBlobs reads only the blob section of a shard — every blob's content and
+// file refs, in ID order — and skips the postings section entirely. It is for
+// callers that need corpus content but not trigram search: the corpus ranker
+// concatenates LoadBlobs across shards into one content index (with global IDs)
+// and builds BM25/symbol stats over it, never paying the positional-postings
+// heap cost that Load would. result[i] is the blob with shard-local ID i.
+func LoadBlobs(path string) ([]index.BlobData, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	hdr, err := parseHeader(data)
+	if err != nil {
+		return nil, err
+	}
+	return loadBlobs(data[hdr.blobOff:hdr.postOff], int(hdr.numBlobs))
+}
+
 // LoadMmap memory-maps a file written by Save and returns an index whose
 // posting lists are decoded on demand from the mapping. Blob content is copied
 // into RAM; only the postings stay mapped. Call the returned Closer when done —

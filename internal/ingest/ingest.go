@@ -23,6 +23,19 @@ type File struct {
 	Content []byte
 }
 
+// Head returns the git commit the repo at dir currently points at
+// (`git -C dir rev-parse HEAD`), trimmed of trailing whitespace. It is the
+// freshness key: re-indexing can be skipped for a repo whose HEAD is unchanged
+// since it was last indexed. An empty repo (no commits) yields an error from
+// git, which the caller may treat as "no recorded head".
+func Head(dir string) (string, error) {
+	out, err := exec.Command("git", "-C", dir, "rev-parse", "HEAD").Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
 // Repo returns the text files tracked in the git repo at dir, labeled under
 // repoName. Binary files (those containing a NUL byte, as ripgrep detects them)
 // are skipped.

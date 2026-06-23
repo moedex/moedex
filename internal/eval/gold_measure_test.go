@@ -54,13 +54,13 @@ func TestFixtureMeasurement(t *testing.T) {
 	logReport(t, "fixture / lexical + symbol arm", repSym)
 	t.Logf("symbol arm: %d blobs carry symbols", symCount)
 
-	// Polyglot symbol extraction (BuildMulti dispatches by file extension): the 3
-	// Go files (refund.go, charge.go, index.go), the 2 C# files (RefundOrder.cs,
-	// SslOrderService.cs) and the 2 TS files (refund.component.ts, order.service.ts)
-	// all carry symbols; the 2 SQL and 1 YAML files have no extractor and
-	// contribute none. 3 + 2 + 2 = 7.
-	if symCount != 7 {
-		t.Errorf("expected 7 blobs with symbols (3 Go + 2 C# + 2 TS), got %d", symCount)
+	// Polyglot symbol extraction (BuildMulti dispatches by file extension): the 4
+	// Go files (refund.go, charge.go, index.go, authenticate.go), the 2 C# files
+	// (RefundOrder.cs, SslOrderService.cs) and the 2 TS files (refund.component.ts,
+	// order.service.ts) all carry symbols; the 2 SQL and 1 YAML files have no
+	// extractor and contribute none. 4 + 2 + 2 = 8.
+	if symCount != 8 {
+		t.Errorf("expected 8 blobs with symbols (4 Go + 2 C# + 2 TS), got %d", symCount)
 	}
 	// The harness must actually find relevant docs across languages.
 	if repBase.MeanRecall < 0.8 {
@@ -116,6 +116,138 @@ func TestFixtureMeasurement(t *testing.T) {
 	if symCI.NDCGAtK < baseCI.NDCGAtK-1e-9 {
 		t.Errorf("coverage gate failed: 'build deploy stage' nDCG regressed with symbol arm: with=%.4f without=%.4f", symCI.NDCGAtK, baseCI.NDCGAtK)
 	}
+}
+
+// TestDenseHybridMeasurement is the lexical-vs-dense-vs-hybrid comparison the
+// harness previously could not run (the old Runner wired a nil dense arm, so the
+// dense/hybrid quality was NEVER measured). It builds four rankers over the same
+// fixture corpus and embedder:
+//
+//	lexical          : BM25 only
+//	dense            : BM25 + dense concept arm (EnableDense)
+//	lexical+symbol   : BM25 + symbol-name arm  (EnableSymbols)
+//	full hybrid      : BM25 + dense + symbol   (both enabled, either order)
+//
+// The dense arm uses a deterministic concept embedder (fake_embedder_test.go), so
+// the comparison is hermetic — no embedding server. The headline assertion is on
+// the synonym query "login credentials": its target file shares NO trigram with
+// the query, so pure lexical CANNOT retrieve it (recall 0), while the dense
+// concept arm can. That is the one thing dense buys over BM25, made measurable.
+func TestDenseHybridMeasurement(t *testing.T) {
+	const k, topK = 5, 10
+	const linesPerChunk, overlap = 6, 2
+	ctx := context.Background()
+	files := FixtureFiles()
+	gold := FixtureGold()
+
+	// The dense arm must NOT collapse to a copy of lexical: a tail dimension keeps
+	// out-of-lexicon tokens distinguishable. 8 concept axes + tail.
+	embedder := newConceptEmbedder(16)
+
+	lexical := NewRunner(BuildIndexFromFiles(files))
+	repLex, err := lexical.Evaluate(ctx, gold, k, topK)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logReport(t, "fixture / lexical only", repLex)
+
+	dense := NewRunner(BuildIndexFromFiles(files))
+	nChunks, err := dense.EnableDense(ctx, embedder, linesPerChunk, overlap)
+	if err != nil {
+		t.Fatalf("EnableDense: %v", err)
+	}
+	if nChunks == 0 {
+		t.Fatal("EnableDense produced no chunks; dense arm would be a no-op")
+	}
+	repDense, err := dense.Evaluate(ctx, gold, k, topK)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logReport(t, "fixture / lexical + dense", repDense)
+	t.Logf("dense arm: %d embedded chunks (dim=%d)", nChunks, embedder.Dim())
+
+	withSym := NewRunner(BuildIndexFromFiles(files))
+	withSym.EnableSymbols()
+	repSym, err := withSym.Evaluate(ctx, gold, k, topK)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logReport(t, "fixture / lexical + symbol", repSym)
+
+	// Full hybrid: enable BOTH arms. Enable symbols FIRST then dense to prove the
+	// Runner preserves the symbol arm across a dense rebuild (order-independence).
+	hybrid := NewRunner(BuildIndexFromFiles(files))
+	hybrid.EnableSymbols()
+	if _, err := hybrid.EnableDense(ctx, embedder, linesPerChunk, overlap); err != nil {
+		t.Fatalf("hybrid EnableDense: %v", err)
+	}
+	repHybrid, err := hybrid.Evaluate(ctx, gold, k, topK)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logReport(t, "fixture / FULL HYBRID (lexical+dense+symbol)", repHybrid)
+
+	t.Logf("MeanNDCG  lexical=%.4f  +dense=%.4f  +symbol=%.4f  hybrid=%.4f",
+		repLex.MeanNDCG, repDense.MeanNDCG, repSym.MeanNDCG, repHybrid.MeanNDCG)
+	t.Logf("MeanRecall lexical=%.4f  +dense=%.4f  +symbol=%.4f  hybrid=%.4f",
+		repLex.MeanRecall, repDense.MeanRecall, repSym.MeanRecall, repHybrid.MeanRecall)
+
+	// --- Headline: dense recovers a synonym query lexical structurally misses ---
+	lexLogin := queryReport(repLex, "login credentials")
+	denseLogin := queryReport(repDense, "login credentials")
+	t.Logf("'login credentials' recall@%d: lexical=%.3f  +dense=%.3f",
+		k, lexLogin.RecallAtK, denseLogin.RecallAtK)
+	if lexLogin.RecallAtK != 0 {
+		t.Errorf("expected pure lexical to MISS the no-trigram-overlap synonym query "+
+			"(recall 0), got %.3f — fixture no longer demonstrates the dense gap",
+			lexLogin.RecallAtK)
+	}
+	if denseLogin.RecallAtK == 0 {
+		t.Error("dense arm failed to recover 'login credentials' (auth/authenticate.go); " +
+			"the dense arm is not contributing")
+	}
+	if posOf(denseLogin.Ranked, "auth/authenticate.go") < 0 {
+		t.Error("dense arm did not surface auth/authenticate.go for 'login credentials'")
+	}
+
+	// The full hybrid must keep the dense win (login) AND the symbol win.
+	hybLogin := queryReport(repHybrid, "login credentials")
+	if hybLogin.RecallAtK == 0 {
+		t.Error("full hybrid lost the dense-only 'login credentials' win")
+	}
+	// Symbol win: 'refund' surfaces the Go definer (lexical alone dropped it from
+	// the top-k — see TestFixtureMeasurement). Hybrid must still surface it.
+	hybRefund := queryReport(repHybrid, "refund")
+	if posOf(hybRefund.Ranked, "billing/refund.go") < 0 {
+		t.Error("full hybrid lost the symbol-arm 'refund' win (Go definer dropped)")
+	}
+
+	// Adding arms must not regress aggregate ranking quality on this set: each
+	// richer configuration should be >= lexical on mean nDCG.
+	if repDense.MeanNDCG < repLex.MeanNDCG-1e-9 {
+		t.Errorf("dense arm regressed MeanNDCG: lexical=%.4f dense=%.4f", repLex.MeanNDCG, repDense.MeanNDCG)
+	}
+	if repHybrid.MeanNDCG < repLex.MeanNDCG-1e-9 {
+		t.Errorf("full hybrid regressed MeanNDCG below lexical: lexical=%.4f hybrid=%.4f", repLex.MeanNDCG, repHybrid.MeanNDCG)
+	}
+	// Recall: the dense and hybrid configs must recover queries lexical misses, so
+	// their mean recall must strictly EXCEED pure lexical on this fixture.
+	if repDense.MeanRecall <= repLex.MeanRecall {
+		t.Errorf("dense arm did not improve MeanRecall: lexical=%.4f dense=%.4f", repLex.MeanRecall, repDense.MeanRecall)
+	}
+	if repHybrid.MeanRecall <= repLex.MeanRecall {
+		t.Errorf("full hybrid did not improve MeanRecall: lexical=%.4f hybrid=%.4f", repLex.MeanRecall, repHybrid.MeanRecall)
+	}
+}
+
+// queryReport returns the QueryReport for a given query string, failing if absent.
+func queryReport(rep Report, query string) QueryReport {
+	for _, q := range rep.Queries {
+		if q.Query == query {
+			return q
+		}
+	}
+	return QueryReport{}
 }
 
 // TestTCSslApiMeasurement runs the verified C# gold against the real corpus when
