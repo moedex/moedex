@@ -31,12 +31,17 @@ On the two warm modes the daemon prints a boot line to stderr, e.g.
 ## What a shard dir is
 
 A shard dir holds one or more `*.idx` files plus a `manifest.json` freshness
-sidecar. They are produced by the indexing pipeline (`internal/parity.Build`),
-which discovers every git repo under a corpus root, ingests them into a sequence
+sidecar. Produce one with the offline indexer `moedex-index`:
+
+```sh
+moedex-index build -corpus /path/to/corpus-root -shard-dir /path/to/shards
+```
+
+It discovers every git repo under the corpus root, ingests them into a sequence
 of content-sized shards (`shard-0000.idx`, `shard-0001.idx`, … — flushed at
 `DefaultShardBytes` ≈ 150 MB of indexed content each), and writes the manifest
-alongside. The `make parity` target runs this build and lands the shards under
-`.parity-work/shards`, which is a valid `-shard-dir`.
+alongside. The result is directly servable as `-shard-dir`. See
+[../moedex-index](../moedex-index) for `check`/`refresh`.
 
 `server.Open(dir)` globs `*.idx` in sorted filename order and `mmap`s each via
 `diskstore.LoadMmap`, holding the mappings for the process lifetime — so postings
@@ -230,19 +235,30 @@ working ranker. The boot line reports the dense source as `cached`, `built`, or
 
 The shard set carries a `manifest.json` (schema in `internal/parity`) recording,
 per shard, which repos contributed blobs to it, and per repo, its git HEAD at
-ingest. This drives shard-level partial re-indexing:
+ingest. The `moedex-index` command drives shard-level partial re-indexing off it:
 
-1. `DetectChanges` compares each repo's current `git rev-parse HEAD` against the
-   manifest to classify repos as changed / added / removed (an unreadable HEAD is
-   treated as changed — rebuild rather than serve stale).
-2. `Rebuild` rebuilds only the shards whose repo set intersects the affected
-   repos (re-ingesting every repo that shared those shards, to preserve in-shard
-   dedup), copies untouched shards forward byte-for-byte, and writes a fresh
-   manifest.
+```sh
+moedex-index check   -shard-dir /path/to/shards   # dry run: changed/added/removed repos
+moedex-index refresh -shard-dir /path/to/shards   # rebuild affected shards, swap in place
+```
+
+Under the hood:
+
+1. `check` (`DetectChanges`) compares each repo's current `git rev-parse HEAD`
+   against the manifest to classify repos as changed / added / removed (an
+   unreadable HEAD is treated as changed — rebuild rather than serve stale). The
+   corpus root defaults to the one recorded in the manifest; `-corpus` overrides.
+2. `refresh` (`Rebuild`) rebuilds only the shards whose repo set intersects the
+   affected repos (re-ingesting every repo that shared those shards, to preserve
+   in-shard dedup), copies untouched shards forward, writes a fresh manifest into
+   a new dir, and atomically swaps it into place (the old dir is removed unless
+   `-keep-backup`).
 
 Because shards are flushed at a content-byte threshold, the shard numbering of a
 rebuilt region is reassigned per build — treat shard IDs as opaque, not stable
-across rebuilds.
+across rebuilds. The daemon does not hot-reload: run `refresh` (e.g. from cron),
+then restart `moedex-serve` to pick up the new shards. A refresh changes the shard
+set, so the dense embedding cache is rebuilt on the next `-mcp` start.
 
 ## Build-tag summary
 

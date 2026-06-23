@@ -7,3 +7,4 @@
 # built daemon binaries
 /moedex-serve
 /moedex-serve-dense
+/moedex-index
