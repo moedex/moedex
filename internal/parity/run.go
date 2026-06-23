@@ -9,15 +9,18 @@ import (
 	"time"
 
 	"moedex/internal/diskstore"
+	"moedex/internal/index"
+	"moedex/internal/query"
+	"moedex/internal/trigram"
 )
 
 // RunConfig configures a full parity run.
 type RunConfig struct {
 	Build          Config
-	Floor          int // battery size floor (AC-D2 requires ≥1000)
-	ScanParallel   int // goroutines for moedex+gold scan per shard
-	RGParallel     int // concurrent ripgrep processes
-	RGThreads      int // rg --threads per process (0 = rg auto)
+	Floor          int  // battery size floor (AC-D2 requires ≥1000)
+	ScanParallel   int  // goroutines for moedex+gold scan per shard
+	RGParallel     int  // concurrent ripgrep processes
+	RGThreads      int  // rg --threads per process (0 = rg auto)
 	SkipRG         bool // skip ripgrep entirely (latency profiling only; NOT a parity run)
 	SkipZoekt      bool
 	ZoektFileLimit int // zoekt-index -file_limit (0 = zoekt default 2MB)
@@ -52,6 +55,7 @@ type Result struct {
 	PeakRSS    int64
 	MoeLatency LatencyStats
 	MoeDur     []time.Duration // per-query moedex search time (indexed by query ID)
+	MoeAttr    []QueryAttribution
 }
 
 // RGError records a ripgrep invocation failure for a query.
@@ -63,6 +67,58 @@ type RGError struct {
 // LatencyStats holds moedex per-query search-latency percentiles (soft).
 type LatencyStats struct {
 	P50, P95, Max time.Duration
+}
+
+// QueryAttribution records per-query work that can be observed without changing
+// search behavior. Candidate counts come from the same index/query primitives the
+// search package uses. Verifier-internal fields remain unset until search exposes
+// them.
+type QueryAttribution struct {
+	CandidateBlobs int64
+	CandidateBytes int64
+	CandidateLines int64
+
+	CandidateKind string
+	AllCandidates bool
+	QueryAll      bool
+
+	LineFilterKind        string
+	LinesEnteringRE2      int64
+	LinesEnteringRE2Known bool
+	VerifyWorkers         int
+
+	observed bool
+}
+
+func (a *QueryAttribution) addShard(s QueryAttribution) {
+	a.CandidateBlobs += s.CandidateBlobs
+	a.CandidateBytes += s.CandidateBytes
+	a.CandidateLines += s.CandidateLines
+	a.LinesEnteringRE2 += s.LinesEnteringRE2
+	if s.VerifyWorkers > a.VerifyWorkers {
+		a.VerifyWorkers = s.VerifyWorkers
+	}
+
+	if !a.observed {
+		a.CandidateKind = s.CandidateKind
+		a.AllCandidates = s.AllCandidates
+		a.QueryAll = s.QueryAll
+		a.LineFilterKind = s.LineFilterKind
+		a.LinesEnteringRE2Known = s.LinesEnteringRE2Known
+		a.VerifyWorkers = s.VerifyWorkers
+		a.observed = true
+		return
+	}
+
+	a.AllCandidates = a.AllCandidates && s.AllCandidates
+	a.QueryAll = a.QueryAll && s.QueryAll
+	if a.CandidateKind != s.CandidateKind {
+		a.CandidateKind = "mixed"
+	}
+	if a.LineFilterKind != s.LineFilterKind {
+		a.LineFilterKind = ""
+	}
+	a.LinesEnteringRE2Known = a.LinesEnteringRE2Known && s.LinesEnteringRE2Known
 }
 
 // HardPass reports whether the run meets the hard parity gate: no real
@@ -101,6 +157,7 @@ func Run(cfg RunConfig) (*Result, error) {
 	moe := make([]accum, nq)
 	gold := make([]accum, nq)
 	moeDur := make([]time.Duration, nq)
+	moeAttr := make([]QueryAttribution, nq)
 	matchers := make([]matcher, nq)
 	for i := range bat.Queries {
 		matchers[i] = goldMatcher(bat.Queries[i])
@@ -115,13 +172,15 @@ func Run(cfg RunConfig) (*Result, error) {
 		}
 		parallelFor(nq, cfg.ScanParallel, func(i int) {
 			st := time.Now()
-			if err := moedexInto(&moe[i], ix, bat.Queries[i], built.FT); err != nil {
+			attr, err := moedexInto(&moe[i], ix, bat.Queries[i], built.FT)
+			if err != nil {
 				// A search error here means an unexpected engine failure; record by
 				// leaving moedex empty — adjudication will flag it as under-approx.
 				_ = err
 			}
 			moeDur[i] += time.Since(st)
 			goldInto(&gold[i], ix, matchers[i], built.FT)
+			moeAttr[i].addShard(attr)
 		})
 		_ = closer.Close()
 		ix = nil
@@ -184,6 +243,7 @@ func Run(cfg RunConfig) (*Result, error) {
 	}
 	res.MoeLatency = latency(moeDur)
 	res.MoeDur = moeDur
+	res.MoeAttr = moeAttr
 
 	// --- Zoekt differential (soft).
 	if !cfg.SkipZoekt {
@@ -193,6 +253,136 @@ func Run(cfg RunConfig) (*Result, error) {
 	res.PeakRSS = maxRSS()
 	res.TotalWall = time.Since(t0)
 	return res, nil
+}
+
+type blobStats struct {
+	bytes int64
+	lines int64
+}
+
+type shardStats struct {
+	blobs      []blobStats
+	totalBytes int64
+	totalLines int64
+}
+
+func newShardStats(ix *index.Index) shardStats {
+	stats := shardStats{blobs: make([]blobStats, ix.NumBlobs())}
+	for id := 0; id < ix.NumBlobs(); id++ {
+		b := ix.Blob(uint64(id))
+		if b == nil {
+			continue
+		}
+		s := blobStats{bytes: int64(len(b.Content)), lines: countLines(b.Content)}
+		stats.blobs[id] = s
+		stats.totalBytes += s.bytes
+		stats.totalLines += s.lines
+	}
+	return stats
+}
+
+func (s shardStats) totals(ids []uint64) (blobs, bytes, lines int64) {
+	for _, id := range ids {
+		if id >= uint64(len(s.blobs)) {
+			continue
+		}
+		bs := s.blobs[id]
+		blobs++
+		bytes += bs.bytes
+		lines += bs.lines
+	}
+	return blobs, bytes, lines
+}
+
+func countLines(content []byte) int64 {
+	var n int64
+	eachLine(content, func(int, []byte) { n++ })
+	return n
+}
+
+func attributionForQuery(ix *index.Index, stats shardStats, q Query) QueryAttribution {
+	if q.Literal && !q.IgnoreCase {
+		return literalAttribution(ix, stats, q.Pattern)
+	}
+	return regexAttribution(ix, stats, q.goRegexSource())
+}
+
+func literalAttribution(ix *index.Index, stats shardStats, pattern string) QueryAttribution {
+	if len(pattern) < trigram.N {
+		return QueryAttribution{
+			CandidateBlobs:        int64(ix.NumBlobs()),
+			CandidateBytes:        stats.totalBytes,
+			CandidateLines:        stats.totalLines,
+			CandidateKind:         "literal-all",
+			AllCandidates:         true,
+			QueryAll:              false,
+			LineFilterKind:        "literal",
+			LinesEnteringRE2:      0,
+			LinesEnteringRE2Known: true,
+			observed:              true,
+		}
+	}
+
+	ids := literalCandidateBlobs(ix, []byte(pattern))
+	blobs, bytes, lines := stats.totals(ids)
+	return QueryAttribution{
+		CandidateBlobs:        blobs,
+		CandidateBytes:        bytes,
+		CandidateLines:        lines,
+		CandidateKind:         "literal-positional",
+		AllCandidates:         int(blobs) == ix.NumBlobs(),
+		QueryAll:              false,
+		LineFilterKind:        "literal",
+		LinesEnteringRE2:      0,
+		LinesEnteringRE2Known: true,
+		observed:              true,
+	}
+}
+
+func literalCandidateBlobs(ix *index.Index, qb []byte) []uint64 {
+	begin := trigram.Trigram{qb[0], qb[1], qb[2]}
+	end := trigram.Trigram{qb[len(qb)-3], qb[len(qb)-2], qb[len(qb)-1]}
+	off := len(qb) - trigram.N
+
+	begins := ix.Postings(begin)
+	ends := ix.Postings(end)
+	j := 0
+	var out []uint64
+	for _, p := range begins {
+		want := p.Offset + off
+		for j < len(ends) && (ends[j].Blob < p.Blob || (ends[j].Blob == p.Blob && ends[j].Offset < want)) {
+			j++
+		}
+		if j < len(ends) && ends[j].Blob == p.Blob && ends[j].Offset == want {
+			if len(out) == 0 || out[len(out)-1] != p.Blob {
+				out = append(out, p.Blob)
+			}
+		}
+	}
+	return out
+}
+
+func regexAttribution(ix *index.Index, stats shardStats, pattern string) QueryAttribution {
+	q, err := query.FromRegexp(pattern)
+	if err != nil {
+		return QueryAttribution{CandidateKind: "regex-error", observed: true}
+	}
+	ids := q.Eval(ix)
+	queryAll := q.String() == "ALL"
+	blobs, bytes, lines := stats.totals(ids)
+	kind := "regex-trigram"
+	if queryAll {
+		kind = "regex-all"
+	}
+	return QueryAttribution{
+		CandidateBlobs: blobs,
+		CandidateBytes: bytes,
+		CandidateLines: lines,
+		CandidateKind:  kind,
+		AllCandidates:  int(blobs) == ix.NumBlobs(),
+		QueryAll:       queryAll,
+		observed:       true,
+	}
 }
 
 // ZoektReport holds the competitive differential outcome.

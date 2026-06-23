@@ -58,8 +58,8 @@ func TestBoundaryTrigramSynthesis(t *testing.T) {
 		t.Fatalf("fo[oa]d should produce a filter, got All")
 	}
 	ix := buildIndex(
-		"a food b", // food matches
-		"a foad b", // foad matches
+		"a food b",        // food matches
+		"a foad b",        // foad matches
 		"fo od separated", // has 'fo' and 'od' but not contiguous -> not a candidate
 	)
 	got := q.Eval(ix)
@@ -204,6 +204,54 @@ func TestFoldedLiteralSelectivity(t *testing.T) {
 	}
 	if len(got) > 3 {
 		t.Errorf("(?i)password not selective: matched %d/4 blobs", len(got))
+	}
+}
+
+func TestCharClassRepeatSelectivity(t *testing.T) {
+	isAll := func(pat string) bool {
+		_, ok := mustQ(t, pat).(allQ)
+		return ok
+	}
+	for _, pat := range []string{`[0-9][0-9][0-9][0-9]`, `[0-9]{4}`, `[é-ü]{2}`} {
+		if isAll(pat) {
+			t.Fatalf("%s reduced to All; expected bounded class/repeat trigram selectivity", pat)
+		}
+	}
+	for _, pat := range []string{`[é-ü]`, `[α-ω]+`, `\p{Greek}`} {
+		if !isAll(pat) {
+			t.Fatalf("%s should remain All in trigram-only mode; single 2-byte matches have no trigram", pat)
+		}
+	}
+
+	ix := buildIndex(
+		"abc1234xyz", // 0: four contiguous digits
+		"abc123xyz",  // 1: admitted over-approx by digit trigram
+		"12-34",      // 2: no digit trigram
+		"abcd",       // 3: no digit trigram
+		"éé",         // 4: two 2-byte runes => byte trigrams exist
+		"é",          // 5: one 2-byte rune, must not be required for {2}
+	)
+
+	digits := map[uint64]bool{}
+	for _, id := range mustQ(t, `[0-9]{4}`).Eval(ix) {
+		digits[id] = true
+	}
+	if !digits[0] {
+		t.Fatalf("[0-9]{4} dropped the true four-digit blob")
+	}
+	if digits[2] || digits[3] {
+		t.Fatalf("[0-9]{4} admitted blobs without any digit trigram: got %v", digits)
+	}
+
+	accents := map[uint64]bool{}
+	for _, id := range mustQ(t, `[é-ü]{2}`).Eval(ix) {
+		accents[id] = true
+	}
+	if !accents[4] {
+		t.Fatalf("[é-ü]{2} dropped the true two-rune blob")
+	}
+	if accents[5] {
+		t.Fatalf("[é-ü]{2} admitted a one-rune blob with no possible two-rune match")
 	}
 }
 

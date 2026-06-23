@@ -151,7 +151,16 @@ run"); all `required_literals_test` cases unchanged.
 - **Latency (50-repo slice, P1→P2):** bucket `h` p50 **24.5→2.68 ms (9×)**, p95
   171→103 ms; overall p95 49.8→36.6 ms. Residual = `k`/`s`-dirty literals/branches
   (`Takes|processes`, `sda`) with no clean ASCII trigram → still full-scan → Phase 3.
-- **PENDING:** full-corpus P1+P2 re-measure (after the background P1 full run frees RAM).
+- **Full-corpus P1+P2 latency profile (953.6 MB, 1000 queries, `-no-rg -no-zoekt`,
+  `P1P2-LATENCY-REPORT.md`, `P1P2-full-latency.csv`):** moedex-vs-gold stayed clean
+  (0 under/over-approx; ripgrep intentionally skipped, so this is not a hard parity
+  gate). Overall p50 **12.1 ms**, p95 **5.49 s**, max **28.88 s**; scan wall
+  **10m2.9s**, peak RSS **6.21 GB**. Bucket tails: `h` p50 **3.23 s**, p95
+  **10.14 s**, max **28.88 s**; `g` p50 **505 ms**, p95 **12.24 s**, max
+  **16.81 s**; `e` p95 **2.96 s**; unicode class queries still hit **15.61 s**.
+  Conclusion: Phase 2 is sound and helps constrainable CI cases, but the full-corpus
+  tail is still dominated by dirty/unconstrainable folded literals and weak regex:
+  95/114 `h` queries are ≥1 s, including all 30 CI regex alternations.
 
 ### Phase 3 — Intra-query parallelism + conjunctive prefilters (the residual)
 After P1+P2 the tail is genuinely-unavoidable full scans: `k`/`s`-dirty CI literals,
@@ -164,8 +173,23 @@ sub-trigram bucket `e` (`->`, `;`), and weak-candidate regex.
 - **Conjunctive literal prefilter** for weak regex: for `foo.*bar` / `foo\s+bar`,
   *both* runs are required → AND-of-runs prefilter (line must contain ALL). Sound,
   strictly stronger than today's pick-one.
+- **Sub-trigram folded prefilters** for dirty CI literals: where no clean ASCII
+  trigram exists, use the longest required clean 1-2 byte span when one is sound
+  (e.g. `he` in `(?i)hess`, `im` in `(?i)skims`) before entering RE2. This targets
+  the full-corpus `h` tail without changing candidate-set soundness.
 - **Folded char-class trigrams** (extend `charClassInfo`) to narrow large unicode
   classes (`\p{Greek}`, `[α-ω]`) that currently degrade to `All`.
+
+**Implementation pass 2026-06-23:** added parity latency attribution (candidate
+blobs/bytes/lines, filter kind, RE2-entering lines, verify workers); replaced the
+flat literal prefilter with a structural line-filter expression (`AND` for required
+concat pieces, `OR` for alternations); kept folded line filters cheap by preferring
+case-variant clean trigrams and falling back to 1-2 byte clean spans only when no
+clean trigram exists; added bounded intra-query verification workers for full-scan
+literal/regex paths; and extended Cox reduction with complete bounded char-class
+enumeration plus min-repeat analysis (`[0-9]{4}`-style constraints). Singleton
+Unicode class queries that can match one 2-byte rune intentionally remain `All` in
+the trigram-only model.
 
 ### Phase 4 — Deferred (only if Phases 1-3 miss target)
 - SIMD posting-list intersection kernel (`[[moedex-research-roadmap]]`) — helps

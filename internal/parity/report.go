@@ -339,8 +339,13 @@ func writeLatencyBreakdown(b *strings.Builder, res *Result) {
 	}
 
 	byBucket := map[Bucket][]time.Duration{}
+	attrByBucket := map[Bucket][]QueryAttribution{}
+	hasAttr := len(res.MoeAttr) == len(res.Results)
 	for i, qr := range res.Results {
 		byBucket[qr.Q.Bucket] = append(byBucket[qr.Q.Bucket], res.MoeDur[i])
+		if hasAttr {
+			attrByBucket[qr.Q.Bucket] = append(attrByBucket[qr.Q.Bucket], res.MoeAttr[i])
+		}
 	}
 	w("### moedex latency by bucket\n\n| Bucket | n | p50 | p95 | max |\n|---|---|---|---|---|\n")
 	for _, bk := range AllBuckets {
@@ -354,11 +359,35 @@ func writeLatencyBreakdown(b *strings.Builder, res *Result) {
 	}
 	w("\n")
 
+	if hasAttr {
+		writeAttributionByBucket(b, attrByBucket)
+	}
+
 	idx := make([]int, len(res.MoeDur))
 	for i := range idx {
 		idx[i] = i
 	}
 	sort.Slice(idx, func(i, j int) bool { return res.MoeDur[idx[i]] > res.MoeDur[idx[j]] })
+	if hasAttr {
+		w("### top-20 slowest queries\n\n")
+		w("| dur | bucket | matches | cand blobs | cand MB | cand lines | RE2 lines | workers | kind | all/query-All | query |\n")
+		w("|---|---|---|---|---|---|---|---|---|---|---|\n")
+		for k, i := range idx {
+			if k >= 20 {
+				break
+			}
+			qr := res.Results[i]
+			attr := res.MoeAttr[i]
+			w("| %s | %s | %d | %d | %.1f | %d | %s | %d | %s | %s | %s |\n",
+				res.MoeDur[i].Round(1e3), qr.Q.Bucket, qr.NMoe,
+				attr.CandidateBlobs, float64(attr.CandidateBytes)/1e6, attr.CandidateLines,
+				attrRE2Lines(attr), attr.VerifyWorkers, attr.CandidateKind, attrAllFlag(attr),
+				strings.ReplaceAll(oneLine(qr.Q.String()), "|", "\\|"))
+		}
+		w("\n")
+		return
+	}
+
 	w("### top-20 slowest queries\n\n| dur | bucket | matches | query |\n|---|---|---|---|\n")
 	for k, i := range idx {
 		if k >= 20 {
@@ -369,6 +398,83 @@ func writeLatencyBreakdown(b *strings.Builder, res *Result) {
 			strings.ReplaceAll(oneLine(qr.Q.String()), "|", "\\|"))
 	}
 	w("\n")
+}
+
+func writeAttributionByBucket(b *strings.Builder, byBucket map[Bucket][]QueryAttribution) {
+	w := func(f string, a ...any) { fmt.Fprintf(b, f, a...) }
+	w("### moedex candidate attribution by bucket\n\n")
+	w("Candidate counts are measured at unique-blob granularity before final line verification. ")
+	w("Filter kind, lines entering RE2, and verify worker counts are captured from ")
+	w("the timed `internal/search` path.\n\n")
+	w("| Bucket | n | cand blobs p50 | cand blobs p95 | cand blobs max | cand MB p95 | cand lines p95 | all-candidates | query-All |\n")
+	w("|---|---|---|---|---|---|---|---|---|\n")
+	for _, bk := range AllBuckets {
+		attrs := byBucket[bk]
+		if len(attrs) == 0 {
+			continue
+		}
+		var blobVals, byteVals, lineVals []int64
+		allCandidates := 0
+		queryAll := 0
+		for _, attr := range attrs {
+			blobVals = append(blobVals, attr.CandidateBlobs)
+			byteVals = append(byteVals, attr.CandidateBytes)
+			lineVals = append(lineVals, attr.CandidateLines)
+			if attr.AllCandidates {
+				allCandidates++
+			}
+			if attr.QueryAll {
+				queryAll++
+			}
+		}
+		blobStats := int64Percentiles(blobVals)
+		byteStats := int64Percentiles(byteVals)
+		lineStats := int64Percentiles(lineVals)
+		w("| %s | %d | %d | %d | %d | %.1f | %d | %d | %d |\n",
+			bk, len(attrs), blobStats.P50, blobStats.P95, blobStats.Max,
+			float64(byteStats.P95)/1e6, lineStats.P95, allCandidates, queryAll)
+	}
+	w("\n")
+}
+
+type int64Stats struct {
+	P50, P95, Max int64
+}
+
+func int64Percentiles(vals []int64) int64Stats {
+	if len(vals) == 0 {
+		return int64Stats{}
+	}
+	c := append([]int64(nil), vals...)
+	sort.Slice(c, func(i, j int) bool { return c[i] < c[j] })
+	pick := func(p float64) int64 {
+		idx := int(p * float64(len(c)))
+		if idx >= len(c) {
+			idx = len(c) - 1
+		}
+		return c[idx]
+	}
+	return int64Stats{P50: pick(0.50), P95: pick(0.95), Max: c[len(c)-1]}
+}
+
+func attrAllFlag(attr QueryAttribution) string {
+	switch {
+	case attr.AllCandidates && attr.QueryAll:
+		return "all/query-All"
+	case attr.AllCandidates:
+		return "all"
+	case attr.QueryAll:
+		return "query-All"
+	default:
+		return ""
+	}
+}
+
+func attrRE2Lines(attr QueryAttribution) string {
+	if !attr.LinesEnteringRE2Known {
+		return ""
+	}
+	return fmt.Sprintf("%d", attr.LinesEnteringRE2)
 }
 
 func passStr(ok bool) string {

@@ -50,11 +50,15 @@ import (
 // unknown, prefix/suffix {""}, match All — the maximally permissive (always
 // safe) result.
 
-// reCap bounds the size of exact/prefix/suffix sets. Cox uses small constants;
-// the exact value only trades selectivity vs. work, never correctness. Above
-// this, a set's information is folded into the match query and the set is
-// widened ("unknown" for exact, truncated toward {""} for prefix/suffix).
-const reCap = 8
+// These caps bound finite-set analysis. They trade selectivity for bounded work,
+// never correctness: overflow always widens rather than truncating.
+const (
+	reCap             = 8
+	reClassCap        = 64
+	reExactCap        = 1024
+	rePrefixSuffixCap = 1024
+	reFoldCap         = 4096
+)
 
 // stringSet is a small set of strings with insertion that respects the cap by
 // signaling overflow. The empty (nil) set means "no strings"; an "unknown"
@@ -97,8 +101,8 @@ func unionSet(a, b stringSet) stringSet {
 	return out
 }
 
-// cross returns the cartesian concatenation a×b. The result can be as large as
-// |a|*|b|; callers cap it afterward.
+// cross returns the cartesian concatenation a×b. Use crossCapped on hot paths
+// where the product may be large.
 func cross(a, b stringSet) stringSet {
 	out := make(stringSet, len(a)*len(b))
 	for x := range a {
@@ -107,6 +111,25 @@ func cross(a, b stringSet) stringSet {
 		}
 	}
 	return out
+}
+
+func crossCapped(a, b stringSet, cap int) (stringSet, bool) {
+	if len(a) == 0 || len(b) == 0 {
+		return stringSet{}, false
+	}
+	if cap >= 0 && len(a) > cap/len(b) {
+		return nil, true
+	}
+	out := make(stringSet, len(a)*len(b))
+	for x := range a {
+		for y := range b {
+			out[x+y] = struct{}{}
+			if cap >= 0 && len(out) > cap {
+				return out, true
+			}
+		}
+	}
+	return out, false
 }
 
 // reInfo is the analysis result for one regex node.
@@ -327,8 +350,9 @@ func asciiFoldVariants(r rune) (bytes []byte, allASCII bool) {
 	return bytes, allASCII
 }
 
-// charClassInfo expands a character class into the set of single-character
-// strings it matches, capped. re.Rune holds inclusive [lo,hi] rune pairs.
+// charClassInfo expands a character class into the complete set of
+// single-character strings it matches when the class is small enough. On cap
+// overflow it widens to All; it never treats a truncated class as complete.
 func charClassInfo(re *syntax.Regexp) reInfo {
 	// Count members up to cap+1 to detect overflow without materializing huge
 	// classes (e.g. [^x] or \w).
@@ -337,7 +361,7 @@ func charClassInfo(re *syntax.Regexp) reInfo {
 	for i := 0; i+1 < len(re.Rune); i += 2 {
 		lo, hi := re.Rune[i], re.Rune[i+1]
 		for r := lo; r <= hi; r++ {
-			if len(members) >= reCap {
+			if len(members) >= reClassCap {
 				overflow = true
 				break
 			}
@@ -375,17 +399,17 @@ func concat(x, y reInfo) reInfo {
 	out.emptyable = x.emptyable && y.emptyable
 
 	// match: both sides required, PLUS boundary trigrams across the join.
-	out.match = And(x.match, y.match, trigramsOfSet(cross(x.suffix, y.prefix)))
+	out.match = And(x.match, y.match, trigramsOfCross(x.suffix, y.prefix))
 
 	// exact: cross product when both known, else unknown.
 	if x.exactKnown && y.exactKnown {
-		ex := cross(x.exact, y.exact)
-		if len(ex) <= reCap {
+		ex, overflow := crossCapped(x.exact, y.exact, reExactCap)
+		if !overflow {
 			out.exactKnown = true
 			out.exact = ex
 		} else {
 			// Overflowed: fold its trigrams into match, then widen to unknown.
-			out.match = And(out.match, trigramsOfSet(ex))
+			out.match = And(out.match, trigramsOfCross(x.exact, y.exact))
 			out.exactKnown = false
 		}
 	} else {
@@ -395,7 +419,7 @@ func concat(x, y reInfo) reInfo {
 	// prefix.
 	switch {
 	case x.exactKnown:
-		out.prefix = capPrefix(cross(x.exact, y.prefix), &out.match)
+		out.prefix = capCrossPrefix(x.exact, y.prefix, &out.match)
 	case x.emptyable:
 		out.prefix = capPrefix(unionSet(x.prefix, y.prefix), &out.match)
 	default:
@@ -405,7 +429,7 @@ func concat(x, y reInfo) reInfo {
 	// suffix (symmetric).
 	switch {
 	case y.exactKnown:
-		out.suffix = capSuffix(cross(x.suffix, y.exact), &out.match)
+		out.suffix = capCrossSuffix(x.suffix, y.exact, &out.match)
 	case y.emptyable:
 		out.suffix = capSuffix(unionSet(y.suffix, x.suffix), &out.match)
 	default:
@@ -427,7 +451,7 @@ func alternate(x, y reInfo) reInfo {
 
 	if x.exactKnown && y.exactKnown {
 		ex := unionSet(x.exact, y.exact)
-		if len(ex) <= reCap {
+		if len(ex) <= reExactCap {
 			out.exactKnown = true
 			out.exact = ex
 		} else {
@@ -478,11 +502,20 @@ func plus(x reInfo) reInfo {
 	}
 }
 
-// repeat handles {min,max}. If min>=1 at least one occurrence is required (like
-// plus over the sub); otherwise zero occurrences allowed -> anyInfo.
+// repeat handles {min,max}. If min>=1 then the first min copies are required;
+// optional tail copies cannot contribute necessary trigrams. Zero-min repeats
+// match the empty string, so they impose no requirement.
 func repeat(re *syntax.Regexp) reInfo {
 	if re.Min >= 1 {
-		return plus(analyze(re.Sub[0]))
+		sub := analyze(re.Sub[0])
+		out := sub
+		for i := 1; i < re.Min; i++ {
+			out = concat(out, sub)
+		}
+		if re.Max < 0 || re.Max > re.Min {
+			out.exactKnown = false
+		}
+		return out
 	}
 	return anyInfo()
 }
@@ -492,7 +525,7 @@ func repeat(re *syntax.Regexp) reInfo {
 // overflow we truncate toward {""} (the always-safe widening: every string has
 // "" as a prefix and suffix).
 func capPrefix(s stringSet, match *Query) stringSet {
-	if len(s) <= reCap {
+	if len(s) <= rePrefixSuffixCap {
 		return s
 	}
 	*match = And(*match, trigramsOfSet(s))
@@ -500,11 +533,35 @@ func capPrefix(s stringSet, match *Query) stringSet {
 }
 
 func capSuffix(s stringSet, match *Query) stringSet {
-	if len(s) <= reCap {
+	if len(s) <= rePrefixSuffixCap {
 		return s
 	}
 	*match = And(*match, trigramsOfSet(s))
 	return newSet("")
+}
+
+func capCrossPrefix(a, b stringSet, match *Query) stringSet {
+	s, overflow := crossCapped(a, b, rePrefixSuffixCap)
+	if overflow {
+		return newSet("")
+	}
+	return capPrefix(s, match)
+}
+
+func capCrossSuffix(a, b stringSet, match *Query) stringSet {
+	s, overflow := crossCapped(a, b, rePrefixSuffixCap)
+	if overflow {
+		return newSet("")
+	}
+	return capSuffix(s, match)
+}
+
+func trigramsOfCross(a, b stringSet) Query {
+	s, overflow := crossCapped(a, b, reFoldCap)
+	if overflow {
+		return All
+	}
+	return trigramsOfSet(s)
 }
 
 // exactTrigrams folds a node's exact set into a trigram query, but only when

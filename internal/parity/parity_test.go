@@ -44,7 +44,7 @@ func buildSynthIndex(t *testing.T) (*index.Index, *FileTable, *TermPool) {
 func matchSet(t *testing.T, ix *index.Index, q Query, ft *FileTable) MatchSet {
 	t.Helper()
 	var a accum
-	if err := moedexInto(&a, ix, q, ft); err != nil {
+	if _, err := moedexInto(&a, ix, q, ft); err != nil {
 		t.Fatalf("moedex %s: %v", q, err)
 	}
 	return a.finalize()
@@ -159,6 +159,35 @@ func TestCaseInsensitiveFindsAllVariants(t *testing.T) {
 	}
 	if moe.Len() < 3 {
 		t.Fatalf("expected ≥3 case-variant lines for (?i)public, got %d", moe.Len())
+	}
+}
+
+func TestLatencyAttributionSynthetic(t *testing.T) {
+	ix, _, _ := buildSynthIndex(t)
+	stats := newShardStats(ix)
+
+	shortLiteral := attributionForQuery(ix, stats, Query{Pattern: "Q", Literal: true})
+	if shortLiteral.CandidateKind != "literal-all" || !shortLiteral.AllCandidates || shortLiteral.QueryAll {
+		t.Fatalf("short literal attribution = %+v, want literal all-candidates without query-All", shortLiteral)
+	}
+	if shortLiteral.CandidateBlobs != int64(ix.NumBlobs()) || shortLiteral.CandidateBytes == 0 || shortLiteral.CandidateLines == 0 {
+		t.Fatalf("short literal candidate totals = %+v, want all shard blobs/bytes/lines", shortLiteral)
+	}
+	if !shortLiteral.LinesEnteringRE2Known || shortLiteral.LinesEnteringRE2 != 0 {
+		t.Fatalf("literal RE2 accounting = known:%v lines:%d, want known zero", shortLiteral.LinesEnteringRE2Known, shortLiteral.LinesEnteringRE2)
+	}
+
+	positional := attributionForQuery(ix, stats, Query{Pattern: "ZZUNIQUEDUPTOKEN", Literal: true})
+	if positional.CandidateKind != "literal-positional" {
+		t.Fatalf("positional candidate kind = %q", positional.CandidateKind)
+	}
+	if positional.CandidateBlobs != 1 {
+		t.Fatalf("positional candidate blobs = %d, want 1 deduped blob", positional.CandidateBlobs)
+	}
+
+	regexAll := attributionForQuery(ix, stats, Query{Pattern: ".", Literal: false})
+	if regexAll.CandidateKind != "regex-all" || !regexAll.QueryAll || !regexAll.AllCandidates {
+		t.Fatalf("regex all attribution = %+v, want regex-all/query-All/all-candidates", regexAll)
 	}
 }
 

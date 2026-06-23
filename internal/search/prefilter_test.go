@@ -117,3 +117,111 @@ func TestPrefilterSoundness_CaseInsensitive(t *testing.T) {
 		t.Fatalf("(?i)password: prefilter dropped a true match: want 4 variant lines, got %d: %v", len(got), got)
 	}
 }
+
+// TestPrefilterSoundness_CaseInsensitiveShortDirtySpan proves the folded
+// prefilter can use a clean short span from a k/s-dirty literal without dropping
+// Unicode fold matches. "hess" has no clean trigram because every trigram
+// touches s, but "he" is a required clean folded span.
+func TestPrefilterSoundness_CaseInsensitiveShortDirtySpan(t *testing.T) {
+	ix := index.New()
+	addBlob(ix, "lower.txt", "hess found\n")
+	addBlob(ix, "upper.txt", "HESS found\n")
+	addBlob(ix, "longs.txt", "heſſ found\n")
+	addBlob(ix, "none.txt", "haze found\n")
+
+	got, err := search.Regex(ix, "(?i)hess")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("(?i)hess: prefilter dropped a true folded match: want 3, got %d: %v", len(got), got)
+	}
+}
+
+func TestPrefilterSoundness_CaseInsensitiveMultiPosition(t *testing.T) {
+	ix := index.New()
+	addBlob(ix, "member.txt", "mem only\ninfo only\nmemberinfo ok\nunrelated text\n")
+
+	got, stats, err := search.RegexWithStats(ix, `(?i)MemberInfo`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("multi-position folded prefilter dropped a true match: want 1, got %d: %v", len(got), got)
+	}
+	if stats.LinesRE2 >= stats.CandidateLines {
+		t.Fatalf("multi-position folded prefilter did not reduce RE2 lines: stats=%+v", stats)
+	}
+}
+
+func TestPrefilterSoundness_UnicodeCharClass(t *testing.T) {
+	ix := index.New()
+	addBlob(ix, "alpha.txt", "start αβγ end\n")
+	addBlob(ix, "omega.txt", "range ends at ω\n")
+	addBlob(ix, "upper.txt", "uppercase Omega only Ω\n")
+	addBlob(ix, "latin.txt", "plain latin text\n")
+
+	got, stats, err := search.RegexWithStats(ix, `[α-ω]+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("[α-ω]+ prefilter dropped/added matches: want 2, got %d: %v", len(got), got)
+	}
+	if stats.LineFilter == "none" {
+		t.Fatalf("[α-ω]+ did not get a bounded Unicode class prefilter: stats=%+v", stats)
+	}
+	if stats.LinesRE2 >= stats.CandidateLines {
+		t.Fatalf("Unicode class prefilter did not reduce RE2 lines: stats=%+v", stats)
+	}
+}
+
+func TestPrefilterSoundness_UnicodeClassEdges(t *testing.T) {
+	ix := index.New()
+	addBlob(ix, "accent.txt", "accent é here\n")
+	addBlob(ix, "capital.txt", "capital É here\n")
+	addBlob(ix, "umlaut.txt", "umlaut ü here\n")
+	addBlob(ix, "latin.txt", "plain latin text\n")
+
+	got, stats, err := search.RegexWithStats(ix, `[é-ü]`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("[é-ü] prefilter dropped/added matches: want 2, got %d: %v", len(got), got)
+	}
+	if stats.LineFilter == "none" {
+		t.Fatalf("[é-ü] did not get a bounded Unicode class prefilter: stats=%+v", stats)
+	}
+
+	got, _, err = search.RegexWithStats(ix, `foo|[é-ü]`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("foo|[é-ü] prefilter dropped/added Unicode branch matches: want 2, got %d: %v", len(got), got)
+	}
+
+	got, _, err = search.RegexWithStats(ix, `(?i)[é]`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("(?i)[é] should remain sound with folded class prefilter disabled: want 2, got %d: %v", len(got), got)
+	}
+}
+
+func TestPrefilterSoundness_ConjunctiveConcat(t *testing.T) {
+	ix := index.New()
+	addBlob(ix, "both.txt", "public final class User\n")
+	addBlob(ix, "public.txt", "public final enum User\n")
+	addBlob(ix, "class.txt", "private final class User\n")
+
+	got, err := search.Regex(ix, `public\s+final\s+class`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("conjunctive prefilter should keep only the true matching line: got %d: %v", len(got), got)
+	}
+}

@@ -71,6 +71,12 @@ func TestSelectivityMeasurement(t *testing.T) {
 		`\[(Http|Route|Api)`,
 		`catch\s*\(`,
 		`throw\s+new`,
+		`[0-9][0-9][0-9][0-9]`,
+		`[0-9]{4}`,
+		`[é-ü]{2}`,
+		`[α-ω]+`,
+		`\p{Greek}`,
+		`[é-ü]`,
 	}
 
 	t.Logf("%-34s %8s %8s %8s %10s", "pattern", "OLD", "NEW", "all", "new/all%")

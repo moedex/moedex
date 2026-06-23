@@ -155,8 +155,8 @@ func main() {
 	os.Exit(1)
 }
 
-// writeLatencyCSV dumps per-query moedex search latency (Phase-0 tail profiling),
-// sorted slowest-first. Columns: query_id,bucket,literal,ignorecase,nmoe,nanos,pattern.
+// writeLatencyCSV dumps per-query moedex search latency and attribution, sorted
+// slowest-first.
 func writeLatencyCSV(res *parity.Result, path string) error {
 	if len(res.MoeDur) != len(res.Results) {
 		return fmt.Errorf("per-query timing unavailable (%d durs, %d results)", len(res.MoeDur), len(res.Results))
@@ -168,15 +168,29 @@ func writeLatencyCSV(res *parity.Result, path string) error {
 	defer f.Close()
 	cw := csv.NewWriter(f)
 	defer cw.Flush()
-	_ = cw.Write([]string{"query_id", "bucket", "literal", "ignorecase", "nmoe", "nanos", "pattern"})
+	_ = cw.Write([]string{
+		"query_id", "bucket", "literal", "ignorecase", "nmoe", "nanos",
+		"candidate_kind", "candidate_blobs", "candidate_bytes", "candidate_lines",
+		"all_candidates", "query_all", "line_filter_kind", "lines_entering_re2", "verify_workers",
+		"pattern",
+	})
 
 	idx := make([]int, len(res.MoeDur))
 	for i := range idx {
 		idx[i] = i
 	}
 	sort.Slice(idx, func(i, j int) bool { return res.MoeDur[idx[i]] > res.MoeDur[idx[j]] })
+	hasAttr := len(res.MoeAttr) == len(res.Results)
 	for _, i := range idx {
 		qr := res.Results[i]
+		var attr parity.QueryAttribution
+		linesEnteringRE2 := ""
+		if hasAttr {
+			attr = res.MoeAttr[i]
+			if attr.LinesEnteringRE2Known {
+				linesEnteringRE2 = strconv.FormatInt(attr.LinesEnteringRE2, 10)
+			}
+		}
 		rec := []string{
 			strconv.Itoa(qr.Q.ID),
 			string(qr.Q.Bucket),
@@ -184,6 +198,15 @@ func writeLatencyCSV(res *parity.Result, path string) error {
 			strconv.FormatBool(qr.Q.IgnoreCase),
 			strconv.Itoa(qr.NMoe),
 			strconv.FormatInt(res.MoeDur[i].Nanoseconds(), 10),
+			attr.CandidateKind,
+			formatAttrInt(hasAttr, attr.CandidateBlobs),
+			formatAttrInt(hasAttr, attr.CandidateBytes),
+			formatAttrInt(hasAttr, attr.CandidateLines),
+			formatAttrBool(hasAttr, attr.AllCandidates),
+			formatAttrBool(hasAttr, attr.QueryAll),
+			attr.LineFilterKind,
+			linesEnteringRE2,
+			formatAttrInt(hasAttr, int64(attr.VerifyWorkers)),
 			qr.Q.Pattern,
 		}
 		if err := cw.Write(rec); err != nil {
@@ -191,6 +214,20 @@ func writeLatencyCSV(res *parity.Result, path string) error {
 		}
 	}
 	return cw.Error()
+}
+
+func formatAttrInt(ok bool, n int64) string {
+	if !ok {
+		return ""
+	}
+	return strconv.FormatInt(n, 10)
+}
+
+func formatAttrBool(ok bool, v bool) string {
+	if !ok {
+		return ""
+	}
+	return strconv.FormatBool(v)
 }
 
 func toolVersion(bin string, arg string) string {

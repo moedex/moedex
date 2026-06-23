@@ -1,0 +1,1001 @@
+query_id,bucket,literal,ignorecase,nmoe,nanos,candidate_kind,candidate_blobs,candidate_bytes,candidate_lines,all_candidates,query_all,line_filter_kind,lines_entering_re2,verify_workers,pattern
+897,h-case-insensitive,false,true,293,18988211667,regex-trigram,2785,602216533,21689409,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",15897271,10,LinesView|Computes
+986,i-unicode,false,false,250,16190453251,regex-all,49800,789265738,26337370,true,true,none,26337370,1,\p{Greek}
+985,i-unicode,false,false,201,11905074626,regex-all,49800,789265738,26337370,true,true,none,26337370,10,[α-ω]+
+899,h-case-insensitive,true,true,2640,9834393332,regex-all,49800,789265738,26337370,true,true,"lit-any(n=2,len=1-1)",19564090,10,MSK
+704,g-regex,false,false,2864280,8718299458,regex-trigram,21271,736777639,24841591,false,false,none,24841591,10,[0-9][0-9][0-9][0-9]
+984,i-unicode,false,false,74396,8113054083,regex-all,49800,789265738,26337370,true,true,none,26337370,10,[é-ü]
+907,h-case-insensitive,false,true,21,7824256000,regex-trigram,1066,575339106,21214487,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",339637,10,Razavi|itemAnswer
+921,h-case-insensitive,false,true,4470,7465990541,regex-trigram,8005,681493742,23583435,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",581808,10,admittable|shark
+905,h-case-insensitive,false,true,5386,7332517916,regex-all,49800,789265738,26337370,true,true,"or(lit-any(n=8,len=3-3),lit-any(n=4,len=2-2))",1786195,10,QAM|hess
+969,h-case-insensitive,false,true,10,7319608958,regex-trigram,278,467505098,19187558,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",403454,10,safariextz|conrols
+872,h-case-insensitive,false,true,29,7000721123,regex-trigram,180,465713890,19195426,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",392880,1,Abstauber|construit
+871,h-case-insensitive,false,true,14,6903615790,regex-trigram,13759,700635715,24195643,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",256370,10,Abklatsch|CAACoC
+964,h-case-insensitive,false,true,689,6851128458,regex-trigram,423,481668852,19391074,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",220039,10,refreshtoken|strumae
+900,h-case-insensitive,false,true,124,6572883918,regex-trigram,671,529075883,20472892,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",81027,10,MemberInfo|IAAOzG
+946,h-case-insensitive,false,true,8,6365416793,regex-trigram,1799,570122321,21129808,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",258635,10,handlerKey|aforarse
+957,h-case-insensitive,false,true,4,6315627499,regex-trigram,417,524254804,20274310,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",103510,10,nElapsed|CADcwF
+979,h-case-insensitive,false,true,29,5984805541,regex-trigram,567,530798674,20287661,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",231704,10,whichDoms|getRepeat
+949,h-case-insensitive,false,true,84,5817157751,regex-trigram,217,472146893,19293522,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",186067,10,hmmss|anamorphic
+885,h-case-insensitive,false,true,5,5750054127,regex-trigram,145,349701792,16294089,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",8810,10,EjEkuOzE|KACjBka
+980,h-case-insensitive,false,true,11,5705305750,regex-trigram,822,557805899,21081585,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",95806,10,whichDoms|zeroResults
+879,h-case-insensitive,false,true,33520,5597279917,regex-trigram,1250,550896825,20808928,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",188132,10,Corp|UACjBpF
+963,h-case-insensitive,false,true,8,5321184751,regex-trigram,400,518216316,20028375,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",86282,10,pushMainArea|Blinkdarm
+909,h-case-insensitive,false,true,72219,5216812000,regex-trigram,266,363841110,16463420,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",37195,10,SAEjBsc|CLR
+962,h-case-insensitive,false,true,8,5117875709,regex-trigram,102,410862378,17946371,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",160503,1,primaryView|CACTjV
+919,h-case-insensitive,false,true,60,5104247749,regex-trigram,224,366752644,16846559,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",43713,10,addPane|EAAhB
+917,h-case-insensitive,false,true,11,5100381832,regex-trigram,210,486776627,19379159,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",152073,10,accdc|scurvier
+942,h-case-insensitive,false,true,20,5035407542,regex-trigram,317,497990750,19698023,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",71140,10,grumpily|fullListTime
+930,h-case-insensitive,false,true,1197,5029415083,regex-trigram,496,525263205,20225636,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",26134,10,becoming|Mwaro
+954,h-case-insensitive,false,true,54,5016643042,regex-trigram,577,481672586,19265903,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",182653,10,mockRegistry|nestedBtn
+943,h-case-insensitive,false,true,946,4900880458,regex-trigram,392,497229760,19879118,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",34102,10,guese|hzeit
+882,h-case-insensitive,false,true,7,4603859085,regex-trigram,93,390696617,17870768,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",68500,1,EACRhG|UAHyB
+922,h-case-insensitive,false,true,8,4547829668,regex-trigram,153,419775408,18445986,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",11368,10,ajustable|iEACgHA
+971,h-case-insensitive,true,true,45,4511793459,regex-all,49800,789265738,26337370,true,true,"lit-any(n=4,len=2-2)",917767,10,skims
+890,h-case-insensitive,false,true,101,4467671375,regex-trigram,195,442967942,18107039,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",14033,10,GACrByK|bfunston
+978,h-case-insensitive,true,true,3,4297400625,regex-all,49800,789265738,26337370,true,true,"lit-any(n=4,len=2-2)",2534365,10,useSETSID
+873,h-case-insensitive,true,true,40,4166203376,regex-trigram,702,536975995,20008769,false,false,"lit-any(n=8,len=3-3)",373090,10,AllBackorders
+925,h-case-insensitive,true,true,3224,4110270875,regex-trigram,553,543002962,20606943,false,false,"lit-any(n=8,len=3-3)",546509,10,atelier
+927,h-case-insensitive,false,true,58,4069163083,regex-trigram,108,409456461,18137835,false,false,"or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3))",24738,10,avowal|hrnew
+970,h-case-insensitive,true,true,40,3962580041,regex-trigram,765,545830472,20464128,false,false,"lit-any(n=8,len=3-3)",120463,10,setTabSize
+886,h-case-insensitive,true,true,2,3731861500,regex-trigram,768,557785095,20851524,false,false,"lit-any(n=8,len=3-3)",219575,10,Estrelleta
+576,e-sub-trigram,true,false,3709206,3698305125,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,es
+918,h-case-insensitive,true,true,289,3526342749,regex-trigram,116,448908132,18483241,false,false,"lit-any(n=8,len=3-3)",18190,1,acuity
+911,h-case-insensitive,true,true,6,3487050124,regex-trigram,273,485886346,19385023,false,false,"lit-any(n=8,len=3-3)",62955,10,Tachov
+975,h-case-insensitive,true,true,138,3468615875,regex-trigram,1429,566971926,21046697,false,false,"lit-any(n=8,len=3-3)",238156,10,thinner
+895,h-case-insensitive,true,true,33,3423616708,regex-trigram,969,534363342,20449182,false,false,"lit-any(n=8,len=3-3)",159376,10,IsTemporary
+883,h-case-insensitive,true,true,10245,3357542500,regex-trigram,4737,615123595,21902844,false,false,"lit-any(n=8,len=3-3)",104653,10,EACTI
+877,h-case-insensitive,true,true,75,3323773249,regex-trigram,1492,559473823,20712193,false,false,"lit-any(n=8,len=3-3)",34045,10,CacheSize
+574,e-sub-trigram,true,false,2989586,3282907918,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,al
+924,h-case-insensitive,true,true,65,3266491333,regex-trigram,78,396720148,17997002,false,false,"lit-any(n=8,len=3-3)",530536,1,androgynous
+874,h-case-insensitive,true,true,54,3237015124,regex-trigram,274,480421115,19359840,false,false,"lit-any(n=8,len=3-3)",122946,10,AuthenticationOptions
+967,h-case-insensitive,true,true,1512,3200689043,regex-trigram,780,488543276,19669968,false,false,"lit-any(n=8,len=3-3)",159236,10,rouge
+926,h-case-insensitive,true,true,13,3185156417,regex-trigram,144,450912438,18437317,false,false,"lit-any(n=8,len=3-3)",118077,10,autoRenewOption
+959,h-case-insensitive,true,true,1868,3181243084,regex-trigram,706,540960287,20541513,false,false,"lit-any(n=8,len=3-3)",50234,10,odar
+893,h-case-insensitive,true,true,5233,3145665290,regex-trigram,3523,623594529,22350854,false,false,"lit-any(n=8,len=3-3)",152414,10,Grep
+908,h-case-insensitive,true,true,277887,3107718458,regex-trigram,13389,656377393,23224657,false,false,"lit-any(n=8,len=3-3)",297657,10,Return
+958,h-case-insensitive,true,true,8,3104176417,regex-trigram,124,441639033,18318653,false,false,"lit-any(n=8,len=3-3)",25950,10,numpadclear
+884,h-case-insensitive,true,true,20,3089837166,regex-trigram,124,371097449,16931032,false,false,"lit-any(n=8,len=3-3)",64641,10,EACdA
+901,h-case-insensitive,true,true,411861,3087433624,regex-trigram,10649,652874515,23418189,false,false,"lit-any(n=8,len=3-3)",388640,10,NULL
+923,h-case-insensitive,true,true,48,3084774333,regex-trigram,138,447268652,18501658,false,false,"lit-any(n=8,len=3-3)",73771,10,alopex
+934,h-case-insensitive,true,true,9,3043865917,regex-trigram,102,431839057,18294867,false,false,"lit-any(n=8,len=3-3)",79530,1,closeAllGroups
+936,h-case-insensitive,true,true,5,3033251210,regex-trigram,381,509891341,19912118,false,false,"lit-any(n=8,len=3-3)",419206,10,configurado
+896,h-case-insensitive,true,true,387,3004771083,regex-trigram,1820,511393233,20093746,false,false,"lit-any(n=8,len=3-3)",21961,10,LastDay
+966,h-case-insensitive,true,true,8,2985339041,regex-trigram,147,454920931,19139229,false,false,"lit-any(n=8,len=3-3)",68236,10,regoperatorsend
+544,e-sub-trigram,true,false,3196348,2976162208,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,","
+881,h-case-insensitive,true,true,8,2944620499,regex-trigram,369,382786410,16923298,false,false,"lit-any(n=8,len=3-3)",2882,10,EAASqD
+903,h-case-insensitive,true,true,8,2917586958,regex-trigram,73,409184811,17891171,false,false,"lit-any(n=8,len=3-3)",448701,1,ProxyRemoteMatch
+902,h-case-insensitive,true,true,157661,2859717000,regex-trigram,21876,617286807,22536957,false,false,"lit-any(n=8,len=3-3)",177107,10,PUBLIC
+939,h-case-insensitive,true,true,9,2845209250,regex-trigram,1325,562075889,21101973,false,false,"lit-any(n=8,len=3-3)",74451,10,fallocate
+584,e-sub-trigram,true,false,3276870,2844753625,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,st
+549,e-sub-trigram,true,false,2736587,2832977500,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,;
+945,h-case-insensitive,true,true,23,2806093500,regex-trigram,218,467397525,18867190,false,false,"lit-any(n=8,len=3-3)",199668,10,handleBlur
+977,h-case-insensitive,true,true,3252,2792829084,regex-trigram,576,516197831,20226946,false,false,"lit-any(n=8,len=3-3)",27789,10,unar
+974,h-case-insensitive,true,true,69395,2675516835,regex-trigram,4199,599948156,21841572,false,false,"lit-any(n=8,len=3-3)",58882,10,tep
+878,h-case-insensitive,true,true,176382,2637847708,regex-trigram,25772,688954360,24066216,false,false,"lit-any(n=8,len=3-3)",205850,10,Class
+920,h-case-insensitive,true,true,65,2570199584,regex-trigram,364,451596648,19374521,false,false,"lit-any(n=8,len=3-3)",20314,10,adminEmail
+952,h-case-insensitive,true,true,24,2564791084,regex-trigram,229,466506755,19000693,false,false,"lit-any(n=8,len=3-3)",7621,10,llReleaseURL
+935,h-case-insensitive,true,true,16,2533816751,regex-trigram,76,385150540,17813951,false,false,"lit-any(n=8,len=3-3)",6370,1,cmKeyToVimKey
+887,h-case-insensitive,true,true,13,2528204959,regex-trigram,102,425537493,18118631,false,false,"lit-any(n=8,len=3-3)",14439,1,FlushFinalBlock
+583,e-sub-trigram,true,false,2432979,2484533541,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,se
+892,h-case-insensitive,true,true,12,2484190666,regex-trigram,138,443486216,18471206,false,false,"lit-any(n=8,len=3-3)",82664,10,GetRemoteAuctionDetails
+929,h-case-insensitive,true,true,1631,2471983750,regex-trigram,204,471321733,19224995,false,false,"lit-any(n=8,len=3-3)",108101,10,beaver
+947,h-case-insensitive,true,true,2,2471473291,regex-trigram,170,430551644,18363610,false,false,"lit-any(n=8,len=3-3)",2343,10,hashGetSpy
+932,h-case-insensitive,true,true,20,2468630166,regex-trigram,95,404670114,18051498,false,false,"lit-any(n=8,len=3-3)",269758,1,cardiomegaly
+684,g-regex,false,false,50264,2445230208,regex-trigram,4466,589541491,21724574,false,false,"or(lit-any(n=1,len=6-6),lit-any(n=1,len=3-3),lit-any(n=1,len=7-7))",46876,10,OAEtBW|ems|negated
+968,h-case-insensitive,true,true,9,2377591918,regex-trigram,129,416568512,18369275,false,false,"lit-any(n=8,len=3-3)",22166,10,rseguy
+572,e-sub-trigram,true,false,1775460,2366670000,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,ac
+888,h-case-insensitive,true,true,28,2363647458,regex-trigram,135,333722394,15890599,false,false,"lit-any(n=8,len=3-3)",3005,10,GAAQD
+912,h-case-insensitive,true,true,1,2311949542,regex-trigram,83,352386842,16619209,false,false,"lit-any(n=8,len=3-3)",1811,1,XRANGEPLAIN
+712,g-regex,false,false,87,2289697917,regex-trigram,9242,602747154,22278228,false,false,"or(lit-any(n=1,len=4-4),lit-any(n=1,len=5-5))",78830,10,\b(Snow|ivate)\b
+876,h-case-insensitive,true,true,19,2270498542,regex-trigram,135,406312645,17882590,false,false,"lit-any(n=8,len=3-3)",4955,10,CBaesg
+948,h-case-insensitive,true,true,87,2223765374,regex-trigram,165,430751218,18602018,false,false,"lit-any(n=8,len=3-3)",202432,10,headlong
+965,h-case-insensitive,true,true,9,2191881875,regex-trigram,72,316036645,16356474,false,false,"lit-any(n=8,len=3-3)",47023,1,regProduct
+933,h-case-insensitive,true,true,94,2137479708,regex-trigram,40,283833197,15394192,false,false,"lit-any(n=8,len=3-3)",182561,1,checkoutV2Domain
+955,h-case-insensitive,true,true,59,2035293667,regex-trigram,89,403019105,17937752,false,false,"lit-any(n=8,len=3-3)",3375,1,muzzy
+950,h-case-insensitive,true,true,8,2018216333,regex-trigram,75,310644666,16229148,false,false,"lit-any(n=8,len=3-3)",758,1,lbtiPendingLock
+891,h-case-insensitive,true,true,10,2009634625,regex-trigram,87,383573972,17589060,false,false,"lit-any(n=8,len=3-3)",4002,1,GAEpDI
+573,e-sub-trigram,true,false,1180028,1996727417,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,ad
+972,h-case-insensitive,true,true,2,1986057335,regex-trigram,30,275696047,15391150,false,false,"lit-any(n=8,len=3-3)",71982,1,stop2224
+898,h-case-insensitive,true,true,6,1983691584,regex-trigram,82,300367959,15820482,false,false,"lit-any(n=8,len=3-3)",7107,1,MAAMvB
+880,h-case-insensitive,true,true,12,1960553586,regex-trigram,73,381032849,17653195,false,false,"lit-any(n=8,len=3-3)",4999,1,DuoMFA
+951,h-case-insensitive,true,true,3,1960280208,regex-trigram,24,278759793,15331067,false,false,"lit-any(n=8,len=3-3)",317743,1,linearGradient4480
+973,h-case-insensitive,true,true,32,1945680334,regex-trigram,87,320637163,16163907,false,false,"lit-any(n=8,len=3-3)",960,10,tcdf
+575,e-sub-trigram,true,false,1288061,1939694667,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,ca
+875,h-case-insensitive,true,true,805,1913058959,regex-trigram,142,347332154,16164373,false,false,"lit-any(n=8,len=3-3)",752,10,BhC
+683,g-regex,false,false,11342,1909421334,regex-trigram,404,510509637,19960487,false,false,"or(lit-any(n=1,len=5-5),lit-any(n=1,len=7-7),lit-any(n=1,len=4-4))",10557,10,OAAiB|gaselos|camp
+673,g-regex,false,false,147,1903031208,regex-trigram,277,478809524,19563571,false,false,"or(lit-any(n=1,len=5-5),lit-any(n=1,len=9-9),lit-any(n=1,len=10-10))",137,10,IAAIY|simulator|Bedingungs
+580,e-sub-trigram,true,false,1330399,1862667875,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,na
+681,g-regex,false,false,832,1857415708,regex-trigram,396,507874805,19932342,false,false,"or(lit-any(n=1,len=6-6),lit-any(n=1,len=7-7),lit-any(n=1,len=5-5))",826,10,MAAQoL|acomode|sideA
+641,g-regex,false,false,133,1851626209,regex-trigram,1632,583952454,21441644,false,false,"or(lit-any(n=1,len=7-7),lit-any(n=1,len=10-10),lit-any(n=1,len=5-5))",84,10,Ataturk|Diaphragma|isind
+797,g-regex,false,false,2032,1828037544,regex-trigram,3600,599630674,21941899,false,false,"or(lit-any(n=1,len=7-7),lit-any(n=1,len=4-4),lit-any(n=1,len=7-7))",1678,10,cALxCnB|latu|EAAKukB
+906,h-case-insensitive,true,true,36,1824104876,regex-trigram,116,320008030,16349138,false,false,"lit-any(n=8,len=3-3)",689,1,Qpress
+910,h-case-insensitive,true,true,90,1821353292,regex-trigram,78,328778997,16701661,false,false,"lit-any(n=8,len=3-3)",5767,1,SyntheticEvent
+941,h-case-insensitive,true,true,2,1747402000,regex-trigram,48,303643770,15954297,false,false,"lit-any(n=8,len=3-3)",1300,1,fname4
+686,g-regex,false,false,35,1726312582,regex-trigram,214,446135384,19072461,false,false,"or(lit-any(n=1,len=4-4),lit-any(n=1,len=10-10),lit-any(n=1,len=6-6))",30,10,QAAJ|sluggishly|agotan
+819,g-regex,false,false,441140,1711278917,regex-all,49800,789265738,26337370,true,true,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=2-2))",2474686,10,i.es
+670,g-regex,false,false,397,1624471375,regex-trigram,1264,533654227,20574315,false,false,"or(lit-any(n=1,len=6-6),lit-any(n=1,len=6-6),lit-any(n=1,len=4-4))",307,10,GAAYxO|rodent|cAMf
+801,g-regex,false,false,1748,1620182002,regex-trigram,872,546739105,20822590,false,false,"or(lit-any(n=1,len=10-10),lit-any(n=1,len=10-10),lit-any(n=1,len=4-4))",1685,10,consulting|adquirente|doto
+843,g-regex,false,false,98973,1611781166,regex-trigram,6914,651213580,23138720,false,false,"or(lit-any(n=1,len=4-4),lit-any(n=1,len=4-4),lit-any(n=1,len=6-6))",81554,10,para|Adan|Landes
+904,h-case-insensitive,true,true,3,1610102001,regex-trigram,56,295833196,15735648,false,false,"lit-any(n=8,len=3-3)",273,1,QACCpiB
+642,g-regex,false,false,19947,1517482666,regex-trigram,409,505029691,20048643,false,false,"or(lit-any(n=1,len=6-6),lit-any(n=1,len=6-6),lit-any(n=1,len=4-4))",19785,1,Becker|turkey|babe
+640,g-regex,false,false,957,1509077666,regex-trigram,1425,551378676,21140376,false,false,"or(lit-any(n=1,len=4-4),lit-any(n=1,len=7-7),lit-any(n=1,len=4-4))",877,10,Asyl|palette|texi
+825,g-regex,false,false,350,1473179166,regex-trigram,429,471878373,19489174,false,false,"or(lit-any(n=1,len=5-5),lit-any(n=1,len=11-11),lit-any(n=1,len=5-5))",346,10,jails|carcinomata|herLe
+850,g-regex,false,false,235,1470008873,regex-trigram,558,516076909,20398797,false,false,"or(lit-any(n=1,len=6-6),lit-any(n=1,len=8-8),lit-any(n=1,len=9-9))",191,10,rsqrps|corniest|Delimiter
+866,g-regex,false,false,86,1433957167,regex-trigram,326,490363525,19809826,false,false,"or(lit-any(n=1,len=12-12),lit-any(n=1,len=10-10),lit-any(n=1,len=9-9))",66,10,writingrules|spiritless|outsenses
+796,g-regex,false,false,207,1397302707,regex-trigram,9778,698103256,23997501,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=5-5))",8857,10,c.eater
+869,g-regex,false,false,231,1382867709,regex-trigram,96,437858551,18865897,false,false,"or(lit-any(n=1,len=6-6),lit-any(n=1,len=9-9),lit-any(n=1,len=10-10))",218,10,ziehen|ranunculi|spiritedly
+833,g-regex,false,false,9,1372330417,regex-trigram,852,465512577,18541579,false,false,"or(lit-any(n=1,len=6-6),lit-any(n=1,len=9-9),lit-any(n=1,len=8-8))",9,10,mBACLC|Appending|ctsToken
+889,h-case-insensitive,false,true,5,1359897876,regex-trigram,80,296667749,15611745,false,false,"all(lit-any(n=4,len=2-2),or(lit-any(n=8,len=3-3),lit-any(n=8,len=3-3)))",4798,1,GAAmBvN|GACpEqzB
+844,g-regex,false,false,270,1354880584,regex-trigram,388,458802816,18886167,false,false,"or(lit-any(n=1,len=11-11),lit-any(n=1,len=9-9),lit-any(n=1,len=10-10))",103,10,parentValue|crockford|OptionDecl
+550,e-sub-trigram,true,false,726461,1344712084,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,</
+823,g-regex,false,false,16,1342495209,regex-trigram,103,432328337,18549785,false,false,"or(lit-any(n=1,len=11-11),lit-any(n=1,len=5-5),lit-any(n=1,len=6-6))",13,1,invidiously|GAsBF|Ansgar
+740,g-regex,false,false,8,1297742541,regex-trigram,1486,530559345,20292419,false,false,"lit-any(n=1,len=5-5)",9478,10,\bcifie\b
+812,g-regex,false,false,77,1295241876,regex-trigram,366,435456222,17717230,false,false,"or(lit-any(n=1,len=10-10),lit-any(n=1,len=4-4),lit-any(n=1,len=6-6))",75,10,expandRefs|RIDL|Chanel
+809,g-regex,false,false,768,1272308083,regex-trigram,10122,653451242,23280850,false,false,"lit-any(n=1,len=4-4)",66105,10,eric$
+786,g-regex,false,false,131,1264077708,regex-trigram,57,377429592,17956257,false,false,"or(lit-any(n=1,len=9-9),lit-any(n=1,len=9-9),lit-any(n=1,len=7-7))",127,1,abrazador|WRITETEXT|Burnham
+548,e-sub-trigram,true,false,770017,1241501789,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,::
+578,e-sub-trigram,true,false,16542,1241427249,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,iw
+581,e-sub-trigram,true,false,99972,1232194750,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,oD
+860,g-regex,false,false,1124,1206836082,regex-trigram,98,359177548,16471514,false,false,"or(lit-any(n=1,len=4-4),lit-any(n=1,len=6-6),lit-any(n=1,len=5-5))",1089,1,toLi|IAAIyB|Ausma
+660,g-regex,false,false,329,1203769249,regex-trigram,325,435387879,17943018,false,false,"or(lit-any(n=1,len=5-5),lit-any(n=1,len=7-7),lit-any(n=1,len=12-12))",313,10,EACXd|Tristan|showInLegend
+563,e-sub-trigram,true,false,838195,1158138082,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,In
+653,g-regex,false,false,568,1152741126,regex-trigram,2535,426811091,18055959,false,false,"or(lit-any(n=1,len=6-6),lit-any(n=1,len=6-6),lit-any(n=1,len=5-5))",507,1,EAAGzZ|Analen|TIMES
+671,g-regex,false,false,466,1142966292,regex-trigram,693,387271431,17050211,false,false,"or(lit-any(n=1,len=7-7),lit-any(n=1,len=8-8),lit-any(n=1,len=11-11))",433,10,GAkGvBE|IGateway|lastContext
+744,g-regex,false,false,408,1139216207,regex-trigram,990,545062423,20717962,false,false,"lit-any(n=1,len=7-7)",541,10,\bindices\b
+805,g-regex,false,false,446,1131741917,regex-trigram,629,529624896,20483386,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=6-6))",1072,10,e.ergent
+711,g-regex,false,false,39,1125522332,regex-trigram,257,333853922,16197396,false,false,"or(lit-any(n=1,len=9-9),lit-any(n=1,len=5-5))",73,10,\b(LineColor|QALlB)\b
+716,g-regex,false,false,13,1119584750,regex-trigram,115,434016844,18480976,false,false,"or(lit-any(n=1,len=12-12),lit-any(n=1,len=9-9))",19,10,\b(acridotheres|CARETTRIM)\b
+720,g-regex,false,false,7,1114980249,regex-trigram,137,412174655,18482520,false,false,"or(lit-any(n=1,len=6-6),lit-any(n=1,len=8-8))",7,10,\b(mBAAbA|aguantar)\b
+555,e-sub-trigram,true,false,987586,1114608084,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,@
+718,g-regex,false,false,343,1105264417,regex-trigram,402,512018634,20136316,false,false,"or(lit-any(n=1,len=6-6),lit-any(n=1,len=6-6))",210,10,\b(czBhOc|pascal)\b
+559,e-sub-trigram,true,false,739359,1104108376,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,Ca
+808,g-regex,false,false,5,1101079251,regex-trigram,1184,556718479,20913733,false,false,"lit-any(n=1,len=7-7)",1561,10,elastic$
+723,g-regex,false,false,111,1079303124,regex-trigram,410,488559898,19826275,false,false,"or(lit-any(n=1,len=5-5),lit-any(n=1,len=9-9))",378,10,\b(strew|Macedonia)\b
+541,e-sub-trigram,true,false,437463,1064229499,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,()
+721,g-regex,false,false,63,1044632958,regex-trigram,1030,538896898,20578046,false,false,"or(lit-any(n=1,len=12-12),lit-any(n=1,len=4-4))",161,10,\b(mechanically|bity)\b
+745,g-regex,false,false,8,1029145540,regex-trigram,38,300273301,15469459,false,false,"lit-any(n=1,len=9-9)",36,1,\bitemLabel\b
+707,g-regex,false,false,6,1028752418,regex-trigram,113,409600815,18402378,false,false,"or(lit-any(n=1,len=5-5),lit-any(n=1,len=8-8))",6,1,\b(GAAMU|cenoslos)\b
+845,g-regex,false,false,170,1015663293,regex-trigram,51,285387238,15411578,false,false,"or(lit-any(n=1,len=3-3),lit-any(n=1,len=8-8),lit-any(n=1,len=6-6))",157,1,pbd|yBAAyBgL|CACxBE
+696,g-regex,false,false,2566,1009686541,regex-trigram,645,347536937,16522745,false,false,"or(lit-any(n=1,len=7-7),lit-any(n=1,len=11-11),lit-any(n=1,len=6-6))",2519,10,Suspend|Ausrutscher|EAAWjD
+663,g-regex,false,false,2733,993247458,regex-trigram,244,316131175,15790964,false,false,"or(lit-any(n=1,len=12-12),lit-any(n=1,len=10-10),lit-any(n=1,len=6-6))",1108,10,EventEmitter|PrepareCSS|KAAKoS
+782,g-regex,false,false,260,988818627,regex-trigram,337,455799543,19497555,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=4-4))",3007,10,a.eban
+981,h-case-insensitive,true,true,2,983866583,regex-trigram,28,159016016,9099849,false,false,"lit-any(n=8,len=3-3)",97,1,ygVQE1olpn4Wk6k
+546,e-sub-trigram,true,false,180299,979435293,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,/*
+816,g-regex,false,false,118,977306625,regex-trigram,82,338163125,16622378,false,false,"or(lit-any(n=1,len=4-4),lit-any(n=1,len=11-11),lit-any(n=1,len=10-10))",43,1,gsub|MinCssFiles|InstallUrl
+715,g-regex,false,false,134,976565000,regex-trigram,201,447724962,18984450,false,false,"or(lit-any(n=1,len=6-6),lit-any(n=1,len=10-10))",3772,10,\b(Yellow|blundering)\b
+822,g-regex,false,false,16,971912709,regex-trigram,3925,600461730,21864779,false,false,"lit-any(n=1,len=4-4)",4223,1,iese$
+982,h-case-insensitive,true,true,94,970555002,regex-trigram,46,248872129,14491449,false,false,"lit-any(n=4,len=3-3)",1353,1,zM160
+719,g-regex,false,false,37,961999541,regex-trigram,108,398311110,18138145,false,false,"or(lit-any(n=1,len=5-5),lit-any(n=1,len=3-3))",290,1,\b(krone|Bii)\b
+708,g-regex,false,false,17,958298374,regex-trigram,108,428451310,18211745,false,false,"or(lit-any(n=1,len=5-5),lit-any(n=1,len=5-5))",20,1,\b(IAAKH|bairn)\b
+705,g-regex,false,false,2,953886000,regex-trigram,560,431431856,17510140,false,false,"or(lit-any(n=1,len=6-6),lit-any(n=1,len=9-9))",6,10,\b(Agende|kVqlMPATv)\b
+832,g-regex,false,false,30,952686667,regex-trigram,756,546883194,20603740,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=7-7))",2557,1,m.rtified
+579,e-sub-trigram,true,false,33394,943984833,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,mt
+552,e-sub-trigram,true,false,252851,940190166,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,==
+827,g-regex,false,false,1192,931299334,regex-trigram,3808,565225772,21475667,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=4-4))",62622,10,l.ield
+784,g-regex,false,false,19,929692207,regex-trigram,81,397890734,18275592,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=7-7))",16,1,a.ericium
+582,e-sub-trigram,true,false,157699,927855669,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,p_
+781,g-regex,false,false,1,921359832,regex-trigram,83,405687970,18325220,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=7-7))",4,1,a.ansador
+783,g-regex,false,false,41,920938125,regex-trigram,53,380730868,17397119,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=7-7))",250,1,a.eraceae
+710,g-regex,false,false,134,915503500,regex-trigram,682,448287992,18975448,false,false,"or(lit-any(n=1,len=11-11),lit-any(n=1,len=12-12))",119,10,\b(IRepository|participants)\b
+557,e-sub-trigram,true,false,402562,912740251,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,Be
+657,g-regex,false,false,9,904763125,regex-trigram,26,240687608,14343662,false,false,"or(lit-any(n=1,len=6-6),lit-any(n=1,len=6-6),lit-any(n=1,len=8-8))",9,1,EAAWsB|MAAMoJ|GAAgBruB
+543,e-sub-trigram,true,false,184323,895641333,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,*/
+831,g-regex,false,false,118,887918167,regex-trigram,6007,598745869,21635451,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=4-4))",73067,10,m.gger
+749,g-regex,false,false,4064,881630041,regex-trigram,1123,479177054,19702490,false,false,"lit-any(n=1,len=4-4)",24384,10,\bshop\b
+631,f-high-frequency,true,false,603991,879901209,literal-positional,14030,687711663,24099696,false,false,literal-positional,,1,var
+807,g-regex,false,false,1273,871816208,regex-trigram,320,442467436,19201608,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=8-8))",18230,10,e.terprise
+791,g-regex,false,false,0,869859542,regex-trigram,616,522044999,20016649,false,false,"lit-any(n=1,len=9-9)",10,10,autoreply$
+553,e-sub-trigram,true,false,76309,863446918,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,=>
+539,e-sub-trigram,true,false,492608,851888584,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,#
+743,g-regex,false,false,1,843381543,regex-trigram,385,487243005,19689347,false,false,"lit-any(n=1,len=7-7)",1,10,\bicieses\b
+714,g-regex,false,false,104,842635042,regex-trigram,364,399352245,17065389,false,false,"or(lit-any(n=1,len=5-5),lit-any(n=1,len=9-9))",115,10,\b(Warns|QueryList)\b
+587,e-sub-trigram,true,false,128988,837711751,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,||
+556,e-sub-trigram,true,false,186331,835415042,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,Au
+852,g-regex,false,false,4,831077625,regex-trigram,62,388276842,17852134,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=9-9))",4,1,s.antwitter
+540,e-sub-trigram,true,false,116462,829083668,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,&&
+722,g-regex,false,false,8,823329708,regex-trigram,19,270350585,15417076,false,false,"or(lit-any(n=1,len=5-5),lit-any(n=1,len=11-11))",8,1,\b(nbpkg|ITestRunner)\b
+561,e-sub-trigram,true,false,17510,822255959,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,Ei
+560,e-sub-trigram,true,false,43721,821792375,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,EA
+785,g-regex,false,false,64,817441208,regex-trigram,801,517902986,20117815,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=5-5))",88,10,a.horre
+545,e-sub-trigram,true,false,75001,815914749,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,->
+767,g-regex,false,false,12,814628248,regex-trigram,247,465560296,19506796,false,false,"lit-any(n=1,len=7-7)",40,10,^[\t ]*arbiter
+777,g-regex,false,false,0,813618625,regex-trigram,85,391827464,17869001,false,false,"lit-any(n=1,len=5-5)",9,10,^[\t ]*outsw
+863,g-regex,false,false,45811,804990042,regex-all,49800,789265738,26337370,true,true,"lit-any(n=1,len=1-1)",3812204,10,v[0-9]+
+739,g-regex,false,false,119,803236459,regex-trigram,1450,551148722,20852506,false,false,"lit-any(n=1,len=5-5)",100,10,\bcacti\b
+916,h-case-insensitive,true,true,43,791301291,regex-trigram,44,258938417,14615928,false,false,"lit-any(n=2,len=3-3)",193,1,a595
+542,e-sub-trigram,true,false,39652,785894000,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,){
+792,g-regex,false,false,1,780052252,regex-trigram,207,433921281,18552945,false,false,"lit-any(n=1,len=7-7)",456,10,awesome$
+841,g-regex,false,false,1,779413957,regex-trigram,85,432000933,18637502,false,false,"lit-any(n=1,len=7-7)",11,1,overfed$
+577,e-sub-trigram,true,false,1640,771959250,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,fZ
+565,e-sub-trigram,true,false,5349,768532291,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,OA
+717,g-regex,false,false,8,766183875,regex-trigram,35,287380357,14967210,false,false,"or(lit-any(n=1,len=7-7),lit-any(n=1,len=3-3))",62,1,\b(cbArrow|EeZ)\b
+585,e-sub-trigram,true,false,50249,759604208,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,zm
+547,e-sub-trigram,true,false,106766,750607335,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,/>
+713,g-regex,false,false,6,749580916,regex-trigram,33,264277087,15118194,false,false,"or(lit-any(n=1,len=12-12),lit-any(n=1,len=6-6))",6,1,\b(UploadFailed|OAAQpZ)\b
+768,g-regex,false,false,122,746594291,regex-trigram,434,426875584,18936133,false,false,"lit-any(n=1,len=3-3)",11067,10,^[\t ]*asm
+612,f-high-frequency,true,false,427707,741636001,literal-positional,19203,729573897,24952356,false,false,literal-positional,,1,for
+570,e-sub-trigram,true,false,41039,736650958,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,[]
+602,f-high-frequency,true,false,682890,735849418,literal-positional,15751,709915454,24502799,false,false,literal-positional,,1,and
+568,e-sub-trigram,true,false,4240,733282666,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,YA
+627,f-high-frequency,true,false,559692,730019001,literal-positional,16632,686472343,24067002,false,false,literal-positional,,1,the
+558,e-sub-trigram,true,false,63881,729386500,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,CA
+639,g-regex,false,false,0,727063250,regex-trigram,71,362655239,16560991,false,false,"all(lit-any(n=1,len=6-6),lit-any(n=1,len=5-5))",0,1,Ascoli.*ullar
+261,b-rare-literal,true,false,3,726918833,literal-positional,106,368342087,17568353,false,false,literal-positional,,1,compacter
+551,e-sub-trigram,true,false,14619,724106584,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,<=
+724,g-regex,false,false,10,720986501,regex-trigram,10,245303335,14635131,false,false,"or(lit-any(n=1,len=12-12),lit-any(n=1,len=5-5))",10,1,\b(totalGotNoNJ|KApIF)\b
+709,g-regex,false,false,14,715270457,regex-trigram,51,248468547,14664282,false,false,"or(lit-any(n=1,len=5-5),lit-any(n=1,len=11-11))",20,1,\b(IAExB|wdrpDomains)\b
+538,e-sub-trigram,true,false,85298,715002917,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,!=
+554,e-sub-trigram,true,false,41277,713550083,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,>=
+586,e-sub-trigram,true,false,47838,712775666,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,{}
+750,g-regex,false,false,87,711045667,regex-trigram,58,383447894,17887492,false,false,"lit-any(n=1,len=4-4)",70,1,\bsnub\b
+766,g-regex,false,false,1,707114457,regex-trigram,76,399169764,18124996,false,false,"lit-any(n=1,len=10-10)",1,1,^[\t ]*appraisees
+567,e-sub-trigram,true,false,3101,704704999,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,Uv
+562,e-sub-trigram,true,false,2548,704161917,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,H5
+564,e-sub-trigram,true,false,46105,701680126,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,MA
+742,g-regex,false,false,238,700467875,regex-trigram,2029,552947272,21208803,false,false,"lit-any(n=1,len=7-7)",318,10,\bfounder\b
+571,e-sub-trigram,true,false,9237,700321583,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,](
+794,g-regex,false,false,0,699758375,regex-trigram,51,379270681,18044064,false,false,"all(lit-any(n=1,len=6-6),lit-any(n=1,len=10-10))",0,1,boning.*pentahedra
+497,d-metachar-literal,true,false,75788,698615127,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,\n
+569,e-sub-trigram,true,false,295789,691512167,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,1,Z
+992,i-unicode,true,false,2508,687446208,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,»
+262,b-rare-literal,true,false,58,685899125,literal-positional,191,384466689,17519254,false,false,literal-positional,,1,compassing
+991,i-unicode,true,false,273,679768167,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,©
+651,g-regex,false,false,528,672651375,regex-all,49800,789265738,26337370,true,true,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=2-2))",83874,10,E.sh
+588,e-sub-trigram,true,false,164367,672602999,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,~
+993,i-unicode,true,false,18,669099084,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,Σ
+847,g-regex,false,false,0,664140249,regex-trigram,1339,556576461,20795956,false,false,"lit-any(n=1,len=8-8)",2,10,platiest$
+837,g-regex,false,false,1,661624041,regex-trigram,79,396025009,18006815,false,false,"lit-any(n=1,len=10-10)",13,1,northwards$
+566,e-sub-trigram,true,false,331734,655136542,literal-subtrigram,49800,789265738,26337370,true,false,literal-subtrigram,,10,Q
+747,g-regex,false,false,28,652874417,regex-trigram,58,301792259,15659541,false,false,"lit-any(n=1,len=9-9)",28,1,\bnodeDepth\b
+806,g-regex,false,false,7,652542458,regex-trigram,36,294157217,15386794,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=8-8))",7,1,e.gineMock
+693,g-regex,false,false,0,651111792,regex-trigram,483,454167353,17872021,false,false,"all(lit-any(n=1,len=6-6),lit-any(n=1,len=6-6))",0,10,Stride.*closer
+851,g-regex,false,false,0,649926166,regex-trigram,26,263375173,15163357,false,false,"all(lit-any(n=1,len=9-9),lit-any(n=1,len=10-10))",0,1,rtDivider.*classnames
+858,g-regex,false,false,31,644871540,regex-trigram,104,422021839,18052142,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=7-7))",31,1,t.pcities
+726,g-regex,false,false,1,639347710,regex-trigram,57,346206945,15935785,false,false,"lit-any(n=1,len=11-11)",1,1,\bDegradation\b
+867,g-regex,false,false,1,635859333,regex-trigram,53,377314882,17940178,false,false,"all(lit-any(n=1,len=3-3),lit-any(n=1,len=6-6))",1,1,yak.*raving
+769,g-regex,false,false,28,628775249,regex-trigram,50,383981538,17903059,false,false,"lit-any(n=1,len=11-11)",76,1,^[\t ]*avoirdupois
+746,g-regex,false,false,8,626544460,regex-trigram,38,373918804,17506643,false,false,"lit-any(n=1,len=12-12)",8,1,\blegalworking\b
+814,g-regex,false,false,7,625706709,regex-trigram,82,389245686,18091189,false,false,"lit-any(n=1,len=3-3)",830,1,gip$
+748,g-regex,false,false,683,618772709,regex-trigram,119,406521664,18250602,false,false,"lit-any(n=1,len=8-8)",595,10,\bpowerful\b
+793,g-regex,false,false,39,617112123,regex-trigram,237,437464276,19029837,false,false,"lit-any(n=1,len=7-7)",1007,10,benefit$
+752,g-regex,false,false,9,611752750,regex-trigram,83,306505506,15522248,false,false,"lit-any(n=1,len=8-8)",17,1,\bviewData\b
+894,h-case-insensitive,true,true,187,603269207,regex-trigram,51,236749790,13656522,false,false,"lit-any(n=2,len=3-3)",174,1,H31
+706,g-regex,false,false,5,596596124,regex-trigram,20,221914050,13342518,false,false,"all(lit-any(n=1,len=2-2),or(lit-any(n=1,len=4-4),lit-any(n=1,len=4-4)))",16,1,\b(EACUsB|EAAKiK)\b
+751,g-regex,false,false,1,596434999,regex-trigram,336,498181865,19772581,false,false,"lit-any(n=1,len=10-10)",1,10,\bvalidities\b
+859,g-regex,false,false,0,593541833,regex-trigram,13,247783107,14772295,false,false,"all(lit-any(n=1,len=6-6),lit-any(n=1,len=8-8))",0,1,temela.*sbMissed
+780,g-regex,false,false,8,593193876,regex-trigram,110,291984739,15902477,false,false,"lit-any(n=1,len=3-3)",783,10,^[\t ]*sdb
+634,g-regex,false,false,4077,593069875,regex-trigram,385,380026184,16979541,false,false,"lit-any(n=1,len=2-2)",4388,10,0x[0-9a-fA-F]+
+643,g-regex,false,false,0,585808041,regex-trigram,40,352265006,16213804,false,false,"all(lit-any(n=1,len=9-9),lit-any(n=1,len=8-8))",0,1,Broadcast.*abisinio
+815,g-regex,false,false,0,574507457,regex-trigram,62,392967186,18037998,false,false,"lit-any(n=1,len=12-12)",2,1,globigerinae$
+961,h-case-insensitive,true,true,12,567937501,regex-trigram,28,85730951,1150741,false,false,"lit-any(n=8,len=3-3)",6797,1,phone_number_throttle_id
+139,a-common-literal,true,false,259689,567755374,literal-positional,11347,587636888,21413574,false,false,literal-positional,,1,return
+755,g-regex,false,false,1,560131542,regex-trigram,72,364388097,16457564,false,false,"lit-any(n=1,len=7-7)",1,1,^[\t ]*Bacardi
+695,g-regex,false,false,0,559790874,regex-trigram,15,256412790,14990228,false,false,"all(lit-any(n=1,len=12-12),lit-any(n=1,len=8-8))",0,1,StripAccents.*daughter
+779,g-regex,false,false,1,550563790,regex-trigram,118,414341728,18589893,false,false,"lit-any(n=1,len=5-5)",54,10,^[\t ]*quelo
+692,g-regex,false,false,0,541604416,regex-trigram,28,307233119,15811554,false,false,"lit-any(n=1,len=6-6)",7,1,Sabieh$
+862,g-regex,false,false,6,541533791,regex-trigram,147,307177653,16157976,false,false,"lit-any(n=1,len=4-4)",518,10,uuid$
+804,g-regex,false,false,0,531507249,regex-trigram,57,303693440,15427591,false,false,"lit-any(n=1,len=7-7)",238,1,domNode$
+839,g-regex,false,false,0,529542626,regex-trigram,23,260234615,15093292,false,false,"lit-any(n=1,len=12-12)",18,1,occurSession$
+772,g-regex,false,false,6,524776710,regex-trigram,14,270332060,15474856,false,false,"lit-any(n=1,len=4-4)",10,1,^[\t ]*dgpg
+619,f-high-frequency,true,false,252051,523076250,literal-positional,14122,675294744,23500442,false,false,literal-positional,,1,new
+868,g-regex,false,false,0,522878125,regex-trigram,61,335144520,16160497,false,false,"all(lit-any(n=1,len=6-6),lit-any(n=1,len=3-3))",0,1,yerais.*War
+738,g-regex,false,false,1,516099583,regex-trigram,49,376572089,17755165,false,false,"lit-any(n=1,len=8-8)",1,1,\bbanjoist\b
+855,g-regex,false,false,0,514331375,regex-trigram,30,290175084,15409118,false,false,"lit-any(n=1,len=10-10)",5,1,stackDepth$
+649,g-regex,false,false,0,512161626,regex-trigram,15,258345976,14974588,false,false,"all(lit-any(n=1,len=5-5),lit-any(n=1,len=8-8))",0,1,Cuneo.*deltaEnd
+774,g-regex,false,false,0,510408292,regex-trigram,44,372332531,17752515,false,false,"lit-any(n=1,len=10-10)",2,1,^[\t ]*gearmanjob
+776,g-regex,false,false,0,508495042,regex-trigram,6,233825372,14359366,false,false,"lit-any(n=1,len=8-8)",6,1,^[\t ]*innerTbl
+849,g-regex,false,false,0,503801250,regex-trigram,29,353523818,16923870,false,false,"lit-any(n=1,len=8-8)",1,1,qrandset$
+635,g-regex,false,false,0,501672500,regex-trigram,24,310278053,15789401,false,false,"lit-any(n=1,len=12-12)",1,1,Abbaubarkeit$
+694,g-regex,false,false,0,497294792,regex-trigram,37,296041022,15405156,false,false,"all(lit-any(n=1,len=12-12),lit-any(n=1,len=7-7))",0,1,StringRepeat.*setCost
+756,g-regex,false,false,894,492537125,regex-trigram,36,319851486,16072774,false,false,"lit-any(n=1,len=10-10)",1552,1,^[\t ]*Birmingham
+802,g-regex,false,false,0,491086583,regex-trigram,167,155100147,2163494,false,false,"lit-any(n=1,len=8-8)",10,10,"digitate[(){};,]"
+736,g-regex,false,false,2,489495540,regex-trigram,61,297267977,15470552,false,false,"lit-any(n=1,len=9-9)",37,1,\bSplitWord\b
+107,a-common-literal,true,false,257670,488509708,literal-positional,3711,547638747,20547866,false,false,literal-positional,,1,function
+753,g-regex,false,false,20,485995499,regex-trigram,369,335190148,16034500,false,false,"lit-any(n=1,len=10-10)",509,10,^[\t ]*AccountLog
+672,g-regex,false,false,0,485046917,regex-trigram,18,302314281,15612075,false,false,"lit-any(n=1,len=8-8)",3,1,Gurmukhi$
+664,g-regex,false,false,68,481327666,regex-trigram,36,256985155,14946665,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=7-7))",68,1,F.exAlign
+775,g-regex,false,false,0,479541666,regex-trigram,24,273312575,15447625,false,false,"lit-any(n=1,len=4-4)",83,1,^[\t ]*gpgp
+86,a-common-literal,true,false,136982,478813790,literal-positional,24379,650922194,23201843,false,false,literal-positional,,1,class
+656,g-regex,false,false,0,473895374,regex-trigram,3,219462977,13342563,false,false,"all(lit-any(n=1,len=7-7),lit-any(n=1,len=8-8))",0,1,EAAQuiC.*TicketID
+678,g-regex,false,false,0,472443957,regex-trigram,6,220236177,13343047,false,false,"all(lit-any(n=1,len=7-7),lit-any(n=1,len=7-7))",0,1,IAGlEsF.*isProto
+864,g-regex,false,false,0,470010458,regex-trigram,19,258396655,15031857,false,false,"all(lit-any(n=1,len=7-7),lit-any(n=1,len=11-11))",0,1,whammed.*OrdinalMeta
+730,g-regex,false,false,2,468769332,regex-trigram,36,318941823,15905266,false,false,"lit-any(n=1,len=5-5)",2,1,\bLoski\b
+145,a-common-literal,true,false,157302,465110208,literal-positional,15300,604178768,22172651,false,false,literal-positional,,1,string
+725,g-regex,false,false,1,464298875,regex-trigram,41,315981043,15847550,false,false,"lit-any(n=1,len=10-10)",1,1,\bBrechttext\b
+826,g-regex,false,false,170,464251792,regex-trigram,199,392250915,18119117,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=4-4))",158,10,k.ytab
+735,g-regex,false,false,2,457770918,regex-trigram,55,251703104,13347255,false,false,"lit-any(n=1,len=6-6)",2,1,\bSAAAmE\b
+680,g-regex,false,false,2,456692666,regex-trigram,50,269495728,15238799,false,false,"lit-any(n=1,len=11-11)",24,1,LibraryPage$
+813,g-regex,false,false,0,456324876,regex-trigram,10,273485695,15607148,false,false,"all(lit-any(n=1,len=8-8),lit-any(n=1,len=7-7))",0,1,fsfreeze.*exhales
+770,g-regex,false,false,4,456209417,regex-trigram,34,266330935,15168768,false,false,"lit-any(n=1,len=7-7)",32,1,^[\t ]*bLookup
+771,g-regex,false,false,0,455394666,regex-trigram,37,284088586,15317565,false,false,"lit-any(n=1,len=11-11)",18,1,^[\t ]*countryFlag
+846,g-regex,false,false,0,452626416,regex-trigram,12,240436248,14458588,false,false,"lit-any(n=1,len=9-9)",4,1,pkgExists$
+662,g-regex,false,false,0,451942792,regex-trigram,3,219462977,13342563,false,false,"all(lit-any(n=1,len=7-7),lit-any(n=1,len=6-6))",0,1,EiErpQM.*EAAMuI
+135,a-common-literal,true,false,141205,440379167,literal-positional,20618,570449940,21658273,false,false,literal-positional,,1,public
+773,g-regex,false,false,0,429574708,regex-trigram,44,267009583,15166174,false,false,"lit-any(n=1,len=11-11)",13,1,^[\t ]*fromEntries
+759,g-regex,false,false,0,427469167,regex-trigram,33,296565655,15406522,false,false,"lit-any(n=1,len=11-11)",2,1,^[\t ]*EmitterNode
+778,g-regex,false,false,0,427460667,regex-trigram,60,264803619,15179522,false,false,"lit-any(n=1,len=11-11)",22,10,^[\t ]*paypalError
+765,g-regex,false,false,21,425284418,regex-trigram,67,302502294,15562166,false,false,"lit-any(n=1,len=12-12)",39,1,^[\t ]*IncludeItems
+676,g-regex,false,false,0,424580959,regex-trigram,22,240268569,14343007,false,false,"lit-any(n=1,len=6-6)",2,1,IACpCw$
+870,h-case-insensitive,true,true,2,417168209,regex-trigram,23,91591516,4925507,false,false,"lit-any(n=4,len=3-3)",66,1,A4Br9FA
+637,g-regex,false,false,0,414870834,regex-trigram,92,92043659,756033,false,false,"lit-any(n=1,len=9-9)",0,1,"Andernach[(){};,]"
+737,g-regex,false,false,1096,409486751,regex-trigram,65,235661759,13653899,false,false,"lit-any(n=1,len=5-5)",1089,10,\bUSAGE\b
+960,h-case-insensitive,true,true,3,408635625,regex-trigram,144,109208080,1706550,false,false,"lit-any(n=8,len=3-3)",18128,10,pending_domains
+697,g-regex,false,false,0,407955917,regex-trigram,9,224782270,13414394,false,false,"lit-any(n=1,len=7-7)",11,1,UNICODE$
+754,g-regex,false,false,0,406869998,regex-trigram,6,221373892,13342804,false,false,"lit-any(n=1,len=7-7)",2,1,^[\t ]*AwBhrEI
+944,h-case-insensitive,true,true,3,401894666,regex-trigram,13,147655634,8803654,false,false,"lit-any(n=2,len=3-3)",217,1,h363q28
+484,d-metachar-literal,true,false,6,397894166,literal-positional,6,236362718,14422723,false,false,literal-positional,,1,AlAbbasiFamily.com
+760,g-regex,false,false,0,397740874,regex-trigram,12,225285242,13392152,false,false,"lit-any(n=1,len=5-5)",4,1,^[\t ]*GADCC
+689,g-regex,false,false,0,388370459,regex-trigram,23,224253060,13388440,false,false,"lit-any(n=1,len=12-12)",1,1,REDEFINITION$
+763,g-regex,false,false,0,384746583,regex-trigram,14,223558732,13361282,false,false,"lit-any(n=1,len=6-6)",2,1,^[\t ]*IACnBE
+644,g-regex,false,false,21,383720583,regex-trigram,171,285451088,15362040,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=3-3))",2834,10,C.AtC
+490,d-metachar-literal,true,false,2,380347292,literal-positional,19,258240916,15075370,false,false,literal-positional,,1,KingsOfRnb.com
+842,g-regex,false,false,9,378966750,regex-trigram,32,262486770,15155410,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=10-10))",14,1,p.ymentInfos
+645,g-regex,false,false,1,378752124,regex-trigram,17,243685047,14450184,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=6-6))",1,1,C.CjBogB
+646,g-regex,false,false,2,362788959,regex-trigram,19,248010893,14657807,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=5-5))",2,1,C.GzBrE
+112,a-common-literal,true,false,50924,354899125,literal-positional,6563,545601797,20553476,false,false,literal-positional,,1,import
+789,g-regex,false,false,0,353671209,regex-trigram,419,209196911,3873486,false,false,"lit-any(n=1,len=7-7)",25,10,agreste[ \t]
+856,g-regex,false,false,0,335853832,regex-trigram,132,115109956,1810747,false,false,"lit-any(n=1,len=11-11)",43,10,"submittable[(){};,]"
+647,g-regex,false,false,1125,328432625,regex-trigram,469,238979891,13646009,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=4-4))",1078,10,C.MMIT
+114,a-common-literal,true,false,136,326858583,literal-positional,235,416607840,18339911,false,false,literal-positional,,1,instrumentation
+623,f-high-frequency,true,false,152,315195042,literal-positional,372,420050461,17897111,false,false,literal-positional,,1,parseExpectedExpression
+88,a-common-literal,true,false,438,312290375,literal-positional,1112,432565665,18163739,false,false,literal-positional,,1,conditioning
+526,d-metachar-literal,true,false,73378,311722418,literal-positional,689,390634652,17367765,false,false,literal-positional,,1,to.
+524,d-metachar-literal,true,false,1900,310875208,literal-positional,529,424343050,16696332,false,false,literal-positional,,1,this.$outdent
+840,g-regex,false,false,0,301771958,regex-trigram,332,157395394,2332172,false,false,"lit-any(n=1,len=7-7)",12,10,"ommited[(){};,]"
+529,d-metachar-literal,true,false,492,301291209,literal-positional,234,373642089,17150045,false,false,literal-positional,,1,window.location
+666,g-regex,false,false,0,299515958,regex-trigram,84,209629589,9392283,false,false,"lit-any(n=1,len=4-4)",26,1,GAAP$
+848,g-regex,false,false,18,296841459,regex-trigram,241,170654843,2304672,false,false,"lit-any(n=1,len=9-9)",1008,10,"political[(){};,]"
+614,f-high-frequency,true,false,49,296262666,literal-positional,49,334769485,16684580,false,false,literal-positional,,1,lastMinute
+853,g-regex,false,false,0,296219082,regex-trigram,31,78451144,1056486,false,false,"lit-any(n=1,len=10-10)",6,1,"searchtype[(){};,]"
+615,f-high-frequency,true,false,323,291435875,literal-positional,133,336591397,16370067,false,false,literal-positional,,1,lineNumber
+417,c-phrase-literal,true,false,800,290729333,literal-positional,476,398899061,16918902,false,false,literal-positional,,1,var next_indent
+603,f-high-frequency,true,false,13592,287409666,literal-positional,1344,430002387,18435304,false,false,literal-positional,,1,bright
+685,g-regex,false,false,1,285679916,regex-trigram,15,246173989,14654668,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=4-4))",8,1,Q.ASuL
+699,g-regex,false,false,3,283466708,regex-trigram,39,226579821,13374216,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=4-4))",9,1,W.CtBC
+629,f-high-frequency,true,false,142,281563125,literal-positional,66,354372871,16904593,false,false,literal-positional,,1,tickPositions
+266,b-rare-literal,true,false,3,279581582,literal-positional,330,367476209,16574062,false,false,literal-positional,,1,dataGrouping
+126,a-common-literal,true,false,756,278948667,literal-positional,27,338729280,16898460,false,false,literal-positional,,1,ntida
+263,b-rare-literal,true,false,13,278615291,literal-positional,14,305988402,15867831,false,false,literal-positional,,1,cretonne
+416,c-phrase-literal,true,false,38000,278433500,literal-positional,12744,337961946,15818614,false,false,literal-positional,,1,using System
+589,f-high-frequency,true,false,776,276928499,literal-positional,289,279598991,15063175,false,false,literal-positional,,1,Ascending
+141,a-common-literal,true,false,444,276567499,literal-positional,27,355034902,17228138,false,false,literal-positional,,1,schel
+626,f-high-frequency,true,false,2130,276514207,literal-positional,244,397664216,17904111,false,false,literal-positional,,1,spell
+520,d-metachar-literal,true,false,2646,272812957,literal-positional,478,275749512,15522567,false,false,literal-positional,,1,repository.
+260,b-rare-literal,true,false,1,272514542,literal-positional,44,292845656,15326170,false,false,literal-positional,,1,checkbox_starts_with
+636,g-regex,false,false,0,272112248,regex-trigram,2,78087834,4641113,false,false,"all(lit-any(n=1,len=11-11),lit-any(n=1,len=6-6))",0,1,AllVersions.*EAAOtM
+632,f-high-frequency,true,false,12602,269355833,literal-positional,419,404882556,16978223,false,false,literal-positional,,1,views
+508,d-metachar-literal,true,false,2375,269193458,literal-positional,467,405723580,17879962,false,false,literal-positional,,1,etc.
+254,b-rare-literal,true,false,2,267863168,literal-positional,22,337986213,16787640,false,false,literal-positional,,1,alivian
+102,a-common-literal,true,false,518,261895541,literal-positional,33,358002845,17009170,false,false,literal-positional,,1,educate
+148,a-common-literal,true,false,293,261096167,literal-positional,32,359745556,17419945,false,false,literal-positional,,1,terrorism
+77,a-common-literal,true,false,89,258789167,literal-positional,31,336497898,16343346,false,false,literal-positional,,1,avocado
+352,c-phrase-literal,true,false,1,258769668,literal-positional,418,295218911,15401574,false,false,literal-positional,,1,ProGet Version
+616,f-high-frequency,true,false,117,258658084,literal-positional,40,248892597,14131577,false,false,literal-positional,,1,localPath
+625,f-high-frequency,true,false,255,258413166,literal-positional,74,324926103,16223824,false,false,literal-positional,,1,setMatcher
+599,f-high-frequency,true,false,91,257733376,literal-positional,43,243100775,14547973,false,false,literal-positional,,1,SelectElement
+80,a-common-literal,true,false,443,257598583,literal-positional,21,341348309,16814023,false,false,literal-positional,,1,birl
+938,h-case-insensitive,true,true,5,256556710,regex-trigram,53,65338518,1009062,false,false,"lit-any(n=8,len=3-3)",9540,10,external_url
+810,g-regex,false,false,0,256059043,regex-trigram,76,167325263,2777711,false,false,"lit-any(n=1,len=9-9)",0,1,etreeplot[ \t]
+665,g-regex,false,false,2,255932791,regex-trigram,347,142329371,1524636,false,false,"lit-any(n=1,len=7-7)",9,10,"Flowers[(){};,]"
+91,a-common-literal,true,false,4,255817917,literal-positional,55,362706659,16736268,false,false,literal-positional,,1,controls_display
+373,c-phrase-literal,true,false,5,255753208,literal-positional,199,325366857,15617773,false,false,literal-positional,,1,class Writer
+43,a-common-literal,true,false,15,254614583,literal-positional,34,271021342,14863658,false,false,literal-positional,,1,PricePerAdditionalServer
+608,f-high-frequency,true,false,263,254329166,literal-positional,23,344808944,16950325,false,false,literal-positional,,1,emmet
+607,f-high-frequency,true,false,40,252881874,literal-positional,75,344748694,15492862,false,false,literal-positional,,1,disableEventListeners
+630,f-high-frequency,true,false,28,252487834,literal-positional,43,337457609,15865523,false,false,literal-positional,,1,usernameSecret
+19,a-common-literal,true,false,10,250930874,literal-positional,60,261692558,14748940,false,false,literal-positional,,1,FormatterName
+143,a-common-literal,true,false,79,250826666,literal-positional,39,300423685,15606917,false,false,literal-positional,,1,seriesGroup
+522,d-metachar-literal,true,false,14,250422333,literal-positional,98,348154863,16092900,false,false,literal-positional,,1,round((select
+53,a-common-literal,true,false,16369,249160625,literal-positional,67,284939539,15704830,false,false,literal-positional,,1,Tee
+492,d-metachar-literal,true,false,62,248148666,literal-positional,11,236440963,14527911,false,false,literal-positional,,1,Partitions.
+829,g-regex,false,false,0,248001127,regex-trigram,31,85305899,1273568,false,false,"lit-any(n=1,len=9-9)",4,1,"lexically[(){};,]"
+162,b-rare-literal,true,false,1,247875668,literal-positional,3,217237902,13341752,false,false,literal-positional,,1,AmbiguityMonitor
+519,d-metachar-literal,true,false,1501,247714750,literal-positional,242,312242817,15994644,false,false,literal-positional,,1,record.
+489,d-metachar-literal,true,false,5434,247572334,literal-positional,600,265113938,15182917,false,false,literal-positional,,1,Directory.
+527,d-metachar-literal,true,false,454,247309124,literal-positional,149,312183339,15997782,false,false,literal-positional,,1,users.
+617,f-high-frequency,true,false,23,246958250,literal-positional,37,266561748,15098421,false,false,literal-positional,,1,loginCount
+164,b-rare-literal,true,false,1057,245631960,literal-positional,18,303596304,15553477,false,false,literal-positional,,1,Arabian
+523,d-metachar-literal,true,false,1058,245160707,literal-positional,527,336905953,16392415,false,false,literal-positional,,1,them.
+368,c-phrase-literal,true,false,2150,244938999,literal-positional,86,360397617,15952128,false,false,literal-positional,,1,alter table
+55,a-common-literal,true,false,12,244616167,literal-positional,34,223636341,13356311,false,false,literal-positional,,1,TokenException
+235,b-rare-literal,true,false,258,243692958,literal-positional,27,244127896,14763186,false,false,literal-positional,,1,Remembering
+127,a-common-literal,true,false,12,242859585,literal-positional,24,262937208,15112499,false,false,literal-positional,,1,num2fraction
+628,f-high-frequency,true,false,533,242069666,literal-positional,131,334598693,15588120,false,false,literal-positional,,1,thousands
+590,f-high-frequency,true,false,869,240241043,literal-positional,400,299168442,15616399,false,false,literal-positional,,1,Braintree
+34,a-common-literal,true,false,8,239801292,literal-positional,37,237422984,14550037,false,false,literal-positional,,1,LoadUrlForwarding
+271,b-rare-literal,true,false,1,239550917,literal-positional,18,339520327,16635063,false,false,literal-positional,,1,generator_priority
+68,a-common-literal,true,false,13,238663165,literal-positional,24,335775413,16597939,false,false,literal-positional,,1,achromatous
+125,a-common-literal,true,false,95,238630916,literal-positional,20,316087013,15410099,false,false,literal-positional,,1,nonrepresentational
+940,h-case-insensitive,true,true,6,237931750,regex-trigram,41,71524335,1176633,false,false,"lit-any(n=8,len=3-3)",6805,1,first_name_word_flag
+811,g-regex,false,false,1,236736958,regex-trigram,20,45076207,496823,false,false,"lit-any(n=1,len=12-12)",6,1,existingSort[ \t]
+72,a-common-literal,true,false,326,236550666,literal-positional,38,357078387,17359103,false,false,literal-positional,,1,agora
+281,b-rare-literal,true,false,772,236507792,literal-positional,12,272823229,15513830,false,false,literal-positional,,1,lichkeit
+90,a-common-literal,true,false,27,236390750,literal-positional,12,250345902,14363878,false,false,literal-positional,,1,contan
+857,g-regex,false,false,12,233201750,regex-trigram,120,73820865,1021492,false,false,"lit-any(n=1,len=9-9)",20,10,"superCall[(){};,]"
+406,c-phrase-literal,true,false,12471,232790584,literal-positional,5429,315081876,15259169,false,false,literal-positional,,1,public int
+258,b-rare-literal,true,false,1,232495460,literal-positional,12,275511978,15604598,false,false,literal-positional,,1,calendarpicker
+259,b-rare-literal,true,false,28,232296624,literal-positional,18,317801321,15494706,false,false,literal-positional,,1,chauvinistic
+256,b-rare-literal,true,false,31,232201709,literal-positional,13,316628219,15595668,false,false,literal-positional,,1,asperity
+31,a-common-literal,true,false,170,230942917,literal-positional,21,295983220,15334578,false,false,literal-positional,,1,Kannada
+591,f-high-frequency,true,false,15168,230182584,literal-positional,425,283882783,15526431,false,false,literal-positional,,1,Daily
+67,a-common-literal,true,false,9,229654792,literal-positional,16,316206585,15549058,false,false,literal-positional,,1,absorption_indicator
+227,b-rare-literal,true,false,1,229474708,literal-positional,36,245745119,14791658,false,false,literal-positional,,1,PackedBubbleComposition
+371,c-phrase-literal,true,false,21,229137458,literal-positional,25,284967672,15787255,false,false,literal-positional,,1,case group_concat
+265,b-rare-literal,true,false,6,229062749,literal-positional,4,244053863,14064241,false,false,literal-positional,,1,ctela
+92,a-common-literal,true,false,62,228762125,literal-positional,29,333363826,16038521,false,false,literal-positional,,1,corridor
+151,a-common-literal,true,false,37,228696625,literal-positional,62,336898523,15361310,false,false,literal-positional,,1,transformOrigin
+93,a-common-literal,true,false,188,228005793,literal-positional,31,349789630,16715150,false,false,literal-positional,,1,creak
+325,c-phrase-literal,true,false,4,227786375,literal-positional,119,224293260,13452806,false,false,literal-positional,,1,Error handleing
+598,f-high-frequency,true,false,231,227740666,literal-positional,73,244379772,14691610,false,false,literal-positional,,1,NewId
+8,a-common-literal,true,false,9,227679958,literal-positional,8,242087110,14635413,false,false,literal-positional,,1,ChooseColor
+152,a-common-literal,true,false,6325,226259166,literal-positional,493,336824849,15427920,false,false,literal-positional,,1,webk
+604,f-high-frequency,true,false,97,226219373,literal-positional,41,339520633,16696749,false,false,literal-positional,,1,caffeine
+238,b-rare-literal,true,false,3,225748167,literal-positional,14,234187326,14356313,false,false,literal-positional,,1,SaveWebsiteMonitor
+73,a-common-literal,true,false,12,224805585,literal-positional,14,295520795,16262221,false,false,literal-positional,,1,altruistically
+54,a-common-literal,true,false,42,224229207,literal-positional,63,239608414,14662038,false,false,literal-positional,,1,TimeSyncService
+75,a-common-literal,true,false,41,223456375,literal-positional,15,295340289,15322231,false,false,literal-positional,,1,ashram
+3,a-common-literal,true,false,246,223221249,literal-positional,4,222839996,13440831,false,false,literal-positional,,1,AndExpr
+253,b-rare-literal,true,false,1,222654334,literal-positional,23,318232844,15582054,false,false,literal-positional,,1,alcornocal
+32,a-common-literal,true,false,2845,222236625,literal-positional,35,256952992,15088300,false,false,literal-positional,,1,Karma
+374,c-phrase-literal,true,false,25,222175460,literal-positional,30,301643612,14474833,false,false,literal-positional,,1,create any
+363,c-phrase-literal,true,false,714,221739541,literal-positional,453,274511189,15146415,false,false,literal-positional,,1,This will
+272,b-rare-literal,true,false,21,221726832,literal-positional,91,302599906,15036520,false,false,literal-positional,,1,getTranslations
+360,c-phrase-literal,true,false,7,221546415,literal-positional,16,245593976,14692820,false,false,literal-positional,,1,Some generic
+174,b-rare-literal,true,false,1,219762333,literal-positional,6,241607215,14608604,false,false,literal-positional,,1,Blattspreite
+100,a-common-literal,true,false,135,219669584,literal-positional,50,273189884,14728586,false,false,literal-positional,,1,droplist_archive
+798,g-regex,false,false,7,219531501,regex-trigram,156,161681045,2740295,false,false,"lit-any(n=1,len=6-6)",130,1,catena[ \t]
+7,a-common-literal,true,false,16,219480916,literal-positional,5,217254026,13342477,false,false,literal-positional,,1,CaptchaFeatureKind
+353,c-phrase-literal,true,false,21,219166249,literal-positional,53,246242959,14687794,false,false,literal-positional,,1,Produce the
+47,a-common-literal,true,false,48,217290915,literal-positional,8,239585161,14737774,false,false,literal-positional,,1,Stint
+613,f-high-frequency,true,false,154,217090208,literal-positional,71,242381783,10834409,false,false,literal-positional,,1,issuer
+364,c-phrase-literal,true,false,27,216887082,literal-positional,34,239207173,14452493,false,false,literal-positional,,1,Use examples
+321,c-phrase-literal,true,false,6,216717876,literal-positional,5,217263266,13342424,false,false,literal-positional,,1,Drop old
+239,b-rare-literal,true,false,1,216332625,literal-positional,31,234115868,14356893,false,false,literal-positional,,1,TryGetOriginalException
+401,c-phrase-literal,true,false,11854,215789584,literal-positional,1080,242754048,14136251,false,false,literal-positional,,1,inner join
+409,c-phrase-literal,true,false,516,215681083,literal-positional,76,289653041,14628881,false,false,literal-positional,,1,return worker
+593,f-high-frequency,true,false,2604,214713499,literal-positional,37,266626595,15172330,false,false,literal-positional,,1,Etc
+103,a-common-literal,true,false,8,214499709,literal-positional,30,283925293,14496593,false,false,literal-positional,,1,eventService
+5,a-common-literal,true,false,60,214233166,literal-positional,56,247021088,13732692,false,false,literal-positional,,1,BreadCrumb
+293,b-rare-literal,true,false,1,213844625,literal-positional,11,248678456,14884753,false,false,literal-positional,,1,setTransferTimer
+81,a-common-literal,true,false,3,213810833,literal-positional,34,300077100,15448478,false,false,literal-positional,,1,bookmark_edit_name
+418,c-phrase-literal,true,false,103,213505791,literal-positional,112,279589047,14306842,false,false,literal-positional,,1,var returnValue
+84,a-common-literal,true,false,8,213312125,literal-positional,5,234322197,14358644,false,false,literal-positional,,1,cairofontweight
+117,a-common-literal,true,false,120,213207292,literal-positional,31,278234562,15434355,false,false,literal-positional,,1,jpn
+149,a-common-literal,true,false,28,213109665,literal-positional,13,287121668,14698776,false,false,literal-positional,,1,tetrahedron
+326,c-phrase-literal,true,false,16,212164042,literal-positional,36,247552879,14827028,false,false,literal-positional,,1,Export partitons
+976,h-case-insensitive,true,true,6,210409959,regex-trigram,92,94345284,1479114,false,false,"lit-any(n=4,len=3-3)",5636,10,to_linkid
+336,c-phrase-literal,true,false,2,210206167,literal-positional,5,233488400,14342149,false,false,literal-positional,,1,Output change
+25,a-common-literal,true,false,2,209841292,literal-positional,13,234108190,14368775,false,false,literal-positional,,1,HasGoDaddyPermissions
+354,c-phrase-literal,true,false,31,209684125,literal-positional,34,233550235,14343744,false,false,literal-positional,,1,Put credential
+620,f-high-frequency,true,false,24,209621041,literal-positional,11,249643070,13612516,false,false,literal-positional,,1,nonNegativeInteger
+595,f-high-frequency,true,false,40,208478168,literal-positional,4,233491689,14342215,false,false,literal-positional,,1,HamlHighlightRules
+48,a-common-literal,true,false,7,208250542,literal-positional,8,219404196,13370507,false,false,literal-positional,,1,StringConversionTests
+361,c-phrase-literal,true,false,7,208039416,literal-positional,18,265863886,14037480,false,false,literal-positional,,1,Stream the
+609,f-high-frequency,true,false,53,207032208,literal-positional,9,233513526,14342648,false,false,literal-positional,,1,esDocument
+180,b-rare-literal,true,false,1,206784628,literal-positional,7,246255084,14683932,false,false,literal-positional,,1,ChineseHongKong
+359,c-phrase-literal,true,false,1188,206339209,literal-positional,235,285999411,14311039,false,false,literal-positional,,1,Set the
+257,b-rare-literal,true,false,96,206035124,literal-positional,45,279859323,15583732,false,false,literal-positional,,1,bpg
+387,c-phrase-literal,true,false,10,205760834,literal-positional,43,255479546,11106160,false,false,literal-positional,,1,execute partition
+251,b-rare-literal,true,false,15,205687166,literal-positional,7,235606150,14495367,false,false,literal-positional,,1,adule
+10,a-common-literal,true,false,20,203926374,literal-positional,64,236625978,14531530,false,false,literal-positional,,1,DropCatchSupportEmail
+931,h-case-insensitive,true,true,2,203783040,regex-trigram,52,21031888,278768,false,false,"lit-any(n=8,len=3-3)",143,1,cAG9D
+255,b-rare-literal,true,false,2,203026790,literal-positional,10,255566957,14238620,false,false,literal-positional,,1,applyCascade
+109,a-common-literal,true,false,4,202926000,literal-positional,6,244117353,14061831,false,false,literal-positional,,1,hipchat_msg_color
+182,b-rare-literal,true,false,21,202595627,literal-positional,8,242995512,14723323,false,false,literal-positional,,1,Concetta
+597,f-high-frequency,true,false,40,201928001,literal-positional,4,233474625,14341756,false,false,literal-positional,,1,LuceneHighlightRules
+18,a-common-literal,true,false,6,201729792,literal-positional,9,233493088,14342055,false,false,literal-positional,,1,FieldInferrer
+252,b-rare-literal,true,false,3,201319584,literal-positional,3,218120449,13418128,false,false,literal-positional,,1,afeblec
+601,f-high-frequency,true,false,37,201154248,literal-positional,6,217265033,13342463,false,false,literal-positional,,1,TestScenario
+250,b-rare-literal,true,false,1,200111501,literal-positional,4,219180484,13490253,false,false,literal-positional,,1,acogolle
+2,a-common-literal,true,false,9,199330956,literal-positional,80,217759843,13353113,false,false,literal-positional,,1,AdminBetaCode
+56,a-common-literal,true,false,40,198337166,literal-positional,11,238414099,14425096,false,false,literal-positional,,1,Tomer
+624,f-high-frequency,true,false,47,197565209,literal-positional,4,243916191,14058199,false,false,literal-positional,,1,pgba
+761,g-regex,false,false,0,197311415,regex-trigram,113,134645151,4998307,false,false,"lit-any(n=1,len=4-4)",22,10,^[\t ]*IAAG
+316,c-phrase-literal,true,false,3747,196909208,literal-positional,379,219250547,13381143,false,false,literal-positional,,1,Content Include
+317,c-phrase-literal,true,false,2,196609126,literal-positional,9,217304978,13343610,false,false,literal-positional,,1,Copying Files
+167,b-rare-literal,true,false,2,196321418,literal-positional,55,217611963,13350071,false,false,literal-positional,,1,AutoDownloadMimeTypes
+46,a-common-literal,true,false,5020,195772333,literal-positional,24,258719021,15081501,false,false,literal-positional,,1,Schools
+166,b-rare-literal,true,false,7,195625333,literal-positional,5,241182946,14582683,false,false,literal-positional,,1,Auskunft
+306,b-rare-literal,true,false,18,195465875,literal-positional,6,223129594,13526472,false,false,literal-positional,,1,zlas
+400,c-phrase-literal,true,false,18,195229794,literal-positional,25,250065383,13651740,false,false,literal-positional,,1,import datetime
+236,b-rare-literal,true,false,1,194412082,literal-positional,5,218919164,13381496,false,false,literal-positional,,1,RenameSearchComments
+787,g-regex,false,false,0,194218293,regex-trigram,11,66498123,1024714,false,false,"lit-any(n=1,len=10-10)",2,1,"accoucheur[(){};,]"
+249,b-rare-literal,true,false,1,194112040,literal-positional,4,219411410,13513350,false,false,literal-positional,,1,accionan
+362,c-phrase-literal,true,false,11,193337501,literal-positional,11,217300404,13343304,false,false,literal-positional,,1,Tasks for
+828,g-regex,false,false,0,193027709,regex-trigram,60,54207110,400722,false,false,"lit-any(n=1,len=8-8)",4,1,"lessLink[(){};,]"
+95,a-common-literal,true,false,8,192034500,literal-positional,4,218084413,13358644,false,false,literal-positional,,1,cubrid_rollback
+116,a-common-literal,true,false,47,191758584,literal-positional,27,228327624,13527648,false,false,literal-positional,,1,jdK
+33,a-common-literal,true,false,107,191570958,literal-positional,54,257901202,14868276,false,false,literal-positional,,1,KtB
+407,c-phrase-literal,true,false,2,191114999,literal-positional,32,227196259,13588686,false,false,literal-positional,,1,remove credentials
+144,a-common-literal,true,false,10,188107793,literal-positional,4,217470999,13346865,false,false,literal-positional,,1,sgbs
+244,b-rare-literal,true,false,1,187818374,literal-positional,3,217311763,13343269,false,false,literal-positional,,1,WindowTop
+915,h-case-insensitive,true,true,313,186905291,regex-trigram,95,119851027,1573623,false,false,"lit-any(n=4,len=3-3)",2002,10,_weight
+172,b-rare-literal,true,false,14,185711709,literal-positional,7,221190228,13501535,false,false,literal-positional,,1,Bettye
+210,b-rare-literal,true,false,3,185087334,literal-positional,3,217427242,13341688,false,false,literal-positional,,1,Gdoa
+248,b-rare-literal,true,false,35,183939875,literal-positional,11,234809688,14367924,false,false,literal-positional,,1,a108
+408,c-phrase-literal,true,false,7801,183797167,literal-positional,1035,253316933,10302606,false,false,literal-positional,,1,return null
+142,a-common-literal,true,false,3,180961833,literal-positional,25,190691587,10007437,false,false,literal-positional,,1,secondCaptain
+913,h-case-insensitive,true,true,33,180731209,regex-trigram,139,125780322,1559258,false,false,"lit-any(n=4,len=3-3)",3920,10,_authContext
+405,c-phrase-literal,true,false,16385,180679458,literal-positional,13701,229939529,10941684,false,false,literal-positional,,1,public class
+45,a-common-literal,true,false,20,180119834,literal-positional,14,217696382,13368556,false,false,literal-positional,,1,RecaptchaEnterprise
+211,b-rare-literal,true,false,5,179179460,literal-positional,4,217265795,13342518,false,false,literal-positional,,1,GetFabals
+983,h-case-insensitive,true,true,9,178746959,regex-trigram,32,14646269,285756,false,false,"lit-any(n=8,len=3-3)",20661,1,zone_domains_tld_company
+161,b-rare-literal,true,false,1,176882792,literal-positional,14,158013052,9711255,false,false,literal-positional,,1,AddToSetEach
+800,g-regex,false,false,6,174808542,regex-trigram,37,148137271,2418138,false,false,"lit-any(n=1,len=8-8)",27,1,cliquish[ \t]
+727,g-regex,false,false,6,173837916,regex-trigram,36,91330198,4667665,false,false,"lit-any(n=1,len=5-5)",6,1,\bEAAUM\b
+928,h-case-insensitive,true,true,15,173503291,regex-trigram,36,80052383,1132783,false,false,"lit-any(n=8,len=3-3)",164,1,baffin_island
+224,b-rare-literal,true,false,1,172178167,literal-positional,3,217235483,13341698,false,false,literal-positional,,1,MemCount
+861,g-regex,false,false,0,171788082,regex-trigram,2,76722038,4640476,false,false,"all(lit-any(n=1,len=5-5),lit-any(n=1,len=6-6))",0,1,tyros.*SAAUlC
+136,a-common-literal,true,false,57,171142042,literal-positional,23,229986316,13544533,false,false,literal-positional,,1,q92
+838,g-regex,false,false,2,169943459,regex-trigram,442,143240709,2929066,false,false,"lit-any(n=1,len=5-5)",233,10,nsche[ \t]
+134,a-common-literal,true,false,34,167539251,literal-positional,40,246248668,10875689,false,false,literal-positional,,1,professionally
+213,b-rare-literal,true,false,1,165750542,literal-positional,13,147347915,8857435,false,false,literal-positional,,1,HtmlGifTransparent
+821,g-regex,false,false,295,165053251,regex-trigram,149,131107986,1854339,false,false,"lit-any(n=1,len=4-4)",2281,1,"iece[(){};,]"
+788,g-regex,false,false,0,161160249,regex-trigram,18,74611781,1022692,false,false,"lit-any(n=1,len=7-7)",97,1,"afflict[(){};,]"
+377,c-phrase-literal,true,false,5,157311958,literal-positional,23,241519464,10007070,false,false,literal-positional,,1,def create_checkpoint
+300,b-rare-literal,true,false,1,156612124,literal-positional,5,153349998,9049572,false,false,literal-positional,,1,useraccountid
+9,a-common-literal,true,false,12,155381583,literal-positional,8,141513227,8702924,false,false,literal-positional,,1,DnsElement
+499,d-metachar-literal,true,false,3372,152276541,literal-positional,255,244935819,10250655,false,false,literal-positional,,1,a.b
+621,f-high-frequency,true,false,96,150912167,literal-positional,10,168965067,9450336,false,false,literal-positional,,1,openTabstops
+953,h-case-insensitive,true,true,56,149463207,regex-trigram,9,55692513,828633,false,false,"lit-any(n=8,len=3-3)",4506,1,magic_quotes_runtime
+22,a-common-literal,true,false,3,147668666,literal-positional,2,141479762,8704463,false,false,literal-positional,,1,GeoAddAsync
+762,g-regex,false,false,0,147540624,regex-trigram,15,80291408,4669584,false,false,"lit-any(n=1,len=6-6)",3,1,^[\t ]*IAAKhN
+131,a-common-literal,true,false,15,146588875,literal-positional,31,184199316,9934718,false,false,literal-positional,,1,payment_group_reference
+118,a-common-literal,true,false,26,142543667,literal-positional,111,194225617,9992225,false,false,literal-positional,,1,keepAlive
+380,c-phrase-literal,true,false,5,142411542,literal-positional,32,210633285,9774887,false,false,literal-positional,,1,def show_progress
+122,a-common-literal,true,false,19,142167334,literal-positional,10,174290365,9769927,false,false,literal-positional,,1,maestri
+288,b-rare-literal,true,false,7,140827084,literal-positional,5,158417197,9711103,false,false,literal-positional,,1,p990
+133,a-common-literal,true,false,2,139452792,literal-positional,5,171775624,8867284,false,false,literal-positional,,1,postCreated
+222,b-rare-literal,true,false,43,137921416,literal-positional,24,165926844,9731587,false,false,literal-positional,,1,M84
+69,a-common-literal,true,false,6,136590376,literal-positional,7,180366331,9839668,false,false,literal-positional,,1,acipenser_huso
+606,f-high-frequency,true,false,53,135758958,literal-positional,10,144444296,8784730,false,false,literal-positional,,1,dLogDate
+914,h-case-insensitive,true,true,12,134606833,regex-trigram,57,93692183,1141696,false,false,"lit-any(n=4,len=3-3)",4723,1,_meridiemParse
+824,g-regex,false,false,0,134405958,regex-trigram,101,67440183,1135887,false,false,"lit-any(n=1,len=6-6)",18,1,"isReal[(){};,]"
+94,a-common-literal,true,false,6,132748708,literal-positional,4,157659515,9702533,false,false,literal-positional,,1,creditCardFee
+130,a-common-literal,true,false,10,132141751,literal-positional,37,145627823,8803375,false,false,literal-positional,,1,output_type
+121,a-common-literal,true,false,24,128638084,literal-positional,5,141542563,8705148,false,false,literal-positional,,1,llGetMaxScaleFactor
+795,g-regex,false,false,6,128287209,regex-trigram,44,144807549,2441076,false,false,"lit-any(n=1,len=7-7)",10,1,brumous[ \t]
+733,g-regex,false,false,4,127848334,regex-trigram,3,79388496,4664500,false,false,"lit-any(n=1,len=9-9)",1,1,\bOPENQUERY\b
+282,b-rare-literal,true,false,1,126550750,literal-positional,4,171646824,8866628,false,false,literal-positional,,1,linearGradient6449
+120,a-common-literal,true,false,4,123612250,literal-positional,14,141920723,8711362,false,false,literal-positional,,1,lines_added
+830,g-regex,false,false,122,122425335,regex-trigram,31,108575802,2040121,false,false,"lit-any(n=1,len=7-7)",180,1,loyalty[ \t]
+155,a-common-literal,true,false,9,118371458,literal-positional,4,143536417,8750987,false,false,literal-positional,,1,zone_domains_tld_aarp
+225,b-rare-literal,true,false,1,118168335,literal-positional,2,141378948,8701513,false,false,literal-positional,,1,NotePad
+158,b-rare-literal,true,false,1,117259833,literal-positional,2,143543035,8834844,false,false,literal-positional,,1,Abarbeitungs
+414,c-phrase-literal,true,false,31590,116806459,literal-positional,3466,224817159,3880066,false,false,literal-positional,,1,to the
+138,a-common-literal,true,false,44,116321874,literal-positional,55,193379433,7215153,false,false,literal-positional,,1,registrar_param_history
+648,g-regex,false,false,56,116131374,regex-trigram,76,93365347,1600253,false,false,"lit-any(n=1,len=7-7)",122,1,Captain[ \t]
+78,a-common-literal,true,false,4,114798625,literal-positional,5,141551375,8703783,false,false,literal-positional,,1,baidu_rank
+23,a-common-literal,true,false,7,110651793,literal-positional,4,145783898,8728819,false,false,literal-positional,,1,H346
+654,g-regex,false,false,3,102245624,regex-trigram,6,2855373,881,false,false,"lit-any(n=1,len=6-6)",3,1,"EAAMlP[(){};,]"
+836,g-regex,false,false,48,92042584,regex-trigram,240,58569220,804637,false,false,"lit-any(n=1,len=4-4)",590,10,"nFor[(){};,]"
+1,a-common-literal,true,false,4,90371501,literal-positional,2,78027512,4773631,false,false,literal-positional,,1,Abgang
+378,c-phrase-literal,true,false,5,90293291,literal-positional,9,108707727,4877052,false,false,literal-positional,,1,def do_backup_final
+818,g-regex,false,false,11,86953833,regex-trigram,25,40720491,924950,false,false,"lit-any(n=1,len=8-8)",19,1,hrspacer[ \t]
+278,b-rare-literal,true,false,2,81528542,literal-positional,4,79642242,4824439,false,false,literal-positional,,1,iguieren
+398,c-phrase-literal,true,false,10,81113293,literal-positional,306,137333931,2191536,false,false,literal-positional,,1,if stream_option
+834,g-regex,false,false,0,69913584,regex-trigram,8,10957734,210011,false,false,"lit-any(n=1,len=12-12)",44,1,macroEnabled[ \t]
+170,b-rare-literal,true,false,404,65582332,literal-positional,129,114287524,4969270,false,false,literal-positional,,1,BCD
+655,g-regex,false,false,4,62848585,regex-trigram,6,829863,6,false,false,"lit-any(n=1,len=7-7)",4,1,"EAAOxgB[(){};,]"
+668,g-regex,false,false,15,62769124,regex-trigram,49,61403459,164112,false,false,"lit-any(n=1,len=5-5)",14,1,"GAASD[(){};,]"
+495,d-metachar-literal,true,false,30669,62401042,literal-positional,2443,140037656,2214428,false,false,literal-positional,,1,[0]
+674,g-regex,false,false,14,60092542,regex-trigram,54,31060778,1006,false,false,"lit-any(n=1,len=5-5)",13,1,"IAASA[(){};,]"
+633,f-high-frequency,true,false,377,59405250,literal-positional,49,122423839,2618883,false,false,literal-positional,,1,withdrawal
+395,c-phrase-literal,true,false,8621,57828250,literal-positional,1698,138560879,2242114,false,false,literal-positional,,1,if not
+413,c-phrase-literal,true,false,269,55585876,literal-positional,186,120802030,1735837,false,false,literal-positional,,1,to manage
+659,g-regex,false,false,1,54275418,regex-trigram,15,4846192,890,false,false,"lit-any(n=1,len=7-7)",1,1,"EAAkBhI[(){};,]"
+638,g-regex,false,false,0,54190085,regex-trigram,0,0,0,false,false,"all(lit-any(n=1,len=8-8),lit-any(n=1,len=7-7))",0,1,Apotheke.*EiEpqPM
+394,c-phrase-literal,true,false,7,52557707,literal-positional,274,92824216,1230053,false,false,literal-positional,,1,if mariadb_version
+89,a-common-literal,true,false,6,49201793,literal-positional,103,113289903,1667389,false,false,literal-positional,,1,consul_target
+790,g-regex,false,false,0,48299418,regex-trigram,4,29967359,765929,false,false,"lit-any(n=1,len=6-6)",0,1,"ahchoo[(){};,]"
+516,d-metachar-literal,true,false,1583,46896167,literal-positional,244,99201143,2004912,false,false,literal-positional,,1,module.exports
+650,g-regex,false,false,0,46215667,regex-trigram,0,0,0,false,false,"lit-any(n=1,len=11-11)",0,1,Dativobjekt[ \t]
+799,g-regex,false,false,28,43531873,regex-trigram,22,34124680,773614,false,false,"lit-any(n=1,len=3-3)",58,1,"ccb[(){};,]"
+472,d-metachar-literal,true,false,42622,43247959,literal-positional,311,16644500,385676,false,false,literal-positional,,1,/*!50003
+512,d-metachar-literal,true,false,12455,42161500,literal-positional,1104,105731768,1746499,false,false,literal-positional,,1,i++
+937,h-case-insensitive,true,true,8,41971376,regex-trigram,2,849650,16957,false,false,"lit-any(n=8,len=3-3)",238,1,event_buffer_fd_set
+701,g-regex,false,false,16,41455666,regex-trigram,34,7858045,129724,false,false,"lit-any(n=1,len=7-7)",10,10,XmlMode[ \t]
+87,a-common-literal,true,false,27,41302166,literal-positional,15,57166874,2106280,false,false,literal-positional,,1,concernedly
+124,a-common-literal,true,false,115,41015166,literal-positional,23,116328314,2483653,false,false,literal-positional,,1,modesty
+412,c-phrase-literal,true,false,420,39569125,literal-positional,74,121858437,1852449,false,false,literal-positional,,1,sum of
+123,a-common-literal,true,false,14,38985583,literal-positional,12,96072765,2019797,false,false,literal-positional,,1,mediastinum
+956,h-case-insensitive,true,true,4,38982750,regex-trigram,73,13778129,304363,false,false,"lit-any(n=4,len=3-3)",6098,1,mysql_user_system
+521,d-metachar-literal,true,false,437,38653082,literal-positional,178,45266762,486823,false,false,literal-positional,,1,results)
+393,c-phrase-literal,true,false,87,37130585,literal-positional,48,72610559,1128687,false,false,literal-positional,,1,if int
+605,f-high-frequency,true,false,1643,34725082,literal-positional,388,7555094,247439,false,false,literal-positional,,1,cflocation
+854,g-regex,false,false,19,34267624,regex-trigram,11,32729493,838189,false,false,"lit-any(n=1,len=3-3)",107,1,srv[ \t]
+480,d-metachar-literal,true,false,14327,33794708,literal-positional,2522,60133347,925608,false,false,literal-positional,,1,=> {
+592,f-high-frequency,true,false,30,32839917,literal-positional,29,4054420,29,false,false,literal-positional,,1,EAAYC
+85,a-common-literal,true,false,13,32501291,literal-positional,11,73831962,1935908,false,false,literal-positional,,1,caparisoned
+403,c-phrase-literal,true,false,149,31486752,literal-positional,57,82824588,2030713,false,false,literal-positional,,1,loop through
+675,g-regex,false,false,21,31047125,regex-trigram,55,23777552,278,false,false,"lit-any(n=1,len=4-4)",30,10,"IACR[(){};,]"
+74,a-common-literal,true,false,20,30957250,literal-positional,13,94201244,1836832,false,false,literal-positional,,1,amazingly
+415,c-phrase-literal,true,false,14,30373583,literal-positional,12,26708366,716652,false,false,literal-positional,,1,use tc_mysqlmgmt
+333,c-phrase-literal,true,false,76,29369416,literal-positional,18,441865,9967,false,false,literal-positional,,1,IF p_function
+99,a-common-literal,true,false,6,29318543,literal-positional,14,35320953,1011646,false,false,literal-positional,,1,def_timezone
+465,d-metachar-literal,true,false,996,28424916,literal-positional,283,96172316,979380,false,false,literal-positional,,1,(x)
+466,d-metachar-literal,true,false,3103,27708291,literal-positional,604,76251878,832185,false,false,literal-positional,,1,");"""
+264,b-rare-literal,true,false,16,25617750,literal-positional,9,38310209,1039009,false,false,literal-positional,,1,croaky
+817,g-regex,false,false,0,25550792,regex-trigram,17,39563169,831742,false,false,"lit-any(n=1,len=4-4)",5,1,hdml[ \t]
+70,a-common-literal,true,false,11,24369916,literal-positional,44,57122513,884936,false,false,literal-positional,,1,activeConfig
+757,g-regex,false,false,0,24365041,regex-trigram,20,27770172,2122,false,false,"lit-any(n=1,len=6-6)",3,1,^[\t ]*EAAGqB
+115,a-common-literal,true,false,22,23311251,literal-positional,15,55389465,828159,false,false,literal-positional,,1,ip_start
+137,a-common-literal,true,false,24,23075501,literal-positional,8,26680827,716403,false,false,literal-positional,,1,qpress
+505,d-metachar-literal,true,false,2148,22899249,literal-positional,174,52577524,980436,false,false,literal-positional,,1,a|b
+315,c-phrase-literal,true,false,534,22846833,literal-positional,193,56986658,925812,false,false,literal-positional,,1,Check if
+6,a-common-literal,true,false,7,22708249,literal-positional,7,1505983,7,false,false,literal-positional,,1,CAAChL
+402,c-phrase-literal,true,false,20,22468250,literal-positional,22,39189124,1080094,false,false,literal-positional,,1,log them
+987,i-unicode,true,false,4,22253417,literal-positional,5,28219793,846180,false,false,literal-positional,,1,cadalozlaşmak
+381,c-phrase-literal,true,false,10,21790833,literal-positional,9,27611468,742603,false,false,literal-positional,,1,def signal_handler
+690,g-regex,false,false,3,21691459,regex-trigram,5,1418583,5,false,false,"lit-any(n=1,len=7-7)",3,1,"SAAUnoB[(){};,]"
+835,g-regex,false,false,0,21670291,regex-trigram,1,2228214,876,false,false,"all(lit-any(n=1,len=7-7),lit-any(n=1,len=6-6))",0,1,mystify.*SAAiBC
+758,g-regex,false,false,0,21355959,regex-trigram,18,3970480,819,false,false,"lit-any(n=1,len=6-6)",9,1,^[\t ]*EAAKwG
+370,c-phrase-literal,true,false,54,20463041,literal-positional,110,75885259,597593,false,false,literal-positional,,1,button icon
+594,f-high-frequency,true,false,6000,20222667,literal-positional,16,3946347,52025,false,false,literal-positional,,1,FullBackups
+506,d-metachar-literal,true,false,2940,19462749,literal-positional,112,36395778,938131,false,false,literal-positional,,1,"cursor.row,"
+994,i-unicode,true,false,1391,18921541,literal-positional,294,50425916,507586,false,false,literal-positional,,1,—
+611,f-high-frequency,true,false,659,18249834,literal-positional,173,36634374,499697,false,false,literal-positional,,1,focusout
+399,c-phrase-literal,true,false,4366,17949376,literal-positional,835,58118703,743930,false,false,literal-positional,,1,img src
+365,c-phrase-literal,true,false,46173,17782751,literal-positional,45,6781628,113095,false,false,literal-positional,,1,VALUES LESS
+728,g-regex,false,false,4,17055626,regex-trigram,5,2757552,880,false,false,"lit-any(n=1,len=7-7)",3,1,\bEAAUxnB\b
+525,d-metachar-literal,true,false,15,16876376,literal-positional,2,553434,16209,false,false,literal-positional,,1,this.pad('{{
+96,a-common-literal,true,false,8,16779375,literal-positional,2,157030,2877,false,false,literal-positional,,1,date_ge_timestamptz
+150,a-common-literal,true,false,7,16708914,literal-positional,5,26885759,723486,false,false,literal-positional,,1,tokenProperties
+532,d-metachar-literal,true,false,1279,16575124,literal-positional,144,15349713,449701,false,false,literal-positional,,1,|cut
+189,b-rare-literal,true,false,2,16566042,literal-positional,7,1095293,7,false,false,literal-positional,,1,EAAQxvB
+517,d-metachar-literal,true,false,7,16242416,literal-positional,3,26676951,715856,false,false,literal-positional,,1,"now(utc=False,"
+513,d-metachar-literal,true,false,9339,15890376,literal-positional,106,22813791,390848,false,false,literal-positional,,1,int(10)
+269,b-rare-literal,true,false,80,15654208,literal-positional,3,5422456,122519,false,false,literal-positional,,1,estibot_droplist_ea
+314,c-phrase-literal,true,false,34,15622958,literal-positional,871,45312204,598752,false,false,literal-positional,,1,Add new
+493,d-metachar-literal,true,false,1920,14609168,literal-positional,1914,19631148,481502,false,false,literal-positional,,1,System.Text;
+379,c-phrase-literal,true,false,5,14540043,literal-positional,18,30625421,719759,false,false,literal-positional,,1,def get_files
+511,d-metachar-literal,true,false,21,14441000,literal-positional,26,44718142,326823,false,false,literal-positional,,1,group_concat(case
+389,c-phrase-literal,true,false,7,14366458,literal-positional,12,51430595,288899,false,false,literal-positional,,1,from optparse
+669,g-regex,false,false,0,14261957,regex-trigram,0,0,0,false,false,"all(lit-any(n=1,len=7-7),lit-any(n=1,len=8-8))",0,1,GAAYrvB.*rightful
+397,c-phrase-literal,true,false,5,14212958,literal-positional,26,36422432,413004,false,false,literal-positional,,1,if snapshot_dir
+391,c-phrase-literal,true,false,5,13833418,literal-positional,4,14300646,351822,false,false,literal-positional,,1,get datadir
+297,b-rare-literal,true,false,1,13594251,literal-positional,5,31822374,206658,false,false,literal-positional,,1,test_stop
+63,a-common-literal,true,false,4,13114041,literal-positional,9,762039,12417,false,false,literal-positional,,1,_regionConfidence
+533,d-metachar-literal,true,false,776,12939459,literal-positional,89,15214284,446020,false,false,literal-positional,,1,|sed
+188,b-rare-literal,true,false,2,12314041,literal-positional,2,249061,2,false,false,literal-positional,,1,EAANnC
+154,a-common-literal,true,false,19,11583625,literal-positional,6,1049950,18396,false,false,literal-positional,,1,wiki_derived_available
+358,c-phrase-literal,true,false,7,11553332,literal-positional,11,783332,14466,false,false,literal-positional,,1,SELECT partition_name
+425,d-metachar-literal,true,false,713,11298001,literal-positional,229,31439942,597552,false,false,literal-positional,,1,"""+"""
+652,g-regex,false,false,2,11284833,regex-trigram,28,15239440,213394,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=3-3))",33,1,E.uBE
+234,b-rare-literal,true,false,1,10941125,literal-positional,1,2602,80,false,false,literal-positional,,1,RabbitMqData
+147,a-common-literal,true,false,39,10557707,literal-positional,13,30950615,218525,false,false,literal-positional,,1,subscribes
+610,f-high-frequency,true,false,80,10544875,literal-positional,3,5422446,122518,false,false,literal-positional,,1,estibot_droplist_cd
+404,c-phrase-literal,true,false,70,10459667,literal-positional,49,41453274,340355,false,false,literal-positional,,1,move them
+682,g-regex,false,false,0,10205581,regex-trigram,10,19422600,19952,false,false,"lit-any(n=1,len=6-6)",3,1,OAAOuS$
+419,c-phrase-literal,true,false,18,10120709,literal-positional,12,31737481,206985,false,false,literal-positional,,1,while not
+496,d-metachar-literal,true,false,105,10075874,literal-positional,24,12159709,341289,false,false,literal-positional,,1,[openbsd]
+439,d-metachar-literal,true,false,2,10067499,literal-positional,1,3285,93,false,false,literal-positional,,1,$TmpDir/Apps.tar
+702,g-regex,false,false,0,9888250,regex-trigram,0,0,0,false,false,"lit-any(n=1,len=6-6)",0,1,YAAMiC[ \t]
+79,a-common-literal,true,false,18,9729457,literal-positional,9,263389,6185,false,false,literal-positional,,1,bgTextureHover
+658,g-regex,false,false,0,9703999,regex-trigram,0,0,0,false,false,"lit-any(n=1,len=7-7)",0,1,EAAgBxO[ \t]
+190,b-rare-literal,true,false,2,9604668,literal-positional,2,264740,2,false,false,literal-positional,,1,EAAStL
+191,b-rare-literal,true,false,1,9578333,literal-positional,1,316181,1,false,false,literal-positional,,1,EAAW6J
+410,c-phrase-literal,true,false,1,9131626,literal-positional,8,1187024,75817,false,false,literal-positional,,1,select volume
+679,g-regex,false,false,3,8960751,regex-trigram,4,2598300,879,false,false,"lit-any(n=1,len=6-6)",3,1,"KAAWoQ[(){};,]"
+13,a-common-literal,true,false,6,8937874,literal-positional,8,1302200,15,false,false,literal-positional,,1,EAAOwsB
+435,d-metachar-literal,true,false,3,8871168,literal-positional,1,13082,351,false,false,literal-positional,,1,$PartitionInfoFile
+49,a-common-literal,true,false,14,8803586,literal-positional,4,395940,6865,false,false,literal-positional,,1,TLDCount
+15,a-common-literal,true,false,1,8614751,literal-positional,2,376173,2,false,false,literal-positional,,1,EAAmBtC
+731,g-regex,false,false,3,8497458,regex-trigram,8,4337753,1803,false,false,"lit-any(n=1,len=6-6)",3,1,\bOAAQic\b
+507,d-metachar-literal,true,false,8,8457876,literal-positional,19,3312698,90224,false,false,literal-positional,,1,date('1900-01-01')
+622,f-high-frequency,true,false,84,8446459,literal-positional,16,2236260,37245,false,false,literal-positional,,1,owned_registrar_id
+110,a-common-literal,true,false,8,8437291,literal-positional,2,849650,16957,false,false,literal-positional,,1,httpresponse_setetag
+528,d-metachar-literal,true,false,332,8277039,literal-positional,63,5070025,125414,false,false,literal-positional,,1,"varchar(255),"
+11,a-common-literal,true,false,5,8187835,literal-positional,5,695884,5,false,false,literal-positional,,1,EAAM3L
+501,d-metachar-literal,true,false,10,8162208,literal-positional,2,12251,377,false,false,literal-positional,,1,ansible.builtin.fetch:
+429,d-metachar-literal,true,false,2,8135667,literal-positional,2,1973,59,false,false,literal-positional,,1,#+$Info.HostName
+446,d-metachar-literal,true,false,393,8109874,literal-positional,14,68055,2361,false,false,literal-positional,,1,$vmName
+59,a-common-literal,true,false,12,8099249,literal-positional,12,35455108,297494,false,false,literal-positional,,1,__zr_style_
+111,a-common-literal,true,false,6,8074209,literal-positional,6,3679477,85521,false,false,literal-positional,,1,idx_acctuser
+140,a-common-literal,true,false,9,7935292,literal-positional,6,15989552,430638,false,false,literal-positional,,1,ruthlessly
+534,d-metachar-literal,true,false,4715,7853041,literal-positional,640,13794608,237905,false,false,literal-positional,,1,"}}"""
+20,a-common-literal,true,false,4,7852082,literal-positional,4,750477,4,false,false,literal-positional,,1,GAAMrC
+330,c-phrase-literal,true,false,2,7796083,literal-positional,1,1207,21,false,false,literal-positional,,1,FROM vsphere_vm_info_latest
+192,b-rare-literal,true,false,1,7680876,literal-positional,1,125107,1,false,false,literal-positional,,1,EAAW9N
+471,d-metachar-literal,true,false,16,7557416,literal-positional,16,3915587,57609,false,false,literal-positional,,1,.d-table-cell
+159,b-rare-literal,true,false,1,7387459,literal-positional,1,2167892,133394,false,false,literal-positional,,1,Abschwellen
+312,c-phrase-literal,true,false,276,7333584,literal-positional,39,611329,14207,false,false,literal-positional,,1,AND table_name
+193,b-rare-literal,true,false,1,7269708,literal-positional,7,940078,7,false,false,literal-positional,,1,EAAkBjD
+420,c-phrase-literal,true,false,44,7222709,literal-positional,32,6254156,118995,false,false,literal-positional,,1,would need
+667,g-regex,false,false,0,7216333,regex-trigram,1,2228214,876,false,false,"all(lit-any(n=1,len=6-6),lit-any(n=1,len=6-6))",0,1,GAAQyU.*admisi
+441,d-metachar-literal,true,false,1496,7108126,literal-positional,62,3684382,53297,false,false,literal-positional,,1,$result
+865,g-regex,false,false,0,7106500,regex-trigram,0,0,0,false,false,"all(lit-any(n=1,len=6-6),lit-any(n=1,len=7-7))",0,1,wheelY.*GACJgkC
+428,d-metachar-literal,true,false,4875,7016499,literal-positional,578,8406576,201218,false,false,literal-positional,,1,"""{{"
+518,d-metachar-literal,true,false,803,6996292,literal-positional,142,9637429,65987,false,false,literal-positional,,1,overflow:hidden;}
+334,c-phrase-literal,true,false,64,6961125,literal-positional,21,1789900,43233,false,false,literal-positional,,1,IF p_type_part
+384,c-phrase-literal,true,false,64,6935584,literal-positional,10,64615,1896,false,false,literal-positional,,1,echo ERROR
+339,c-phrase-literal,true,false,2,6646666,literal-positional,2,100751,364,false,false,literal-positional,,1,PARTITION p_20200730
+463,d-metachar-literal,true,false,226,6600042,literal-positional,59,38930047,328787,false,false,literal-positional,,1,(//
+61,a-common-literal,true,false,8,6329501,literal-positional,2,142988,3101,false,false,literal-positional,,1,_maximumAttachmentSize
+299,b-rare-literal,true,false,8,6302291,literal-positional,7,4243490,95149,false,false,literal-positional,,1,upgrade_count
+291,b-rare-literal,true,false,1,6201917,literal-positional,1,72277,2268,false,false,literal-positional,,1,radialGradient12636
+459,d-metachar-literal,true,false,100,6164041,literal-positional,65,1084323,27511,false,false,literal-positional,,1,'{print
+500,d-metachar-literal,true,false,12,5981625,literal-positional,7,52717,1690,false,false,literal-positional,,1,ansible.builtin.copy:
+436,d-metachar-literal,true,false,3,5962292,literal-positional,1,7779,219,false,false,literal-positional,,1,$Partitions2Archive
+313,c-phrase-literal,true,false,3,5877584,literal-positional,2,14006,307,false,false,literal-positional,,1,AND time
+185,b-rare-literal,true,false,1,5817623,literal-positional,1,105346,1,false,false,literal-positional,,1,EAAK64B
+12,a-common-literal,true,false,5,5782335,literal-positional,4,702061,4,false,false,literal-positional,,1,EAAO6a
+355,c-phrase-literal,true,false,14,5767292,literal-positional,58,1323712,34600,false,false,literal-positional,,1,Run Sync
+323,c-phrase-literal,true,false,1574,5717125,literal-positional,116,11067290,270692,false,false,literal-positional,,1,END IF
+328,c-phrase-literal,true,false,482,5566251,literal-positional,87,2382240,57302,false,false,literal-positional,,1,FROM information_schema
+82,a-common-literal,true,false,3,5536043,literal-positional,2,279225,5656,false,false,literal-positional,,1,boss_spoke
+27,a-common-literal,true,false,7,5157834,literal-positional,6,1070380,6,false,false,literal-positional,,1,IAAKE
+509,d-metachar-literal,true,false,14,5145460,literal-positional,11,979796,16685,false,false,literal-positional,,1,function.</summary>
+396,c-phrase-literal,true,false,388,5047585,literal-positional,8,391603,9423,false,false,literal-positional,,1,if self
+113,a-common-literal,true,false,29,5000374,literal-positional,4,50913,1825,false,false,literal-positional,,1,inputElements
+803,g-regex,false,false,0,4968372,regex-trigram,3,79653,1808,false,false,"lit-any(n=1,len=9-9)",4,1,divTIShow$
+438,d-metachar-literal,true,false,4,4754417,literal-positional,1,2336,60,false,false,literal-positional,,1,$SVCFile
+35,a-common-literal,true,false,247,4728959,literal-positional,16,2483276,35219,false,false,literal-positional,,1,Lucene
+187,b-rare-literal,true,false,1,4544792,literal-positional,1,105346,1,false,false,literal-positional,,1,EAAMsR
+392,c-phrase-literal,true,false,5,4531209,literal-positional,11,112933,3257,false,false,literal-positional,,1,global logger
+344,c-phrase-literal,true,false,2,4505874,literal-positional,2,100751,364,false,false,literal-positional,,1,PARTITION p_20201001
+478,d-metachar-literal,true,false,3,4486457,literal-positional,4,9547215,234369,false,false,literal-positional,,1,395.121
+14,a-common-literal,true,false,3,4483584,literal-positional,3,370086,3,false,false,literal-positional,,1,EAASxP
+470,d-metachar-literal,true,false,240,4435458,literal-positional,2,4340,177,false,false,literal-positional,,1,.ace-xcode
+426,d-metachar-literal,true,false,204,4383044,literal-positional,153,4439544,103609,false,false,literal-positional,,1,""".NET"
+350,c-phrase-literal,true,false,2,4366417,literal-positional,2,100751,364,false,false,literal-positional,,1,PARTITION p_20210201
+101,a-common-literal,true,false,3,4365667,literal-positional,1,21762,399,false,false,literal-positional,,1,dwm_add_new
+618,f-high-frequency,true,false,246,4365458,literal-positional,64,8239610,140435,false,false,literal-positional,,1,lorDepth
+279,b-rare-literal,true,false,1,4331584,literal-positional,1,79347,2067,false,false,literal-positional,,1,jira_affected_user
+295,b-rare-literal,true,false,1,4312876,literal-positional,1,33717,930,false,false,literal-positional,,1,stop2625
+460,d-metachar-literal,true,false,726,4284459,literal-positional,114,11334521,230405,false,false,literal-positional,,1,'{{
+453,d-metachar-literal,true,false,3,4279418,literal-positional,2,20861,570,false,false,literal-positional,,1,${TmpDir}/*.out
+308,c-phrase-literal,true,false,7,4241666,literal-positional,7,62008,1336,false,false,literal-positional,,1,A procedure
+464,d-metachar-literal,true,false,661,4040209,literal-positional,109,9360186,196132,false,false,literal-positional,,1,(SELECT
+468,d-metachar-literal,true,false,6,4001835,literal-positional,3,9943,197,false,false,literal-positional,,1,--user=$MySQLUser
+390,c-phrase-literal,true,false,120,3928625,literal-positional,30,3356846,79927,false,false,literal-positional,,1,function JSX
+734,g-regex,false,false,1,3914290,regex-trigram,12,4438806,901,false,false,"lit-any(n=1,len=7-7)",1,1,\bQACjBnK\b
+175,b-rare-literal,true,false,1,3896292,literal-positional,1,2167892,133394,false,false,literal-positional,,1,Bohlenflo
+531,d-metachar-literal,true,false,38,3896249,literal-positional,8,76330,2009,false,false,literal-positional,,1,|Out-File
+503,d-metachar-literal,true,false,20,3866250,literal-positional,19,186978,5964,false,false,literal-positional,,1,ansible.posix.mount:
+97,a-common-literal,true,false,8,3825418,literal-positional,2,849650,16957,false,false,literal-positional,,1,db2_num_rows
+184,b-rare-literal,true,false,1,3809458,literal-positional,1,137960,1,false,false,literal-positional,,1,EAAEsc
+277,b-rare-literal,true,false,4,3780917,literal-positional,1,2167892,133394,false,false,literal-positional,,1,hlungsergebnis
+58,a-common-literal,true,false,5,3753958,literal-positional,5,3017083,85410,false,false,literal-positional,,1,YtOq
+26,a-common-literal,true,false,9,3703458,literal-positional,9,4222849,16,false,false,literal-positional,,1,IAAIjE
+475,d-metachar-literal,true,false,4,3653708,literal-positional,24,10759210,61327,false,false,literal-positional,,1,10.0.70.0
+332,c-phrase-literal,true,false,32,3607458,literal-positional,16,429614,9751,false,false,literal-positional,,1,IF p_file_format
+104,a-common-literal,true,false,13,3576958,literal-positional,4,209642,4704,false,false,literal-positional,,1,fl_count
+319,c-phrase-literal,true,false,94,3564667,literal-positional,32,3644911,96155,false,false,literal-positional,,1,DROP FUNCTION
+369,c-phrase-literal,true,false,2,3521667,literal-positional,71,457622,12447,false,false,literal-positional,,1,basic Steps
+502,d-metachar-literal,true,false,83,3467958,literal-positional,38,278934,8636,false,false,literal-positional,,1,ansible.builtin.file:
+691,g-regex,false,false,0,3453792,regex-trigram,0,0,0,false,false,"lit-any(n=1,len=7-7)",0,1,SAAyBpG[ \t]
+287,b-rare-literal,true,false,36,3426292,literal-positional,1,159302,7016,false,false,literal-positional,,1,nnosla
+372,c-phrase-literal,true,false,998,3258167,literal-positional,114,2749843,90275,false,false,literal-positional,,1,cfelseif u
+437,d-metachar-literal,true,false,4,3212876,literal-positional,1,3285,93,false,false,literal-positional,,1,$PemFile
+214,b-rare-literal,true,false,1,3206500,literal-positional,1,74930,326,false,false,literal-positional,,1,Humacao_069
+21,a-common-literal,true,false,1,3188708,literal-positional,5,1192654,5,false,false,literal-positional,,1,GAAmB9E
+186,b-rare-literal,true,false,1,3160333,literal-positional,1,219918,1,false,false,literal-positional,,1,EAAMlc
+385,c-phrase-literal,true,false,138,3144167,literal-positional,16,769593,30335,false,false,literal-positional,,1,echo Error
+386,c-phrase-literal,true,false,5,3118460,literal-positional,1,25042,697,false,false,literal-positional,,1,elif opts
+40,a-common-literal,true,false,8,3079586,literal-positional,2,130144,1465,false,false,literal-positional,,1,NoSuchFileError
+443,d-metachar-literal,true,false,112,3064167,literal-positional,19,3931924,16060,false,false,literal-positional,,1,$value
+215,b-rare-literal,true,false,4,3057374,literal-positional,4,15151108,4,false,false,literal-positional,,1,IAC3J
+481,d-metachar-literal,true,false,1,3050833,literal-positional,1,13082,351,false,false,literal-positional,,1,>=a.min_id
+504,d-metachar-literal,true,false,6,3021833,literal-positional,3,41039,1180,false,false,literal-positional,,1,ansible_ssh_pass={{
+741,g-regex,false,false,2,3011251,regex-trigram,3,2736874,878,false,false,"lit-any(n=1,len=5-5)",2,1,\beAsVX\b
+491,d-metachar-literal,true,false,1,3003499,literal-positional,1,7779,219,false,false,literal-positional,,1,MinId=$StartingID
+366,c-phrase-literal,true,false,75,2954166,literal-positional,26,3441968,91586,false,false,literal-positional,,1,WHERE NOT
+687,g-regex,false,false,1,2936874,regex-trigram,9,1412027,16,false,false,"lit-any(n=1,len=6-6)",1,1,"QACrEC[(){};,]"
+241,b-rare-literal,true,false,1,2858666,literal-positional,1,6221,93,false,false,literal-positional,,1,UnitrendsVMBackup
+537,d-metachar-literal,true,false,42,2856581,literal-positional,10,115494,3266,false,false,literal-positional,,1,}}\\Virtual
+430,d-metachar-literal,true,false,545,2803126,literal-positional,187,487107,12766,false,false,literal-positional,,1,$(cat
+228,b-rare-literal,true,false,1,2793333,literal-positional,3,571311,3,false,false,literal-positional,,1,QAAE0rB
+432,d-metachar-literal,true,false,1280,2709916,literal-positional,7,97536,3305,false,false,literal-positional,,1,$0\n\
+442,d-metachar-literal,true,false,418,2660666,literal-positional,44,153136,4910,false,false,literal-positional,,1,$result.changed
+171,b-rare-literal,true,false,1,2604291,literal-positional,1,2167892,133394,false,false,literal-positional,,1,Bedingtheit
+71,a-common-literal,true,false,10,2566416,literal-positional,3,51825,1128,false,false,literal-positional,,1,admin_cc_rep
+596,f-high-frequency,true,false,41,2514833,literal-positional,39,8106456,498,false,false,literal-positional,,1,IAAf
+477,d-metachar-literal,true,false,14,2514833,literal-positional,11,68608,1871,false,false,literal-positional,,1,255.0.0.0
+383,c-phrase-literal,true,false,4,2507751,literal-positional,1,6578,126,false,false,literal-positional,,1,echo  DESTINATION
+207,b-rare-literal,true,false,1,2497083,literal-positional,1,137960,1,false,false,literal-positional,,1,GAAkBj6B
+515,d-metachar-literal,true,false,2,2493417,literal-positional,1,10461,320,false,false,literal-positional,,1,"match(""18"")"
+346,c-phrase-literal,true,false,2,2465959,literal-positional,8,5674902,90760,false,false,literal-positional,,1,PARTITION p_20201022
+996,i-unicode,true,false,442,2463626,literal-positional,117,3983968,104834,false,false,literal-positional,,1,→
+206,b-rare-literal,true,false,1,2424915,literal-positional,1,53753,1,false,false,literal-positional,,1,GAAgBjM
+66,a-common-literal,true,false,2,2410127,literal-positional,2,2341114,120233,false,false,literal-positional,,1,abrenunciar
+310,c-phrase-literal,true,false,1378,2338834,literal-positional,33,951049,15333,false,false,literal-positional,,1,ADD PARTITION
+357,c-phrase-literal,true,false,2,2295499,literal-positional,1,12616,271,false,false,literal-positional,,1,SELECT mean
+216,b-rare-literal,true,false,1,2275499,literal-positional,1,105346,1,false,false,literal-positional,,1,KAAOyG
+320,c-phrase-literal,true,false,125,2234332,literal-positional,27,3484762,92633,false,false,literal-positional,,1,DROP TEMPORARY
+820,g-regex,false,false,0,2226374,regex-trigram,1,2228214,876,false,false,"all(lit-any(n=1,len=5-5),lit-any(n=1,len=6-6))",0,1,iBAGR.*IAUNrG
+486,d-metachar-literal,true,false,213,2101294,literal-positional,44,4133309,108264,false,false,literal-positional,,1,CAST(
+476,d-metachar-literal,true,false,980,2080542,literal-positional,102,2720162,39416,false,false,literal-positional,,1,10.0.80.13
+294,b-rare-literal,true,false,4,2067917,literal-positional,2,283401,5454,false,false,literal-positional,,1,sideboxBeige_b
+203,b-rare-literal,true,false,3,2042624,literal-positional,3,5082266,152495,false,false,literal-positional,,1,FNRm
+168,b-rare-literal,true,false,1,2041916,literal-positional,1,219918,1,false,false,literal-positional,,1,BAACjF
+289,b-rare-literal,true,false,1,2028459,literal-positional,9,6060732,97825,false,false,literal-positional,,1,p_20180327
+28,a-common-literal,true,false,2,2018041,literal-positional,5,1009898,5,false,false,literal-positional,,1,IAAM0xB
+205,b-rare-literal,true,false,1,1974208,literal-positional,6,1085033,6,false,false,literal-positional,,1,GAAI5sB
+469,d-metachar-literal,true,false,1874,1963459,literal-positional,177,484229,9188,false,false,literal-positional,,1,.ForMember(d
+62,a-common-literal,true,false,2,1884043,literal-positional,1,5973,151,false,false,literal-positional,,1,_memCacheKey
+41,a-common-literal,true,false,3,1879376,literal-positional,3,370086,3,false,false,literal-positional,,1,OAASjR
+318,c-phrase-literal,true,false,87,1843709,literal-positional,25,3646250,96920,false,false,literal-positional,,1,DEALLOCATE PREPARE
+367,c-phrase-literal,true,false,289,1824790,literal-positional,49,679432,15737,false,false,literal-positional,,1,WHERE table_schema
+988,i-unicode,true,false,21,1811834,literal-positional,4,2542630,116375,false,false,literal-positional,,1,café
+340,c-phrase-literal,true,false,2,1777751,literal-positional,2,100751,364,false,false,literal-positional,,1,PARTITION p_20200804
+153,a-common-literal,true,false,3,1740042,literal-positional,3,23189,203,false,false,literal-positional,,1,whoislog_readonly
+146,a-common-literal,true,false,12,1704334,literal-positional,3,1203044,22385,false,false,literal-positional,,1,subPixelFix
+382,c-phrase-literal,true,false,10,1701710,literal-positional,1,25042,697,false,false,literal-positional,,1,def start_backup
+309,c-phrase-literal,true,false,32,1696958,literal-positional,31,1077047,27338,false,false,literal-positional,,1,A script
+345,c-phrase-literal,true,false,2,1677916,literal-positional,2,100751,364,false,false,literal-positional,,1,PARTITION p_20201005
+243,b-rare-literal,true,false,1,1645417,literal-positional,1,74930,326,false,false,literal-positional,,1,Veraguas_10
+700,g-regex,false,false,0,1589208,regex-trigram,27,6087959,909,false,false,"lit-any(n=1,len=6-6)",3,1,WACtBC$
+348,c-phrase-literal,true,false,2,1504916,literal-positional,2,100751,364,false,false,literal-positional,,1,PARTITION p_20201230
+275,b-rare-literal,true,false,20,1494500,literal-positional,12,7798973,75214,false,false,literal-positional,,1,h1K
+132,a-common-literal,true,false,8,1486084,literal-positional,5,203414,4033,false,false,literal-positional,,1,poly_in
+729,g-regex,false,false,1,1457792,regex-trigram,3,2571886,878,false,false,"lit-any(n=1,len=7-7)",1,1,\bKAGxDsF\b
+284,b-rare-literal,true,false,1,1440335,literal-positional,3,4796,126,false,false,literal-positional,,1,max_concurrent_requests
+36,a-common-literal,true,false,3,1416667,literal-positional,3,421548,3,false,false,literal-positional,,1,MAAMlI
+732,g-regex,false,false,1,1410374,regex-trigram,1,53959,1,false,false,"lit-any(n=1,len=6-6)",1,1,\bOACLhF\b
+375,c-phrase-literal,true,false,107,1370208,literal-positional,14,427589,10445,false,false,literal-positional,,1,def __init__
+458,d-metachar-literal,true,false,63,1316751,literal-positional,16,2158836,64802,false,false,literal-positional,,1,'\n';
+341,c-phrase-literal,true,false,2,1304335,literal-positional,2,100751,364,false,false,literal-positional,,1,PARTITION p_20200812
+661,g-regex,false,false,3,1265959,regex-trigram,5,1399344,5,false,false,"lit-any(n=1,len=5-5)",3,1,"ECjCc[(){};,]"
+337,c-phrase-literal,true,false,2,1229375,literal-positional,4,120958,717,false,false,literal-positional,,1,PARTITION p_20200525
+229,b-rare-literal,true,false,2,1216790,literal-positional,2,447031,2,false,false,literal-positional,,1,QAAIiN
+221,b-rare-literal,true,false,2,1209917,literal-positional,2,17111,464,false,false,literal-positional,,1,LaunchConfig
+376,c-phrase-literal,true,false,5,1170416,literal-positional,1,25042,697,false,false,literal-positional,,1,def backup_using_wdt
+331,c-phrase-literal,true,false,2,1129958,literal-positional,2,15415,346,false,false,literal-positional,,1,Get GTID
+356,c-phrase-literal,true,false,36,1116666,literal-positional,16,2243972,50024,false,false,literal-positional,,1,SELECT g
+83,a-common-literal,true,false,8,1113499,literal-positional,1,23162,256,false,false,literal-positional,,1,bwperim
+327,c-phrase-literal,true,false,20,1078375,literal-positional,19,443924,10010,false,false,literal-positional,,1,FROM day_num
+37,a-common-literal,true,false,3,1078084,literal-positional,3,370086,3,false,false,literal-positional,,1,MAAU2I
+60,a-common-literal,true,false,10,1076876,literal-positional,7,2732088,48463,false,false,literal-positional,,1,_goodBad
+98,a-common-literal,true,false,8,1063666,literal-positional,2,849650,16957,false,false,literal-positional,,1,dbplus_sql
+246,b-rare-literal,true,false,1,1032959,literal-positional,1,59391,1,false,false,literal-positional,,1,YAAsBgF
+990,i-unicode,true,false,5,995709,literal-positional,3,1069114,72411,false,false,literal-positional,,1,naïve
+223,b-rare-literal,true,false,1,989042,literal-positional,1,109089,1,false,false,literal-positional,,1,MAAlCkE
+303,b-rare-literal,true,false,7,988875,literal-positional,5,2311015,6377,false,false,literal-positional,,1,v307
+240,b-rare-literal,true,false,1,961458,literal-positional,1,316181,1,false,false,literal-positional,,1,UAAWc
+349,c-phrase-literal,true,false,2,960377,literal-positional,2,100751,364,false,false,literal-positional,,1,PARTITION p_20201231
+226,b-rare-literal,true,false,1,930417,literal-positional,1,192479,1,false,false,literal-positional,,1,OAAO5f
+181,b-rare-literal,true,false,1,928457,literal-positional,1,74930,326,false,false,literal-positional,,1,Coahuila_07
+535,d-metachar-literal,true,false,216,908292,literal-positional,74,1365892,31081,false,false,literal-positional,,1,"}}"","
+989,i-unicode,true,false,1,902166,literal-positional,1,8048,185,false,false,literal-positional,,1,cluster’s
+4,a-common-literal,true,false,8,886083,literal-positional,2,5030,193,false,false,literal-positional,,1,B83426
+307,b-rare-literal,true,false,2,875668,literal-positional,2,403716,7411,false,false,literal-positional,,1,zonefile_search2
+698,g-regex,false,false,2,859876,regex-trigram,8,2397206,245,false,false,"all(lit-any(n=1,len=1-1),lit-any(n=1,len=4-4))",2,1,W.BzBW
+444,d-metachar-literal,true,false,34,855833,literal-positional,6,54678,1824,false,false,literal-positional,,1,$vmMemoryMax
+129,a-common-literal,true,false,4,850750,literal-positional,4,1770527,51246,false,false,literal-positional,,1,oOCtoJ3F17kglZC
+342,c-phrase-literal,true,false,2,846249,literal-positional,2,100751,364,false,false,literal-positional,,1,PARTITION p_20200823
+76,a-common-literal,true,false,57,842791,literal-positional,19,2948747,36310,false,false,literal-positional,,1,avg_us
+764,g-regex,false,false,0,833873,regex-trigram,7,2723910,195,false,false,"lit-any(n=1,len=5-5)",2,1,^[\t ]*IAuBK
+44,a-common-literal,true,false,3,827707,literal-positional,3,985006,28714,false,false,literal-positional,,1,QIZrnhueC1W0gYlDEeaPr
+322,c-phrase-literal,true,false,34,813169,literal-positional,6,54678,1824,false,false,literal-positional,,1,Dynamic mem
+600,f-high-frequency,true,false,40,791041,literal-positional,2,468795,13966,false,false,literal-positional,,1,T_IS_IDENTICAL
+351,c-phrase-literal,true,false,2,757126,literal-positional,2,100751,364,false,false,literal-positional,,1,PARTITION p_20210205
+338,c-phrase-literal,true,false,2,755208,literal-positional,4,120958,717,false,false,literal-positional,,1,PARTITION p_20200610
+163,b-rare-literal,true,false,1,743584,literal-positional,1,74930,326,false,false,literal-positional,,1,Ana_M3
+52,a-common-literal,true,false,6,737541,literal-positional,4,162843,8632,false,false,literal-positional,,1,TclPrdWebNb11
+343,c-phrase-literal,true,false,2,720209,literal-positional,2,100751,364,false,false,literal-positional,,1,PARTITION p_20200927
+105,a-common-literal,true,false,9,713915,literal-positional,3,2161274,49537,false,false,literal-positional,,1,fpcrj9c3d
+292,b-rare-literal,true,false,3,706583,literal-positional,3,1156584,33509,false,false,literal-positional,,1,s3sxcCLjJfsBi
+64,a-common-literal,true,false,16,688416,literal-positional,15,2185561,22,false,false,literal-positional,,1,aAAcD
+50,a-common-literal,true,false,5,666333,literal-positional,16,456082,17111,false,false,literal-positional,,1,TclPrdAkTest2
+347,c-phrase-literal,true,false,2,640167,literal-positional,2,100751,364,false,false,literal-positional,,1,PARTITION p_20201228
+514,d-metachar-literal,true,false,3,639167,literal-positional,3,16164,516,false,false,literal-positional,,1,ip_addr)
+530,d-metachar-literal,true,false,52,636334,literal-positional,13,2002245,2430,false,false,literal-positional,,1,{role:
+242,b-rare-literal,true,false,1,616166,literal-positional,1,241519,4753,false,false,literal-positional,,1,Variations_
+311,c-phrase-literal,true,false,22,614831,literal-positional,20,448386,10110,false,false,literal-positional,,1,AND DATE_ADD
+488,d-metachar-literal,true,false,80,609664,literal-positional,19,443924,10010,false,false,literal-positional,,1,DATE_ADD(CAST(
+179,b-rare-literal,true,false,2,592791,literal-positional,2,437846,4832,false,false,literal-positional,,1,Cabrayil
+388,c-phrase-literal,true,false,8,569540,literal-positional,8,182942,541,false,false,literal-positional,,1,flush logs
+487,d-metachar-literal,true,false,80,566293,literal-positional,19,443924,10010,false,false,literal-positional,,1,"DATE),"
+677,g-regex,false,false,0,554207,regex-trigram,0,0,0,false,false,"lit-any(n=1,len=5-5)",0,1,IAEvC[ \t]
+290,b-rare-literal,true,false,1,529791,literal-positional,3,127900,884,false,false,literal-positional,,1,p_20180811
+195,b-rare-literal,true,false,1,523625,literal-positional,1,316181,1,false,false,literal-positional,,1,EACpB4M
+510,d-metachar-literal,true,false,69,514292,literal-positional,42,2713962,19455,false,false,literal-positional,,1,g.*
+474,d-metachar-literal,true,false,5,479124,literal-positional,2,3108,98,false,false,literal-positional,,1,/tmp/trigger_alert.sh
+329,c-phrase-literal,true,false,16,471460,literal-positional,16,429614,9751,false,false,literal-positional,,1,FROM month_no
+445,d-metachar-literal,true,false,85,471335,literal-positional,6,54678,1824,false,false,literal-positional,,1,$vmMinMem
+16,a-common-literal,true,false,3,464957,literal-positional,3,370086,3,false,false,literal-positional,,1,EACJ8lB
+219,b-rare-literal,true,false,5,459666,literal-positional,2,1001260,3883,false,false,literal-positional,,1,L383
+51,a-common-literal,true,false,8,457417,literal-positional,8,121859,3990,false,false,literal-positional,,1,TclPrdDbNb7
+237,b-rare-literal,true,false,1,439876,literal-positional,1,2228214,876,false,false,literal-positional,,1,SD_PULL_REQUEST
+273,b-rare-literal,true,false,2,429624,literal-positional,2,461912,7842,false,false,literal-positional,,1,govalue_avg
+479,d-metachar-literal,true,false,4,419125,literal-positional,1,57957,1106,false,false,literal-positional,,1,4.414.943
+324,c-phrase-literal,true,false,71,402874,literal-positional,19,443924,10010,false,false,literal-positional,,1,EXECUTE sql_statement1
+482,d-metachar-literal,true,false,35,380166,literal-positional,19,443924,10010,false,false,literal-positional,,1,@v_base_sql=CONCAT(
+194,b-rare-literal,true,false,1,375792,literal-positional,1,113318,1,false,false,literal-positional,,1,EACH1C
+456,d-metachar-literal,true,false,21,375249,literal-positional,17,626964,14808,false,false,literal-positional,,1,'%Y')
+165,b-rare-literal,true,false,1,358293,literal-positional,1,5425,215,false,false,literal-positional,,1,ArabicUAE
+688,g-regex,false,false,0,350041,regex-trigram,0,0,0,false,false,"lit-any(n=1,len=5-5)",0,1,QADgC[ \t]
+434,d-metachar-literal,true,false,6,344165,literal-positional,1,3340,118,false,false,literal-positional,,1,$OutputVmDisk
+268,b-rare-literal,true,false,1,315043,literal-positional,1,316181,1,false,false,literal-positional,,1,eAAe3U
+457,d-metachar-literal,true,false,30,304875,literal-positional,19,298600,6022,false,false,literal-positional,,1,'127.0.0.1'
+108,a-common-literal,true,false,4,294583,literal-positional,4,21420,618,false,false,literal-positional,,1,godaddy_picksheet2_
+169,b-rare-literal,true,false,2,288042,literal-positional,2,628130,2,false,false,literal-positional,,1,BAClBH
+703,g-regex,false,false,0,281833,regex-trigram,0,0,0,false,false,"lit-any(n=1,len=3-3)",0,1,"YPS[(){};,]"
+536,d-metachar-literal,true,false,9,273540,literal-positional,9,23793,748,false,false,literal-positional,,1,"}}/files/s3cfg.txt"""
+218,b-rare-literal,true,false,1,266207,literal-positional,1,74930,326,false,false,literal-positional,,1,Kong_08
+423,d-metachar-literal,true,false,33,259082,literal-positional,9,62573,1881,false,false,literal-positional,,1,"""${SSH_Opts[@]}"""
+427,d-metachar-literal,true,false,1,257207,literal-positional,1,27055,540,false,false,literal-positional,,1,"""</host:addr>""))}"
+128,a-common-literal,true,false,4,244251,literal-positional,4,1692294,4,false,false,literal-positional,,1,oBAAuC
+208,b-rare-literal,true,false,1,243376,literal-positional,3,374913,3,false,false,literal-positional,,1,GACtB2M
+449,d-metachar-literal,true,false,24,236334,literal-positional,1,12616,271,false,false,literal-positional,,1,${OutFile}.txt
+283,b-rare-literal,true,false,1,229041,literal-positional,1,395655,10987,false,false,literal-positional,,1,lkFFpdVDw
+473,d-metachar-literal,true,false,18,227793,literal-positional,9,23793,748,false,false,literal-positional,,1,/root/.s3cfg
+424,d-metachar-literal,true,false,3,227584,literal-positional,9,37243,1051,false,false,literal-positional,,1,"""${hostname}"
+296,b-rare-literal,true,false,1,223084,literal-positional,1,103868,762,false,false,literal-positional,,1,tclstgwebdc3
+178,b-rare-literal,true,false,1,214751,literal-positional,1,219918,1,false,false,literal-positional,,1,CACE5V
+447,d-metachar-literal,true,false,47,208002,literal-positional,5,49354,1353,false,false,literal-positional,,1,${ExportFile}
+305,b-rare-literal,true,false,14,194957,literal-positional,10,1067227,4497,false,false,literal-positional,,1,zM78
+0,a-common-literal,true,false,5,192500,literal-positional,1,100397,2837,false,false,literal-positional,,1,AWS1
+286,b-rare-literal,true,false,1,191000,literal-positional,1,242492,7216,false,false,literal-positional,,1,nJIWqRsvU3yP8Mcg
+448,d-metachar-literal,true,false,64,185209,literal-positional,23,109314,3054,false,false,literal-positional,,1,${KeyFile}
+494,d-metachar-literal,true,false,1,184916,literal-positional,1,6578,126,false,false,literal-positional,,1,"Uncompress(lz4),"
+231,b-rare-literal,true,false,1,179582,literal-positional,1,140064,1,false,false,literal-positional,,1,QACMiI
+177,b-rare-literal,true,false,1,177791,literal-positional,1,316181,1,false,false,literal-positional,,1,CAC3C3oB
+157,b-rare-literal,true,false,5,166709,literal-positional,4,1914124,701,false,false,literal-positional,,1,A9B8
+485,d-metachar-literal,true,false,2,160749,literal-positional,1,10185,306,false,false,literal-positional,,1,C:\\temp\\setip.ps1
+24,a-common-literal,true,false,13,157168,literal-positional,1,853573,3392,false,false,literal-positional,,1,H96C42
+411,c-phrase-literal,true,false,18,156709,literal-positional,16,13186,502,false,false,literal-positional,,1,sudo mv
+450,d-metachar-literal,true,false,2,147500,literal-positional,1,10832,306,false,false,literal-positional,,1,"${PartitionDays},60,"
+431,d-metachar-literal,true,false,14,147125,literal-positional,7,40931,988,false,false,literal-positional,,1,$(date):
+119,a-common-literal,true,false,8,146250,literal-positional,3,39816,741,false,false,literal-positional,,1,la_pd
+451,d-metachar-literal,true,false,21,145792,literal-positional,6,62436,1704,false,false,literal-positional,,1,${PartitionList})
+995,i-unicode,true,false,4,145752,literal-positional,4,170702,3778,false,false,literal-positional,,1,“SYNC
+209,b-rare-literal,true,false,1,143042,literal-positional,1,110315,1,false,false,literal-positional,,1,GAGRl8B
+422,d-metachar-literal,true,false,18,140624,literal-positional,3,20916,671,false,false,literal-positional,,1,"""${DataDir}"
+217,b-rare-literal,true,false,1,140500,literal-positional,1,219918,1,false,false,literal-positional,,1,KAG9BC
+455,d-metachar-literal,true,false,8,139291,literal-positional,2,237814,5910,false,false,literal-positional,,1,"'""[^""]*""'"
+483,d-metachar-literal,true,false,1,139209,literal-positional,1,100397,2837,false,false,literal-positional,,1,AWS_54.236.126.168;
+335,c-phrase-literal,true,false,6,138541,literal-positional,5,210812,1820,false,false,literal-positional,,1,MSCK REPAIR
+200,b-rare-literal,true,false,2,138291,literal-positional,2,1048497,2,false,false,literal-positional,,1,EiE7hPM
+29,a-common-literal,true,false,2,135290,literal-positional,2,178860,2,false,false,literal-positional,,1,KACbkB
+156,b-rare-literal,true,false,2,133375,literal-positional,2,1048497,2,false,false,literal-positional,,1,A8BrsGA
+302,b-rare-literal,true,false,1,130333,literal-positional,1,150535,970,false,false,literal-positional,,1,v0v97c0
+106,a-common-literal,true,false,8,129250,literal-positional,1,11666,185,false,false,literal-positional,,1,fprem1
+270,b-rare-literal,true,false,1,128707,literal-positional,1,219918,1,false,false,literal-positional,,1,gCA2KyC
+301,b-rare-literal,true,false,1,121082,literal-positional,1,150535,970,false,false,literal-positional,,1,v0v1v0v0v30v0c0
+462,d-metachar-literal,true,false,1,120959,literal-positional,1,9443,168,false,false,literal-positional,,1,($app)
+17,a-common-literal,true,false,2,120626,literal-positional,2,1048497,2,false,false,literal-positional,,1,EjEujRzE
+212,b-rare-literal,true,false,1,119376,literal-positional,1,74930,326,false,false,literal-positional,,1,Haouz_47
+39,a-common-literal,true,false,2,118708,literal-positional,2,264740,2,false,false,literal-positional,,1,MAIlEgX
+276,b-rare-literal,true,false,1,118001,literal-positional,1,75025,1824,false,false,literal-positional,,1,hfMainPaymentInfoId
+196,b-rare-literal,true,false,1,117624,literal-positional,1,137960,1,false,false,literal-positional,,1,EAGpCc
+421,d-metachar-literal,true,false,1,117416,literal-positional,1,3632,94,false,false,literal-positional,,1,"""$TableInfo"""
+65,a-common-literal,true,false,3,115292,literal-positional,3,370086,3,false,false,literal-positional,,1,aACnC5H
+230,b-rare-literal,true,false,1,114916,literal-positional,1,192479,1,false,false,literal-positional,,1,QAC9BvW
+57,a-common-literal,true,false,2,114251,literal-positional,2,264740,2,false,false,literal-positional,,1,UACpBmD
+245,b-rare-literal,true,false,1,113918,literal-positional,1,74930,326,false,false,literal-positional,,1,Xocali_64
+247,b-rare-literal,true,false,0,113667,literal-positional,0,0,0,false,false,literal-positional,,1,ZZUNIQUEDUPTOKEN
+183,b-rare-literal,true,false,2,106582,literal-positional,2,1048497,2,false,false,literal-positional,,1,E4BnBf
+30,a-common-literal,true,false,2,106458,literal-positional,2,136411,2,false,false,literal-positional,,1,KAE9B5C
+232,b-rare-literal,true,false,1,102001,literal-positional,1,219918,1,false,false,literal-positional,,1,QACR1I
+999,i-unicode,true,false,2,101749,literal-positional,2,85402,1888,false,false,literal-positional,,1,
+997,i-unicode,true,false,7,101166,literal-positional,2,137061,3349,false,false,literal-positional,,1,☃
+498,d-metachar-literal,true,false,4,99459,literal-positional,2,3982,127,false,false,literal-positional,,1,"]*$"""
+199,b-rare-literal,true,false,2,92957,literal-positional,2,1048497,2,false,false,literal-positional,,1,EiE5oSM
+267,b-rare-literal,true,false,1,90334,literal-positional,1,117008,149,false,false,literal-positional,,1,e4idxNP4K3RWAACA1YUtOg4e
+173,b-rare-literal,true,false,2,90333,literal-positional,2,1048497,2,false,false,literal-positional,,1,BjC2G4D
+202,b-rare-literal,true,false,2,90333,literal-positional,2,1048497,2,false,false,literal-positional,,1,EjE42OzE
+467,d-metachar-literal,true,false,1,88415,literal-positional,1,12616,271,false,false,literal-positional,,1,--host=${db_master}<<EOQ
+42,a-common-literal,true,false,3,88000,literal-positional,3,370086,3,false,false,literal-positional,,1,OAENxoB
+440,d-metachar-literal,true,false,1,87624,literal-positional,1,3285,93,false,false,literal-positional,,1,$TmpDir/Apps.tar;
+38,a-common-literal,true,false,3,85834,literal-positional,3,421548,3,false,false,literal-positional,,1,MAEEuF
+201,b-rare-literal,true,false,2,85790,literal-positional,2,1048497,2,false,false,literal-positional,,1,EjE0vRzE
+233,b-rare-literal,true,false,1,84334,literal-positional,1,219918,1,false,false,literal-positional,,1,QAENrd
+433,d-metachar-literal,true,false,1,82708,literal-positional,1,11740,328,false,false,literal-positional,,1,$ArchiveData2Db
+198,b-rare-literal,true,false,2,82210,literal-positional,2,1048497,2,false,false,literal-positional,,1,EgCzjHG
+285,b-rare-literal,true,false,0,80333,literal-positional,0,0,0,false,false,literal-positional,,1,moedexRareNeedle42
+461,d-metachar-literal,true,false,5,77333,literal-positional,4,16142,349,false,false,literal-positional,,1,($IsVmRunningTmp
+452,d-metachar-literal,true,false,3,74293,literal-positional,1,13082,351,false,false,literal-positional,,1,${PartitionList}|
+197,b-rare-literal,true,false,2,71085,literal-positional,2,265344,2,false,false,literal-positional,,1,EAH7B
+176,b-rare-literal,true,false,1,69585,literal-positional,1,14758,1,false,false,literal-positional,,1,CA8DGzC
+280,b-rare-literal,true,false,1,69374,literal-positional,1,117008,149,false,false,literal-positional,,1,kGxCvP03g8M1Mw0rkmuPe
+160,b-rare-literal,true,false,2,68125,literal-positional,2,1048497,2,false,false,literal-positional,,1,Ad8lLrC
+274,b-rare-literal,true,false,1,66916,literal-positional,1,1279,1,false,false,literal-positional,,1,h0a2
+304,b-rare-literal,true,false,5,65917,literal-positional,5,15751,353,false,false,literal-positional,,1,v7a_916f
+220,b-rare-literal,true,false,1,59333,literal-positional,1,15172,90,false,false,literal-positional,,1,LYjwsIyHBI
+204,b-rare-literal,true,false,1,48957,literal-positional,1,117008,149,false,false,literal-positional,,1,FwDg5ohU6Utp6wtpawNj7wq
+298,b-rare-literal,true,false,1,46041,literal-positional,1,219918,1,false,false,literal-positional,,1,uEAGPV
+454,d-metachar-literal,true,false,2,44166,literal-positional,2,13311,442,false,false,literal-positional,,1,"${UseMem}"""
+998,i-unicode,true,false,0,39500,literal-positional,0,0,0,false,false,literal-positional,,1,你好
