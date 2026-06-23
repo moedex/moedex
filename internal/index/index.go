@@ -46,6 +46,24 @@ func (b *Blob) LineOf(off int) int {
 	return i + 1
 }
 
+// LineAt returns the 1-based line number containing byte offset off together
+// with that line's bytes (excluding the trailing '\n'). The numbering matches
+// LineOf, and the bounds match forEachLine's, so verifying a match at a posting
+// offset yields the same (file, line) result a line scan would. off is assumed
+// in range (trigram posting offsets always are).
+func (b *Blob) LineAt(off int) (int, []byte) {
+	i := sort.Search(len(b.lineStarts), func(i int) bool { return b.lineStarts[i] > off }) - 1
+	if i < 0 {
+		i = 0
+	}
+	start := b.lineStarts[i]
+	end := len(b.Content)
+	if i+1 < len(b.lineStarts) {
+		end = b.lineStarts[i+1] - 1 // exclude the '\n' that begins the next line
+	}
+	return i + 1, b.Content[start:end]
+}
+
 // Index is a content-addressed trigram index. Postings are served either from
 // an in-RAM map (the builder path) or, when pp is set, on demand from a
 // PostingProvider such as an mmap-backed loader (see RestoreLazy).
@@ -124,4 +142,26 @@ func (ix *Index) Postings(t trigram.Trigram) []Posting {
 		return ix.pp.Postings(t)
 	}
 	return ix.postings[t]
+}
+
+// postingCounter is an optional PostingProvider capability: report a trigram's
+// posting count cheaply (without decoding the list). The mmap loader implements
+// it via a varint walk; providers that don't are handled by the decode fallback
+// in PostingCount.
+type postingCounter interface {
+	PostingCount(t trigram.Trigram) int
+}
+
+// PostingCount returns the number of postings for t. It is the cheap selectivity
+// probe used by the positional search path to choose the rarest driver trigram
+// before decoding only that one; a lazy provider that exposes a count uses it,
+// otherwise we fall back to decoding (eager builds just read the slice length).
+func (ix *Index) PostingCount(t trigram.Trigram) int {
+	if ix.pp != nil {
+		if pc, ok := ix.pp.(postingCounter); ok {
+			return pc.PostingCount(t)
+		}
+		return len(ix.pp.Postings(t))
+	}
+	return len(ix.postings[t])
 }

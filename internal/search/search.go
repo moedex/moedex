@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"unicode"
 	"unicode/utf8"
 
@@ -152,13 +153,230 @@ func RegexWithStats(ix *index.Index, pattern string) ([]Match, Stats, error) {
 	// engine. When no required literals can be proven (empty set), the prefilter
 	// is disabled and every line goes to the full engine — soundness over speed.
 	filter := requiredLineFilter(pattern)
-	ids := q.Eval(ix)
 
+	// Positional fast path: when the prefilter reduces to trigram-length literals
+	// (the case-insensitive "h" tail, and short literal alternations), the lines
+	// a required trigram can occur on come straight from the positional postings
+	// — exactly like Literal's begin/end-gram jump. RE2 then runs only on those
+	// few lines, so we never scan the content of every candidate blob. Rare
+	// tokens have tiny posting lists, so this collapses the multi-second
+	// content-scan tail to milliseconds.
+	if matches, stats, ok := regexPositional(ix, re, filter); ok {
+		return dedupe(matches), stats, nil
+	}
+
+	ids := q.Eval(ix)
 	matches, stats := scanRegexLines(ix, ids, re, filter)
 	stats.QueryAll = q.String() == "ALL"
 	stats.CandidateBlobs = len(ids)
 	stats.LineFilter = filterString(filter)
 	return dedupe(matches), stats, nil
+}
+
+const (
+	// positionalSelectiveEnough stops AND driver-probing once a position's
+	// postings are this few: it's already selective, more probes won't pay.
+	positionalSelectiveEnough = 2048
+	// maxPositionalPostings bounds the positional path. Above this the driver
+	// trigram is common enough that decoding its postings and RE2-ing every line
+	// is no better than the bounded content scan, so we fall back.
+	maxPositionalPostings = 1 << 18 // 262144
+)
+
+// regexPositional verifies a regex from the positional postings instead of a
+// content scan, when the prefilter reduces to trigram-length literals. It
+// returns ok=false (caller falls back to scanRegexLines) for any filter with a
+// non-trigram literal leaf, a rune class, or no filter, and when the driver
+// posting set is too large to beat the scan path.
+//
+// Soundness: positionalCandidates returns posting lists whose union of
+// (blob, offset) positions is a necessary condition — every line the pattern can
+// match contains a driver trigram at some offset, so that offset's posting maps
+// to the line. RE2 then confirms, so the match set is identical to the scan.
+func regexPositional(ix *index.Index, re *regexp.Regexp, filter lineFilter) ([]Match, Stats, bool) {
+	tris, ok := positionalTrigrams(ix, filter)
+	if !ok {
+		return nil, Stats{}, false
+	}
+	// Cheap cap check via PostingCount before decoding anything: a driver this
+	// common is no cheaper than the bounded content scan, so fall back.
+	total := 0
+	for _, t := range tris {
+		total += ix.PostingCount(t)
+		if total > maxPositionalPostings {
+			return nil, Stats{}, false
+		}
+	}
+
+	// 1. Map the driver postings to a de-duplicated set of candidate lines. This
+	// is cheap (a binary search + map insert per posting, no byte scanning), so
+	// it stays serial; the byte-heavy verification below is what we parallelize.
+	type blobLine struct {
+		blob uint64
+		line int
+	}
+	seen := map[blobLine]struct{}{}
+	blobs := map[uint64]struct{}{}
+	var cands []candidateLine
+	for _, t := range tris {
+		for _, p := range ix.Postings(t) {
+			b := ix.Blob(p.Blob)
+			if b == nil {
+				continue
+			}
+			lineNo, line := b.LineAt(p.Offset)
+			k := blobLine{p.Blob, lineNo}
+			if _, dup := seen[k]; dup {
+				continue
+			}
+			seen[k] = struct{}{}
+			blobs[p.Blob] = struct{}{}
+			cands = append(cands, candidateLine{b: b, lineNo: lineNo, line: line})
+		}
+	}
+
+	// 2. Verify candidate lines in parallel (filter.maybe re-applies the full
+	// AND/OR the single driver position skipped, then RE2 confirms). Both are
+	// byte-heavy on minified lines, so this is where the worker split pays.
+	matches, vstats := verifyCandidateLines(cands, re, filter)
+	stats := Stats{
+		LineFilter:       "positional",
+		CandidateBlobs:   len(blobs),
+		CandidateLines:   int64(len(cands)),
+		CandidateBytes:   vstats.CandidateBytes,
+		LinesAfterFilter: vstats.LinesAfterFilter,
+		LinesRE2:         vstats.LinesRE2,
+		ParallelWorkers:  vstats.ParallelWorkers,
+	}
+	return matches, stats, true
+}
+
+// candidateLine is one de-duplicated line a driver trigram occurs on, pending
+// full-filter + RE2 verification.
+type candidateLine struct {
+	b      *index.Blob
+	lineNo int
+	line   []byte
+}
+
+// verifyCandidateLines runs the prefilter and RE2 over candidate lines, split
+// across the shared verify-worker pool. Each worker collects its own matches, so
+// there is no shared mutable state during the byte-heavy work; results merge at
+// the end.
+func verifyCandidateLines(cands []candidateLine, re *regexp.Regexp, filter lineFilter) ([]Match, Stats) {
+	verify := func(sub []candidateLine) scanResult {
+		var res scanResult
+		for _, c := range sub {
+			if filter != nil && !filter.maybe(c.line) {
+				continue
+			}
+			res.stats.LinesAfterFilter++
+			res.stats.LinesRE2++
+			res.stats.CandidateBytes += int64(len(c.line))
+			if re.Match(c.line) {
+				res.matches = appendRefs(res.matches, c.b, c.lineNo)
+			}
+		}
+		return res
+	}
+
+	workers, release := claimVerifyWorkers(len(cands))
+	defer release()
+	if workers <= 1 {
+		res := verify(cands)
+		res.stats.ParallelWorkers = 1
+		return res.matches, res.stats
+	}
+	// Dynamic work-stealing rather than fixed contiguous ranges: a few minified
+	// lines (tens of KB each) can carry almost all the RE2 cost, and they cluster
+	// in posting order, so an even split-by-count leaves one worker doing
+	// everything. Workers pull chunks from a shared cursor instead, so heavy lines
+	// spread across cores regardless of where they sit.
+	const chunk = 16
+	var next int64
+	out := make([]scanResult, workers)
+	var wg sync.WaitGroup
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func(w int) {
+			defer wg.Done()
+			var res scanResult
+			for {
+				start := int(atomic.AddInt64(&next, chunk)) - chunk
+				if start >= len(cands) {
+					break
+				}
+				end := start + chunk
+				if end > len(cands) {
+					end = len(cands)
+				}
+				r := verify(cands[start:end])
+				res.matches = append(res.matches, r.matches...)
+				res.stats.add(r.stats)
+			}
+			out[w] = res
+		}(w)
+	}
+	wg.Wait()
+	return combineScanResults(out, workers)
+}
+
+// positionalTrigrams reduces a prefilter to the trigrams whose postings, unioned,
+// are a sound superset of every line the filter could pass — or ok=false when
+// the filter is not trigram-reducible. A litSet contributes its members (each
+// must be exactly a trigram). An AND needs every child, so any one
+// trigram-reducible child is sound; we pick the most selective via the cheap
+// PostingCount and stop probing once one is clearly rare. An OR may match via any
+// branch, so all branches must be reducible and are unioned. Only the returned
+// trigrams are decoded by the caller, so a common position is never materialized
+// just to be measured.
+func positionalTrigrams(ix *index.Index, f lineFilter) ([]trigram.Trigram, bool) {
+	switch v := f.(type) {
+	case litSet:
+		tris := make([]trigram.Trigram, 0, len(v))
+		for _, lit := range v {
+			if len(lit) != trigram.N {
+				return nil, false
+			}
+			tris = append(tris, trigram.Trigram{lit[0], lit[1], lit[2]})
+		}
+		return tris, true
+	case allFilter:
+		var best []trigram.Trigram
+		bestN := -1
+		for _, sub := range v {
+			tris, ok := positionalTrigrams(ix, sub)
+			if !ok {
+				continue // a non-trigram child still constrains via RE2
+			}
+			n := 0
+			for _, t := range tris {
+				n += ix.PostingCount(t)
+			}
+			if bestN < 0 || n < bestN {
+				best, bestN = tris, n
+			}
+			if bestN <= positionalSelectiveEnough {
+				break // already selective enough; skip the remaining positions
+			}
+		}
+		if bestN < 0 {
+			return nil, false
+		}
+		return best, true
+	case orFilter:
+		var tris []trigram.Trigram
+		for _, sub := range v {
+			st, ok := positionalTrigrams(ix, sub)
+			if !ok {
+				return nil, false // an unbounded branch makes the union unbounded
+			}
+			tris = append(tris, st...)
+		}
+		return tris, true
+	default:
+		return nil, false // runeClassFilter, nil, etc.
+	}
 }
 
 type scanResult struct {

@@ -216,6 +216,37 @@ func (p *mmapProvider) Postings(t trigram.Trigram) []index.Posting {
 	return index.DecodePostings(p.raw[t])
 }
 
+// PostingCount returns how many postings t has without materializing them: it
+// walks the grouped-varint encoding summing per-blob counts (and skipping the
+// offset deltas). Driver selection in the positional search path uses this to
+// pick the rarest trigram before decoding only the winner, so a common trigram
+// is never fully decoded just to be measured.
+func (p *mmapProvider) PostingCount(t trigram.Trigram) int {
+	b := p.raw[t]
+	n, pos := 0, 0
+	for pos < len(b) {
+		_, k := binary.Uvarint(b[pos:]) // blob delta
+		if k <= 0 {
+			break
+		}
+		pos += k
+		c, k2 := binary.Uvarint(b[pos:]) // count in this blob group
+		if k2 <= 0 {
+			break
+		}
+		pos += k2
+		n += int(c)
+		for i := uint64(0); i < c; i++ {
+			_, k3 := binary.Uvarint(b[pos:]) // skip offset delta
+			if k3 <= 0 {
+				return n
+			}
+			pos += k3
+		}
+	}
+	return n
+}
+
 func (p *mmapProvider) Trigrams() []trigram.Trigram {
 	out := make([]trigram.Trigram, 0, len(p.raw))
 	for t := range p.raw {

@@ -98,3 +98,66 @@ func BenchmarkRegexSelective(b *testing.B) {
 		}
 	}
 }
+
+// bigBlobIndex models the full-corpus latency tail: a handful of LARGE blobs
+// (minified/generated files, ~3000 lines each) that survive trigram candidate
+// selection. The cost there is NOT regexp — only a few lines reach RE2 — but the
+// per-line prefilter scan over millions of candidate lines. The rare tokens
+// ("razavi", "itemanswer") appear on just a couple of lines per blob, so a
+// case-insensitive alternation has a tiny match set yet a huge candidate-line
+// set: exactly the #907-style tail from the parity report.
+func bigBlobIndex(tb testing.TB) *index.Index {
+	tb.Helper()
+	const nBlobs = 120
+	const linesPerBlob = 3000
+	rng := rand.New(rand.NewSource(7))
+	vocab := []string{
+		"function", "return", "value", "handler", "request", "response", "buffer",
+		"element", "config", "context", "render", "compute", "process", "validate",
+		"window", "document", "prototype", "callback", "property", "attribute",
+	}
+	ix := index.New()
+	for blob := 0; blob < nBlobs; blob++ {
+		var sb []byte
+		sb = append(sb, []byte(fmt.Sprintf("// generated bundle %d\n", blob))...)
+		for line := 0; line < linesPerBlob; line++ {
+			w1 := vocab[rng.Intn(len(vocab))]
+			w2 := vocab[rng.Intn(len(vocab))]
+			w3 := vocab[rng.Intn(len(vocab))]
+			sb = append(sb, []byte(fmt.Sprintf("var %s_%d=function(%s){return %s(%d)};\n", w1, line, w2, w3, rng.Intn(100000)))...)
+		}
+		// Two rare tokens, each on exactly one line of this blob.
+		sb = append(sb, []byte(fmt.Sprintf("var Razavi_%d = itemAnswer(%d);\n", blob, blob))...)
+		rel := fmt.Sprintf("bundles/app%d.min.js", blob)
+		abs := "/synthetic/" + rel
+		ix.AddFile("bundlerepo", rel, abs, fmt.Sprintf("bigsha-%d", blob), sb)
+	}
+	return ix
+}
+
+// BenchmarkRegexFoldedAlternationBigBlobs is the headline tail-latency benchmark:
+// a case-insensitive alternation of two rare tokens over large blobs. Candidate
+// selection keeps every blob (both tokens are present), so the whole corpus is
+// scanned, but only ~2 lines per blob can match. The old per-line prefilter ran
+// up to ~16 bytes.Contains calls on each of ~360k candidate lines; the buffer
+// scan should find the few candidate lines with a handful of bytes.Index sweeps.
+func BenchmarkRegexFoldedAlternationBigBlobs(b *testing.B) {
+	ix := bigBlobIndex(b)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := search.Regex(ix, "(?i)razavi|itemanswer"); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkLiteralSubTrigramBigBlobs covers the sub-trigram literal tail (no
+// trigram to intersect, every blob scanned line by line). "->" is rarer than
+// ";", so the buffer scan should skip most lines.
+func BenchmarkLiteralSubTrigramBigBlobs(b *testing.B) {
+	ix := bigBlobIndex(b)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = search.Literal(ix, "=>")
+	}
+}
