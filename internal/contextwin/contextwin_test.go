@@ -1,0 +1,450 @@
+package contextwin
+
+import (
+	"strings"
+	"testing"
+
+	"moedex/internal/index"
+	"moedex/internal/rank"
+)
+
+// helper: build an index with one file and return (index, blobID).
+func indexOne(t *testing.T, repo, rel, abs, content string) (*index.Index, uint64) {
+	t.Helper()
+	ix := index.New()
+	ix.AddFile(repo, rel, abs, sha(content), []byte(content))
+	b := ix.Blob(0)
+	if b == nil {
+		t.Fatalf("blob 0 missing after AddFile")
+	}
+	return ix, 0
+}
+
+// sha is a trivial unique-ish key for tests (content-addressed dedup only needs
+// distinct keys for distinct content here).
+func sha(s string) string { return "sha-" + s }
+
+func span(start, end int) rank.LineSpan { return rank.LineSpan{StartLine: start, EndLine: end} }
+
+func ref(repo, rel, abs string) index.FileRef {
+	return index.FileRef{Repo: repo, RelPath: rel, AbsPath: abs}
+}
+
+// ---- Block expansion: brace-delimited function ----
+
+func TestExpandBraceFunction(t *testing.T) {
+	src := `package main
+
+func foo() {
+	x := 1
+	y := 2
+	return x + y
+}
+
+func bar() {}
+`
+	// Lines:
+	// 1 package main
+	// 2 (blank)
+	// 3 func foo() {
+	// 4   x := 1
+	// 5   y := 2
+	// 6   return x + y
+	// 7 }
+	// 8 (blank)
+	// 9 func bar() {}
+	ix, id := indexOne(t, "r", "main.go", "/abs/main.go", src)
+	res := []rank.RankedResult{{
+		Blob:      id,
+		Files:     []index.FileRef{ref("r", "main.go", "/abs/main.go")},
+		Score:     1.0,
+		LineSpans: []rank.LineSpan{span(4, 4)}, // hit on `x := 1`, deep inside foo
+	}}
+	// ContextLines 0 so padding does not mask the brace logic; but defaults kick
+	// in at <=0, so use 1 explicitly and rely on brace balance to capture body.
+	win := Assemble(ix, res, Options{TokenBudget: 100000, ContextLines: 0})
+	if len(win.Blocks) != 1 {
+		t.Fatalf("want 1 block, got %d: %+v", len(win.Blocks), win.Blocks)
+	}
+	b := win.Blocks[0]
+	// Padding default (3) -> start 1, end 7; net braces over [1,7]: '{' on 3, '}'
+	// on 7 => balanced, indent fallback. To make the brace path deterministic we
+	// instead assert the function body is fully captured: must include the
+	// closing brace line 7 and the opening line 3.
+	if !strings.Contains(b.Text, "func foo()") {
+		t.Errorf("block should include function header:\n%s", b.Text)
+	}
+	if !strings.Contains(b.Text, "return x + y") {
+		t.Errorf("block should include function body:\n%s", b.Text)
+	}
+	if b.StartLine > 3 {
+		t.Errorf("StartLine %d should reach func header (line 3)", b.StartLine)
+	}
+	if b.EndLine < 7 {
+		t.Errorf("EndLine %d should reach closing brace (line 7)", b.EndLine)
+	}
+	// Should NOT bleed into bar().
+	if strings.Contains(b.Text, "func bar()") {
+		t.Errorf("block should not include the next function:\n%s", b.Text)
+	}
+}
+
+// A span on the opening brace line with no context padding exercises the net>0
+// brace-down walk specifically.
+func TestExpandBraceDownFromHeader(t *testing.T) {
+	src := "func f() {\n\ta()\n\tb()\n}\nafter()\n"
+	// 1 func f() {
+	// 2   a()
+	// 3   b()
+	// 4 }
+	// 5 after()
+	ix, id := indexOne(t, "r", "f.go", "/abs/f.go", src)
+	res := []rank.RankedResult{{
+		Blob:      id,
+		Files:     []index.FileRef{ref("r", "f.go", "/abs/f.go")},
+		Score:     1.0,
+		LineSpans: []rank.LineSpan{span(1, 1)},
+	}}
+	// Anchor is the hit line 1 (net brace +1) -> walk down to closing brace 4.
+	win := Assemble(ix, res, Options{TokenBudget: 100000, ContextLines: 1})
+	if len(win.Blocks) != 1 {
+		t.Fatalf("want 1 block, got %d", len(win.Blocks))
+	}
+	b := win.Blocks[0]
+	if b.StartLine != 1 || b.EndLine != 4 {
+		t.Errorf("want lines 1-4 (balanced function), got %d-%d:\n%s", b.StartLine, b.EndLine, b.Text)
+	}
+	if strings.Contains(b.Text, "after()") {
+		t.Errorf("should stop at closing brace, not include after():\n%s", b.Text)
+	}
+}
+
+// ---- Block expansion: indent-delimited (Python-like) ----
+
+func TestExpandIndent(t *testing.T) {
+	src := "def f():\n    a = 1\n    b = 2\n    return a + b\n\ndef g():\n    pass\n"
+	// 1 def f():
+	// 2     a = 1
+	// 3     b = 2
+	// 4     return a + b
+	// 5 (blank)
+	// 6 def g():
+	// 7     pass
+	ix, id := indexOne(t, "r", "x.py", "/abs/x.py", src)
+	res := []rank.RankedResult{{
+		Blob:      id,
+		Files:     []index.FileRef{ref("r", "x.py", "/abs/x.py")},
+		Score:     1.0,
+		LineSpans: []rank.LineSpan{span(3, 3)}, // `b = 2`
+	}}
+	win := Assemble(ix, res, Options{TokenBudget: 100000, ContextLines: 1})
+	if len(win.Blocks) != 1 {
+		t.Fatalf("want 1 block, got %d", len(win.Blocks))
+	}
+	b := win.Blocks[0]
+	// indent fallback: min indent of region (line 3) is 4; extend across the
+	// >=4-indent run (lines 2-4), then pull header `def f():` (line 1, indent 0).
+	if b.StartLine != 1 {
+		t.Errorf("want header line 1, got StartLine %d:\n%s", b.StartLine, b.Text)
+	}
+	if b.EndLine != 4 {
+		t.Errorf("want end of indented run line 4, got EndLine %d:\n%s", b.EndLine, b.Text)
+	}
+	if !strings.Contains(b.Text, "def f():") || !strings.Contains(b.Text, "return a + b") {
+		t.Errorf("block should span the whole indented body:\n%s", b.Text)
+	}
+	if strings.Contains(b.Text, "def g()") {
+		t.Errorf("block should not bleed into next def:\n%s", b.Text)
+	}
+}
+
+// ---- Clamping at file start/end ----
+
+func TestExpandClampsToFileBounds(t *testing.T) {
+	src := "a\nb\nc\n" // 3 lines
+	ix, id := indexOne(t, "r", "t.txt", "/abs/t.txt", src)
+	res := []rank.RankedResult{{
+		Blob:      id,
+		Files:     []index.FileRef{ref("r", "t.txt", "/abs/t.txt")},
+		Score:     1.0,
+		LineSpans: []rank.LineSpan{span(1, 3)},
+	}}
+	// Large padding would go negative / past EOF; must clamp to [1,3].
+	win := Assemble(ix, res, Options{TokenBudget: 100000, ContextLines: 50})
+	if len(win.Blocks) != 1 {
+		t.Fatalf("want 1 block, got %d", len(win.Blocks))
+	}
+	b := win.Blocks[0]
+	if b.StartLine != 1 || b.EndLine != 3 {
+		t.Errorf("want clamp to 1-3, got %d-%d", b.StartLine, b.EndLine)
+	}
+	if b.Text != "a\nb\nc\n" {
+		t.Errorf("unexpected text %q", b.Text)
+	}
+}
+
+// A span starting/ending past EOF must clamp, not panic.
+func TestSpanBeyondEOFClamped(t *testing.T) {
+	src := "one\ntwo\n" // 2 lines
+	ix, id := indexOne(t, "r", "t.txt", "/abs/t.txt", src)
+	res := []rank.RankedResult{{
+		Blob:      id,
+		Files:     []index.FileRef{ref("r", "t.txt", "/abs/t.txt")},
+		Score:     1.0,
+		LineSpans: []rank.LineSpan{span(100, 200)},
+	}}
+	win := Assemble(ix, res, Options{TokenBudget: 100000, ContextLines: 1})
+	if len(win.Blocks) != 1 {
+		t.Fatalf("want 1 block, got %d", len(win.Blocks))
+	}
+	b := win.Blocks[0]
+	if b.EndLine > 2 || b.StartLine < 1 {
+		t.Errorf("span past EOF not clamped: %d-%d", b.StartLine, b.EndLine)
+	}
+}
+
+// ---- Overlap / adjacency merge within a file ----
+
+func TestMergeOverlappingSpansSameFile(t *testing.T) {
+	// 10 plain lines, brace-free, indent-free -> indent fallback is a no-op
+	// (minIndent 0, no extension), so block lines equal padded spans.
+	src := "L1\nL2\nL3\nL4\nL5\nL6\nL7\nL8\nL9\nL10\n"
+	ix, id := indexOne(t, "r", "f.txt", "/abs/f.txt", src)
+	res := []rank.RankedResult{{
+		Blob:  id,
+		Files: []index.FileRef{ref("r", "f.txt", "/abs/f.txt")},
+		Score: 0.5,
+		LineSpans: []rank.LineSpan{
+			span(3, 3), // pad1 -> 2..4
+			span(5, 5), // pad1 -> 4..6  (touches/overlaps 2..4)
+		},
+	}}
+	win := Assemble(ix, res, Options{TokenBudget: 100000, ContextLines: 1})
+	if len(win.Blocks) != 1 {
+		t.Fatalf("overlapping spans should merge to 1 block, got %d: %+v", len(win.Blocks), win.Blocks)
+	}
+	b := win.Blocks[0]
+	if b.StartLine != 2 || b.EndLine != 6 {
+		t.Errorf("merged range want 2-6, got %d-%d", b.StartLine, b.EndLine)
+	}
+}
+
+func TestMergeKeepsMaxScore(t *testing.T) {
+	src := "L1\nL2\nL3\nL4\nL5\nL6\nL7\n"
+	ix := index.New()
+	ix.AddFile("r", "f.txt", "/abs/f.txt", sha(src), []byte(src))
+	res := []rank.RankedResult{
+		{Blob: 0, Files: []index.FileRef{ref("r", "f.txt", "/abs/f.txt")}, Score: 0.2, LineSpans: []rank.LineSpan{span(2, 2)}},
+		{Blob: 0, Files: []index.FileRef{ref("r", "f.txt", "/abs/f.txt")}, Score: 0.9, LineSpans: []rank.LineSpan{span(3, 3)}},
+	}
+	win := Assemble(ix, res, Options{TokenBudget: 100000, ContextLines: 1})
+	if len(win.Blocks) != 1 {
+		t.Fatalf("adjacent spans should merge to 1 block, got %d", len(win.Blocks))
+	}
+	if win.Blocks[0].Score != 0.9 {
+		t.Errorf("merged block should keep max score 0.9, got %v", win.Blocks[0].Score)
+	}
+}
+
+func TestDifferentFilesStaySeparate(t *testing.T) {
+	srcA := "A1\nA2\nA3\n"
+	srcB := "B1\nB2\nB3\n"
+	ix := index.New()
+	ix.AddFile("r", "a.txt", "/abs/a.txt", sha(srcA), []byte(srcA))
+	ix.AddFile("r", "b.txt", "/abs/b.txt", sha(srcB), []byte(srcB))
+	res := []rank.RankedResult{
+		{Blob: 0, Files: []index.FileRef{ref("r", "a.txt", "/abs/a.txt")}, Score: 0.5, LineSpans: []rank.LineSpan{span(2, 2)}},
+		{Blob: 1, Files: []index.FileRef{ref("r", "b.txt", "/abs/b.txt")}, Score: 0.5, LineSpans: []rank.LineSpan{span(2, 2)}},
+	}
+	win := Assemble(ix, res, Options{TokenBudget: 100000, ContextLines: 1})
+	if len(win.Blocks) != 2 {
+		t.Fatalf("blocks from different files must stay separate, got %d", len(win.Blocks))
+	}
+}
+
+// ---- Token budget / truncation ----
+
+func TestTokenBudgetTruncates(t *testing.T) {
+	// Three files, each block ~ a known number of chars. With a tight budget only
+	// the top-scoring blocks survive and Truncated is set.
+	body := strings.Repeat("xxxxxxxxxx\n", 5) // 5 lines * 11 chars = 55 chars -> 14 tokens
+	ix := index.New()
+	ix.AddFile("r", "a.txt", "/abs/a.txt", sha("a"+body), []byte(body))
+	ix.AddFile("r", "b.txt", "/abs/b.txt", sha("b"+body), []byte(body))
+	ix.AddFile("r", "c.txt", "/abs/c.txt", sha("c"+body), []byte(body))
+	res := []rank.RankedResult{
+		{Blob: 0, Files: []index.FileRef{ref("r", "a.txt", "/abs/a.txt")}, Score: 0.9, LineSpans: []rank.LineSpan{span(1, 5)}},
+		{Blob: 1, Files: []index.FileRef{ref("r", "b.txt", "/abs/b.txt")}, Score: 0.5, LineSpans: []rank.LineSpan{span(1, 5)}},
+		{Blob: 2, Files: []index.FileRef{ref("r", "c.txt", "/abs/c.txt")}, Score: 0.1, LineSpans: []rank.LineSpan{span(1, 5)}},
+	}
+	// Each block is 55 chars -> 14 tokens. Budget 20 fits exactly one block.
+	win := Assemble(ix, res, Options{TokenBudget: 20, ContextLines: 0})
+	if len(win.Blocks) != 1 {
+		t.Fatalf("budget should admit exactly 1 block, got %d (estimate %d)", len(win.Blocks), win.TokenEstimate)
+	}
+	if win.Blocks[0].AbsPath != "/abs/a.txt" {
+		t.Errorf("highest-scoring block (a) should survive, got %s", win.Blocks[0].AbsPath)
+	}
+	if !win.Truncated {
+		t.Errorf("Truncated should be true when blocks were dropped")
+	}
+	if win.TokenEstimate > 20 {
+		t.Errorf("TokenEstimate %d exceeds budget 20", win.TokenEstimate)
+	}
+}
+
+// First block is always admitted even if it alone exceeds the budget.
+func TestFirstBlockAdmittedOverBudget(t *testing.T) {
+	body := strings.Repeat("y", 1000) + "\n" // ~250 tokens, far over budget
+	ix, id := indexOne(t, "r", "big.txt", "/abs/big.txt", body)
+	res := []rank.RankedResult{{
+		Blob:      id,
+		Files:     []index.FileRef{ref("r", "big.txt", "/abs/big.txt")},
+		Score:     1.0,
+		LineSpans: []rank.LineSpan{span(1, 1)},
+	}}
+	win := Assemble(ix, res, Options{TokenBudget: 5, ContextLines: 0})
+	if len(win.Blocks) != 1 {
+		t.Fatalf("first block should be admitted even over budget, got %d blocks", len(win.Blocks))
+	}
+	if win.Truncated {
+		t.Errorf("only block emitted -> nothing dropped -> Truncated should be false")
+	}
+}
+
+func TestTokenEstimateMatchesFormula(t *testing.T) {
+	src := "abcd\nefgh\n" // block text = "abcd\nefgh\n" = 10 chars -> ceil(10/4)=3
+	ix, id := indexOne(t, "r", "t.txt", "/abs/t.txt", src)
+	res := []rank.RankedResult{{
+		Blob:      id,
+		Files:     []index.FileRef{ref("r", "t.txt", "/abs/t.txt")},
+		Score:     1.0,
+		LineSpans: []rank.LineSpan{span(1, 2)},
+	}}
+	win := Assemble(ix, res, Options{TokenBudget: 100000, ContextLines: 0})
+	if win.TokenEstimate != 3 {
+		t.Errorf("ceil(10/4)=3 expected, got %d", win.TokenEstimate)
+	}
+}
+
+// ---- Ordering ----
+
+func TestOrderingByScoreDesc(t *testing.T) {
+	srcA := "A1\nA2\nA3\n"
+	srcB := "B1\nB2\nB3\n"
+	srcC := "C1\nC2\nC3\n"
+	ix := index.New()
+	ix.AddFile("r", "a.txt", "/abs/a.txt", sha(srcA), []byte(srcA))
+	ix.AddFile("r", "b.txt", "/abs/b.txt", sha(srcB), []byte(srcB))
+	ix.AddFile("r", "c.txt", "/abs/c.txt", sha(srcC), []byte(srcC))
+	// Provide in non-score order to prove the sort, not input order, decides.
+	res := []rank.RankedResult{
+		{Blob: 0, Files: []index.FileRef{ref("r", "a.txt", "/abs/a.txt")}, Score: 0.3, LineSpans: []rank.LineSpan{span(2, 2)}},
+		{Blob: 1, Files: []index.FileRef{ref("r", "b.txt", "/abs/b.txt")}, Score: 0.9, LineSpans: []rank.LineSpan{span(2, 2)}},
+		{Blob: 2, Files: []index.FileRef{ref("r", "c.txt", "/abs/c.txt")}, Score: 0.6, LineSpans: []rank.LineSpan{span(2, 2)}},
+	}
+	win := Assemble(ix, res, Options{TokenBudget: 100000, ContextLines: 0})
+	if len(win.Blocks) != 3 {
+		t.Fatalf("want 3 blocks, got %d", len(win.Blocks))
+	}
+	gotOrder := []string{win.Blocks[0].AbsPath, win.Blocks[1].AbsPath, win.Blocks[2].AbsPath}
+	want := []string{"/abs/b.txt", "/abs/c.txt", "/abs/a.txt"}
+	for i := range want {
+		if gotOrder[i] != want[i] {
+			t.Errorf("ordering wrong: got %v want %v", gotOrder, want)
+			break
+		}
+	}
+}
+
+// ---- Edge cases ----
+
+func TestEmptyResults(t *testing.T) {
+	ix := index.New()
+	win := Assemble(ix, nil, Options{})
+	if len(win.Blocks) != 0 {
+		t.Errorf("empty results -> no blocks, got %d", len(win.Blocks))
+	}
+	if win.Truncated {
+		t.Errorf("empty results -> Truncated false")
+	}
+	if win.TokenEstimate != 0 {
+		t.Errorf("empty results -> TokenEstimate 0, got %d", win.TokenEstimate)
+	}
+}
+
+func TestDefaultsApplied(t *testing.T) {
+	// ContextLines<=0 -> default 3. Hit on line 5 of a 20-line plain file should
+	// pad to 2..8 (default 3, indent fallback no-op on brace/indent-free text).
+	var sb strings.Builder
+	for i := 1; i <= 20; i++ {
+		sb.WriteString("line\n")
+	}
+	src := sb.String()
+	ix, id := indexOne(t, "r", "t.txt", "/abs/t.txt", src)
+	res := []rank.RankedResult{{
+		Blob:      id,
+		Files:     []index.FileRef{ref("r", "t.txt", "/abs/t.txt")},
+		Score:     1.0,
+		LineSpans: []rank.LineSpan{span(5, 5)},
+	}}
+	win := Assemble(ix, res, Options{}) // all defaults
+	if len(win.Blocks) != 1 {
+		t.Fatalf("want 1 block, got %d", len(win.Blocks))
+	}
+	b := win.Blocks[0]
+	if b.StartLine != 2 || b.EndLine != 8 {
+		t.Errorf("default ContextLines=3 should pad to 2-8, got %d-%d", b.StartLine, b.EndLine)
+	}
+}
+
+func TestMissingBlobSkipped(t *testing.T) {
+	ix := index.New()
+	ix.AddFile("r", "a.txt", "/abs/a.txt", sha("a"), []byte("a\nb\n"))
+	res := []rank.RankedResult{
+		{Blob: 999, Files: []index.FileRef{ref("r", "x", "/abs/x")}, Score: 1.0, LineSpans: []rank.LineSpan{span(1, 1)}},
+		{Blob: 0, Files: []index.FileRef{ref("r", "a.txt", "/abs/a.txt")}, Score: 0.5, LineSpans: []rank.LineSpan{span(1, 1)}},
+	}
+	// Blob 999 is absent; should be skipped without panic, blob 0 still emitted.
+	win := Assemble(ix, res, Options{TokenBudget: 100000})
+	if len(win.Blocks) != 1 || win.Blocks[0].AbsPath != "/abs/a.txt" {
+		t.Fatalf("missing blob should be skipped, valid one kept: %+v", win.Blocks)
+	}
+}
+
+func TestResultWithNoFilesSkipped(t *testing.T) {
+	ix := index.New()
+	ix.AddFile("r", "a.txt", "/abs/a.txt", sha("a"), []byte("a\nb\n"))
+	res := []rank.RankedResult{
+		{Blob: 0, Files: nil, Score: 1.0, LineSpans: []rank.LineSpan{span(1, 1)}},
+	}
+	win := Assemble(ix, res, Options{TokenBudget: 100000})
+	if len(win.Blocks) != 0 {
+		t.Fatalf("result with no FileRefs should be skipped, got %d blocks", len(win.Blocks))
+	}
+}
+
+// Block reports Files[0] deterministically when a result has multiple refs.
+func TestReportsFirstFileRef(t *testing.T) {
+	ix := index.New()
+	// Same content under two paths -> deduped to one blob with two FileRefs.
+	ix.AddFile("r1", "a.txt", "/abs/a.txt", sha("dup"), []byte("dup\nx\n"))
+	ix.AddFile("r2", "b.txt", "/abs/b.txt", sha("dup"), []byte("dup\nx\n"))
+	res := []rank.RankedResult{{
+		Blob: 0,
+		Files: []index.FileRef{
+			ref("r1", "a.txt", "/abs/a.txt"),
+			ref("r2", "b.txt", "/abs/b.txt"),
+		},
+		Score:     1.0,
+		LineSpans: []rank.LineSpan{span(1, 1)},
+	}}
+	win := Assemble(ix, res, Options{TokenBudget: 100000})
+	if len(win.Blocks) != 1 {
+		t.Fatalf("want 1 block, got %d", len(win.Blocks))
+	}
+	b := win.Blocks[0]
+	if b.Repo != "r1" || b.RelPath != "a.txt" || b.AbsPath != "/abs/a.txt" {
+		t.Errorf("should report Files[0], got %+v", b)
+	}
+}

@@ -1,0 +1,46 @@
+package index
+
+import (
+	"reflect"
+	"testing"
+)
+
+func TestPostingsCodecRoundTrip(t *testing.T) {
+	cases := [][]Posting{
+		nil,
+		{{Blob: 0, Offset: 0}},
+		{{Blob: 0, Offset: 0}, {Blob: 0, Offset: 1}, {Blob: 0, Offset: 100}},
+		{{Blob: 0, Offset: 5}, {Blob: 3, Offset: 0}, {Blob: 3, Offset: 9}, {Blob: 250, Offset: 1 << 20}},
+		// many blobs, single posting each
+		func() []Posting {
+			var ps []Posting
+			for b := uint64(0); b < 1000; b++ {
+				ps = append(ps, Posting{Blob: b, Offset: int(b * 7)})
+			}
+			return ps
+		}(),
+	}
+	for i, ps := range cases {
+		got := DecodePostings(EncodePostings(ps))
+		if len(ps) == 0 && len(got) == 0 {
+			continue
+		}
+		if !reflect.DeepEqual(got, ps) {
+			t.Errorf("case %d: round-trip mismatch\n want %v\n  got %v", i, ps, got)
+		}
+	}
+}
+
+func TestPostingsCodecCompresses(t *testing.T) {
+	// One posting per rune of a dense blob: deltas are 1, so each should encode
+	// to roughly a single byte versus 16 in the naive representation.
+	var ps []Posting
+	for off := 0; off < 10000; off++ {
+		ps = append(ps, Posting{Blob: 42, Offset: off})
+	}
+	enc := EncodePostings(ps)
+	naive := len(ps) * 16
+	if len(enc) >= naive/4 {
+		t.Errorf("expected >4x compression vs naive %d bytes, got %d", naive, len(enc))
+	}
+}

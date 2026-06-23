@@ -1,0 +1,18 @@
+?   	moedex/cmd/moedex	[no test files]
+?   	moedex/cmd/moedex-mcp	[no test files]
+?   	moedex/cmd/moedex-parity	[no test files]
+?   	moedex/cmd/scale	[no test files]
+ok  	moedex/internal/contextwin	(cached)
+ok  	moedex/internal/diskstore	(cached)
+ok  	moedex/internal/embed	(cached)
+ok  	moedex/internal/eval	(cached)
+ok  	moedex/internal/index	(cached)
+ok  	moedex/internal/ingest	(cached)
+ok  	moedex/internal/mcp	(cached)
+ok  	moedex/internal/parity	2.763s
+ok  	moedex/internal/query	(cached)
+ok  	moedex/internal/rank	(cached)
+ok  	moedex/internal/search	(cached)
+ok  	moedex/internal/symbol	(cached)
+ok  	moedex/internal/tokenindex	(cached)
+?   	moedex/internal/trigram	[no test files]
