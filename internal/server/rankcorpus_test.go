@@ -224,3 +224,112 @@ func TestOpenRankEmptyDirErrors(t *testing.T) {
 		t.Error("expected error opening dir with no shards, got nil")
 	}
 }
+
+func TestRankCorpusPersistsAndReloadsTokenAndSymbolSidecars(t *testing.T) {
+	dir := t.TempDir()
+	buildShard(t, dir, "shard-0000.idx", map[string]string{
+		"billing/refund.go": "package billing\n\n// Refund reverses a captured charge.\nfunc Refund(id string) error { return nil }\n",
+		"util/strings.go":   "package util\n\nfunc TrimSpace(s string) string { return s }\n",
+	})
+
+	// First open BUILDS both indexes and persists the four sidecar files.
+	first, err := OpenRank(context.Background(), dir, RankConfig{TopK: 5})
+	if err != nil {
+		t.Fatalf("OpenRank build: %v", err)
+	}
+	if first.TokensFromCache() || first.SymbolsFromCache() {
+		t.Error("first open should BUILD, not load token/symbol from cache")
+	}
+	for _, name := range []string{"corpus-tokens.tki", "corpus-tokens.tki.meta", "corpus-symbols.sym", "corpus-symbols.sym.meta"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
+			t.Fatalf("sidecar %s not written: %v", name, err)
+		}
+	}
+
+	// Second open over the unchanged corpus must LOAD both from cache.
+	second, err := OpenRank(context.Background(), dir, RankConfig{TopK: 5})
+	if err != nil {
+		t.Fatalf("OpenRank reload: %v", err)
+	}
+	if !second.TokensFromCache() {
+		t.Error("second open should LOAD the token sidecar")
+	}
+	if !second.SymbolsFromCache() {
+		t.Error("second open should LOAD the symbol sidecar")
+	}
+	if second.NumDocs() != first.NumDocs() {
+		t.Errorf("cached NumDocs %d != built %d", second.NumDocs(), first.NumDocs())
+	}
+	if second.NumSymbolBlobs() != first.NumSymbolBlobs() {
+		t.Errorf("cached NumSymbolBlobs %d != built %d", second.NumSymbolBlobs(), first.NumSymbolBlobs())
+	}
+
+	// The loaded indexes must still rank: the defining file tops the results.
+	win, err := second.SearchContext(context.Background(), "refund", 800, 5)
+	if err != nil {
+		t.Fatalf("SearchContext after reload: %v", err)
+	}
+	if len(win.Blocks) == 0 || !strings.Contains(win.Blocks[0].RelPath, "refund.go") {
+		t.Errorf("cached indexes failed to surface billing/refund.go, got %+v", win.Blocks)
+	}
+}
+
+func TestRankCorpusSidecarsInvalidatedByCorpusChange(t *testing.T) {
+	dir := t.TempDir()
+	buildShard(t, dir, "shard-0000.idx", map[string]string{"a/x.go": "package a\nfunc Foo() {}\n"})
+
+	if _, err := OpenRank(context.Background(), dir, RankConfig{TopK: 5}); err != nil {
+		t.Fatalf("initial build: %v", err)
+	}
+	// Add a second shard: the fingerprint changes, so both sidecars are stale.
+	buildShard(t, dir, "shard-0001.idx", map[string]string{"b/y.go": "package b\nfunc Bar() {}\n"})
+	rc, err := OpenRank(context.Background(), dir, RankConfig{TopK: 5})
+	if err != nil {
+		t.Fatalf("rebuild: %v", err)
+	}
+	if rc.TokensFromCache() || rc.SymbolsFromCache() {
+		t.Error("adding a shard must invalidate both sidecars (expected rebuild)")
+	}
+	if rc.NumBlobs() != 2 {
+		t.Errorf("NumBlobs = %d, want 2 after adding a shard", rc.NumBlobs())
+	}
+
+	// A third open over the now-stable set must LOAD the re-persisted sidecars.
+	third, err := OpenRank(context.Background(), dir, RankConfig{TopK: 5})
+	if err != nil {
+		t.Fatalf("re-open: %v", err)
+	}
+	if !third.TokensFromCache() || !third.SymbolsFromCache() {
+		t.Error("third open should LOAD the re-persisted sidecars")
+	}
+}
+
+func TestRankCorpusCorruptSidecarFallsBackToRebuild(t *testing.T) {
+	dir := t.TempDir()
+	buildShard(t, dir, "shard-0000.idx", map[string]string{"a/x.go": "package a\nfunc Foo() {}\n"})
+
+	if _, err := OpenRank(context.Background(), dir, RankConfig{TopK: 5}); err != nil {
+		t.Fatalf("initial build: %v", err)
+	}
+	// Corrupt the token data file (the .meta still matches), so Load must fail and
+	// OpenRank must fall back to a clean rebuild — never erroring the boot.
+	if err := os.WriteFile(filepath.Join(dir, "corpus-tokens.tki"), []byte("not a valid TKI file"), 0o644); err != nil {
+		t.Fatalf("corrupt token sidecar: %v", err)
+	}
+	rc, err := OpenRank(context.Background(), dir, RankConfig{TopK: 5})
+	if err != nil {
+		t.Fatalf("OpenRank over corrupt sidecar must not error: %v", err)
+	}
+	if rc.TokensFromCache() {
+		t.Error("a corrupt token sidecar must trigger a rebuild, not a load")
+	}
+
+	// The rebuild re-persisted a valid file; a subsequent open loads it.
+	again, err := OpenRank(context.Background(), dir, RankConfig{TopK: 5})
+	if err != nil {
+		t.Fatalf("re-open after rebuild: %v", err)
+	}
+	if !again.TokensFromCache() {
+		t.Error("re-persisted token sidecar should load on the next open")
+	}
+}

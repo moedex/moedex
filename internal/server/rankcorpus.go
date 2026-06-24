@@ -43,6 +43,13 @@ type RankConfig struct {
 	EmbedModel    string // recorded in the sidecar meta; a model change invalidates it
 	LinesPerChunk int    // dense chunk window (default 40)
 	Overlap       int    // dense chunk overlap (default 10)
+
+	// Token/symbol sidecars (load-or-build-and-save, mirroring StorePath). Both
+	// default to a path under dir when empty, so the feature is on by default; a
+	// matching sidecar skips the rebuild on reload, otherwise OpenRank builds and
+	// re-persists. Persistence is best-effort and never fails a boot.
+	TokenPath  string // persisted BM25 token-index sidecar (default dir/corpus-tokens.tki)
+	SymbolPath string // persisted syntactic symbol-index sidecar (default dir/corpus-symbols.sym)
 }
 
 // RankCorpus is the ranked, agent-facing surface over a set of prebuilt shards.
@@ -61,6 +68,8 @@ type RankCorpus struct {
 	syms        *symbol.Index
 	store       *embed.Store // nil when the dense arm is disabled
 	denseCached bool         // true when the store was loaded from a persisted sidecar
+	tokenCached bool         // true when the token index was loaded from a persisted sidecar
+	symsCached  bool         // true when the symbol index was loaded from a persisted sidecar
 	searcher    *mcp.IndexSearcher
 }
 
@@ -69,30 +78,26 @@ type RankCorpus struct {
 // corpus under ctx — the boot-time dense-arm cost — so callers should pass a
 // cancellable context.
 func OpenRank(ctx context.Context, dir string, cfg RankConfig) (*RankCorpus, error) {
-	paths, err := filepath.Glob(filepath.Join(dir, "*.idx"))
+	ix, paths, err := loadUnified(dir)
 	if err != nil {
-		return nil, fmt.Errorf("server: glob shards: %w", err)
+		return nil, err
 	}
-	if len(paths) == 0 {
-		return nil, fmt.Errorf("server: no *.idx shards under %s", dir)
-	}
-	sort.Strings(paths)
 
-	// Concatenate blob content across shards. index.Restore assigns each blob the
-	// ID equal to its position in this slice, so IDs are global and dense.
-	var blobs []index.BlobData
-	for _, p := range paths {
-		bs, err := diskstore.LoadBlobs(p)
-		if err != nil {
-			return nil, fmt.Errorf("server: load blobs %s: %w", p, err)
+	// Token index: load a matching persisted sidecar, else build + best-effort
+	// persist. Default the path under dir so the cache is on by default.
+	tokenPath := cfg.TokenPath
+	if tokenPath == "" {
+		tokenPath = defaultTokenPath(dir)
+	}
+	ti, tokenCached := loadPersistedTokens(tokenPath, paths, ix.NumBlobs())
+	if ti == nil {
+		ti = tokenindex.Build(ix)
+		if err := savePersistedTokens(ti, tokenPath, paths, ix.NumBlobs()); err != nil {
+			// Best-effort: a failed cache write must not take down a working ranker.
+			fmt.Fprintf(os.Stderr, "server: persist token index (continuing): %v\n", err)
 		}
-		blobs = append(blobs, bs...)
 	}
-	// nil postings: the corpus ranker never does trigram search (candidates come
-	// from the token index), so the positional postings are intentionally absent.
-	ix := index.Restore(blobs, nil)
-
-	ti := tokenindex.Build(ix)
+	fmt.Fprintf(os.Stderr, "server: token index %s\n", cacheTag(tokenCached))
 
 	// Dense arm: a prebuilt store wins; else load a matching persisted sidecar;
 	// else embed the corpus now (and persist if StorePath is set).
@@ -122,14 +127,68 @@ func OpenRank(ctx context.Context, dir string, cfg RankConfig) (*RankCorpus, err
 	ranker := rank.New(ix, ti, store, cfg.Emb, cfg.Rank)
 	ranker.UseTokenCandidates(true)
 
-	syms := symbol.BuildMulti(ix)
+	// Symbol index: load a matching persisted sidecar, else build + best-effort
+	// persist. Default the path under dir so the cache is on by default.
+	symbolPath := cfg.SymbolPath
+	if symbolPath == "" {
+		symbolPath = defaultSymbolPath(dir)
+	}
+	syms, symsCached := loadPersistedSymbols(symbolPath, paths, ix.NumBlobs())
+	if syms == nil {
+		syms = symbol.BuildMulti(ix)
+		if err := savePersistedSymbols(syms, symbolPath, paths, ix.NumBlobs()); err != nil {
+			fmt.Fprintf(os.Stderr, "server: persist symbol index (continuing): %v\n", err)
+		}
+	}
+	fmt.Fprintf(os.Stderr, "server: symbol index %s\n", cacheTag(symsCached))
 	ranker.SetSymbols(syms)
 
 	searcher := mcp.NewIndexSearcher(ix, ranker, cfg.TopK)
 	searcher.SetEnclosingBytes(syms.EnclosingBytesFunc())
 
-	return &RankCorpus{ix: ix, ti: ti, syms: syms, store: store, denseCached: cached, searcher: searcher}, nil
+	return &RankCorpus{ix: ix, ti: ti, syms: syms, store: store, denseCached: cached, tokenCached: tokenCached, symsCached: symsCached, searcher: searcher}, nil
 }
+
+// loadUnified globs the "*.idx" shards under dir (sorted), concatenates their
+// blob content, and restores a single content-only index. index.Restore assigns
+// each blob the ID equal to its position in the sorted slice, so IDs are global
+// and dense — and identical across OpenRank and BuildSidecars (which is why both
+// share this helper). Returns the sorted shard paths so callers can fingerprint
+// the same set. The postings are nil: the corpus ranker never does trigram
+// search (candidates come from the token index).
+func loadUnified(dir string) (*index.Index, []string, error) {
+	paths, err := filepath.Glob(filepath.Join(dir, "*.idx"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("server: glob shards: %w", err)
+	}
+	if len(paths) == 0 {
+		return nil, nil, fmt.Errorf("server: no *.idx shards under %s", dir)
+	}
+	sort.Strings(paths)
+
+	var blobs []index.BlobData
+	for _, p := range paths {
+		bs, err := diskstore.LoadBlobs(p)
+		if err != nil {
+			return nil, nil, fmt.Errorf("server: load blobs %s: %w", p, err)
+		}
+		blobs = append(blobs, bs...)
+	}
+	return index.Restore(blobs, nil), paths, nil
+}
+
+// cacheTag renders the load-vs-build outcome for a one-line stderr trace.
+func cacheTag(cached bool) string {
+	if cached {
+		return "loaded from cache"
+	}
+	return "built"
+}
+
+// defaultTokenPath / defaultSymbolPath are the on-by-default sidecar locations
+// next to the shards, so OpenRank persists+reuses with zero caller wiring.
+func defaultTokenPath(dir string) string  { return filepath.Join(dir, "corpus-tokens.tki") }
+func defaultSymbolPath(dir string) string { return filepath.Join(dir, "corpus-symbols.sym") }
 
 // storeMeta validates a persisted corpus-embedding sidecar against the current
 // corpus. A mismatch on any field means the store was built from a different
@@ -191,6 +250,106 @@ func savePersistedStore(st *embed.Store, storePath string, shardPaths []string, 
 	return os.WriteFile(storePath+".meta", meta, 0o644)
 }
 
+// sidecarMeta validates a persisted token- or symbol-index sidecar against the
+// current corpus. Unlike storeMeta it has no Model field (token/symbol indexes
+// depend only on the shard set, not on an embedding model). It reuses
+// corpusFingerprint, so any add/remove/regrow of shards invalidates the cache.
+type sidecarMeta struct {
+	Fingerprint string `json:"fingerprint"` // shard set (sorted name+size)
+	NumBlobs    int    `json:"num_blobs"`   // unified-index blob count (global IDs)
+}
+
+// sidecarMetaMatches reports whether path's sibling .meta matches the current
+// corpus. Any missing/corrupt/mismatched meta returns false so OpenRank rebuilds.
+func sidecarMetaMatches(path string, shardPaths []string, numBlobs int) bool {
+	raw, err := os.ReadFile(path + ".meta")
+	if err != nil {
+		return false
+	}
+	var m sidecarMeta
+	if err := json.Unmarshal(raw, &m); err != nil {
+		return false
+	}
+	return m.Fingerprint == corpusFingerprint(shardPaths) && m.NumBlobs == numBlobs
+}
+
+// writeSidecarMeta writes the validating .meta sibling for a token/symbol sidecar.
+func writeSidecarMeta(path string, shardPaths []string, numBlobs int) error {
+	meta, err := json.Marshal(sidecarMeta{
+		Fingerprint: corpusFingerprint(shardPaths),
+		NumBlobs:    numBlobs,
+	})
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path+".meta", meta, 0o644)
+}
+
+// loadPersistedTokens loads tokenPath iff its sibling .meta matches the current
+// corpus. Returns (nil,false) on any missing/corrupt/mismatch so OpenRank rebuilds.
+func loadPersistedTokens(tokenPath string, shardPaths []string, numBlobs int) (*tokenindex.TokenIndex, bool) {
+	if !sidecarMetaMatches(tokenPath, shardPaths, numBlobs) {
+		return nil, false
+	}
+	ti, err := tokenindex.Load(tokenPath)
+	if err != nil {
+		return nil, false
+	}
+	return ti, true
+}
+
+// savePersistedTokens writes the token index and its validating meta sidecar.
+func savePersistedTokens(ti *tokenindex.TokenIndex, tokenPath string, shardPaths []string, numBlobs int) error {
+	if err := tokenindex.Save(ti, tokenPath); err != nil {
+		return err
+	}
+	return writeSidecarMeta(tokenPath, shardPaths, numBlobs)
+}
+
+// loadPersistedSymbols loads symbolPath iff its sibling .meta matches the current
+// corpus. Returns (nil,false) on any missing/corrupt/mismatch so OpenRank rebuilds.
+func loadPersistedSymbols(symbolPath string, shardPaths []string, numBlobs int) (*symbol.Index, bool) {
+	if !sidecarMetaMatches(symbolPath, shardPaths, numBlobs) {
+		return nil, false
+	}
+	syms, err := symbol.Load(symbolPath)
+	if err != nil {
+		return nil, false
+	}
+	return syms, true
+}
+
+// savePersistedSymbols writes the symbol index and its validating meta sidecar.
+func savePersistedSymbols(syms *symbol.Index, symbolPath string, shardPaths []string, numBlobs int) error {
+	if err := symbol.Save(syms, symbolPath); err != nil {
+		return err
+	}
+	return writeSidecarMeta(symbolPath, shardPaths, numBlobs)
+}
+
+// BuildSidecars builds and persists the token and symbol sidecars for the shard
+// set under dir, to the same default paths OpenRank reads. The offline indexer
+// calls this after a build/refresh so the daemon finds the caches warm and skips
+// both rebuilds on its next boot. It shares loadUnified with OpenRank, so the
+// blob IDs and fingerprint match byte-for-byte. Embeddings are not built here
+// (they need the embedder; that is a serve-time concern). Returns the two data
+// paths written.
+func BuildSidecars(dir string) (tokenPath, symbolPath string, err error) {
+	ix, paths, err := loadUnified(dir)
+	if err != nil {
+		return "", "", err
+	}
+	tokenPath = defaultTokenPath(dir)
+	symbolPath = defaultSymbolPath(dir)
+	if err := savePersistedTokens(tokenindex.Build(ix), tokenPath, paths, ix.NumBlobs()); err != nil {
+		return "", "", fmt.Errorf("server: persist token index: %w", err)
+	}
+	if err := savePersistedSymbols(symbol.BuildMulti(ix), symbolPath, paths, ix.NumBlobs()); err != nil {
+		return "", "", fmt.Errorf("server: persist symbol index: %w", err)
+	}
+	return tokenPath, symbolPath, nil
+}
+
 func chunkLines(cfg RankConfig) int {
 	if cfg.LinesPerChunk <= 0 {
 		return 40
@@ -232,3 +391,11 @@ func (rc *RankCorpus) DenseChunks() int {
 // DenseFromCache reports whether the dense arm's embeddings were loaded from a
 // persisted sidecar (true) rather than embedded at boot (false).
 func (rc *RankCorpus) DenseFromCache() bool { return rc.denseCached }
+
+// TokensFromCache reports whether the BM25 token index was loaded from a
+// persisted sidecar (true) rather than rebuilt at boot (false).
+func (rc *RankCorpus) TokensFromCache() bool { return rc.tokenCached }
+
+// SymbolsFromCache reports whether the symbol index was loaded from a persisted
+// sidecar (true) rather than rebuilt at boot (false).
+func (rc *RankCorpus) SymbolsFromCache() bool { return rc.symsCached }

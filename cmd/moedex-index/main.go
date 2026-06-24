@@ -39,6 +39,7 @@ import (
 	"moedex/internal/index"
 	"moedex/internal/ingest"
 	"moedex/internal/parity"
+	"moedex/internal/server"
 )
 
 func main() {
@@ -111,8 +112,23 @@ func runBuild(args []string) error {
 	if err := parity.WriteManifest(filepath.Join(*shardDir, parity.ManifestName), m); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}
-	fmt.Printf("built %d shard(s), %d file(s) from %d repo(s) into %s\n", nShards, nFiles, len(m.Heads), *shardDir)
+	// Build the token+symbol ranking sidecars so the daemon finds them warm and
+	// skips both rebuilds on its next boot. Best-effort: a sidecar failure must
+	// not fail an otherwise-good build (the daemon will just rebuild on boot).
+	sidecars := buildSidecars(*shardDir)
+	fmt.Printf("built %d shard(s), %d file(s) from %d repo(s) into %s%s\n", nShards, nFiles, len(m.Heads), *shardDir, sidecars)
 	return nil
+}
+
+// buildSidecars writes the ranking sidecars under dir and returns a short suffix
+// for the success line. On error it warns to stderr and returns "" — consistent
+// with the best-effort persistence in the serving layer.
+func buildSidecars(dir string) string {
+	if _, _, err := server.BuildSidecars(dir); err != nil {
+		fmt.Fprintf(os.Stderr, "moedex-index: warning: build ranking sidecars (daemon will rebuild on boot): %v\n", err)
+		return ""
+	}
+	return " (+token/symbol sidecars)"
 }
 
 // buildShards indexes every repo under root into byte-sized shards written to
@@ -294,13 +310,17 @@ func runRefresh(args []string) error {
 		return fmt.Errorf("fix up manifest paths: %w", err)
 	}
 
+	// Rebuild the token+symbol sidecars on the LIVE dir (the shard set changed, so
+	// any prior sidecars are now stale). Best-effort, as in build.
+	sidecars := buildSidecars(dir)
+
 	if *keepBackup {
-		fmt.Printf("refreshed %s (previous dir kept at %s)\n", dir, bak)
+		fmt.Printf("refreshed %s%s (previous dir kept at %s)\n", dir, sidecars, bak)
 	} else {
 		if err := os.RemoveAll(bak); err != nil {
 			fmt.Fprintf(os.Stderr, "moedex-index: warning: could not remove backup %s: %v\n", bak, err)
 		}
-		fmt.Printf("refreshed %s\n", dir)
+		fmt.Printf("refreshed %s%s\n", dir, sidecars)
 	}
 	fmt.Println("note: the shard set changed — moedex-serve will rebuild the dense embedding cache on next start.")
 	return nil

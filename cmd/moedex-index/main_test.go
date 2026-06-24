@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -96,6 +97,61 @@ func TestBuildCheckRefresh(t *testing.T) {
 	// --- refresh again: clean no-op ---
 	if ch := detect(t, shardDir); ch.Any() {
 		t.Fatalf("post-refresh check still reports drift: %+v", ch)
+	}
+}
+
+// TestMoedexIndexBuildProducesSidecars proves the offline indexer writes the
+// token+symbol ranking sidecars so the daemon finds them warm: a fresh OpenRank
+// over the built dir LOADS both indexes from cache (no rebuild). It also covers
+// the refresh path: after a mutate+refresh, the live dir carries valid sidecars.
+func TestMoedexIndexBuildProducesSidecars(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	root := t.TempDir()
+	repoA := initRepo(t, filepath.Join(root, "repoA"), map[string]string{
+		"alpha.go": "package a\n\nfunc AlphaUniqueToken() {}\n",
+	})
+	shardDir := filepath.Join(t.TempDir(), "shards")
+
+	// --- build writes the four sidecar files ---
+	if err := runBuild([]string{"-corpus", root, "-shard-dir", shardDir}); err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	for _, name := range []string{"corpus-tokens.tki", "corpus-tokens.tki.meta", "corpus-symbols.sym", "corpus-symbols.sym.meta"} {
+		if _, err := os.Stat(filepath.Join(shardDir, name)); err != nil {
+			t.Fatalf("sidecar %s not written by build: %v", name, err)
+		}
+	}
+
+	// A fresh daemon boot finds them warm (loads, does not rebuild).
+	rc, err := server.OpenRank(context.Background(), shardDir, server.RankConfig{})
+	if err != nil {
+		t.Fatalf("OpenRank after build: %v", err)
+	}
+	if !rc.TokensFromCache() || !rc.SymbolsFromCache() {
+		t.Errorf("daemon did not find warm sidecars: tokens=%v symbols=%v",
+			rc.TokensFromCache(), rc.SymbolsFromCache())
+	}
+
+	// --- mutate + refresh rebuilds sidecars on the live dir ---
+	writeFile(t, filepath.Join(repoA, "gamma.go"), "package a\n\nfunc GammaFreshToken() {}\n")
+	gitCommit(t, repoA, "add gamma")
+	if err := runRefresh([]string{"-shard-dir", shardDir}); err != nil {
+		t.Fatalf("refresh: %v", err)
+	}
+	for _, name := range []string{"corpus-tokens.tki", "corpus-tokens.tki.meta", "corpus-symbols.sym", "corpus-symbols.sym.meta"} {
+		if _, err := os.Stat(filepath.Join(shardDir, name)); err != nil {
+			t.Fatalf("sidecar %s missing on live dir after refresh: %v", name, err)
+		}
+	}
+	rc2, err := server.OpenRank(context.Background(), shardDir, server.RankConfig{})
+	if err != nil {
+		t.Fatalf("OpenRank after refresh: %v", err)
+	}
+	if !rc2.TokensFromCache() || !rc2.SymbolsFromCache() {
+		t.Errorf("post-refresh daemon did not find warm sidecars: tokens=%v symbols=%v",
+			rc2.TokensFromCache(), rc2.SymbolsFromCache())
 	}
 }
 
