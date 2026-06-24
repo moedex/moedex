@@ -8,10 +8,13 @@ identical content is indexed once), trigrams are **positional byte-trigrams**
 (byte offsets, not rune offsets), and a regex is reduced to a **necessary-condition
 boolean trigram query** that selects candidate blobs which a real regex engine then
 verifies. Correctness is pinned to **ripgrep parity** (`internal/search/parity_test.go`
-shells out to `rg` and asserts identical line matches). The whole system is
-**pure Go standard library** with a single *optional* external dependency: a local
-HTTP embedding server for the dense-retrieval arm — absent that, moedex runs
-fully self-contained.
+shells out to `rg` and asserts identical line matches). The **default build is pure
+Go standard library** with zero ML/runtime dependencies: the dense-retrieval arm is
+optional and absent it, moedex runs fully self-contained. The dense arm has two
+backends — an **in-process ONNX code embedder** compiled in only under the `onnx`
+build tag (which is the only thing that pulls the `github.com/sugarme/tokenizer` and
+`github.com/yalue/onnxruntime_go` modules in `go.mod`), or a **local HTTP embedding
+server**. Neither is needed for lexical/symbol/path retrieval.
 
 The design lineage lives in [`zoekt-2026-redesign.md`](zoekt-2026-redesign.md)
 (the northstar) and the [`research/`](research) notes; this document describes the
@@ -37,15 +40,18 @@ All library code lives under `internal/`; executables under `cmd/`.
 | search | [`internal/search`](internal/search) | Candidate retrieval + verify → line matches | `Match`; `Literal(ix, q) []Match`; `Regex(ix, pattern) ([]Match, error)` |
 | diskstore | [`internal/diskstore`](internal/diskstore) | Persist/reload the index; mmap postings | `Save(ix, path)`; `Load(path)`; `LoadMmap(path) (*index.Index, io.Closer, error)` |
 | tokenindex | [`internal/tokenindex`](internal/tokenindex) | Persistent inverted index of BM25 term stats | `TokenIndex`; `Build(ix)`; `Tokenize(text)`; `NumDocs/AvgDocLen/DocLen/DocFreq/TermFreq`; `Save`, `Load` |
-| embed | [`internal/embed`](internal/embed) | Dense arm: chunk → vector → cosine search | `Vector`, `Embedder`, `HTTPEmbedder`, `NewHTTPEmbedder`; `Chunk`, `ChunkBlob`; `Store`, `BuildStore`, `Hit`, `(*Store) Search/Save`; `LoadStore` |
-| rank | [`internal/rank`](internal/rank) | Fuse lexical + dense arms via RRF | `RankedResult`, `LineSpan`; `Config`; `Ranker`, `New`, `(*Ranker) Rank` |
+| embed | [`internal/embed`](internal/embed) | Dense arm: chunk → vector → cosine search | `Vector`, `Embedder`; `HTTPEmbedder`, `NewHTTPEmbedder`; `ONNXEmbedder`, `NewONNXEmbedder`, `NewONNXEmbedderFromFiles` (real only under `-tags onnx`; a no-op stub otherwise); `Chunk`, `ChunkBlob`; `Store`, `BuildStore`, `Hit`, `(*Store) Search/Save/Len/Dim`; `LoadStore` |
+| rank | [`internal/rank`](internal/rank) | Fuse lexical + dense + symbol + path arms via RRF | `RankedResult`, `LineSpan`; `Config`; `Ranker`, `New`, `(*Ranker) Rank/SetSymbols/SetDense/UseTokenCandidates` |
 | contextwin | [`internal/contextwin`](internal/contextwin) | Assemble ranked results into token-budgeted blocks | `ContextBlock`, `ContextWindow`, `Options`; `Assemble(ix, results, opts) ContextWindow` |
-| symbol | [`internal/symbol`](internal/symbol) | Syntactic symbol layer (Go only) for block scoping | `Symbol`, `Kind`, `Index`, `NewIndex`, `Enclosing`, `EnclosingBytesFunc`; `Extractor`, `GoExtractor`, `Build`; `Save`, `Load` |
+| symbol | [`internal/symbol`](internal/symbol) | Polyglot syntactic symbol layer for block scoping + the symbol-name arm | `Symbol`, `Kind`, `Index`, `NewIndex`, `Enclosing`, `EnclosingBytesFunc`; `Extractor`, `GoExtractor`, `CSharpExtractor`, `TSExtractor`, `SQLExtractor`, `CFExtractor`, `ExtractorForPath`, `Build`, `BuildMulti`; `Save`, `Load` |
 | eval | [`internal/eval`](internal/eval) | IR-metrics + ranker evaluation harness | `GoldQuery`, `NewBinaryGold`; `RecallAtK`, `PrecisionAtK`, `MRR`, `NDCGAtK`; `Runner`, `NewRunner`, `Evaluate`, `Report`, `QueryReport`; `BuildIndexFromCorpus`, `BuildIndexFromFiles` |
-| parity | [`internal/parity`](internal/parity) | Full-corpus exact-match retrieval parity harness (sharded build, seeded battery, rg/gold/Zoekt oracles, adjudication, report) | `Config`, `RunConfig`, `Run`; `Build`, `Built`, `FileTable`; `Generate`, `Battery`, `Query`, `Bucket`; `QueryResult`, `Verdict`; `WriteReport`, `ReportMeta` |
+| parity | [`internal/parity`](internal/parity) | Full-corpus exact-match retrieval parity harness + shard-level freshness | `Config`, `RunConfig`, `Run`; `Build`, `Built`, `FileTable`, `DefaultShardBytes`; `Generate`, `Battery`, `Query`, `Bucket`; `QueryResult`, `Verdict`; `WriteReport`, `ReportMeta`; `Manifest`, `ShardManifest`, `RepoHead`, `WriteManifest`, `LoadManifest`, `DetectChanges`, `Changes`, `Rebuild` |
+| server | [`internal/server`](internal/server) | Warm multi-shard serving spine: mmap'd retrieval + ranked agent context | `Corpus`, `Open`, `(*Corpus) Regex/Literal/NumShards/NumBlobs/Close`; `RankCorpus`, `RankConfig`, `OpenRank`, `(*RankCorpus) SearchContext`; `BuildSidecars` |
 | mcp | [`internal/mcp`](internal/mcp) | Serve `search_context` over MCP (JSON-RPC/stdio) | `ContextSearcher`; `Server`, `NewServer`, `Serve`; `IndexSearcher`, `NewIndexSearcher`, `SetEnclosingBytes`, `SearchContext` |
 | moedex | [`cmd/moedex`](cmd/moedex) | CLI: index one repo, run a literal/regex query | — |
-| moedex-mcp | [`cmd/moedex-mcp`](cmd/moedex-mcp) | MCP server binary | — |
+| moedex-mcp | [`cmd/moedex-mcp`](cmd/moedex-mcp) | Single-repo MCP server binary | — |
+| moedex-serve | [`cmd/moedex-serve`](cmd/moedex-serve) | Warm retrieval daemon over a prebuilt shard dir: `-http` retrieval API, `-q` one-shot, `-mcp` ranked context | — |
+| moedex-index | [`cmd/moedex-index`](cmd/moedex-index) | Offline shard-dir builder/freshness tool: `build` / `check` / `refresh` | — |
 | scale | [`cmd/scale`](cmd/scale) | Index many repos, report size/throughput/mmap memory | — |
 | moedex-parity | [`cmd/moedex-parity`](cmd/moedex-parity) | Full-corpus parity gate: build + battery + oracles + `PARITY-REPORT.md`, non-zero exit on failure | — |
 
@@ -60,7 +66,7 @@ git ls-files ──▶ ingest.Repo ──▶ index.AddFile (per file)
                                       │
                                       ├─▶ tokenindex.Build   (BM25 term stats)
                                       ├─▶ embed.BuildStore   (optional dense vectors)
-                                      └─▶ symbol.Build       (Go symbol ranges)
+                                      └─▶ symbol.BuildMulti  (polyglot symbol ranges)
 
 index ──▶ diskstore.Save ──▶ diskstore.Load / LoadMmap
 ```
@@ -84,9 +90,14 @@ index ──▶ diskstore.Save ──▶ diskstore.Load / LoadMmap
      document lengths — the BM25 input set.
    - [`embed.BuildStore`](internal/embed/embed.go) (optional) chunks each blob into
      overlapping line-windows (`ChunkBlob`), embeds them in batches of 64 via the
-     `Embedder`, and stores L2-normalized vectors in a flat brute-force `Store`.
-   - [`symbol.Build`](internal/symbol/extract.go) runs `GoExtractor` over each
-     blob; blobs that don't parse as Go simply get no symbols.
+     `Embedder` (the in-process ONNX code embedder or an HTTP server), and stores
+     L2-normalized vectors in a flat brute-force `Store`.
+   - [`symbol.BuildMulti`](internal/symbol/build_multi.go) dispatches a
+     language-appropriate `Extractor` per blob via `ExtractorForPath`, keyed on the
+     first file's extension (`.go`→`GoExtractor`, `.cs`→`CSharpExtractor`,
+     `.ts`/`.tsx`→`TSExtractor`, `.sql`→`SQLExtractor`, `.cfm`/`.cfc`→`CFExtractor`);
+     a blob whose extension isn't recognized, or that yields no symbols, is skipped
+     and falls back to the brace/indent heuristic at scoping time.
 4. **Persistence** ([`diskstore.Save`](internal/diskstore/diskstore.go)) writes the
    index to a single file; `LoadMmap` maps it back with posting lists left on disk.
 
@@ -97,7 +108,9 @@ MCP tools/call search_context
    └─▶ IndexSearcher.SearchContext           (internal/mcp/mcp.go)
           ├─▶ rank.Ranker.Rank               (internal/rank/ranker.go)
           │      ├─ lexical arm: trigram candidate blobs + BM25 (tokenindex)
-          │      ├─ dense arm:   embed.Store.Search (optional)
+          │      ├─ path arm:    file-path token coverage (PathMinCoverage, on by default)
+          │      ├─ symbol arm:  symbol-name coverage (SymbolMinCoverage; needs symbol index)
+          │      ├─ dense arm:   embed.Store.Search (optional; query-length gated)
           │      └─ fuse:        Reciprocal Rank Fusion (RRF) ──▶ []RankedResult
           └─▶ contextwin.Assemble            (internal/contextwin/contextwin.go)
                  ├─ expand each salient LineSpan to its enclosing block
@@ -106,21 +119,44 @@ MCP tools/call search_context
                  └─ emit best-first under a token budget ──▶ ContextWindow
 ```
 
-The call chain is wired in [`cmd/moedex-mcp/main.go`](cmd/moedex-mcp/main.go):
-it builds the index + token index, conditionally builds the dense store, constructs
-a `rank.Ranker`, wraps it in an `mcp.IndexSearcher` (default `topK = 20`), wires the
-Go symbol layer in via `searcher.SetEnclosingBytes(symIdx.EnclosingBytesFunc())`,
-and serves on stdin/stdout.
+The single-repo call chain is wired in
+[`cmd/moedex-mcp/main.go`](cmd/moedex-mcp/main.go): it builds the index + token
+index, conditionally builds the dense store, constructs a `rank.Ranker`, wraps it in
+an `mcp.IndexSearcher` (default `topK = 20`), builds the polyglot symbol layer
+(`symbol.BuildMulti`) and wires it both for scoping
+(`searcher.SetEnclosingBytes(symIdx.EnclosingBytesFunc())`) and as a ranking arm
+(`ranker.SetSymbols(symIdx)`), and serves on stdin/stdout. The warm multi-shard
+equivalent is `server.OpenRank` (see [Serving spine](#warm-serving-spine-internalserver--cmdmoedex-serve)).
 
-Inside [`Ranker.Rank`](internal/rank/ranker.go): the **lexical arm** generates
-candidate blobs by unioning the trigram candidate sets of each query term (terms
-shorter than 3 bytes are skipped for candidate generation but still score), then
-BM25-scores each candidate (`K1`=1.2, `B`=0.75 by default). The **dense arm**
-(only when both `store` and `emb` are non-nil) does cosine search over chunk
-embeddings, keeping the best chunk per blob. The two ranked lists are fused by
-**RRF**: each arm contributes `1/(RRFk + rank)` at a blob's rank (`RRFk`=60
-default). Results carry both the fused score and the salient `LineSpan`s that seed
-context extraction.
+Inside [`Ranker.Rank`](internal/rank/ranker.go) up to four RRF arms run, each
+contributing `1/(RRFk + rank)` at a blob's rank (`RRFk`=60 default):
+
+- **Lexical arm** — generates candidate blobs by unioning the trigram candidate
+  sets of each query term (terms shorter than 3 bytes are skipped for candidate
+  generation but still score), then BM25-scores each candidate (`K1`=1.2, `B`=0.75
+  by default). The corpus ranker switches candidate generation to the token index
+  via `UseTokenCandidates(true)` because its content-only index carries no postings.
+- **Path arm** (`pathArm`) — the zoekt-style filename signal. A blob whose file
+  path tokens cover at least `PathMinCoverage` (default **0.6**) of the query's
+  distinct terms casts a vote, so a query like "federated server" finds
+  `mysql_create_federated_server.sql` even when "federated" lives only in the
+  filename. It is **on by default** (every blob has a path, so it needs no external
+  index; a negative `PathMinCoverage` disables it and skips building the path index).
+- **Symbol arm** (`symbolArm`) — active only when a symbol index is installed
+  (`SetSymbols`). A blob whose defined symbol *names* cover at least
+  `SymbolMinCoverage` (default **0.67**) of the query's distinct terms votes, so a
+  blob that defines `func Refund` outranks one that merely mentions the word.
+- **Dense arm** (`denseArm`) — active only when both `store` and `emb` are non-nil
+  AND the query passes the **query-length gate** `DenseMinQueryTerms` (default
+  **5** distinct terms): short keyword queries are the lexical/symbol/path arms' home
+  turf where low-cosine chunks are noise, so dense is reserved for longer
+  natural-language queries. It does cosine search over chunk embeddings, keeping the
+  best chunk per blob. A second, opt-in `DenseMinScore` cosine threshold (off by
+  default) can additionally gate individual chunks by similarity.
+
+Results carry the fused score, the raw BM25/cosine components, and the salient
+`LineSpan`s (lexical match lines, plus each voting arm's span) that seed context
+extraction.
 
 [`contextwin.Assemble`](internal/contextwin/contextwin.go) expands each span into a
 block, merges overlapping/touching blocks within a file, walks results best-first
@@ -154,13 +190,18 @@ block is always emitted even if it alone exceeds budget; any later skip sets
   the Go heap. `cmd/scale` measures this directly (`MOEDEX_MMAP=1`).
 - **Optional dense arm (zero-dep default).** The dense arm lives behind the
   `Embedder` interface and is `nil`-able; `rank.New(ix, ti, nil, nil, cfg)` yields
-  pure-lexical ranking with no external dependencies. A local HTTP embedding server
-  lights up the hybrid when configured. Vectors are L2-normalized so cosine reduces
-  to a dot product over a flat (brute-force) store — an ANN index is a later
-  optimization behind the same `Search` API.
+  ranking with no external dependencies. Two backends satisfy `Embedder`: an
+  **in-process ONNX code embedder** (`embed.ONNXEmbedder`,
+  st-codesearch-distilroberta-base, 768-d, int8-quantized to ~78MB embedded in the
+  binary) compiled in only under `-tags onnx` — the default build links a no-op stub
+  ([`onnx_disabled.go`](internal/embed/onnx_disabled.go)) so the core keeps zero ML
+  deps — and a **local HTTP embedding server** (`embed.HTTPEmbedder`, any
+  OpenAI/ollama-style `/embeddings` endpoint), which needs no build tag. Vectors are
+  L2-normalized so cosine reduces to a dot product over a flat (brute-force) store —
+  an ANN index is a later optimization behind the same `Search` API.
 - **RRF fusion (not a learned reranker).** Reciprocal Rank Fusion needs no score
-  calibration between the BM25 and cosine arms and is the northstar's conservative
-  default; a learned reranker is explicitly deferred (see
+  calibration between the BM25, cosine, symbol-name, and path arms and is the
+  northstar's conservative default; a learned reranker is explicitly deferred (see
   [`research/learned-reranker.md`](research/learned-reranker.md)).
 - **Necessary-condition query reduction.** [`internal/query`](internal/query/query.go)
   guarantees ripgrep parity by only ever producing a *necessary* condition for a
@@ -175,14 +216,21 @@ block is always emitted even if it alone exceeds budget; any later skip sets
 
 ## On-disk formats
 
-All four sidecar/store formats are little-endian and round-trippable.
+All four binary sidecar/store formats are little-endian and round-trippable.
 
 | Format | Magic | Writer | Layout |
 |---|---|---|---|
 | Trigram index | `MOEDEX03` (v3) | [`diskstore`](internal/diskstore/diskstore.go) | 48-byte header (magic, version, reserved, numBlobs, numTrigrams, blobOff, postOff), then a **blob section** (per blob: SHA, content, file refs) and a **postings section** (per trigram: 3 bytes + uint64 encLen + varint-delta encoded list). Each list is an individually-addressable byte range so `LoadMmap` can hand out sub-slices. |
 | Token index | `TKI1` (v1) | [`tokenindex/codec.go`](internal/tokenindex/codec.go) | 4-byte magic + version, then the BM25 term statistics; `Save`/`Load` round-trip them. |
 | Embedding store | `MDXE` (v1) | [`embed/codec.go`](internal/embed/codec.go) | 4-byte magic, version, dim, count; then `count` chunk records (blob, startLine/endLine as uint32, startByte/endByte as uint64); then `count` contiguous float32 vectors. |
-| Symbol sidecar | `SYM1` | [`symbol/codec.go`](internal/symbol/codec.go) | 4-byte magic, uvarint blob count; per blob: blobID, symCount, then per symbol the name, kind, and four byte offsets (nameStart/nameEnd/bodyStart/bodyEnd) — all uvarint. |
+| Symbol sidecar | `SYM1` | [`symbol/codec.go`](internal/symbol/codec.go) | 4-byte magic, uvarint blob count; per blob: blobID, symCount, then per symbol the name, kind, and four byte offsets (nameStart/nameEnd/bodyStart/bodyEnd) — all uvarint. Holds symbols from every language extractor (Go/C#/TS/SQL/CFML), not just Go. |
+
+The serving layer adds two JSON sidecars that are not part of the index codecs: a
+freshness `manifest.json` (`internal/parity/manifest.go` — repo→shard membership +
+each repo's git HEAD) and per-cache `.meta` validators next to the corpus token,
+symbol, and embedding sidecars (`internal/server/rankcorpus.go` — a shard-set
+fingerprint + blob count, plus the embedding model for the embedding store, so a
+stale cache is detected and rebuilt rather than silently reused).
 
 ---
 
@@ -225,8 +273,60 @@ the small `internal/search` parity test to the entire `~/TCGitlab` corpus by
   it must never beat moedex on truth-recall.
 
 This harness surfaced and fixed a real under-approximation: the `internal/search`
-verify-stage literal prefilter (`requiredRun`) treated a case-folded `OpLiteral`
+verify-stage literal prefilter (`requiredLiterals`) treated a case-folded `OpLiteral`
 (from `(?i)`) as a case-*sensitive* required byte run, dropping other-case matches.
+
+## Warm serving spine (`internal/server` + `cmd/moedex-serve`)
+
+The one-shot CLIs rebuild an index per invocation. The serving spine instead reads a
+**prebuilt shard directory** and answers queries with zero cold-start. The offline
+side ([`cmd/moedex-index`](cmd/moedex-index)) produces and refreshes that directory;
+the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
+
+- **Retrieval corpus** ([`server.Corpus`](internal/server/corpus.go)). `Open` mmaps
+  every `*.idx` shard once (`diskstore.LoadMmap`) and holds the mappings for its
+  lifetime, so postings never enter the Go heap. `Regex`/`Literal` fan a per-shard
+  scan across all shards (bounded by `NumCPU`) and merge the results; because
+  `search.Match` carries absolute/repo/relative paths, matches from independent
+  shards merge by concatenation with no cross-shard blob-ID space to reconcile. This
+  backs `moedex-serve -http` (a small JSON `/search` API) and `-q` (one-shot).
+- **Ranked agent context** ([`server.RankCorpus`](internal/server/rankcorpus.go)).
+  `OpenRank` loads only blob *content* from every shard (`diskstore.LoadBlobs` — no
+  positional postings, so no RAM wall), concatenates it into one content-only index
+  with global blob IDs, and builds the corpus-wide BM25 token index and polyglot
+  symbol index, fused by `rank.Ranker` (with `UseTokenCandidates(true)`). It
+  implements `mcp.ContextSearcher`, so `moedex-serve -mcp` serves `search_context`
+  over the whole corpus.
+- **Sidecar persistence.** `OpenRank` is **load-or-build-and-save** for all three
+  ranking sidecars: the BM25 token index (default `corpus-tokens.tki`, `TKI1`), the
+  symbol index (default `corpus-symbols.sym`, `SYM1`), and (when an embedder is set)
+  the embedding store (`corpus-embeddings.store`, `MDXE`). Each is reused only if its
+  `.meta` validator matches the current corpus fingerprint; otherwise it is rebuilt
+  and re-persisted (best-effort — a failed cache write never fails a boot).
+  `BuildSidecars` lets the offline indexer pre-warm the token+symbol caches (it
+  shares `loadUnified` with `OpenRank`, so blob IDs and the fingerprint match
+  byte-for-byte); embeddings are a serve-time concern and are not built there.
+- **Freshness** ([`internal/parity/manifest.go`](internal/parity/manifest.go)).
+  `moedex-index build` writes a `manifest.json` recording, per shard, which repos
+  contributed blobs, and per repo its git HEAD at ingest. `check` compares each
+  repo's current `git rev-parse HEAD` against the manifest (`DetectChanges`);
+  `refresh` rebuilds **only the shards whose repo set intersects the changed repos**
+  (`Rebuild`), carries the untouched shards forward byte-for-byte, atomically swaps
+  the new dir into place, and rebuilds the token/symbol sidecars. Freshness is
+  shard-level (not per-repo) because a content-sized shard interleaves several repos;
+  the documented caveats (shard-boundary drift, opaque per-build shard IDs) live in
+  the package doc.
+- **Daemon hardening** ([`cmd/moedex-serve`](cmd/moedex-serve)). The `-http` server
+  defends a hostile network: optional **bearer auth** (`Authorization: Bearer`,
+  enabled by `-auth-token` or `MOEDEX_AUTH_TOKEN`; `/healthz` and `/metrics` stay
+  open), a **loopback-default bind** when no token is set, optional **TLS**
+  (`-tls-cert`/`-tls-key`), structured logging via **`log/slog`** plus a `/metrics`
+  endpoint, a panic-recovery + per-request-timeout middleware chain, and bounded
+  `http.Server` read/write/idle timeouts. **SIGHUP** hot-swaps the served corpus (or
+  re-runs `OpenRank` for `-mcp`) without dropping in-flight requests; a failed reload
+  keeps the current one. The dense embedder for `-mcp` is selected by `-embed`
+  (`auto|onnx|http|none`): `auto` picks `onnx` when an ONNX Runtime library path is
+  given, else `http` when `MOEDEX_EMBED_URL` is set, else `none`.
 
 ## Current state & deliberately deferred
 
@@ -235,12 +335,25 @@ verify-stage literal prefilter (`requiredRun`) treated a case-folded `OpLiteral`
 - In-memory positional byte-trigram index with SHA content dedup.
 - Full Cox-style regex → boolean trigram reduction, verified to ripgrep parity.
 - On-disk persistence (`MOEDEX03`) with mmap'd compact varint-delta postings.
-- BM25 lexical ranking over a persistent token index.
-- Optional dense arm (local embedding server) fused with lexical via RRF.
+- A four-arm hybrid ranker fused via RRF: BM25 lexical (over a persistent token
+  index), a zoekt-style **path/filename arm** (on by default), a **symbol-name arm**
+  (when a symbol index is installed), and an optional **dense arm** gated by query
+  length — each arm independently gated so it stays additive.
+- An optional dense arm with two interchangeable backends: an **in-process ONNX**
+  code embedder (`-tags onnx`) and a **local HTTP** embedding server.
 - Token-budgeted, deduplicated, block-scoped context-window assembly.
-- A Go-only syntactic symbol layer (`go/parser`) that scopes context blocks to
-  real definition boundaries.
-- MCP `search_context` tool over stdio JSON-RPC.
+- A **polyglot** syntactic symbol layer (`symbol.BuildMulti`) with extractors for Go
+  (`go/parser`), C#, TypeScript, SQL, and ColdFusion — scopes context blocks to real
+  definition boundaries and feeds the symbol-name ranking arm.
+- MCP `search_context` tool over stdio JSON-RPC (single-repo via `cmd/moedex-mcp`,
+  whole-corpus via `moedex-serve -mcp`).
+- A **warm multi-shard serving spine** (`internal/server`, `cmd/moedex-serve`): an
+  mmap'd retrieval daemon (`-http`/`-q`) and a ranked agent-context surface (`-mcp`),
+  with load-or-build-and-save BM25/symbol/embedding sidecars and daemon hardening
+  (bearer auth, loopback default, TLS, slog/metrics, timeouts, SIGHUP hot-reload).
+- **Shard-level freshness** (`internal/parity` manifest + `cmd/moedex-index`
+  `build`/`check`/`refresh`): detect changed repos by git HEAD and rebuild only the
+  affected shards.
 - An IR-metrics evaluation harness (recall@k, precision@k, MRR, nDCG@k).
 - A full-corpus exact-match retrieval parity harness (`internal/parity`,
   `cmd/moedex-parity`): sharded whole-corpus build, seeded ≥1000-query battery,
@@ -251,31 +364,35 @@ verify-stage literal prefilter (`requiredRun`) treated a case-folded `OpLiteral`
 northstar and [`research/`](research):
 
 - **Incremental / delta indexing** — the data model is content-addressed to keep
-  this first-class, but no incremental update path exists yet.
-- **Distribution / sharding** — single-node only; blob-SHA addressing leaves room
-  for it.
+  this first-class. Freshness today is *shard-level* (`moedex-index refresh`
+  rebuilds whole affected shards); a finer per-blob delta path does not exist yet.
+- **Distribution / sharding** — sharded on disk and served as a multi-shard corpus,
+  but still **single-node**: there is no cross-node distribution or replication.
 - **Native SIMD intersection/verification kernel** — see
   [`research/simd-kernel.md`](research/simd-kernel.md); the engine is pure Go.
 - **FM-index compressed cold tier** — see
   [`research/fm-index-cold-tier.md`](research/fm-index-cold-tier.md).
-- **Learned reranker** — RRF is the current fusion; see
+- **Learned reranker** — RRF over the four arms is the current fusion; see
   [`research/learned-reranker.md`](research/learned-reranker.md).
-- **Multi-language symbols** — only `GoExtractor` exists; tree-sitter/SCIP for other
-  languages is deferred behind the `Extractor` interface (see
-  [`research/symbol-layer.md`](research/symbol-layer.md)).
-- **Find-refs / go-to-def, symbol-name ranking arm, an ANN vector index, and
-  agent-consumer metrics (UDCG)** are all noted as future work.
+- **Deeper / semantic symbols** — the polyglot extractors (Go/C#/TS/SQL/CFML) are
+  syntactic and best-effort (the non-Go ones are regex/byte scanners, not full
+  parsers; see [`research/symbol-layer.md`](research/symbol-layer.md)). Tree-sitter
+  or SCIP-grade parsing, and additional languages, remain future work.
+- **Find-refs / go-to-def and an ANN vector index** are still future work. (The
+  symbol-name ranking arm and the path/filename arm are now built — see the ranker.)
 
 ---
 
 ## Build & run
 
 ```sh
-go build ./...        # build all packages and commands
+go build ./...        # build all packages and commands (default: zero ML deps)
 go test ./...         # run the test suite (parity tests shell out to `rg`)
 make verify           # master gate: health + round-trip + full-corpus parity
 make parity           # just the full-corpus parity gate -> PARITY-REPORT.md
 make setup            # one-time: install the Zoekt differential oracle
+make build-dense      # build moedex-serve with the in-process ONNX embedder (-tags onnx)
+make test-dense       # run the onnx-tagged embedder test (needs the ONNX Runtime lib)
 ```
 
 The parity tests in `internal/search` and the `internal/parity` harness require
@@ -309,19 +426,66 @@ moedex-mcp -repo DIR
 | `-chunk-lines` | `40` | lines per embedding chunk (dense arm) |
 | `-chunk-overlap` | `10` | overlapping lines between chunks (dense arm) |
 
-The server ingests the repo, builds the trigram + token indexes and the Go symbol
-layer, optionally builds the dense store, and serves the `search_context` tool
-(args: `query` required, `token_budget` and `top_k` optional) over stdin/stdout.
+The server ingests the repo, builds the trigram + token indexes and the polyglot
+symbol layer (`symbol.BuildMulti`), optionally builds the dense store, and serves the
+`search_context` tool (args: `query` required, `token_budget` and `top_k` optional)
+over stdin/stdout. `cmd/moedex-mcp` uses the **HTTP** dense backend only; the
+in-process ONNX backend is wired in `moedex-serve` (below).
 
 **Dense arm (optional) — environment variables:**
 
 | Variable | Effect |
 |---|---|
-| `MOEDEX_EMBED_URL` | Base URL of a local OpenAI/ollama-style embeddings endpoint (e.g. `http://localhost:11434/v1`). Setting it enables the dense arm; `embed.Embed` POSTs to `{URL}/embeddings`. |
+| `MOEDEX_EMBED_URL` | Base URL of a local OpenAI/ollama-style embeddings endpoint (e.g. `http://localhost:11434/v1`). Setting it enables the dense arm; `HTTPEmbedder.Embed` POSTs to `{URL}/embeddings`. |
 | `MOEDEX_EMBED_MODEL` | Model name sent in the embedding request body. |
 
 Without `MOEDEX_EMBED_URL` the server logs that the dense arm is disabled and runs
-pure-lexical with zero external dependencies.
+lexical + symbol + path ranking with zero external dependencies.
+
+### `moedex-index` — offline shard-dir builder / freshness
+
+```sh
+moedex-index build   -corpus ROOT -shard-dir DIR [-shard-bytes N] [-force] [-v]
+moedex-index check   -shard-dir DIR [-corpus ROOT]
+moedex-index refresh -shard-dir DIR [-corpus ROOT] [-keep-backup] [-v]
+```
+
+`build` indexes every git repo under `-corpus` into byte-sized `shard-NNNN.idx`
+files (default `-shard-bytes` is `parity.DefaultShardBytes` ≈ 150MB of content),
+writes the `manifest.json` freshness sidecar, and pre-warms the token+symbol ranking
+sidecars. `check` is read-only and prints changed/added/removed repos vs. the
+manifest's recorded git HEADs. `refresh` rebuilds only the affected shards and
+atomically swaps them in (the previous dir is dropped unless `-keep-backup`). For
+`check`/`refresh` the corpus root defaults to the `Root` recorded in the manifest.
+The result is directly servable by `moedex-serve -shard-dir DIR`.
+
+### `moedex-serve` — warm retrieval / context daemon
+
+```sh
+moedex-serve -shard-dir DIR -http :8080          # retrieval HTTP API (GET /search)
+moedex-serve -shard-dir DIR -q PATTERN [-regex]  # one-shot retrieval query
+moedex-serve -shard-dir DIR -mcp                 # ranked agent context (MCP/stdio)
+```
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `-shard-dir` | `MOEDEX_SHARD_DIR` | directory of prebuilt `*.idx` shards (required) |
+| `-http` | _(unset)_ | serve the retrieval HTTP API on this address |
+| `-mcp` | `false` | serve ranked agent context over MCP (stdio) |
+| `-q` | _(unset)_ | one-shot retrieval query |
+| `-regex` | `false` | treat `-q` as a regular expression |
+| `-top-k` | `20` | default ranked results per MCP query |
+| `-embed` | `auto` | dense embedder for `-mcp`: `auto`/`onnx`/`http`/`none` |
+| `-onnx-runtime` | `ONNXRUNTIME_LIB_PATH` | path to the ONNX Runtime shared library (in-process embedder; needs `-tags onnx`) |
+| `-auth-token` | `MOEDEX_AUTH_TOKEN` | require `Authorization: Bearer <token>` on `-http` (except `/healthz`, `/metrics`) |
+| `-tls-cert` / `-tls-key` | _(unset)_ | serve `-http` over HTTPS (set together) |
+| `-request-timeout` | `30s` | per-request HTTP timeout on `-http` |
+| `-limit` | `0` | cap matches printed/returned (0 = no cap) |
+
+The `-http` server exposes `GET /search?q=&regex=&limit=`, plus `/healthz`,
+`/metrics`, and `/stats`. SIGHUP hot-reloads the shard dir without dropping requests.
+The dense arm applies to `-mcp` only; with `-embed onnx` (and a `-tags onnx` build)
+the embeddings are computed in-process and persisted next to the shards.
 
 ### `scale` — corpus sizing tool
 
