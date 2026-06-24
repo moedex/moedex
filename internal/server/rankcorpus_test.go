@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"moedex/internal/embed"
+	"moedex/internal/rank"
 )
 
 // conceptEmbedder is a deterministic, network-free Embedder for tests. It
@@ -64,7 +65,10 @@ func TestRankCorpusDenseArmRecoversNoOverlapQuery(t *testing.T) {
 		t.Fatalf("lexical-only should not reach the no-overlap query, got %d blocks", len(win.Blocks))
 	}
 
-	dense, err := OpenRank(context.Background(), dir, RankConfig{TopK: 5, Emb: conceptEmbedder{}, LinesPerChunk: 20, Overlap: 5})
+	// Rank.DenseMinQueryTerms:-1 disables the production query-length gate: this test
+	// uses a short (3-term) synonym query to exercise the dense MECHANISM, which the
+	// default gate (>= 5 terms) would otherwise suppress.
+	dense, err := OpenRank(context.Background(), dir, RankConfig{TopK: 5, Emb: conceptEmbedder{}, LinesPerChunk: 20, Overlap: 5, Rank: rank.Config{DenseMinQueryTerms: -1}})
 	if err != nil {
 		t.Fatalf("OpenRank dense: %v", err)
 	}
@@ -138,7 +142,9 @@ func TestRankCorpusPersistsAndReloadsEmbeddings(t *testing.T) {
 		"calc/add.go":   "package calc\n\nfunc Add(a, b int) int { return a + b }\n",
 	})
 	storePath := filepath.Join(dir, "corpus-embeddings.store")
-	cfg := RankConfig{TopK: 5, Emb: conceptEmbedder{}, EmbedModel: "concept-v1", StorePath: storePath, LinesPerChunk: 20, Overlap: 5}
+	// Rank.DenseMinQueryTerms:-1 disables the production query-length gate so the short
+	// synonym query after reload exercises the dense arm (see the no-overlap test).
+	cfg := RankConfig{TopK: 5, Emb: conceptEmbedder{}, EmbedModel: "concept-v1", StorePath: storePath, LinesPerChunk: 20, Overlap: 5, Rank: rank.Config{DenseMinQueryTerms: -1}}
 
 	// First open builds and persists.
 	first, err := OpenRank(context.Background(), dir, cfg)

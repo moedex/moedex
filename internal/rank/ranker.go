@@ -58,6 +58,41 @@ type Config struct {
 	// while keeping every win (e.g. "federated server"/"administration service"
 	// 0.0->1.0). See eval's gold sweep.
 	PathMinCoverage float64
+
+	// DenseMinScore gates the dense (embedding cosine) arm: a dense chunk casts its
+	// RRF vote only when its cosine similarity is at least this value. The dense arm
+	// pulls a fixed candidate pool (top-64 chunks) and, UNGATED, every chunk votes
+	// regardless of similarity. Measured on the pooled gold this is CONDITIONALLY
+	// good: dense lifts the synonym-gap / agent stratum (where a semantic match is the
+	// only signal — corpusGoldAgentNL: +dense NDCG 0.14->0.34) but REGRESSES the
+	// answerable gold (where lexical/path/symbol already win and low-cosine dense
+	// chunks are noise that displaces correct hits — 0.932->0.923). The threshold
+	// keeps the confident semantic matches and drops the noise.
+	//
+	// Cosine is in [-1,1] and SCALE-DEPENDENT on the embedder, so the default is
+	// calibrated for the bundled model (embed/onnx); a different Embedder may want a
+	// different value. The zero value means the default (see withDefaults); a NEGATIVE
+	// value DISABLES the gate (every dense chunk votes — the pre-gate behavior, used by
+	// hermetic fixture tests whose synthetic embedder has a different cosine scale).
+	// The gate only matters when the dense arm is active (store+emb set).
+	DenseMinScore float64
+
+	// DenseMinQueryTerms gates the dense arm by QUERY LENGTH: the dense arm runs only
+	// when the query has at least this many DISTINCT terms. This is the additive
+	// mechanism the score gate could not provide. Short keyword queries ("generate
+	// csr", "void transaction") are the lexical/symbol/path arms' home turf, where the
+	// answer is already found and low-cosine dense chunks are pure noise that displaces
+	// it; longer natural-language queries ("migrate a recurring subscription from one
+	// processor to another") are where those arms are starved and a semantic match is
+	// the only signal. Gating dense to fire only on the long queries makes it PURELY
+	// ADDITIVE on the pooled gold — it never touches the (short) answerable queries
+	// (no regression) yet keeps the full lift on the (long) synonym-gap stratum. Unlike
+	// DenseMinScore this is embedder-agnostic (it never looks at cosine scale).
+	//
+	// The zero value means the default (see withDefaults); a NEGATIVE value disables
+	// the gate (dense runs for every query — the pre-gate behavior, used by hermetic
+	// fixture tests whose short synthetic queries exercise the dense plumbing).
+	DenseMinQueryTerms int
 }
 
 func (c Config) withDefaults() Config {
@@ -79,6 +114,17 @@ func (c Config) withDefaults() Config {
 	if c.PathMinCoverage == 0 {
 		c.PathMinCoverage = 0.6
 	}
+	if c.DenseMinQueryTerms == 0 {
+		// Dense fires only on queries with >= 5 distinct terms. Chosen on the pooled
+		// gold as the smallest value that is PURELY ADDITIVE: the (short) answerable
+		// queries are untouched — identical to the no-dense baseline — while the (long)
+		// synonym-gap stratum keeps its full lift (+0.21 NDCG / +0.42 recall). See
+		// eval's TestCorpusDenseGateSweep. A negative value disables the gate.
+		c.DenseMinQueryTerms = 5
+	}
+	// DenseMinScore intentionally has NO default bump: the cosine gate is an opt-in,
+	// embedder-coupled knob (0 leaves it off; the Rank check requires > 0). The
+	// query-length gate above is the embedder-agnostic default.
 	return c
 }
 
@@ -173,10 +219,13 @@ func (r *Ranker) UseTokenCandidates(v bool) { r.tokenCandidates = v }
 func (r *Ranker) Rank(ctx context.Context, q string, topK int) ([]RankedResult, error) {
 	terms := tokenindex.Tokenize([]byte(q))
 
-	lex := r.lexicalArm(terms)       // sorted desc by BM25
-	dense, err := r.denseArm(ctx, q) // sorted desc by cosine (nil if no arm)
-	if err != nil {
-		return nil, err
+	lex := r.lexicalArm(terms) // sorted desc by BM25
+	var dense []denseScore     // sorted desc by cosine (nil if no arm / gated out)
+	if r.denseAllowedFor(terms) {
+		var err error
+		if dense, err = r.denseArm(ctx, q); err != nil {
+			return nil, err
+		}
 	}
 	sym := r.symbolArm(terms) // sorted desc by symbol-name match (nil if no arm)
 	path := r.pathArm(terms)  // sorted desc by filename/path match (nil if disabled)
@@ -206,6 +255,12 @@ func (r *Ranker) Rank(ctx context.Context, q string, topK int) ([]RankedResult, 
 	}
 	denseSpan := map[uint64][]LineSpan{}
 	for i, s := range dense {
+		// Dense confidence gate: a too-weak cosine is noise (it displaces correct hits
+		// on keyword queries) so it does not vote. A non-positive DenseMinScore leaves
+		// the arm ungated. dense is sorted desc by score, so gated chunks are the tail.
+		if r.cfg.DenseMinScore > 0 && s.score < r.cfg.DenseMinScore {
+			continue
+		}
 		a := get(s.blob)
 		a.rrf += 1.0 / (r.cfg.RRFk + float64(i+1))
 		if s.score > a.dense {
@@ -365,6 +420,24 @@ type denseScore struct {
 	blob  uint64
 	score float64
 	span  LineSpan
+}
+
+// denseAllowedFor reports whether the dense arm should run for this query given the
+// query-length gate (Config.DenseMinQueryTerms). Short keyword queries are the
+// lexical/symbol/path arms' home turf, where dense only adds noise; the dense arm is
+// reserved for longer natural-language queries where a semantic match is the only
+// signal. A non-positive DenseMinQueryTerms disables the gate (dense always runs).
+func (r *Ranker) denseAllowedFor(terms []string) bool {
+	if r.cfg.DenseMinQueryTerms <= 0 {
+		return true
+	}
+	seen := make(map[string]bool, len(terms))
+	for _, t := range terms {
+		if t != "" {
+			seen[t] = true
+		}
+	}
+	return len(seen) >= r.cfg.DenseMinQueryTerms
 }
 
 // denseArm runs cosine search over chunk embeddings, keeping the best-scoring

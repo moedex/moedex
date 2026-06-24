@@ -90,6 +90,10 @@ func TestCorpusONNXMeasurement(t *testing.T) {
 	// + real (onnx) dense arm. Fresh index per runner so the corpora are independent.
 	ixDense, _, _, _ := BuildGoldCorpusIndex()
 	dense := NewRunner(ixDense)
+	dense.SetDenseMinQueryTerms(-1) // measure RAW (ungated) dense — this test documents
+	// the raw net-negative-on-answerable / net-positive-on-agent-NL behavior that
+	// JUSTIFIES the production query-length gate (the gate is pinned additive by
+	// TestCorpusDenseGateSweep).
 	nChunks, err := dense.EnableDense(ctx, emb, linesPerChunk, overlap)
 	if err != nil {
 		t.Skipf("onnx dense build failed (%v); skipping", err)
@@ -104,9 +108,10 @@ func TestCorpusONNXMeasurement(t *testing.T) {
 	logReport(t, "pooled corpus / lexical + REAL onnx dense", repDense)
 
 	// Full hybrid: lexical + path (default) + dense + symbol — the production stack
-	// WITH the dense arm. This is what the gate asserts on.
+	// WITH the dense arm. This is what the gate asserts on. RAW (ungated) dense, as above.
 	ixFull, _, _, _ := BuildGoldCorpusIndex()
 	full := NewRunner(ixFull)
+	full.SetDenseMinQueryTerms(-1)
 	if _, err := full.EnableDense(ctx, emb, linesPerChunk, overlap); err != nil {
 		t.Skipf("onnx dense build failed for hybrid (%v)", err)
 	}

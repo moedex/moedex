@@ -98,6 +98,20 @@ func (run *Runner) SetSymbolCoverage(c float64) {
 	run.rebuild()
 }
 
+// SetDenseMinScore sets the dense arm's cosine confidence gate and rebuilds. Used by
+// the eval to sweep the gate; a negative value disables it (every dense chunk votes).
+func (run *Runner) SetDenseMinScore(s float64) {
+	run.cfg.DenseMinScore = s
+	run.rebuild()
+}
+
+// SetDenseMinQueryTerms sets the dense arm's query-length gate and rebuilds. Used by
+// the eval to sweep the gate; a negative value disables it (dense runs for every query).
+func (run *Runner) SetDenseMinQueryTerms(n int) {
+	run.cfg.DenseMinQueryTerms = n
+	run.rebuild()
+}
+
 // EnableSymbols builds a multi-language symbol index (Go/C#/TypeScript/
 // ColdFusion/SQL, by file extension) over the runner's corpus and wires it into
 // the ranker as the symbol-name RRF arm. Returns the number of blobs that carry

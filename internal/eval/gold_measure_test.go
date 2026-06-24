@@ -153,6 +153,10 @@ func TestDenseHybridMeasurement(t *testing.T) {
 	logReport(t, "fixture / lexical only", repLex)
 
 	dense := NewRunner(BuildIndexFromFiles(files))
+	// Disable the production query-length gate: this fixture exercises the dense
+	// MECHANISM with short synthetic queries (e.g. the 2-term "login credentials"
+	// synonym), which the default gate (>= 5 terms) would otherwise suppress.
+	dense.SetDenseMinQueryTerms(-1)
 	nChunks, err := dense.EnableDense(ctx, embedder, linesPerChunk, overlap)
 	if err != nil {
 		t.Fatalf("EnableDense: %v", err)
@@ -178,6 +182,7 @@ func TestDenseHybridMeasurement(t *testing.T) {
 	// Full hybrid: enable BOTH arms. Enable symbols FIRST then dense to prove the
 	// Runner preserves the symbol arm across a dense rebuild (order-independence).
 	hybrid := NewRunner(BuildIndexFromFiles(files))
+	hybrid.SetDenseMinQueryTerms(-1) // same: short synthetic queries, gate off
 	hybrid.EnableSymbols()
 	if _, err := hybrid.EnableDense(ctx, embedder, linesPerChunk, overlap); err != nil {
 		t.Fatalf("hybrid EnableDense: %v", err)

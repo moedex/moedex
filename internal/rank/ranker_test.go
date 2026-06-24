@@ -157,7 +157,9 @@ func TestDenseArmContributes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := New(ix, ti, store, emb, Config{})
+	// DenseMinQueryTerms:-1 disables the production query-length gate so this 2-term
+	// query exercises the dense arm (the default gate fires only at >= 5 terms).
+	r := New(ix, ti, store, emb, Config{DenseMinQueryTerms: -1})
 
 	res, err := r.Rank(context.Background(), "alpha database", 10)
 	if err != nil {
