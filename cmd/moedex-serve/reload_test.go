@@ -59,7 +59,7 @@ func TestCorpusHolderHotSwap(t *testing.T) {
 				// "marker" appears in every generation, so a healthy snapshot
 				// always returns exactly one match; 0 would mean we read a
 				// half-swapped or unmapped corpus.
-				m, _ := snap.c.Literal("marker")
+				m, _, _ := snap.c.Literal(context.Background(), "marker")
 				if len(m) != 1 {
 					t.Errorf("query saw %d matches, want 1 (corrupt/unmapped snapshot)", len(m))
 				}
@@ -92,7 +92,7 @@ func TestCorpusHolderHotSwap(t *testing.T) {
 
 	// The live generation must still answer, and the last swap was dirA.
 	snap := h.acquire()
-	if m, _ := snap.c.Literal("AlphaToken"); len(m) != 1 {
+	if m, _, _ := snap.c.Literal(context.Background(), "AlphaToken"); len(m) != 1 {
 		t.Errorf("final corpus: AlphaToken matches = %d, want 1", len(m))
 	}
 	snap.release()

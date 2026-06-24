@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 
@@ -46,7 +47,10 @@ func TestCorpusMergesAcrossShards(t *testing.T) {
 	}
 
 	// A literal that appears in both shards must surface from both.
-	matches, _ := c.Literal("token")
+	matches, _, err := c.Literal(context.Background(), "token")
+	if err != nil {
+		t.Fatalf("Literal: %v", err)
+	}
 	if len(matches) != 2 {
 		t.Fatalf("Literal(token): %d matches, want 2 (one per shard): %+v", len(matches), matches)
 	}
@@ -71,7 +75,7 @@ func TestCorpusRegexAcrossShards(t *testing.T) {
 	}
 	defer c.Close()
 
-	matches, _, err := c.Regex(`func \w+\(\)`)
+	matches, _, err := c.Regex(context.Background(), `func \w+\(\)`)
 	if err != nil {
 		t.Fatalf("Regex: %v", err)
 	}
@@ -89,7 +93,7 @@ func TestCorpusBadRegexReportsError(t *testing.T) {
 	}
 	defer c.Close()
 
-	if _, _, err := c.Regex("(unterminated"); err == nil {
+	if _, _, err := c.Regex(context.Background(), "(unterminated"); err == nil {
 		t.Error("expected error for malformed regex, got nil")
 	}
 }

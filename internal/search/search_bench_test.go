@@ -1,6 +1,7 @@
 package search_test
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -56,7 +57,7 @@ func BenchmarkRegexAlternation(b *testing.B) {
 	ix := benchIndex(b)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := search.Regex(ix, "handler|response|payload"); err != nil {
+		if _, err := search.Regex(context.Background(), ix,"handler|response|payload"); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -69,7 +70,7 @@ func BenchmarkLiteralCommon(b *testing.B) {
 	ix := benchIndex(b)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = search.Literal(ix, "return")
+		_, _ = search.Literal(context.Background(), ix, "return")
 	}
 }
 
@@ -80,7 +81,7 @@ func BenchmarkRegexClassOnly(b *testing.B) {
 	ix := benchIndex(b)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := search.Regex(ix, "func_[0-9]+"); err != nil {
+		if _, err := search.Regex(context.Background(), ix,"func_[0-9]+"); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -93,7 +94,7 @@ func BenchmarkRegexSelective(b *testing.B) {
 	ix := benchIndex(b)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := search.Regex(ix, "zqxj_marker"); err != nil {
+		if _, err := search.Regex(context.Background(), ix,"zqxj_marker"); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -145,7 +146,7 @@ func BenchmarkRegexFoldedAlternationBigBlobs(b *testing.B) {
 	ix := bigBlobIndex(b)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := search.Regex(ix, "(?i)razavi|itemanswer"); err != nil {
+		if _, err := search.Regex(context.Background(), ix,"(?i)razavi|itemanswer"); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -158,6 +159,6 @@ func BenchmarkLiteralSubTrigramBigBlobs(b *testing.B) {
 	ix := bigBlobIndex(b)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = search.Literal(ix, "=>")
+		_, _ = search.Literal(context.Background(), ix, "=>")
 	}
 }

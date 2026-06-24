@@ -12,9 +12,9 @@ import (
 // HTTP hardening is layered as decorators over the whole mux. The chain runs
 // outermost-first: recover(accessLog(timeout(auth(mux)))). recover is outermost
 // so it catches panics from any inner layer; accessLog wraps the writer to
-// capture status/bytes and feeds the metrics; timeout is an HTTP-layer bound
-// (the underlying corpus scan is not cancellable — see withTimeout); auth gates
-// everything except the open /healthz and /metrics probes.
+// capture status/bytes and feeds the metrics; timeout bounds the HTTP response
+// AND cancels r.Context(), which the corpus scan observes (see withTimeout);
+// auth gates everything except the open /healthz and /metrics probes.
 
 // openPaths bypass auth: liveness and the metrics scrape must work without a
 // token (decision 3).
@@ -96,10 +96,11 @@ func withAccessLog(next http.Handler, m *metrics) http.Handler {
 }
 
 // withTimeout bounds the HTTP response with http.TimeoutHandler (503 on expiry).
-// This is an HTTP-layer bound only: Corpus.Regex/Literal take no context, so the
-// underlying scan runs to completion even after the client gets the 503. Deep
-// cancellation needs ctx threaded through internal/server + internal/search and
-// is a tracked follow-up on another lane.
+// On expiry it cancels r.Context(), which Corpus.Regex/Literal thread into the
+// search path: the scan's hot loops check cancellation on a stride, so an expired
+// request stops burning CPU promptly rather than running to completion. The abort
+// is observed within cancelCheckStride candidates (or one 16-line verify chunk),
+// not instantly — bounded, not immediate.
 func withTimeout(next http.Handler, d time.Duration) http.Handler {
 	return http.TimeoutHandler(next, d, `{"error":"request timeout"}`)
 }

@@ -1,6 +1,7 @@
 package search_test
 
 import (
+	"context"
 	"crypto/sha1"
 	"fmt"
 	"testing"
@@ -26,7 +27,7 @@ func TestPrefilterSoundness_Alternation(t *testing.T) {
 	addBlob(ix, "a.txt", "the foobaz token\n")
 	addBlob(ix, "b.txt", "another barbaz here\n")
 
-	got, err := search.Regex(ix, "(foo|bar)baz")
+	got, err := search.Regex(context.Background(), ix,"(foo|bar)baz")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +49,7 @@ func TestPrefilterSoundness_AlternationOfLiterals(t *testing.T) {
 	addBlob(ix, "c.txt", "z payload z\n")
 	addBlob(ix, "d.txt", "none of the keywords here\n")
 
-	got, err := search.Regex(ix, "handler|response|payload")
+	got, err := search.Regex(context.Background(), ix,"handler|response|payload")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +66,7 @@ func TestPrefilterSoundness_LeadingClass(t *testing.T) {
 	addBlob(ix, "a.txt", "a Token line\n")
 	addBlob(ix, "b.txt", "a token line\n")
 
-	got, err := search.Regex(ix, "[Tt]oken")
+	got, err := search.Regex(context.Background(), ix,"[Tt]oken")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +85,7 @@ func TestPrefilterCorrect_RequiredPrefix(t *testing.T) {
 	addBlob(ix, "a.txt", "   call func_42(x)\n") // literal mid-line, real match
 	addBlob(ix, "b.txt", "no marker on this line\n")
 
-	got, err := search.Regex(ix, "func_[0-9]+")
+	got, err := search.Regex(context.Background(), ix,"func_[0-9]+")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +110,7 @@ func TestPrefilterSoundness_CaseInsensitive(t *testing.T) {
 	addBlob(ix, "longs.txt", "user paſſword reset\n") // (?i)password matches via s<->ſ
 	addBlob(ix, "none.txt", "totally unrelated text\n")
 
-	got, err := search.Regex(ix, "(?i)password")
+	got, err := search.Regex(context.Background(), ix,"(?i)password")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +130,7 @@ func TestPrefilterSoundness_CaseInsensitiveShortDirtySpan(t *testing.T) {
 	addBlob(ix, "longs.txt", "heſſ found\n")
 	addBlob(ix, "none.txt", "haze found\n")
 
-	got, err := search.Regex(ix, "(?i)hess")
+	got, err := search.Regex(context.Background(), ix,"(?i)hess")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +143,7 @@ func TestPrefilterSoundness_CaseInsensitiveMultiPosition(t *testing.T) {
 	ix := index.New()
 	addBlob(ix, "member.txt", "mem only\ninfo only\nmemberinfo ok\nunrelated text\n")
 
-	got, stats, err := search.RegexWithStats(ix, `(?i)MemberInfo`)
+	got, stats, err := search.RegexWithStats(context.Background(), ix,`(?i)MemberInfo`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +162,7 @@ func TestPrefilterSoundness_UnicodeCharClass(t *testing.T) {
 	addBlob(ix, "upper.txt", "uppercase Omega only Ω\n")
 	addBlob(ix, "latin.txt", "plain latin text\n")
 
-	got, stats, err := search.RegexWithStats(ix, `[α-ω]+`)
+	got, stats, err := search.RegexWithStats(context.Background(), ix,`[α-ω]+`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +184,7 @@ func TestPrefilterSoundness_UnicodeClassEdges(t *testing.T) {
 	addBlob(ix, "umlaut.txt", "umlaut ü here\n")
 	addBlob(ix, "latin.txt", "plain latin text\n")
 
-	got, stats, err := search.RegexWithStats(ix, `[é-ü]`)
+	got, stats, err := search.RegexWithStats(context.Background(), ix,`[é-ü]`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +195,7 @@ func TestPrefilterSoundness_UnicodeClassEdges(t *testing.T) {
 		t.Fatalf("[é-ü] did not get a bounded Unicode class prefilter: stats=%+v", stats)
 	}
 
-	got, _, err = search.RegexWithStats(ix, `foo|[é-ü]`)
+	got, _, err = search.RegexWithStats(context.Background(), ix,`foo|[é-ü]`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,7 +203,7 @@ func TestPrefilterSoundness_UnicodeClassEdges(t *testing.T) {
 		t.Fatalf("foo|[é-ü] prefilter dropped/added Unicode branch matches: want 2, got %d: %v", len(got), got)
 	}
 
-	got, _, err = search.RegexWithStats(ix, `(?i)[é]`)
+	got, _, err = search.RegexWithStats(context.Background(), ix,`(?i)[é]`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +218,7 @@ func TestPrefilterSoundness_ConjunctiveConcat(t *testing.T) {
 	addBlob(ix, "public.txt", "public final enum User\n")
 	addBlob(ix, "class.txt", "private final class User\n")
 
-	got, err := search.Regex(ix, `public\s+final\s+class`)
+	got, err := search.Regex(context.Background(), ix,`public\s+final\s+class`)
 	if err != nil {
 		t.Fatal(err)
 	}

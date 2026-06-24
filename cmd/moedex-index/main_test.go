@@ -177,7 +177,10 @@ func assertServableContains(t *testing.T, shardDir, literal string, wantAtLeast 
 		t.Fatalf("server.Open(%s): %v", shardDir, err)
 	}
 	defer c.Close()
-	matches, _ := c.Literal(literal)
+	matches, _, err := c.Literal(context.Background(), literal)
+	if err != nil {
+		t.Fatalf("literal %q: %v", literal, err)
+	}
 	if len(matches) < wantAtLeast {
 		t.Errorf("literal %q: %d matches, want >= %d", literal, len(matches), wantAtLeast)
 	}

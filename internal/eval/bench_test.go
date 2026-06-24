@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -105,7 +106,7 @@ func BenchmarkSearchLiteral_Selective(b *testing.B) {
 	ix := benchCorpus(b)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = search.Literal(ix, "zqxj_marker")
+		_, _ = search.Literal(context.Background(), ix, "zqxj_marker")
 	}
 }
 
@@ -115,7 +116,7 @@ func BenchmarkSearchLiteral_Common(b *testing.B) {
 	ix := benchCorpus(b)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = search.Literal(ix, "return")
+		_, _ = search.Literal(context.Background(), ix, "return")
 	}
 }
 
@@ -125,7 +126,7 @@ func BenchmarkSearchRegex_Alternation(b *testing.B) {
 	ix := benchCorpus(b)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := search.Regex(ix, "handler|response|payload"); err != nil {
+		if _, err := search.Regex(context.Background(), ix,"handler|response|payload"); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -138,7 +139,7 @@ func BenchmarkSearchRegex_Class(b *testing.B) {
 	ix := benchCorpus(b)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := search.Regex(ix, "func_[0-9]+"); err != nil {
+		if _, err := search.Regex(context.Background(), ix,"func_[0-9]+"); err != nil {
 			b.Fatal(err)
 		}
 	}

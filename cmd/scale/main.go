@@ -6,6 +6,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"os"
@@ -75,7 +76,7 @@ func main() {
 	if sample != "" {
 		fmt.Printf("\n=== sample regex query: %q ===\n", sample)
 		qStart := time.Now()
-		m, err := search.Regex(ix, sample)
+		m, err := search.Regex(context.Background(), ix, sample)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "query error:", err)
 			return
@@ -121,7 +122,7 @@ func main() {
 			float64(ms.HeapAlloc)/float64(max64(totalBytes, 1)))
 		if sample != "" {
 			qStart := time.Now()
-			m, err := search.Regex(loaded, sample)
+			m, err := search.Regex(context.Background(), loaded, sample)
 			if err == nil {
 				fmt.Printf("sample query       : %d lines in %s (off mmap)\n",
 					len(m), time.Since(qStart).Round(time.Microsecond))

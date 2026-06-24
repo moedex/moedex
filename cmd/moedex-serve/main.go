@@ -51,7 +51,7 @@ func main() {
 	authToken := flag.String("auth-token", "", "if set (or MOEDEX_AUTH_TOKEN), require `Authorization: Bearer <token>` on -http (except /healthz, /metrics)")
 	tlsCert := flag.String("tls-cert", "", "TLS certificate file; serve -http over HTTPS (requires -tls-key)")
 	tlsKey := flag.String("tls-key", "", "TLS private key file; serve -http over HTTPS (requires -tls-cert)")
-	requestTimeout := flag.Duration("request-timeout", 30*time.Second, "per-request HTTP timeout on -http (503 on expiry; the underlying scan still runs to completion)")
+	requestTimeout := flag.Duration("request-timeout", 30*time.Second, "per-request HTTP timeout on -http (503 on expiry; the underlying scan observes cancellation and aborts promptly)")
 	flag.Parse()
 
 	// Auth precedence: MOEDEX_AUTH_TOKEN is the base, -auth-token overrides it.
@@ -234,14 +234,19 @@ func configureDenseArm(cfg *server.RankConfig, shardDir, kind, onnxRuntime strin
 func runOneShot(c *server.Corpus, pattern string, isRegex bool, limit int) {
 	var matches []search.Match
 	if isRegex {
-		m, _, err := c.Regex(pattern)
+		m, _, err := c.Regex(context.Background(), pattern)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "moedex-serve: %v\n", err)
 			os.Exit(1)
 		}
 		matches = m
 	} else {
-		matches, _ = c.Literal(pattern)
+		m, _, err := c.Literal(context.Background(), pattern)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "moedex-serve: %v\n", err)
+			os.Exit(1)
+		}
+		matches = m
 	}
 	if limit > 0 && len(matches) > limit {
 		matches = matches[:limit]
@@ -272,8 +277,9 @@ type httpConfig struct {
 //
 // The mux is wrapped with the hardening chain (recover/log/timeout/auth — see
 // middleware.go); /metrics and /healthz stay open. Server timeouts bound slow
-// clients; the per-request timeout is an HTTP-layer bound only (the scan is not
-// cancellable, see withTimeout).
+// clients; the per-request timeout cancels r.Context(), which /search threads
+// into the corpus scan, so an expired request aborts the scan promptly (within
+// a stride; see withTimeout) instead of running to completion.
 func runHTTP(c *server.Corpus, cfg httpConfig) error {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, nil)))
 
@@ -428,14 +434,30 @@ func handleSearch(c *server.Corpus, w http.ResponseWriter, r *http.Request) {
 	var matches []search.Match
 	var stats search.Stats
 	if isRegex {
-		m, s, err := c.Regex(q)
+		m, s, err := c.Regex(r.Context(), q)
 		if err != nil {
+			// A regex error is either a malformed pattern (client's fault, 400) or a
+			// cancelled/expired request (no useful body — the TimeoutHandler already
+			// owns the 503 response, so just stop).
+			if r.Context().Err() != nil {
+				return
+			}
 			writeJSON(w, http.StatusBadRequest, searchResponse{Query: q, Regex: true, Error: err.Error()})
 			return
 		}
 		matches, stats = m, s
 	} else {
-		matches, stats = c.Literal(q)
+		m, s, err := c.Literal(r.Context(), q)
+		if err != nil {
+			// Literal only errors on cancellation today; the TimeoutHandler owns the
+			// 503, so just stop. Other errors become a 500.
+			if r.Context().Err() != nil {
+				return
+			}
+			writeJSON(w, http.StatusInternalServerError, searchResponse{Query: q, Error: err.Error()})
+			return
+		}
+		matches, stats = m, s
 	}
 
 	total := len(matches)

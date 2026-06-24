@@ -1,6 +1,7 @@
 package search_test
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"regexp"
@@ -41,7 +42,7 @@ func goldRegex(t *testing.T, blobs map[string]string, pattern string) []string {
 
 func gotRegex(t *testing.T, ix *index.Index, pattern string) []string {
 	t.Helper()
-	ms, err := search.Regex(ix, pattern)
+	ms, err := search.Regex(context.Background(), ix, pattern)
 	if err != nil {
 		t.Fatalf("Regex(%q): %v", pattern, err)
 	}
@@ -134,7 +135,7 @@ func TestPositionalRouting(t *testing.T) {
 		{`.`, false},                    // no required literal
 	}
 	for _, c := range cases {
-		_, stats, err := search.RegexWithStats(ix, c.pat)
+		_, stats, err := search.RegexWithStats(context.Background(), ix, c.pat)
 		if err != nil {
 			t.Fatalf("RegexWithStats(%q): %v", c.pat, err)
 		}

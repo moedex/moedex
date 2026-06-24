@@ -1,6 +1,7 @@
 package search_test
 
 import (
+	"context"
 	"crypto/sha1"
 	"fmt"
 	"os"
@@ -57,7 +58,10 @@ func TestDedup(t *testing.T) {
 		t.Fatalf("identical content should dedupe to 1 blob (+1 other) = 2; got %d", ix.NumBlobs())
 	}
 	// A match in the shared blob must expand to both files.
-	got := search.Literal(ix, "hello")
+	got, err := search.Literal(context.Background(), ix, "hello")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(got) != 2 {
 		t.Fatalf("expected match in both deduped files, got %d: %v", len(got), got)
 	}
@@ -152,12 +156,17 @@ func runParity(t *testing.T, ix *index.Index, files []string) {
 	t.Helper()
 	for _, q := range literalQueries {
 		want := ripgrep(t, q, true, files)
-		got := toLocs(search.Literal(ix, q))
+		lm, err := search.Literal(context.Background(), ix, q)
+		if err != nil {
+			t.Errorf("literal %q: moedex error: %v", q, err)
+			continue
+		}
+		got := toLocs(lm)
 		assertEqual(t, "literal "+strconv.Quote(q), want, got)
 	}
 	for _, q := range regexQueries {
 		want := ripgrep(t, q, false, files)
-		m, err := search.Regex(ix, q)
+		m, err := search.Regex(context.Background(), ix, q)
 		if err != nil {
 			t.Errorf("regex %q: moedex error: %v", q, err)
 			continue

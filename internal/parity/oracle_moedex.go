@@ -1,6 +1,8 @@
 package parity
 
 import (
+	"context"
+
 	"moedex/internal/index"
 	"moedex/internal/search"
 )
@@ -28,10 +30,10 @@ func moedexInto(a *accum, ix *index.Index, q Query, ft *FileTable) (QueryAttribu
 //     (case-insensitive literals become (?i)\Qlit\E; regex/regex-ci as written).
 func moedexMatches(ix *index.Index, q Query) ([]search.Match, QueryAttribution, error) {
 	if q.Literal && !q.IgnoreCase {
-		ms, stats := search.LiteralWithStats(ix, q.Pattern)
-		return ms, attributionFromSearchStats(q, stats, ix.NumBlobs()), nil
+		ms, stats, err := search.LiteralWithStats(context.Background(), ix, q.Pattern)
+		return ms, attributionFromSearchStats(q, stats, ix.NumBlobs()), err
 	}
-	ms, stats, err := search.RegexWithStats(ix, q.goRegexSource())
+	ms, stats, err := search.RegexWithStats(context.Background(), ix, q.goRegexSource())
 	return ms, attributionFromSearchStats(q, stats, ix.NumBlobs()), err
 }
 

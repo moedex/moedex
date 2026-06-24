@@ -10,6 +10,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -93,28 +94,30 @@ func (c *Corpus) NumBlobs() int {
 
 // Regex runs pattern against every shard and returns the merged, deterministically
 // ordered matches. A malformed pattern is reported once (the first shard's parse
-// error); per-shard scans that fail abort the whole query.
-func (c *Corpus) Regex(pattern string) ([]search.Match, search.Stats, error) {
-	return c.fan(func(ix *index.Index) ([]search.Match, search.Stats, error) {
-		m, s, err := search.RegexWithStats(ix, pattern)
+// error); per-shard scans that fail abort the whole query. A cancelled/expired
+// ctx aborts the per-shard scans promptly and surfaces ctx.Err().
+func (c *Corpus) Regex(ctx context.Context, pattern string) ([]search.Match, search.Stats, error) {
+	return c.fan(ctx, func(ctx context.Context, ix *index.Index) ([]search.Match, search.Stats, error) {
+		m, s, err := search.RegexWithStats(ctx, ix, pattern)
 		return m, s, err
 	})
 }
 
-// Literal runs a literal query against every shard and returns merged matches.
-func (c *Corpus) Literal(q string) ([]search.Match, search.Stats) {
-	m, s, _ := c.fan(func(ix *index.Index) ([]search.Match, search.Stats, error) {
-		m, s := search.LiteralWithStats(ix, q)
-		return m, s, nil
+// Literal runs a literal query against every shard and returns merged matches. A
+// cancelled/expired ctx aborts the per-shard scans promptly and surfaces
+// ctx.Err().
+func (c *Corpus) Literal(ctx context.Context, q string) ([]search.Match, search.Stats, error) {
+	return c.fan(ctx, func(ctx context.Context, ix *index.Index) ([]search.Match, search.Stats, error) {
+		m, s, err := search.LiteralWithStats(ctx, ix, q)
+		return m, s, err
 	})
-	return m, s
 }
 
 // fan runs one per-shard query across all shards concurrently (bounded by
 // NumCPU), then merges and orders the results. The per-shard verify stage is
 // already globally throttled by search's package-level permit pool, so fanning
 // shards in parallel cannot oversubscribe the CPU.
-func (c *Corpus) fan(query func(*index.Index) ([]search.Match, search.Stats, error)) ([]search.Match, search.Stats, error) {
+func (c *Corpus) fan(ctx context.Context, query func(context.Context, *index.Index) ([]search.Match, search.Stats, error)) ([]search.Match, search.Stats, error) {
 	n := len(c.shards)
 	perShard := make([][]search.Match, n)
 	stats := make([]search.Stats, n)
@@ -132,7 +135,7 @@ func (c *Corpus) fan(query func(*index.Index) ([]search.Match, search.Stats, err
 		go func(i int) {
 			defer wg.Done()
 			defer func() { <-sem }()
-			perShard[i], stats[i], errs[i] = query(c.shards[i].ix)
+			perShard[i], stats[i], errs[i] = query(ctx, c.shards[i].ix)
 		}(i)
 	}
 	wg.Wait()

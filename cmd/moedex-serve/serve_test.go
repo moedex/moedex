@@ -1,13 +1,18 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"moedex/internal/diskstore"
+	"moedex/internal/index"
 	"moedex/internal/server"
 )
 
@@ -94,10 +99,10 @@ func TestNoAuthWhenTokenEmpty(t *testing.T) {
 // TestRequestTimeoutBoundsResponse drives a deliberately slow handler through the
 // real withTimeout to confirm the HTTP layer returns early with 503.
 //
-// CAVEAT (by design): this bounds only the HTTP response. Corpus.Regex/Literal
-// take no context.Context, so a real /search scan keeps running to completion
-// after the client receives the 503. Deep cancellation requires threading ctx
-// through internal/server + internal/search and is a tracked follow-up.
+// This test asserts only the HTTP-layer bound (a 503 returns before the slow
+// handler finishes). The companion TestRequestTimeoutCancelsScan asserts the
+// deeper property — that a real /search scan observes the cancelled context and
+// aborts promptly rather than running to completion.
 func TestRequestTimeoutBoundsResponse(t *testing.T) {
 	slow := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(200 * time.Millisecond)
@@ -114,6 +119,78 @@ func TestRequestTimeoutBoundsResponse(t *testing.T) {
 	}
 	if elapsed >= 200*time.Millisecond {
 		t.Errorf("response took %s; timeout did not bound it early", elapsed)
+	}
+}
+
+// makeLargeShardDir writes a one-shard dir whose blobs are big enough that a full
+// scan takes meaningful wall-time — used to prove the scan observes cancellation
+// rather than running to completion.
+func makeLargeShardDir(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	ix := index.New()
+	for b := 0; b < 80; b++ {
+		var sb []byte
+		for line := 0; line < 1500; line++ {
+			sb = append(sb, []byte(fmt.Sprintf("var handler_%d=function(response){return payload(%d)};\n", line, b))...)
+		}
+		rel := fmt.Sprintf("app%d.js", b)
+		ix.AddFile("repo", rel, filepath.Join(dir, rel), fmt.Sprintf("sha-%d", b), sb)
+	}
+	if err := diskstore.Save(ix, filepath.Join(dir, "shard-0000.idx")); err != nil {
+		t.Fatalf("save shard: %v", err)
+	}
+	return dir
+}
+
+// TestRequestTimeoutCancelsScan proves the deep cancellation property the
+// HTTP-only TestRequestTimeoutBoundsResponse cannot: when a /search request's
+// context is cancelled (as withTimeout does on expiry), the underlying corpus
+// scan observes the cancellation and aborts promptly instead of running to
+// completion. handleSearch is driven directly with a pre-cancelled request
+// context, which is fully synchronous (no detached goroutine racing Close):
+//   - (1) it returns far faster than an uncancelled scan of the same query, and
+//   - (2) it takes the cancellation early-return branch — writing nothing, so the
+//     TimeoutHandler's own 503 body is the only response the client ever sees.
+func TestRequestTimeoutCancelsScan(t *testing.T) {
+	dir := makeLargeShardDir(t)
+	c, err := server.Open(dir)
+	if err != nil {
+		t.Fatalf("open corpus: %v", err)
+	}
+	defer c.Close()
+
+	// Baseline: how long does the uncancelled regex scan take? The cancelled run
+	// must be far below this to prove the scan did not run to completion.
+	start := time.Now()
+	if _, _, err := c.Regex(context.Background(), "handler|response|payload"); err != nil {
+		t.Fatalf("baseline Regex: %v", err)
+	}
+	base := time.Since(start)
+	if base < 5*time.Millisecond {
+		t.Skipf("baseline scan too fast (%s) to test cancellation meaningfully", base)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	req := httptest.NewRequest(http.MethodGet, "/search?q=handler%7Cresponse%7Cpayload&regex=1", nil).WithContext(ctx)
+	hrec := httptest.NewRecorder()
+	hStart := time.Now()
+	handleSearch(c, hrec, req)
+	elapsed := time.Since(hStart)
+
+	// (1) Returned promptly — the scan aborted, it did not complete.
+	if elapsed >= base/2 {
+		t.Errorf("pre-cancelled handleSearch took %s; uncancelled baseline %s — scan did not abort promptly", elapsed, base)
+	}
+	// (2) Took the cancellation early return: no body is written, so the outer
+	// TimeoutHandler's 503 is the only thing the client sees (and crucially, no
+	// "count" search payload was produced).
+	if hrec.Body.Len() != 0 {
+		t.Errorf("pre-cancelled handleSearch wrote a body (%q); want empty (cancellation early return)", hrec.Body.String())
+	}
+	if strings.Contains(hrec.Body.String(), "\"count\"") {
+		t.Errorf("scan ran to completion: body has a search payload (%q)", hrec.Body.String())
 	}
 }
 

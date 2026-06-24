@@ -7,6 +7,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -39,13 +40,17 @@ func main() {
 
 	var matches []search.Match
 	if *isRegex {
-		matches, err = search.Regex(ix, pattern)
+		matches, err = search.Regex(context.Background(), ix, pattern)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "regex:", err)
 			os.Exit(1)
 		}
 	} else {
-		matches = search.Literal(ix, pattern)
+		matches, err = search.Literal(context.Background(), ix, pattern)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "literal:", err)
+			os.Exit(1)
+		}
 	}
 
 	for _, m := range matches {

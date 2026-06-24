@@ -5,6 +5,7 @@ package search
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"regexp"
 	"regexp/syntax"
@@ -56,17 +57,41 @@ const verifyParallelThreshold = 32
 
 var verifyPermits = make(chan struct{}, max(1, runtime.NumCPU()-1))
 
+// cancelCheckStride is how many candidates (or content lines) a hot scan loop
+// processes between non-blocking cancellation checks. It is large enough that the
+// per-check cost (one non-blocking select) is negligible against the byte-heavy
+// work in between, yet small enough that an expired/cancelled request aborts
+// promptly instead of running the scan to completion.
+const cancelCheckStride = 256
+
+// canceled reports whether ctx is done, without blocking. Hot loops call it on a
+// stride so a cancelled (e.g. timed-out) request stops burning CPU promptly.
+func canceled(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+		return false
+	}
+}
+
 // Literal finds every line containing the literal q. It uses the positional
 // begin-gram/end-gram intersection to pick candidate (blob, offset) pairs —
 // intersecting just two posting lists and verifying positional distance — then
 // confirms the full substring before recording a match.
-func Literal(ix *index.Index, q string) []Match {
-	matches, _ := LiteralWithStats(ix, q)
-	return matches
+//
+// ctx is checked on a stride during the scan; a cancelled/expired ctx aborts the
+// scan promptly and returns ctx.Err() with whatever partial matches were found.
+func Literal(ctx context.Context, ix *index.Index, q string) ([]Match, error) {
+	matches, _, err := LiteralWithStats(ctx, ix, q)
+	return matches, err
 }
 
 // LiteralWithStats is Literal plus profiling attribution.
-func LiteralWithStats(ix *index.Index, q string) ([]Match, Stats) {
+func LiteralWithStats(ctx context.Context, ix *index.Index, q string) ([]Match, Stats, error) {
+	if canceled(ctx) {
+		return nil, Stats{}, ctx.Err()
+	}
 	qb := []byte(q)
 	var matches []Match
 	stats := Stats{LineFilter: "literal-positional", ParallelWorkers: 1}
@@ -79,11 +104,15 @@ func LiteralWithStats(ix *index.Index, q string) ([]Match, Stats) {
 		for i := range ids {
 			ids[i] = uint64(i)
 		}
-		matches, stats = scanLiteralLines(ix, ids, qb)
+		var cancel bool
+		matches, stats, cancel = scanLiteralLines(ctx, ix, ids, qb)
 		stats.CandidateBlobs = len(ids)
 		stats.LineFilter = "literal-subtrigram"
 		stats.QueryAll = false
-		return dedupe(matches), stats
+		if cancel {
+			return dedupe(matches), stats, ctx.Err()
+		}
+		return dedupe(matches), stats, nil
 	}
 
 	begin := trigram.Trigram{qb[0], qb[1], qb[2]}
@@ -101,7 +130,10 @@ func LiteralWithStats(ix *index.Index, q string) ([]Match, Stats) {
 	ends := ix.Postings(end)
 	j := 0
 	seenCandidate := map[uint64]bool{}
-	for _, p := range begins {
+	for i, p := range begins {
+		if i%cancelCheckStride == 0 && canceled(ctx) {
+			return dedupe(matches), stats, ctx.Err()
+		}
 		want := p.Offset + off
 		// Advance the end cursor to the first posting that is >= (p.Blob, want)
 		// in (Blob, Offset) order.
@@ -124,19 +156,25 @@ func LiteralWithStats(ix *index.Index, q string) ([]Match, Stats) {
 			}
 		}
 	}
-	return dedupe(matches), stats
+	return dedupe(matches), stats, nil
 }
 
 // Regex finds every line matching pattern. The trigram query selects candidate
 // blobs; the real regex engine then verifies, line by line, to match ripgrep's
 // default semantics exactly.
-func Regex(ix *index.Index, pattern string) ([]Match, error) {
-	matches, _, err := RegexWithStats(ix, pattern)
+//
+// ctx is checked on a stride during the scan; a cancelled/expired ctx aborts the
+// scan promptly and returns ctx.Err() with whatever partial matches were found.
+func Regex(ctx context.Context, ix *index.Index, pattern string) ([]Match, error) {
+	matches, _, err := RegexWithStats(ctx, ix, pattern)
 	return matches, err
 }
 
 // RegexWithStats is Regex plus profiling attribution.
-func RegexWithStats(ix *index.Index, pattern string) ([]Match, Stats, error) {
+func RegexWithStats(ctx context.Context, ix *index.Index, pattern string) ([]Match, Stats, error) {
+	if canceled(ctx) {
+		return nil, Stats{}, ctx.Err()
+	}
 	q, err := query.FromRegexp(pattern)
 	if err != nil {
 		return nil, Stats{}, err
@@ -161,15 +199,21 @@ func RegexWithStats(ix *index.Index, pattern string) ([]Match, Stats, error) {
 	// few lines, so we never scan the content of every candidate blob. Rare
 	// tokens have tiny posting lists, so this collapses the multi-second
 	// content-scan tail to milliseconds.
-	if matches, stats, ok := regexPositional(ix, re, filter); ok {
+	if matches, stats, cancel, ok := regexPositional(ctx, ix, re, filter); ok {
+		if cancel {
+			return dedupe(matches), stats, ctx.Err()
+		}
 		return dedupe(matches), stats, nil
 	}
 
 	ids := q.Eval(ix)
-	matches, stats := scanRegexLines(ix, ids, re, filter)
+	matches, stats, cancel := scanRegexLines(ctx, ix, ids, re, filter)
 	stats.QueryAll = q.String() == "ALL"
 	stats.CandidateBlobs = len(ids)
 	stats.LineFilter = filterString(filter)
+	if cancel {
+		return dedupe(matches), stats, ctx.Err()
+	}
 	return dedupe(matches), stats, nil
 }
 
@@ -193,10 +237,10 @@ const (
 // (blob, offset) positions is a necessary condition — every line the pattern can
 // match contains a driver trigram at some offset, so that offset's posting maps
 // to the line. RE2 then confirms, so the match set is identical to the scan.
-func regexPositional(ix *index.Index, re *regexp.Regexp, filter lineFilter) ([]Match, Stats, bool) {
+func regexPositional(ctx context.Context, ix *index.Index, re *regexp.Regexp, filter lineFilter) ([]Match, Stats, bool, bool) {
 	tris, ok := positionalTrigrams(ix, filter)
 	if !ok {
-		return nil, Stats{}, false
+		return nil, Stats{}, false, false
 	}
 	// Cheap cap check via PostingCount before decoding anything: a driver this
 	// common is no cheaper than the bounded content scan, so fall back.
@@ -204,7 +248,7 @@ func regexPositional(ix *index.Index, re *regexp.Regexp, filter lineFilter) ([]M
 	for _, t := range tris {
 		total += ix.PostingCount(t)
 		if total > maxPositionalPostings {
-			return nil, Stats{}, false
+			return nil, Stats{}, false, false
 		}
 	}
 
@@ -218,8 +262,13 @@ func regexPositional(ix *index.Index, re *regexp.Regexp, filter lineFilter) ([]M
 	seen := map[blobLine]struct{}{}
 	blobs := map[uint64]struct{}{}
 	var cands []candidateLine
+	seenPostings := 0
 	for _, t := range tris {
 		for _, p := range ix.Postings(t) {
+			if seenPostings%cancelCheckStride == 0 && canceled(ctx) {
+				return nil, Stats{}, true, true
+			}
+			seenPostings++
 			b := ix.Blob(p.Blob)
 			if b == nil {
 				continue
@@ -238,7 +287,7 @@ func regexPositional(ix *index.Index, re *regexp.Regexp, filter lineFilter) ([]M
 	// 2. Verify candidate lines in parallel (filter.maybe re-applies the full
 	// AND/OR the single driver position skipped, then RE2 confirms). Both are
 	// byte-heavy on minified lines, so this is where the worker split pays.
-	matches, vstats := verifyCandidateLines(cands, re, filter)
+	matches, vstats, cancel := verifyCandidateLines(ctx, cands, re, filter)
 	stats := Stats{
 		LineFilter:       "positional",
 		CandidateBlobs:   len(blobs),
@@ -248,7 +297,7 @@ func regexPositional(ix *index.Index, re *regexp.Regexp, filter lineFilter) ([]M
 		LinesRE2:         vstats.LinesRE2,
 		ParallelWorkers:  vstats.ParallelWorkers,
 	}
-	return matches, stats, true
+	return matches, stats, cancel, true
 }
 
 // candidateLine is one de-duplicated line a driver trigram occurs on, pending
@@ -263,10 +312,14 @@ type candidateLine struct {
 // across the shared verify-worker pool. Each worker collects its own matches, so
 // there is no shared mutable state during the byte-heavy work; results merge at
 // the end.
-func verifyCandidateLines(cands []candidateLine, re *regexp.Regexp, filter lineFilter) ([]Match, Stats) {
+func verifyCandidateLines(ctx context.Context, cands []candidateLine, re *regexp.Regexp, filter lineFilter) ([]Match, Stats, bool) {
 	verify := func(sub []candidateLine) scanResult {
 		var res scanResult
-		for _, c := range sub {
+		for i, c := range sub {
+			if i%cancelCheckStride == 0 && canceled(ctx) {
+				res.canceled = true
+				return res
+			}
 			if filter != nil && !filter.maybe(c.line) {
 				continue
 			}
@@ -285,7 +338,8 @@ func verifyCandidateLines(cands []candidateLine, re *regexp.Regexp, filter lineF
 	if workers <= 1 {
 		res := verify(cands)
 		res.stats.ParallelWorkers = 1
-		return res.matches, res.stats
+		matches, stats, cancel := combineScanResults([]scanResult{res}, 1)
+		return matches, stats, cancel
 	}
 	// Dynamic work-stealing rather than fixed contiguous ranges: a few minified
 	// lines (tens of KB each) can carry almost all the RE2 cost, and they cluster
@@ -302,6 +356,12 @@ func verifyCandidateLines(cands []candidateLine, re *regexp.Regexp, filter lineF
 			defer wg.Done()
 			var res scanResult
 			for {
+				// One non-blocking cancellation check per chunk pull: chunk=16 is the
+				// natural cadence, so an expired request stops within a chunk.
+				if canceled(ctx) {
+					res.canceled = true
+					break
+				}
 				start := int(atomic.AddInt64(&next, chunk)) - chunk
 				if start >= len(cands) {
 					break
@@ -313,6 +373,10 @@ func verifyCandidateLines(cands []candidateLine, re *regexp.Regexp, filter lineF
 				r := verify(cands[start:end])
 				res.matches = append(res.matches, r.matches...)
 				res.stats.add(r.stats)
+				if r.canceled {
+					res.canceled = true
+					break
+				}
 			}
 			out[w] = res
 		}(w)
@@ -380,17 +444,18 @@ func positionalTrigrams(ix *index.Index, f lineFilter) ([]trigram.Trigram, bool)
 }
 
 type scanResult struct {
-	matches []Match
-	stats   Stats
+	matches  []Match
+	stats    Stats
+	canceled bool
 }
 
-func scanLiteralLines(ix *index.Index, ids []uint64, needle []byte) ([]Match, Stats) {
+func scanLiteralLines(ctx context.Context, ix *index.Index, ids []uint64, needle []byte) ([]Match, Stats, bool) {
 	workers, release := claimVerifyWorkers(len(ids))
 	defer release()
 	if workers <= 1 {
-		res := scanLiteralRange(ix, ids, needle)
+		res := scanLiteralRange(ctx, ix, ids, needle)
 		res.stats.ParallelWorkers = 1
-		return res.matches, res.stats
+		return combineScanResults([]scanResult{res}, 1)
 	}
 
 	out := make([]scanResult, workers)
@@ -399,16 +464,24 @@ func scanLiteralLines(ix *index.Index, ids []uint64, needle []byte) ([]Match, St
 		wg.Add(1)
 		go func(w, start, end int) {
 			defer wg.Done()
-			out[w] = scanLiteralRange(ix, ids[start:end], needle)
+			out[w] = scanLiteralRange(ctx, ix, ids[start:end], needle)
 		}(w, r.start, r.end)
 	}
 	wg.Wait()
 	return combineScanResults(out, workers)
 }
 
-func scanLiteralRange(ix *index.Index, ids []uint64, needle []byte) scanResult {
+func scanLiteralRange(ctx context.Context, ix *index.Index, ids []uint64, needle []byte) scanResult {
 	var res scanResult
 	for _, id := range ids {
+		// Check once per blob, not per cancelCheckStride blobs: the degenerate tail
+		// this guards is a handful of very large (minified/generated) blobs, where a
+		// per-blob count stride would only fire at the first blob. One non-blocking
+		// select per blob is negligible against scanning the blob's content.
+		if canceled(ctx) {
+			res.canceled = true
+			return res
+		}
 		b := ix.Blob(id)
 		res.stats.CandidateBytes += int64(len(b.Content))
 		forEachLine(b.Content, func(li int, line []byte) {
@@ -422,13 +495,13 @@ func scanLiteralRange(ix *index.Index, ids []uint64, needle []byte) scanResult {
 	return res
 }
 
-func scanRegexLines(ix *index.Index, ids []uint64, re *regexp.Regexp, filter lineFilter) ([]Match, Stats) {
+func scanRegexLines(ctx context.Context, ix *index.Index, ids []uint64, re *regexp.Regexp, filter lineFilter) ([]Match, Stats, bool) {
 	workers, release := claimVerifyWorkers(len(ids))
 	defer release()
 	if workers <= 1 {
-		res := scanRegexRange(ix, ids, re, filter)
+		res := scanRegexRange(ctx, ix, ids, re, filter)
 		res.stats.ParallelWorkers = 1
-		return res.matches, res.stats
+		return combineScanResults([]scanResult{res}, 1)
 	}
 
 	out := make([]scanResult, workers)
@@ -437,16 +510,22 @@ func scanRegexLines(ix *index.Index, ids []uint64, re *regexp.Regexp, filter lin
 		wg.Add(1)
 		go func(w, start, end int) {
 			defer wg.Done()
-			out[w] = scanRegexRange(ix, ids[start:end], re, filter)
+			out[w] = scanRegexRange(ctx, ix, ids[start:end], re, filter)
 		}(w, r.start, r.end)
 	}
 	wg.Wait()
 	return combineScanResults(out, workers)
 }
 
-func scanRegexRange(ix *index.Index, ids []uint64, re *regexp.Regexp, filter lineFilter) scanResult {
+func scanRegexRange(ctx context.Context, ix *index.Index, ids []uint64, re *regexp.Regexp, filter lineFilter) scanResult {
 	var res scanResult
 	for _, id := range ids {
+		// Check once per blob (see scanLiteralRange): the tail this guards is a few
+		// huge blobs, so a per-blob count stride would only ever fire at blob 0.
+		if canceled(ctx) {
+			res.canceled = true
+			return res
+		}
 		b := ix.Blob(id)
 		res.stats.CandidateBytes += int64(len(b.Content))
 		forEachLine(b.Content, func(li int, line []byte) {
@@ -464,15 +543,20 @@ func scanRegexRange(ix *index.Index, ids []uint64, re *regexp.Regexp, filter lin
 	return res
 }
 
-func combineScanResults(results []scanResult, workers int) ([]Match, Stats) {
+// combineScanResults merges per-worker results and reports whether any worker
+// observed cancellation (OR across workers): a single cancelled worker makes the
+// whole call surface ctx.Err() to the caller.
+func combineScanResults(results []scanResult, workers int) ([]Match, Stats, bool) {
 	var matches []Match
 	stats := Stats{ParallelWorkers: workers}
+	cancel := false
 	for _, res := range results {
 		matches = append(matches, res.matches...)
 		stats.add(res.stats)
+		cancel = cancel || res.canceled
 	}
 	stats.ParallelWorkers = workers
-	return matches, stats
+	return matches, stats, cancel
 }
 
 type indexRange struct{ start, end int }

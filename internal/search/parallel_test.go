@@ -1,6 +1,7 @@
 package search
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -46,12 +47,12 @@ func TestParallelRegexMatchesSerial(t *testing.T) {
 
 	ix := parallelTestIndex(t)
 	filled := fillVerifyPermits()
-	serial, serialStats, err := RegexWithStats(ix, "handler|response|payload")
+	serial, serialStats, err := RegexWithStats(context.Background(), ix, "handler|response|payload")
 	drainVerifyPermits(filled)
 	if err != nil {
 		t.Fatal(err)
 	}
-	parallel, parallelStats, err := RegexWithStats(ix, "handler|response|payload")
+	parallel, parallelStats, err := RegexWithStats(context.Background(), ix, "handler|response|payload")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,9 +73,15 @@ func TestParallelShortLiteralMatchesSerial(t *testing.T) {
 
 	ix := parallelTestIndex(t)
 	filled := fillVerifyPermits()
-	serial, serialStats := LiteralWithStats(ix, "x")
+	serial, serialStats, err := LiteralWithStats(context.Background(), ix, "x")
 	drainVerifyPermits(filled)
-	parallel, parallelStats := LiteralWithStats(ix, "x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	parallel, parallelStats, err := LiteralWithStats(context.Background(), ix, "x")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !reflect.DeepEqual(serial, parallel) {
 		t.Fatalf("parallel literal results differ from serial:\nserial=%v\nparallel=%v", serial, parallel)
 	}
@@ -88,12 +95,12 @@ func TestParallelShortLiteralMatchesSerial(t *testing.T) {
 
 func TestParallelRegexDeterministic(t *testing.T) {
 	ix := parallelTestIndex(t)
-	want, _, err := RegexWithStats(ix, "special|payload")
+	want, _, err := RegexWithStats(context.Background(), ix, "special|payload")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for i := 0; i < 20; i++ {
-		got, _, err := RegexWithStats(ix, "special|payload")
+		got, _, err := RegexWithStats(context.Background(), ix, "special|payload")
 		if err != nil {
 			t.Fatal(err)
 		}
