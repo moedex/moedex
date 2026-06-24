@@ -10,6 +10,8 @@
 
 default:
   image: golang:1.26
+  tags:
+    - docker-image
 
 variables:
   # Pin the toolchain to the image's Go; never auto-download a toolchain in CI.
