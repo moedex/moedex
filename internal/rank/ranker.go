@@ -27,8 +27,16 @@ type Config struct {
 	// full RRF vote — e.g. query "build deploy stage" matching just "build" in a
 	// symbol BuildIndex (coverage 1/3) is gated out, while a symbol whose name IS
 	// the query, e.g. "refund" -> func Refund (coverage 1/1), still fires. This
-	// was the measured false-boost mode (see eval). The zero value means the 0.5
-	// default; pass a negative value to disable the gate (pre-gating behavior).
+	// was the measured false-boost mode (see eval). A negative value disables the
+	// gate (pre-gating behavior).
+	//
+	// The zero value means the 0.67 default. It was 0.5 until the path arm landed;
+	// once the path arm carries the filename signal, the looser 0.5 gate let the
+	// symbol arm cast marginal votes the path arm already covers, which cost NDCG in
+	// the combined stack. Raising to 0.67 (only near-exact symbol-name matches vote)
+	// makes the symbol arm additive-on-recall and ~neutral-on-NDCG alongside path;
+	// it is the plateau on the gold (0.67/0.75/1.0 score identically), so a stable
+	// choice rather than a fragile peak. See eval's symbol-coverage sweep.
 	SymbolMinCoverage float64
 
 	// PathMinCoverage gates AND enables the filename/path arm: a blob whose file
@@ -66,7 +74,7 @@ func (c Config) withDefaults() Config {
 		c.MaxSpans = 8
 	}
 	if c.SymbolMinCoverage == 0 {
-		c.SymbolMinCoverage = 0.5
+		c.SymbolMinCoverage = 0.67
 	}
 	if c.PathMinCoverage == 0 {
 		c.PathMinCoverage = 0.6

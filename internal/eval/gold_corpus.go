@@ -117,10 +117,12 @@ package eval
 //
 // PATH ARM (2026-06-24). Ranking now includes a filename/path RRF arm, ON by
 // default (rank.Config.PathMinCoverage). It lifts this gold's full-stack NDCG
-// ~0.64 -> ~0.85 and fixes "federated server"/"administration service" (0.0 -> 1.0,
+// ~0.64 -> ~0.89 and fixes "federated server"/"administration service" (0.0 -> 1.0,
 // terms that live only in the path). It also SUBSUMES the symbol arm on this
-// filename-aligned corpus — see TestCorpusGoldGate's four-arm note for the full
-// breakdown and why the gate no longer asserts symbol >= lexical.
+// filename-aligned corpus (the symbol gate was raised 0.5 -> 0.67 to stop it
+// casting marginal votes the path arm already covers) — see TestCorpusGoldGate's
+// four-arm note for the full breakdown and why the gate no longer asserts
+// symbol >= lexical.
 //
 // CONFIDENCE: every C#/TS/SQL label is grep/read-verified by two independent
 // judges and reconciled; the CF labels are single-judge pooled+read-verified.

@@ -21,22 +21,24 @@ import (
 // one index by toggling arms:
 //
 //	lexical only (no path/sym) NDCG=0.640 MRR=0.746 Recall=0.702   <- historical baseline
-//	+symbol (no path)          NDCG=0.758 MRR=0.803 Recall=0.784   <- symbol's standalone value
+//	+symbol (no path)          NDCG=0.751 MRR=0.786 Recall=0.836   <- symbol's standalone value
 //	lexical+path (no symbol)   NDCG=0.893 MRR=0.933 Recall=0.921   <- the path arm's big lift
-//	+path+symbol (PRODUCTION)  NDCG=0.855 MRR=0.853 Recall=0.913   <- the default stack
+//	+path+symbol (PRODUCTION)  NDCG=0.887 MRR=0.917 Recall=0.938   <- the default stack
 //
 // KEY FINDING: on this gold the path arm SUBSUMES the symbol arm. The TC corpus
 // names files for their concept (RefundOrderValidator.cs, administration.service.ts,
 // mysql_create_federated_server.sql), so the filename signal captures — and exceeds
 // — what symbol-name matching provided, lifting NDCG +0.25 over plain lexical and
 // fixing standing failures ("federated server"/"administration service" 0.0->1.0).
-// Stacking symbol on top of path is then slightly NDCG-negative (it adds recall:
-// 0.921->0.913 NDCG but the symbol votes broaden coverage). So the old invariant
-// "symbol >= lexical" is no longer the right one — with path on, lexical already
-// contains most of symbol's signal. The gate now asserts, instead, that EACH arm
-// beats the no-path lexical baseline and the full production stack clears floors.
-// (Symbol retains independent value for non-filename-aligned queries and for
-// context scoping, a distribution this 30q filename-heavy gold under-represents.)
+// Stacking symbol on top of path is then ~NDCG-neutral but RECALL-positive
+// (0.893->0.887 NDCG, recall 0.921->0.938): the symbol votes broaden coverage. The
+// symbol gate was raised 0.5->0.67 when the path arm landed so it stops casting
+// marginal votes the path arm already covers (see rank.Config.SymbolMinCoverage).
+// So the old invariant "symbol >= lexical" is no longer the right one — with path
+// on, lexical already contains most of symbol's signal. The gate now asserts,
+// instead, that EACH arm beats the no-path lexical baseline and the full production
+// stack clears floors. (Symbol retains independent value for non-filename-aligned
+// queries and for context scoping, a distribution this 30q gold under-represents.)
 //
 // Skips cleanly when the corpus root is absent (set MOEDEX_CORPUS_ROOT or place
 // repos under ~/TCGitlab), so it never reds CI on a machine without the corpus.
@@ -104,16 +106,16 @@ func TestCorpusGoldGate(t *testing.T) {
 		t.Error("symbol arm attached to 0 blobs; the C#/TS/CF/SQL symbol lane is dead")
 	}
 
-	// --- Hard floors (a margin below the 2026-06-24 measured baseline) ----------
+	// --- Hard floors (~0.08 below the 2026-06-24 measured baseline) -------------
 	const (
-		// Historical lexical-only baseline (0.640 / 0.702 / 0.746).
+		// Historical lexical-only baseline (NDCG 0.640 / Recall 0.702 / MRR 0.746).
 		minLexNDCG   = 0.58
 		minLexRecall = 0.64
 		minLexMRR    = 0.68
-		// Full production stack: lexical+path+symbol (0.855 / 0.913 / 0.853).
-		minFullNDCG   = 0.78
-		minFullRecall = 0.84
-		minFullMRR    = 0.78
+		// Full production stack lexical+path+symbol (NDCG 0.887 / Recall 0.938 / MRR 0.917).
+		minFullNDCG   = 0.80
+		minFullRecall = 0.86
+		minFullMRR    = 0.83
 	)
 	if repLexOnly.MeanNDCG < minLexNDCG {
 		t.Errorf("lexical-only MeanNDCG = %.4f, below floor %.4f (regression)", repLexOnly.MeanNDCG, minLexNDCG)
