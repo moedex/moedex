@@ -21,6 +21,7 @@ type QueryReport struct {
 	PrecAtK     float64  // Precision@K
 	MRR         float64  // reciprocal rank of first relevant
 	NDCGAtK     float64  // nDCG@K (graded gains)
+	UDCGAtK     float64  // UDCG@K (graded gains minus distractor penalties)
 }
 
 // Report is the aggregate of running a gold set through the ranker: one
@@ -33,6 +34,7 @@ type Report struct {
 	MeanPrec   float64
 	MeanMRR    float64
 	MeanNDCG   float64
+	MeanUDCG   float64
 }
 
 // Runner evaluates a ranker over a gold set. It owns a built index + token
@@ -191,6 +193,7 @@ func (run *Runner) Evaluate(ctx context.Context, gold []GoldQuery, k, topK int) 
 			PrecAtK:     PrecisionAtK(ranked, g.Relevant, k),
 			MRR:         MRR(ranked, g.Relevant),
 			NDCGAtK:     NDCGAtK(ranked, g.Relevant, k),
+			UDCGAtK:     UDCGAtK(ranked, g.Relevant, k),
 		}
 		rep.Queries = append(rep.Queries, qr)
 	}
@@ -210,11 +213,13 @@ func (rep *Report) finalizeMeans() {
 		rep.MeanPrec += q.PrecAtK
 		rep.MeanMRR += q.MRR
 		rep.MeanNDCG += q.NDCGAtK
+		rep.MeanUDCG += q.UDCGAtK
 	}
 	rep.MeanRecall /= float64(n)
 	rep.MeanPrec /= float64(n)
 	rep.MeanMRR /= float64(n)
 	rep.MeanNDCG /= float64(n)
+	rep.MeanUDCG /= float64(n)
 }
 
 // SortedQueries returns the per-query reports sorted by query string, giving a

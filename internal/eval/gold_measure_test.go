@@ -12,11 +12,11 @@ func logReport(t *testing.T, label string, rep Report) {
 	t.Helper()
 	t.Logf("== %s (k=%d) ==", label, rep.K)
 	for _, q := range rep.SortedQueries() {
-		t.Logf("  %-26s recall=%.3f prec=%.3f mrr=%.3f ndcg=%.3f",
-			q.Query, q.RecallAtK, q.PrecAtK, q.MRR, q.NDCGAtK)
+		t.Logf("  %-26s recall=%.3f prec=%.3f mrr=%.3f ndcg=%.3f udcg=%.3f",
+			q.Query, q.RecallAtK, q.PrecAtK, q.MRR, q.NDCGAtK, q.UDCGAtK)
 	}
-	t.Logf("  MEAN  recall=%.3f prec=%.3f mrr=%.3f ndcg=%.3f",
-		rep.MeanRecall, rep.MeanPrec, rep.MeanMRR, rep.MeanNDCG)
+	t.Logf("  MEAN  recall=%.3f prec=%.3f mrr=%.3f ndcg=%.3f udcg=%.3f",
+		rep.MeanRecall, rep.MeanPrec, rep.MeanMRR, rep.MeanNDCG, rep.MeanUDCG)
 }
 
 func posOf(ranked []string, relPath string) int {

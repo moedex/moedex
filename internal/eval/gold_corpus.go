@@ -131,6 +131,20 @@ package eval
 // raised 0.5 -> 0.67 when the path arm landed. See TestCorpusGoldGate's four-arm
 // note for the breakdown.
 //
+// HARD-DISTRACTOR LABELS (2026-06-24, added with the UDCG metric). A few queries
+// carry NEGATIVE grades (grade -1). These are "hard distractors": files the
+// adjudication confirmed are plausible-but-WRONG for the query (a same-named symbol
+// on a different object, a shared enum, a same-prefix sibling script) AND that the
+// lexical/symbol arms actually surface. They are INVISIBLE to nDCG/recall/
+// precision/MRR — every one of those guards on grade >= 1, and gain() zeroes
+// non-positive grades — so they do NOT move the existing baselines or gate floors.
+// They are consumed ONLY by UDCGAtK, which penalizes a distractor that lands in the
+// top-k context window (the agent-consumer cost nDCG ignores). The four labeled
+// here (void transaction, refund order validation, skip replication error, show
+// slave status) reuse files the two-annotator pass already DROPPED, so each is a
+// documented, read-verified judgment, not a fresh guess. UDCG is a regression WATCH
+// (logged), not a hard gate floor.
+//
 // CONFIDENCE: every C#/TS/SQL label is grep/read-verified by two independent
 // judges and reconciled; the CF and non-aligned labels are single-judge
 // pooled+read-verified. This set GATES (see TestCorpusGoldGate): the lexical-only
@@ -175,11 +189,14 @@ func corpusGoldCSharp() []GoldQuery {
 			"src/TC.SslApi.Service/Validation/GenerateCsrValidator.cs": 2,
 		}},
 		// "refund order validation": RefundOrderValidator.cs:9 defines the eligible-
-		// statuses + accept-date rule. [ADJUDICATED: ValidationErrorCode.cs DROPPED
-		// — annotator #2 judged it a shared, generic error-code enum, not a definer
-		// of refund validation; the single grade-2 definer is the only solid label.]
+		// statuses + accept-date rule (the single grade-2 definer). HARD DISTRACTOR
+		// (grade -1, UDCG only): ValidationErrorCode.cs is a shared, generic error-code
+		// enum [ADJUDICATED: annotator #2 judged it NOT a definer of refund validation]
+		// that the lexical arm surfaces for any "...validation" query —
+		// plausible-but-wrong, penalized rather than silently dropped.
 		{Query: "refund order validation", Relevant: map[string]int{
 			"src/TC.SslApi.Service/Validation/RefundOrderValidator.cs": 2,
+			"src/TC.SslApi.Service/Models/ValidationErrorCode.cs":      -1,
 		}},
 		// "ssl contact validation": SslContactValidator.cs:6 defines first/last/
 		// email/phone NotEmpty rules. High confidence.
@@ -336,19 +353,23 @@ func corpusGoldSQL() []GoldQuery {
 		}},
 		// "skip replication error": util_replication_skip_multisource.sql defines a
 		// proc that sets SQL_SLAVE_SKIP_COUNTER=1 (the literal "skip a replication
-		// error" operation). [ADJUDICATED: util_replication_turbo_button.sql DROPPED
-		// — annotator #2 read it and confirmed it only toggles
-		// innodb_flush_log_at_trx_commit/sync_binlog for catch-up speed; it is
-		// replication TUNING, not error-skipping.]
+		// error" operation) — the single grade-2 definer. HARD DISTRACTOR (grade -1,
+		// UDCG only): util_replication_turbo_button.sql [ADJUDICATED: annotator #2 read
+		// it and confirmed it only toggles innodb_flush_log_at_trx_commit/sync_binlog
+		// for catch-up speed — replication TUNING, not error-skipping] is a same-prefix
+		// replication util the lexical arm surfaces, plausible-but-wrong.
 		{Query: "skip replication error", Relevant: map[string]int{
 			"replication/util_replication_skip_multisource.sql": 2,
+			"replication/util_replication_turbo_button.sql":     -1,
 		}},
 		// "show slave status": util_replication_show_slave_status.sql (named for it,
-		// runs SHOW SLAVE STATUS). [ADJUDICATED: util_help_replication.sql DROPPED —
-		// it is a help/index proc that lists ALL replication utils, a low-information
-		// catch-all rather than a definer of this query's concept.]
+		// runs SHOW SLAVE STATUS) — the single grade-2 definer. HARD DISTRACTOR (grade
+		// -1, UDCG only): util_help_replication.sql [ADJUDICATED: a help/index proc that
+		// lists ALL replication utils, a low-information catch-all, not a definer]
+		// mentions slave status and is surfaced for this query — plausible-but-wrong.
 		{Query: "show slave status", Relevant: map[string]int{
 			"replication/util_replication_show_slave_status.sql": 2,
+			"replication/util_help_replication.sql":              -1,
 		}},
 		// "create history table trigger": create_history_scripts.sql defines
 		// util_create_history_scripts, which generates CREATE TABLE *_history +
@@ -385,12 +406,15 @@ func corpusGoldColdFusion() []GoldQuery {
 	return []GoldQuery{
 		// "void transaction": act_voidTransaction.cfm:5 defines
 		// <cffunction name="voidTransaction"> (PayPal void). act_auctionCancelOldBids
-		// cfincludes it and calls voidTransaction() (:23) -> grade 1. NOTE: the
-		// voidTransaction in act_recurring-paypal-to-ppv4 is a gateway-object method
-		// (rInit.transaction().voidTransaction), a different symbol — DROPPED.
+		// cfincludes it and calls voidTransaction() (:23) -> grade 1. HARD DISTRACTOR
+		// (grade -1, UDCG only): act_recurring-paypal-to-ppv4.cfm contains a
+		// voidTransaction that is a gateway-object METHOD
+		// (rInit.transaction().voidTransaction) — a different symbol the lexical/symbol
+		// arms surface for this query, plausible-but-wrong.
 		{Query: "void transaction", Relevant: map[string]int{
-			"_inc/act_voidTransaction.cfm":      2,
-			"_inc/act_auctionCancelOldBids.cfm": 1,
+			"_inc/act_voidTransaction.cfm":          2,
+			"_inc/act_auctionCancelOldBids.cfm":     1,
+			"_inc/act_recurring-paypal-to-ppv4.cfm": -1,
 		}},
 		// "unzip file": act_fun_zip.cfm defines gUnZip (:28) and gUnzipFile (:52).
 		// dsp_cachePre.cfm calls gUnZip() to decompress the page cache -> grade 1.

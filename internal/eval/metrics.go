@@ -12,10 +12,12 @@
 // ranked list + a map[string]int relevance set) so the math is provable in
 // isolation without building an index.
 //
-// This is slice 1. It deliberately does NOT yet cover: UDCG (the
-// distraction-aware, agent-consumer metric called for in research/), dense-arm
-// evaluation, or a large gold set — see the package report. The metric math is
-// the load-bearing correctness work and is pinned by hand-computed tests.
+// The metric math is the load-bearing correctness work and is pinned by
+// hand-computed tests. Alongside the rank-position metrics it includes UDCG
+// (Utility and Distraction-aware Cumulative Gain), the agent-consumer metric
+// called for in research/learned-reranker.md: unlike nDCG, which simply ignores
+// non-relevant hits, UDCG penalizes the distractors an LLM agent would ingest
+// from the top-k context window.
 package eval
 
 import (
@@ -188,6 +190,9 @@ func NDCGAtK(ranked []string, relevant map[string]int, k int) float64 {
 
 // idealDCGAtK is the DCG of the best possible ranking: the relevant grades
 // sorted descending, placed at positions 1..k, the rest contributing nothing.
+// Distractor grades (negative) and grade 0 are excluded — the ideal ranking
+// surfaces relevant docs and no distractors, so it is unchanged by the distractor
+// labels UDCG consumes.
 func idealDCGAtK(relevant map[string]int, k int) float64 {
 	grades := make([]int, 0, len(relevant))
 	for _, g := range relevant {
@@ -202,4 +207,87 @@ func idealDCGAtK(relevant map[string]int, k int) float64 {
 		idcg += gain(grades[i]) * discount(i+1)
 	}
 	return idcg
+}
+
+// unlabeledDistractorPenalty is the implicit per-document cost UDCG charges to a
+// retrieved doc in the top-k that the gold marks NEITHER relevant (grade >= 1)
+// NOR an explicit hard distractor (grade < 0) — i.e. an UNLABELED doc (grade 0).
+// It is deliberately SMALLER than a hard distractor's penalty (a grade -1 costs
+// distractorPenalty == 1.0): an unlabeled doc is only a PROBABLE distractor (the
+// gold is sparse and single-judge, so it may be an unlabeled-relevant), whereas
+// an explicit -1 is a hand-confirmed plausible-but-wrong. The ratio (0.5 vs 1.0)
+// encodes "about half as confident this is noise as a labeled hard distractor."
+const unlabeledDistractorPenalty = 0.5
+
+// distractorPenalty is the cost of a DISTRACTOR — a document the gold explicitly
+// marks plausible-but-wrong with a NEGATIVE grade. The magnitude mirrors gain()
+// so the penalty scale is symmetric with the utility scale: penalty(-g) ==
+// gain(g) == 2^g - 1. A "hard" distractor (grade -1) costs 1.0 (exactly what a
+// grade-1 relevant hit is worth); a costlier one (grade -2) costs 3.0. A
+// non-negative grade is not an explicit distractor and costs 0 here (grade 0 is
+// handled separately by unlabeledDistractorPenalty).
+func distractorPenalty(grade int) float64 {
+	if grade >= 0 {
+		return 0
+	}
+	return gain(-grade)
+}
+
+// UDCGAtK is Utility- and Distraction-aware Cumulative Gain at cutoff k,
+// normalized — the agent-consumer metric from research/learned-reranker.md
+// (arXiv 2510.21440). Unlike nDCG, which simply IGNORES non-relevant results, an
+// LLM agent ingests the whole top-k context window jointly, so an irrelevant hit
+// is not free: a plausible-but-wrong "distractor" actively degrades the answer.
+// UDCG therefore REWARDS relevant docs (the nDCG utility term) and SUBTRACTS a
+// cost for distractors that appear in the top-k:
+//
+//   - relevant (grade >= 1):            + gain(grade) * discount(rank)   [same as nDCG]
+//   - explicit hard distractor (g < 0): - distractorPenalty(grade) * discount(rank)
+//   - unlabeled (grade 0):              - unlabeledDistractorPenalty * discount(rank)
+//
+// The result is (utility - distraction) / IDCG@k, the SAME ideal normalizer nDCG
+// uses: the ideal ranking has the relevant docs at the top and NO distractors, so
+// its distraction term is 0 and IDCG is unchanged. Consequences:
+//
+//   - UDCG <= NDCG always, with equality iff no distractor sits in the top-k.
+//   - UDCG can go NEGATIVE: a top-k dominated by hard distractors is worse for an
+//     agent than an empty result (which scores 0). This is intentional — it is the
+//     "distractors actively harm" thesis the metric exists to express. It is NOT
+//     clamped to [0,1].
+//
+// The position discount applies to penalties too, so a distractor high in the
+// window (where the agent anchors) costs more than one near the cutoff.
+//
+// HONESTY: like nDCG, UDCG is only as good as the labels. The implicit penalty
+// assumes an unlabeled top-k hit is noise; against a sparse single-judge gold it
+// may penalize an unlabeled-RELEVANT doc. That is why UDCG is a regression WATCH
+// (logged), not a hard gate floor, and why the explicit hard-distractor labels
+// (the high-confidence penalties) carry the larger weight. Returns 0 when there
+// are no relevant docs (IDCG 0 — undefined, matching NDCGAtK). Duplicates: only a
+// doc's first (best) occurrence contributes; later ones are skipped.
+func UDCGAtK(ranked []string, relevant map[string]int, k int) float64 {
+	k = effectiveK(k, len(ranked))
+	idcg := idealDCGAtK(relevant, k)
+	if idcg == 0 {
+		return 0
+	}
+
+	seen := make(map[string]bool)
+	var udcg float64
+	for i := 0; i < k; i++ {
+		r := ranked[i]
+		if seen[r] {
+			continue
+		}
+		seen[r] = true
+		switch grade := relevant[r]; {
+		case grade >= 1:
+			udcg += gain(grade) * discount(i+1)
+		case grade < 0:
+			udcg -= distractorPenalty(grade) * discount(i+1)
+		default: // grade == 0: unlabeled, an implicit (probable) distractor
+			udcg -= unlabeledDistractorPenalty * discount(i+1)
+		}
+	}
+	return udcg / idcg
 }
