@@ -15,17 +15,30 @@ import (
 	"moedex/internal/ingest"
 )
 
-// dirExists reports whether a repo's working tree is still present on disk,
-// using the SAME signal DiscoverRepos keys on: the repo dir contains a ".git"
-// (dir OR file — a worktree/submodule gitlink is a ".git" file). This makes
-// "still present" symmetric with discovery, so a repo classified as removed is
-// precisely one whose git repo is genuinely gone, not one a discovery walk
-// transiently skipped. A bare dir whose .git vanished is treated as removed.
-func dirExists(repoDir string) bool {
-	if _, err := os.Stat(filepath.Join(repoDir, ".git")); err == nil {
-		return true
-	}
-	return false
+// statFn is the seam used to probe a repo's .git presence; production uses
+// os.Stat. Tests override it to simulate a non-ENOENT stat error (EACCES/EIO/
+// racing parent-dir failure) and assert that "couldn't tell" never causes a
+// still-present repo to be dropped.
+var statFn = os.Stat
+
+// repoGone reports whether a repo's git repo is GENUINELY gone from disk — the
+// ONLY condition under which a refresh may classify it as removed. It probes the
+// SAME signal DiscoverRepos keys on (a ".git" entry, dir OR file — a worktree/
+// submodule gitlink is a ".git" file), and distinguishes three outcomes:
+//
+//   - stat SUCCESS              -> present; gone=false (carry forward / handled).
+//   - stat error, IsNotExist    -> genuinely removed; gone=true.
+//   - stat error, NOT IsNotExist (EACCES/EIO/transient) -> AMBIGUOUS, we could
+//     NOT tell; gone=false so the entry is carried forward, never dropped.
+//
+// Only a definitive ENOENT classifies a repo as removed; any "couldn't tell"
+// outcome is treated as still-present (the data-loss-averse choice — carrying a
+// stale entry forward is at worst a deferred removal, but a wrongful drop is
+// silent, irrecoverable under-approximation). The caller records ambiguous cases
+// in FailedRepos so the next refresh retries.
+func repoGone(repoDir string) bool {
+	_, err := statFn(filepath.Join(repoDir, ".git"))
+	return err != nil && os.IsNotExist(err)
 }
 
 // contentKey is the CONTENT-TRUE blob key: the SHA-1 of the bytes actually
@@ -277,25 +290,26 @@ func refreshCAS(old *BlobManifest, root, casDir string, discover discoverFn, ing
 	}
 	// Old-manifest repos absent from the current discovered set. A discovery MISS
 	// is NOT proof of removal: DiscoverRepos can transiently fail to return a repo
-	// (an unreadable parent dir is skipped mid-walk, a racing rename, etc.). Stat
-	// the dir before classifying — same data-loss class as the re-ingest-failure
-	// path, different trigger:
-	//   - dir GONE from disk  -> a genuine removal; drop the entry by omission.
-	//   - dir STILL on disk   -> a transient discovery miss; CARRY FORWARD the
-	//     prior manifest entry unchanged (no content lost) and surface it as
-	//     failed, so the next refresh retries it. Only a dir truly absent is removed.
+	// (an unreadable parent dir is skipped mid-walk, a racing rename, etc.). Probe
+	// the .git before classifying — same data-loss class as the re-ingest-failure
+	// path, different trigger. The classification is total and airtight (repoGone):
+	//   - .git GENUINELY gone (stat ENOENT) -> a real removal; drop by omission.
+	//   - .git present, OR stat AMBIGUOUS (a non-ENOENT error: EACCES/EIO/transient
+	//     where we could NOT tell) -> CARRY FORWARD the prior manifest entry
+	//     unchanged (no content lost) and surface it as failed, so the next refresh
+	//     retries it. Only a definitive ENOENT removes; "couldn't tell" never drops.
 	for _, r := range old.Repos {
 		if currentSet[r.Dir] {
 			continue // handled in the main loop above
 		}
-		if dirExists(r.Dir) {
-			ds.FailedRepos = append(ds.FailedRepos, r.Dir)
-			m.Repos = append(m.Repos, r)
-			m.Stats.RawBytes += rawBytesOf(store, r)
-			m.Stats.FileRefs += len(r.Files)
+		if repoGone(r.Dir) {
+			ds.RemovedRepos = append(ds.RemovedRepos, r.Dir)
 			continue
 		}
-		ds.RemovedRepos = append(ds.RemovedRepos, r.Dir)
+		ds.FailedRepos = append(ds.FailedRepos, r.Dir)
+		m.Repos = append(m.Repos, r)
+		m.Stats.RawBytes += rawBytesOf(store, r)
+		m.Stats.FileRefs += len(r.Files)
 	}
 
 	m.Stats.UniqueBlobs = store.Len()

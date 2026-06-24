@@ -580,6 +580,86 @@ func TestRefreshDiscoveryMissCarriesForwardStillPresentRepo(t *testing.T) {
 	}
 }
 
+// TestRefreshAmbiguousStatErrorCarriesForwardRepo hardens the removal path: a
+// repo absent from the discovered set whose .git STAT returns a NON-ENOENT error
+// (EACCES, EIO, a racing parent-dir failure — i.e. "couldn't tell whether it's
+// gone") must NOT be classified as removed. Collapsing every stat error into
+// "gone" would drop a still-present repo's content on a transient FS hiccup —
+// the same silent-data-loss class, one level deeper. Only a definitive ENOENT
+// removes; any ambiguous outcome carries the entry forward (recorded failed).
+//
+// The stat is injected via the statFn seam so the test does not depend on real
+// (and unreliable) FS error conditions.
+func TestRefreshAmbiguousStatErrorCarriesForwardRepo(t *testing.T) {
+	requireGit(t)
+	corpus := t.TempDir()
+	repoA := filepath.Join(corpus, "repoA")
+	repoB := filepath.Join(corpus, "repoB")
+	uniqueB := "package b\nconst ONLY_IN_B = 7\n"
+	commitGitRepo(t, repoA, map[string]string{"a.go": "package a\nconst A = 1\n"})
+	commitGitRepo(t, repoB, map[string]string{"b.go": uniqueB})
+
+	casDir := t.TempDir()
+	m, err := buildCAS(corpus, casDir, ingest.DiscoverRepos, ingest.Repo, ingest.Head)
+	if err != nil {
+		t.Fatalf("buildCAS: %v", err)
+	}
+	rbBOld, _ := m.RepoOf(repoB)
+	if len(rbBOld.Files) == 0 {
+		t.Fatal("repoB should have files in the initial manifest (test premise)")
+	}
+
+	// Discovery omits repoB (a transient miss). repoB is STILL on disk, but inject
+	// a NON-ENOENT stat error for its .git so the refresh "cannot tell" if it is
+	// gone. A correct classifier must NOT remove it.
+	missingDiscover := func(string) ([]string, error) { return []string{repoA}, nil }
+	bGit := filepath.Join(repoB, ".git")
+	orig := statFn
+	t.Cleanup(func() { statFn = orig })
+	statFn = func(name string) (os.FileInfo, error) {
+		if name == bGit {
+			// A non-IsNotExist error: the "couldn't tell" class (mimics EACCES/EIO).
+			return nil, fmt.Errorf("injected permission/IO error stat-ing %s", name)
+		}
+		return orig(name)
+	}
+	// Sanity: the injected error must NOT satisfy os.IsNotExist (else the test
+	// would not be exercising the ambiguous branch).
+	if _, e := statFn(bGit); os.IsNotExist(e) {
+		t.Fatal("test premise: injected stat error must NOT be IsNotExist")
+	}
+
+	m2, ds, err := refreshCAS(m, corpus, casDir, missingDiscover, ingest.Repo, ingest.Head)
+	if err != nil {
+		t.Fatalf("refreshCAS: %v", err)
+	}
+
+	// repoB (ambiguous stat) must be carried forward, NOT removed.
+	if contains(ds.RemovedRepos, repoB) {
+		t.Error("HARDENING: repoB with an ambiguous (non-ENOENT) stat error was misclassified as removed")
+	}
+	if !contains(ds.FailedRepos, repoB) {
+		t.Errorf("repoB should be surfaced in FailedRepos, got %v", ds.FailedRepos)
+	}
+	rbBNew, ok := m2.RepoOf(repoB)
+	if !ok {
+		t.Fatal("HARDENING: repoB dropped from manifest on a non-ENOENT stat error (data loss)")
+	}
+	if !equalStrs(rbBNew.SortedBlobs(), rbBOld.SortedBlobs()) {
+		t.Errorf("repoB blob set changed despite carry-forward: old=%v new=%v",
+			rbBOld.SortedBlobs(), rbBNew.SortedBlobs())
+	}
+
+	// End-to-end: repoB's unique content STILL findable after export.
+	shardDir := filepath.Join(t.TempDir(), "shards")
+	if _, err := ExportShardDir(casDir, shardDir, 1<<30); err != nil {
+		t.Fatalf("ExportShardDir: %v", err)
+	}
+	if !shardDirFinds(t, shardDir, "ONLY_IN_B") {
+		t.Error("HARDENING: repoB's content vanished from exported shards after an ambiguous stat error")
+	}
+}
+
 // --- E. manifest round-trip ----------------------------------------------
 
 func TestBlobManifestRoundTrip(t *testing.T) {
