@@ -113,8 +113,14 @@ package eval
 // top-level CREATE definition names, so all FOUR gold languages exercise the
 // symbol arm (the SQL no-op is closed). On THIS gold the SQL arm is neutral, not
 // additive: the 6 SQL queries are filename-mirror micro-script lookups already
-// won by lexical (see corpusGoldSQL). "federated server" is a standing NDCG-0.0
-// failure — relevant by filename only, which the content-only ranker cannot see.
+// won by lexical (see corpusGoldSQL).
+//
+// PATH ARM (2026-06-24). Ranking now includes a filename/path RRF arm, ON by
+// default (rank.Config.PathMinCoverage). It lifts this gold's full-stack NDCG
+// ~0.64 -> ~0.85 and fixes "federated server"/"administration service" (0.0 -> 1.0,
+// terms that live only in the path). It also SUBSUMES the symbol arm on this
+// filename-aligned corpus — see TestCorpusGoldGate's four-arm note for the full
+// breakdown and why the gate no longer asserts symbol >= lexical.
 //
 // CONFIDENCE: every C#/TS/SQL label is grep/read-verified by two independent
 // judges and reconciled; the CF labels are single-judge pooled+read-verified.
@@ -338,14 +344,12 @@ func corpusGoldSQL() []GoldQuery {
 			"history_tables/create_history_scripts.sql": 2,
 		}},
 		// "federated server": mysql_create_federated_server.sql is the only file
-		// that emits CREATE SERVER ... FOREIGN DATA WRAPPER 'mysql'. Relevant by
-		// CONCEPT, but a KNOWN content-only-ranker artifact: the word "federated"
-		// appears ONLY in the filename, never in the body (which is a SELECT
-		// CONCAT('CREATE SERVER ''',..) that BUILDS the DDL dynamically). The ranker
-		// scores content, not path, so this query is NDCG 0.0 — and the symbol arm
-		// cannot rescue it because the CREATE SERVER is dynamic SQL (no static name
-		// to extract, by the precision rule). Kept as an honest standing failure: it
-		// measures the gap a filename/path index (zoekt-style) would close.
+		// that emits CREATE SERVER ... FOREIGN DATA WRAPPER 'mysql'. The word
+		// "federated" appears ONLY in the filename, never in the body (a SELECT
+		// CONCAT('CREATE SERVER ''',..) that BUILDS the DDL dynamically), so the
+		// content-only lexical/symbol arms score it 0.0. The filename/path arm
+		// (on by default) is exactly what surfaces it: NDCG 0.0 -> 1.0. This was the
+		// motivating case for the path arm.
 		{Query: "federated server", Relevant: map[string]int{
 			"mysql_create_federated_server.sql": 2,
 		}},

@@ -48,6 +48,7 @@ type Runner struct {
 	store *embed.Store   // dense arm; nil = lexical only
 	emb   embed.Embedder // dense arm; nil = lexical only
 	syms  *symbol.Index  // symbol-name arm; nil = off
+	cfg   rank.Config    // ranker config; zero value = all arms at defaults
 	r     *rank.Ranker
 }
 
@@ -67,10 +68,32 @@ func NewRunner(ix *index.Index) *Runner {
 // syms). A nil store+emb is the pure-lexical slice-1 baseline; the symbol arm is
 // re-installed if present so it is not lost when the dense arm is toggled.
 func (run *Runner) rebuild() {
-	run.r = rank.New(run.ix, run.ti, run.store, run.emb, rank.Config{})
+	run.r = rank.New(run.ix, run.ti, run.store, run.emb, run.cfg)
 	if run.syms != nil {
 		run.r.SetSymbols(run.syms)
 	}
+}
+
+// DisablePathArm turns off the filename/path RRF arm (on by default) and rebuilds.
+// Used by the eval to measure ranking with vs. without the path signal; production
+// callers leave it on.
+func (run *Runner) DisablePathArm() {
+	run.cfg.PathMinCoverage = -1
+	run.rebuild()
+}
+
+// SetPathCoverage sets the filename/path arm's coverage gate and rebuilds. Used by
+// the eval to sweep the gate; production uses the default.
+func (run *Runner) SetPathCoverage(c float64) {
+	run.cfg.PathMinCoverage = c
+	run.rebuild()
+}
+
+// SetSymbolCoverage sets the symbol arm's coverage gate and rebuilds. Used by the
+// eval to sweep the gate; production uses the default.
+func (run *Runner) SetSymbolCoverage(c float64) {
+	run.cfg.SymbolMinCoverage = c
+	run.rebuild()
 }
 
 // EnableSymbols builds a multi-language symbol index (Go/C#/TypeScript/

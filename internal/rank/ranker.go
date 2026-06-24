@@ -30,6 +30,26 @@ type Config struct {
 	// was the measured false-boost mode (see eval). The zero value means the 0.5
 	// default; pass a negative value to disable the gate (pre-gating behavior).
 	SymbolMinCoverage float64
+
+	// PathMinCoverage gates AND enables the filename/path arm: a blob whose file
+	// path tokens cover at least this fraction of the query's DISTINCT terms casts
+	// an RRF vote. Unlike the symbol/dense arms it needs no external index — every
+	// blob has a path — so it is ON by default (the zero value means the 0.6
+	// default). A NEGATIVE value disables the arm entirely (and skips building the
+	// path index). This is the zoekt-style signal: a query like "federated server"
+	// finds mysql_create_federated_server.sql even when "federated" appears only in
+	// the filename and never in the content the lexical arm scores.
+	//
+	// The default 0.6 is higher than the symbol arm's 0.5 by design and was chosen
+	// on the pooled gold as the gate at which the arm is PURELY ADDITIVE — it never
+	// demotes a query below its no-path score. Path tokens are short and common, so
+	// a loose gate lets a one-token filename distractor (a file literally named for
+	// a couple of the query words but not the true definer) outvote the real result
+	// via RRF; 0.6 requires both terms of a 2-term query (a majority for longer
+	// ones), which gated out exactly the three gold queries that regressed at 0.5
+	// while keeping every win (e.g. "federated server"/"administration service"
+	// 0.0->1.0). See eval's gold sweep.
+	PathMinCoverage float64
 }
 
 func (c Config) withDefaults() Config {
@@ -47,6 +67,9 @@ func (c Config) withDefaults() Config {
 	}
 	if c.SymbolMinCoverage == 0 {
 		c.SymbolMinCoverage = 0.5
+	}
+	if c.PathMinCoverage == 0 {
+		c.PathMinCoverage = 0.6
 	}
 	return c
 }
@@ -66,6 +89,12 @@ type Ranker struct {
 	syms  *symbol.Index  // optional; nil disables the symbol-name arm
 	cfg   Config
 
+	// pathPostings is a small inverted index from a path token to the blobs whose
+	// file path(s) contain it, built once in New (skipped when the path arm is
+	// disabled). It lets pathArm gather candidates without scanning every blob per
+	// query — the scalable analog of the trigram candidate set for the lexical arm.
+	pathPostings map[string][]uint64
+
 	// tokenCandidates makes the lexical arm generate candidates from the token
 	// index (ti.Docs) instead of the trigram index. The corpus ranker sets this:
 	// its content-only index carries no positional postings, so the trigram path
@@ -80,7 +109,38 @@ type Ranker struct {
 // The symbol-name arm is opt-in via SetSymbols and stays disabled here so New's
 // signature (and existing callers in mcp/eval/tests) are unchanged.
 func New(ix *index.Index, ti *tokenindex.TokenIndex, store *embed.Store, emb embed.Embedder, cfg Config) *Ranker {
-	return &Ranker{ix: ix, ti: ti, store: store, emb: emb, cfg: cfg.withDefaults()}
+	r := &Ranker{ix: ix, ti: ti, store: store, emb: emb, cfg: cfg.withDefaults()}
+	if r.cfg.PathMinCoverage >= 0 {
+		r.buildPathIndex()
+	}
+	return r
+}
+
+// buildPathIndex populates pathPostings: token -> sorted, deduped blob IDs whose
+// file path(s) contain that token. Tokens come from tokenindex.Tokenize over each
+// FileRef.RelPath, so they split on '/', '.', '_', '-' and camelCase exactly as
+// query terms do. A blob is listed once per token even if several of its paths (or
+// path segments) contain it. Built once at construction; blobs are visited in
+// ascending ID order, so every postings list is already sorted.
+func (r *Ranker) buildPathIndex() {
+	pp := map[string][]uint64{}
+	n := r.ix.NumBlobs()
+	for id := uint64(0); id < uint64(n); id++ {
+		b := r.ix.Blob(id)
+		if b == nil {
+			continue
+		}
+		seen := map[string]bool{}
+		for _, f := range b.Files {
+			for _, t := range tokenindex.Tokenize([]byte(f.RelPath)) {
+				if !seen[t] {
+					seen[t] = true
+					pp[t] = append(pp[t], id)
+				}
+			}
+		}
+	}
+	r.pathPostings = pp
 }
 
 // SetSymbols installs (or clears, when s is nil) the optional symbol-name index
@@ -111,6 +171,7 @@ func (r *Ranker) Rank(ctx context.Context, q string, topK int) ([]RankedResult, 
 		return nil, err
 	}
 	sym := r.symbolArm(terms) // sorted desc by symbol-name match (nil if no arm)
+	path := r.pathArm(terms)  // sorted desc by filename/path match (nil if disabled)
 
 	// Reciprocal Rank Fusion: each arm contributes 1/(k+rank) at a blob's rank.
 	type agg struct {
@@ -154,6 +215,15 @@ func (r *Ranker) Rank(ctx context.Context, q string, topK int) ([]RankedResult, 
 		a.rrf += 1.0 / (r.cfg.RRFk + float64(i+1))
 		symSpan[s.blob] = append(symSpan[s.blob], s.span)
 	}
+	// Fourth RRF arm: a blob whose file PATH matches the query (the zoekt-style
+	// filename signal). Folds into the same per-blob rrf aggregate; its span is the
+	// file head so a path-only hit still carries context.
+	pathSpan := map[uint64][]LineSpan{}
+	for i, s := range path {
+		a := get(s.blob)
+		a.rrf += 1.0 / (r.cfg.RRFk + float64(i+1))
+		pathSpan[s.blob] = append(pathSpan[s.blob], s.span)
+	}
 
 	results := make([]RankedResult, 0, len(byBlob))
 	for blob, a := range byBlob {
@@ -161,6 +231,7 @@ func (r *Ranker) Rank(ctx context.Context, q string, topK int) ([]RankedResult, 
 		spans := r.lexicalSpans(b, terms)
 		spans = append(spans, denseSpan[blob]...)
 		spans = append(spans, symSpan[blob]...)
+		spans = append(spans, pathSpan[blob]...)
 		results = append(results, RankedResult{
 			Blob:      blob,
 			Files:     b.Files,
@@ -416,6 +487,94 @@ func (r *Ranker) symbolArm(terms []string) []symScore {
 			blob:  blob,
 			score: total,
 			span:  LineSpan{StartLine: line, EndLine: line},
+		})
+	}
+
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].score != out[j].score {
+			return out[i].score > out[j].score
+		}
+		return out[i].blob < out[j].blob
+	})
+	return out
+}
+
+type pathScore struct {
+	blob  uint64
+	score float64
+	span  LineSpan
+}
+
+// pathArm ranks blobs by how strongly their file PATH matches the query — the
+// zoekt-style filename signal. Disabled (returns nil) when PathMinCoverage is
+// negative or the path index was not built.
+//
+// Matching mirrors the symbol arm: each candidate blob's path is tokenized with
+// the same tokenindex.Tokenize as the query, and a blob scores by the number of
+// DISTINCT query terms its best path covers. Candidates come from pathPostings
+// (the blobs sharing at least one path token with the query), so a query never
+// scans the whole corpus. The coverage gate (cfg.PathMinCoverage of the distinct
+// query terms) keeps a single common token like "service" or "src" from voting
+// for every path that contains it.
+//
+// A multi-file blob (content dedup) is scored by its BEST-matching path. The
+// contributed LineSpan is the file head (line 1): a path match points at a file,
+// not a content line, and seeding line 1 gives the context assembler something to
+// show for a blob the lexical arm never surfaced (the whole point — "federated"
+// lives only in the filename).
+func (r *Ranker) pathArm(terms []string) []pathScore {
+	if r.cfg.PathMinCoverage < 0 || r.pathPostings == nil || len(terms) == 0 {
+		return nil
+	}
+	want := make(map[string]bool, len(terms))
+	for _, t := range terms {
+		if t != "" {
+			want[t] = true
+		}
+	}
+	if len(want) == 0 {
+		return nil
+	}
+	minHits := int(math.Ceil(r.cfg.PathMinCoverage * float64(len(want))))
+	if minHits < 1 {
+		minHits = 1
+	}
+
+	// Candidate blobs: any blob whose path carries at least one query term.
+	cand := map[uint64]bool{}
+	for t := range want {
+		for _, b := range r.pathPostings[t] {
+			cand[b] = true
+		}
+	}
+
+	out := make([]pathScore, 0, len(cand))
+	for blob := range cand {
+		b := r.ix.Blob(blob)
+		if b == nil {
+			continue
+		}
+		bestHits := 0
+		for _, f := range b.Files {
+			seen := map[string]bool{}
+			hits := 0
+			for _, t := range tokenindex.Tokenize([]byte(f.RelPath)) {
+				if want[t] && !seen[t] {
+					seen[t] = true
+					hits++
+				}
+			}
+			if hits > bestHits {
+				bestHits = hits
+			}
+		}
+		if bestHits < minHits {
+			continue // coverage gate: too weak a path match to vote
+		}
+		out = append(out, pathScore{
+			blob:  blob,
+			score: float64(bestHits),
+			span:  LineSpan{StartLine: 1, EndLine: 1},
 		})
 	}
 

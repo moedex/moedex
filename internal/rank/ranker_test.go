@@ -22,6 +22,30 @@ func buildIndex(contents ...string) *index.Index {
 	return ix
 }
 
+// buildIndexWithPaths makes a tiny index from {relPath, content} pairs (one blob
+// each), so tests can exercise the filename/path arm with meaningful paths.
+func buildIndexWithPaths(pairs ...[2]string) *index.Index {
+	ix := index.New()
+	for i, p := range pairs {
+		rel, content := p[0], p[1]
+		sha := string(rune('a'+i)) + rel + content
+		ix.AddFile("repo", rel, "/abs/"+rel, sha, []byte(content))
+	}
+	return ix
+}
+
+// hasPath reports whether any result is backed by a file with the given RelPath.
+func hasPath(res []RankedResult, rel string) bool {
+	for _, r := range res {
+		for _, f := range r.Files {
+			if f.RelPath == rel {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // fakeEmbedder is a deterministic hashed bag-of-words embedder: texts sharing
 // words get higher cosine. No network, no model.
 type fakeEmbedder struct{ dim int }
@@ -314,6 +338,106 @@ func TestSymbolArmCoverageGate(t *testing.T) {
 	// no-op: gated and ungated scores are identical (both include the symbol vote).
 	if g, u := score(Config{}, "build"), score(Config{SymbolMinCoverage: -1}, "build"); g != u {
 		t.Errorf("full-coverage query should be unaffected by the gate: gated=%v ungated=%v", g, u)
+	}
+}
+
+// TestPathArmSurfacesFilenameOnlyMatch is the path arm's reason to exist: a blob
+// whose query terms appear ONLY in its file path (never in the content the lexical
+// arm scores) is still surfaced. This is the real "federated server" case, where
+// "federated" lives only in mysql_create_federated_server.sql's name.
+func TestPathArmSurfacesFilenameOnlyMatch(t *testing.T) {
+	// Content deliberately omits "federated" and "server"; both live only in the path.
+	ix := buildIndexWithPaths(
+		[2]string{"db/federated_server_setup.sql", "select concat host database user password"},
+		[2]string{"db/other.sql", "select count star from table"},
+	)
+	ti := tokenindex.Build(ix)
+
+	// Path arm ON (default): the filename-only match is found.
+	on := New(ix, ti, nil, nil, Config{})
+	res, err := on.Rank(context.Background(), "federated server", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasPath(res, "db/federated_server_setup.sql") {
+		t.Errorf("path arm should surface a filename-only match; got %+v", res)
+	}
+
+	// Path arm OFF: the content has neither term, so the blob is not retrievable.
+	off := New(ix, ti, nil, nil, Config{PathMinCoverage: -1})
+	res, err = off.Rank(context.Background(), "federated server", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasPath(res, "db/federated_server_setup.sql") {
+		t.Errorf("with the path arm disabled, a filename-only match must NOT be surfaced; got %+v", res)
+	}
+}
+
+// TestPathArmCoverageGate checks the path arm's coverage gate: a path that matches
+// only one term of a two-term query is gated out at the 0.6 default (which needs
+// both) but votes when the gate is loosened to 0.5. The true two-term match always
+// fires. Content carries none of the query terms, so the path arm is the only
+// signal in play.
+func TestPathArmCoverageGate(t *testing.T) {
+	ix := buildIndexWithPaths(
+		[2]string{"app/order.service.ts", "zzz yyy www"}, // path has order+service (2/2)
+		[2]string{"app/admin.service.ts", "qqq rrr sss"}, // path has service only (1/2)
+	)
+	ti := tokenindex.Build(ix)
+
+	// Default gate 0.6 -> minHits=2 for a 2-term query: the 1/2 path is suppressed.
+	def := New(ix, ti, nil, nil, Config{})
+	res, err := def.Rank(context.Background(), "order service", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasPath(res, "app/order.service.ts") {
+		t.Errorf("the full 2/2 path match should always fire; got %+v", res)
+	}
+	if hasPath(res, "app/admin.service.ts") {
+		t.Errorf("default gate (0.6) should suppress the weak 1/2 path match; got %+v", res)
+	}
+
+	// Loosened gate 0.5 -> minHits=1: the 1/2 path now votes and is surfaced.
+	loose := New(ix, ti, nil, nil, Config{PathMinCoverage: 0.5})
+	res, err = loose.Rank(context.Background(), "order service", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasPath(res, "app/admin.service.ts") {
+		t.Errorf("loosened gate (0.5) should let the 1/2 path match vote; got %+v", res)
+	}
+}
+
+// TestPathArmDisabledUnchanged asserts a negative PathMinCoverage leaves ranking
+// identical to a build where no path token could ever match — the arm is strictly
+// gated off and never perturbs scores.
+func TestPathArmDisabledUnchanged(t *testing.T) {
+	// Query terms appear in content (so the lexical arm drives ranking) but NOT in
+	// any path, so even an enabled path arm contributes nothing here — disabling it
+	// must therefore produce byte-identical results.
+	ix := buildIndexWithPaths(
+		[2]string{"a.txt", "database connection here database"},
+		[2]string{"b.txt", "database pool"},
+	)
+	ti := tokenindex.Build(ix)
+
+	onRes, err := New(ix, ti, nil, nil, Config{}).Rank(context.Background(), "database", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	offRes, err := New(ix, ti, nil, nil, Config{PathMinCoverage: -1}).Rank(context.Background(), "database", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(onRes) != len(offRes) {
+		t.Fatalf("path arm changed result count on a no-path-match query: %d vs %d", len(onRes), len(offRes))
+	}
+	for i := range onRes {
+		if onRes[i].Blob != offRes[i].Blob || onRes[i].Score != offRes[i].Score {
+			t.Errorf("path arm perturbed a no-path-match query at %d: %+v vs %+v", i, onRes[i], offRes[i])
+		}
 	}
 }
 
