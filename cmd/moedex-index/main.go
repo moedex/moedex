@@ -90,6 +90,8 @@ func runBuild(args []string) error {
 	shardBytes := fs.Int64("shard-bytes", parity.DefaultShardBytes, "target indexed-content bytes per shard")
 	force := fs.Bool("force", false, "clear a non-empty shard dir before building")
 	verbose := fs.Bool("v", false, "log per-shard progress")
+	selective := fs.Bool("selective", false, "opt-in FREE-style selective trigram index (drop near-universal grams; parity-safe via force-scan fallback)")
+	gramMaxDF := fs.Float64("gram-max-df", 0.9, "with -selective: keep a trigram only if it occurs in at most this fraction of blobs (0..1)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -105,7 +107,13 @@ func runBuild(args []string) error {
 	}
 	logf := mkLogf(*verbose)
 
-	m, nShards, nFiles, err := buildShards(root, *shardDir, *shardBytes, logf)
+	var sel index.GramSelector
+	if *selective {
+		sel = index.FrequencyThresholdSelector{MaxDocFraction: *gramMaxDF}
+		logf("selective index enabled: %s", sel.Describe())
+	}
+
+	m, nShards, nFiles, err := buildShards(root, *shardDir, *shardBytes, sel, logf)
 	if err != nil {
 		return err
 	}
@@ -136,7 +144,12 @@ func buildSidecars(dir string) string {
 // parity.Build: a shard is flushed once its accumulated content reaches
 // shardBytes (checked at repo boundaries, so a repo is never split across
 // shards). Repos that fail to ingest are skipped, not fatal.
-func buildShards(root, shardDir string, shardBytes int64, logf func(string, ...any)) (*parity.Manifest, int, int, error) {
+// sel is nil for the default all-trigram build; when non-nil the shards are
+// built selectively (see index.Builder), which is parity-safe via the
+// IndexedGram membership gate — a dropped gram only ever widens the candidate
+// set, never drops a match. The flush abstraction targets shardBuilder so the
+// packing loop is identical for both paths.
+func buildShards(root, shardDir string, shardBytes int64, sel index.GramSelector, logf func(string, ...any)) (*parity.Manifest, int, int, error) {
 	if shardBytes <= 0 {
 		shardBytes = parity.DefaultShardBytes
 	}
@@ -149,7 +162,7 @@ func buildShards(root, shardDir string, shardBytes int64, logf func(string, ...a
 	var (
 		shards   []parity.ShardManifest
 		heads    []parity.RepoHead
-		ix       = index.New()
+		sb       = newShardBuilder(sel)
 		curBytes int64
 		curRepos []string
 		curSeen  = map[string]bool{}
@@ -157,17 +170,18 @@ func buildShards(root, shardDir string, shardBytes int64, logf func(string, ...a
 		nFiles   int
 	)
 	flush := func() error {
-		if ix.NumBlobs() == 0 {
+		if sb.NumBlobs() == 0 {
 			return nil
 		}
 		path := filepath.Join(shardDir, fmt.Sprintf("shard-%04d.idx", shardIdx))
+		ix := sb.finalize()
 		if err := diskstore.Save(ix, path); err != nil {
 			return fmt.Errorf("save shard %d: %w", shardIdx, err)
 		}
 		shards = append(shards, parity.ShardManifest{Path: path, Repos: curRepos, ContentBytes: curBytes})
 		logf("  flushed shard %d: %d blobs, %.1f MB", shardIdx, ix.NumBlobs(), float64(curBytes)/1e6)
 		shardIdx++
-		ix = index.New()
+		sb = newShardBuilder(sel)
 		curBytes = 0
 		curRepos = nil
 		curSeen = map[string]bool{}
@@ -191,7 +205,7 @@ func buildShards(root, shardDir string, shardBytes int64, logf func(string, ...a
 				continue // same abspath already in this repo's batch
 			}
 			seen[f.AbsPath] = true
-			ix.AddFile(f.Repo, f.RelPath, f.AbsPath, f.SHA, f.Content)
+			sb.AddFile(f.Repo, f.RelPath, f.AbsPath, f.SHA, f.Content)
 			curBytes += int64(len(f.Content))
 			nFiles++
 			contributed = true
@@ -219,6 +233,50 @@ func buildShards(root, shardDir string, shardBytes int64, logf func(string, ...a
 		Shards:   shards,
 	}
 	return m, shardIdx, nFiles, nil
+}
+
+// shardBuilder unifies the all-trigram (*index.Index) and selective
+// (*index.Builder) build paths behind the AddFile / NumBlobs / finalize trio the
+// packing loop needs. When sel is nil it uses the eager index.New()+AddFile
+// path (each AddFile materializes every trigram immediately, exactly as before);
+// when sel is non-nil it uses the two-pass index.Builder (count then prune at
+// finalize), so the default path is byte-identical to the prior code.
+type shardBuilder struct {
+	sel index.GramSelector
+	eag *index.Index   // all-trigram path (sel == nil)
+	bld *index.Builder // selective path (sel != nil)
+}
+
+func newShardBuilder(sel index.GramSelector) *shardBuilder {
+	sb := &shardBuilder{sel: sel}
+	if sel == nil {
+		sb.eag = index.New()
+	} else {
+		sb.bld = index.NewSelective(sel)
+	}
+	return sb
+}
+
+func (sb *shardBuilder) AddFile(repo, rel, abs, sha string, content []byte) {
+	if sb.eag != nil {
+		sb.eag.AddFile(repo, rel, abs, sha, content)
+		return
+	}
+	sb.bld.AddFile(repo, rel, abs, sha, content)
+}
+
+func (sb *shardBuilder) NumBlobs() int {
+	if sb.eag != nil {
+		return sb.eag.NumBlobs()
+	}
+	return sb.bld.NumBlobs()
+}
+
+func (sb *shardBuilder) finalize() *index.Index {
+	if sb.eag != nil {
+		return sb.eag
+	}
+	return sb.bld.Finalize()
 }
 
 // ---------------------------------------------------------------------------

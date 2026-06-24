@@ -339,6 +339,14 @@ func literalAttribution(ix *index.Index, stats shardStats, pattern string) Query
 	}
 }
 
+// literalCandidateBlobs computes the begin/end-gram candidate-blob set for the
+// parity harness's profiling ATTRIBUTION only (CandidateBlobs/Bytes/Lines), not
+// for match retrieval — actual matches come from the search package, which is
+// selective-index aware. The parity harness always builds all-trigram indexes
+// (it never enables the opt-in selective path), so reading begin/end postings
+// directly here is exact. On a selective index it would under-count candidates;
+// that is acceptable for attribution but is why this helper is not used for
+// retrieval.
 func literalCandidateBlobs(ix *index.Index, qb []byte) []uint64 {
 	begin := trigram.Trigram{qb[0], qb[1], qb[2]}
 	end := trigram.Trigram{qb[len(qb)-3], qb[len(qb)-2], qb[len(qb)-1]}
