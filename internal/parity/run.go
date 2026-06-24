@@ -323,7 +323,24 @@ func literalAttribution(ix *index.Index, stats shardStats, pattern string) Query
 		}
 	}
 
-	ids := literalCandidateBlobs(ix, []byte(pattern))
+	ids, all := literalCandidateBlobs(ix, []byte(pattern))
+	if all {
+		// On a selective index, a deselected begin/end gram has UNKNOWN postings:
+		// the search path force-scans every blob (IndexedGram widening). Attribute
+		// that here so candidate counts are honest rather than under-counted.
+		return QueryAttribution{
+			CandidateBlobs:        int64(ix.NumBlobs()),
+			CandidateBytes:        stats.totalBytes,
+			CandidateLines:        stats.totalLines,
+			CandidateKind:         "literal-all",
+			AllCandidates:         true,
+			QueryAll:              false,
+			LineFilterKind:        "literal",
+			LinesEnteringRE2:      0,
+			LinesEnteringRE2Known: true,
+			observed:              true,
+		}
+	}
 	blobs, bytes, lines := stats.totals(ids)
 	return QueryAttribution{
 		CandidateBlobs:        blobs,
@@ -342,14 +359,21 @@ func literalAttribution(ix *index.Index, stats shardStats, pattern string) Query
 // literalCandidateBlobs computes the begin/end-gram candidate-blob set for the
 // parity harness's profiling ATTRIBUTION only (CandidateBlobs/Bytes/Lines), not
 // for match retrieval — actual matches come from the search package, which is
-// selective-index aware. The parity harness always builds all-trigram indexes
-// (it never enables the opt-in selective path), so reading begin/end postings
-// directly here is exact. On a selective index it would under-count candidates;
-// that is acceptable for attribution but is why this helper is not used for
-// retrieval.
-func literalCandidateBlobs(ix *index.Index, qb []byte) []uint64 {
+// selective-index aware.
+//
+// It returns (ids, all). On the default all-trigram build every gram is indexed,
+// so all is always false and ids is the exact begin/end candidate set. On a
+// selective build, if either the begin or end gram is DESELECTED (IndexedGram
+// false) its postings are UNKNOWN — reading them directly would under-count, so
+// we report all=true (every blob is a candidate, matching the search path's
+// force-scan widening). This keeps attribution honest under selective indexing;
+// it is still not a match-correctness path.
+func literalCandidateBlobs(ix *index.Index, qb []byte) (ids []uint64, all bool) {
 	begin := trigram.Trigram{qb[0], qb[1], qb[2]}
 	end := trigram.Trigram{qb[len(qb)-3], qb[len(qb)-2], qb[len(qb)-1]}
+	if ix.Selective() && (!ix.IndexedGram(begin) || !ix.IndexedGram(end)) {
+		return nil, true
+	}
 	off := len(qb) - trigram.N
 
 	begins := ix.Postings(begin)
@@ -367,7 +391,7 @@ func literalCandidateBlobs(ix *index.Index, qb []byte) []uint64 {
 			}
 		}
 	}
-	return out
+	return out, false
 }
 
 func regexAttribution(ix *index.Index, stats shardStats, pattern string) QueryAttribution {

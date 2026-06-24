@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"moedex/internal/index"
 	"moedex/internal/parity"
 )
 
@@ -50,6 +51,8 @@ func main() {
 	latencyCSV := flag.String("latency-csv", "", "if set, write per-query latency CSV to this path")
 	zoektFileLimit := flag.Int("zoekt-file-limit", 0, "zoekt-index -file_limit (0 = zoekt default 2MB)")
 	keep := flag.Bool("keep", false, "keep scratch work dir after the run")
+	selective := flag.Bool("selective", false, "build the opt-in FREE-style selective trigram index (drop near-universal grams; parity-safe via IndexedGram force-scan). Proves AC-D3 holds on the selective build too.")
+	gramMaxDF := flag.Float64("gram-max-df", 0.9, "with -selective: keep a trigram only if it occurs in at most this fraction of blobs (0..1)")
 	flag.Parse()
 
 	if *corpus == "" {
@@ -65,6 +68,12 @@ func main() {
 		fmt.Fprintf(os.Stderr, "[parity] "+f+"\n", a...)
 	}
 
+	var selector index.GramSelector
+	if *selective {
+		selector = index.FrequencyThresholdSelector{MaxDocFraction: *gramMaxDF}
+		logf("selective parity gate: %s", selector.Describe())
+	}
+
 	cfg := parity.RunConfig{
 		Build: parity.Config{
 			Root:       *corpus,
@@ -72,6 +81,7 @@ func main() {
 			Seed:       *seed,
 			ShardBytes: *shardBytes,
 			MaxRepos:   *maxRepos,
+			Selector:   selector,
 		},
 		Floor:          *floor,
 		ScanParallel:   *scanPar,
