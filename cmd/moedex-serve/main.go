@@ -39,18 +39,31 @@ import (
 )
 
 func main() {
+	// Load a KEY=VALUE config file (systemd EnvironmentFile format) BEFORE the
+	// flag defaults below read the environment, so the file feeds those defaults.
+	// Layering: an explicit flag overrides the file, the file overrides the
+	// process env, the env overrides the built-in default. Parsed straight from
+	// os.Args because it must run before flag.Parse.
+	if cp := extractConfigPath(os.Args[1:]); cp != "" {
+		if err := loadEnvFile(cp); err != nil {
+			fmt.Fprintf(os.Stderr, "moedex-serve: -config %s: %v\n", cp, err)
+			os.Exit(2)
+		}
+	}
+	flag.String("config", "", "load a KEY=VALUE settings file (systemd EnvironmentFile format) before flags; flag > file > env > default")
+
 	shardDir := flag.String("shard-dir", os.Getenv("MOEDEX_SHARD_DIR"), "directory of prebuilt *.idx shards")
-	httpAddr := flag.String("http", "", "if set, serve the retrieval HTTP API on this address (e.g. :8080)")
+	httpAddr := flag.String("http", os.Getenv("MOEDEX_HTTP_ADDR"), "if set (or MOEDEX_HTTP_ADDR), serve the retrieval HTTP API on this address (e.g. 127.0.0.1:8080)")
 	mcpMode := flag.Bool("mcp", false, "serve ranked agent context over MCP (stdio)")
 	q := flag.String("q", "", "one-shot retrieval query")
 	isRegex := flag.Bool("regex", false, "treat -q as a regular expression (default: literal)")
 	limit := flag.Int("limit", 0, "cap matches printed/returned (0 = no cap)")
 	topK := flag.Int("top-k", 20, "default ranked results per MCP query")
-	embedKind := flag.String("embed", "auto", "dense embedder for -mcp: auto|onnx|http|none (auto = onnx if -onnx-runtime/ONNXRUNTIME_LIB_PATH set, else http if MOEDEX_EMBED_URL set, else none)")
+	embedKind := flag.String("embed", envOr("MOEDEX_EMBED", "auto"), "dense embedder for -mcp: auto|onnx|http|none (auto = onnx if -onnx-runtime/ONNXRUNTIME_LIB_PATH set, else http if MOEDEX_EMBED_URL set, else none)")
 	onnxRuntime := flag.String("onnx-runtime", os.Getenv("ONNXRUNTIME_LIB_PATH"), "path to the ONNX Runtime shared library (in-process embedder; requires -tags onnx build)")
 	authToken := flag.String("auth-token", "", "if set (or MOEDEX_AUTH_TOKEN), require `Authorization: Bearer <token>` on -http (except /healthz, /metrics)")
-	tlsCert := flag.String("tls-cert", "", "TLS certificate file; serve -http over HTTPS (requires -tls-key)")
-	tlsKey := flag.String("tls-key", "", "TLS private key file; serve -http over HTTPS (requires -tls-cert)")
+	tlsCert := flag.String("tls-cert", os.Getenv("MOEDEX_TLS_CERT"), "TLS certificate file; serve -http over HTTPS (requires -tls-key)")
+	tlsKey := flag.String("tls-key", os.Getenv("MOEDEX_TLS_KEY"), "TLS private key file; serve -http over HTTPS (requires -tls-cert)")
 	requestTimeout := flag.Duration("request-timeout", 30*time.Second, "per-request HTTP timeout on -http (503 on expiry; the underlying scan observes cancellation and aborts promptly)")
 	flag.Parse()
 

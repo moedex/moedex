@@ -52,19 +52,42 @@ corpus must not be queried (the memory is unmapped); `Close` is idempotent.
 
 | Flag | Default | Meaning |
 |------|---------|---------|
+| `-config` | _(off)_ | load a `KEY=VALUE` settings file (systemd `EnvironmentFile` format) before flags; **flag > file > env > default** |
 | `-shard-dir` | `$MOEDEX_SHARD_DIR` | directory of prebuilt `*.idx` shards (**required**) |
-| `-http` | _(off)_ | serve the retrieval HTTP API on this address (e.g. `:8080`) |
+| `-http` | `$MOEDEX_HTTP_ADDR` | serve the retrieval HTTP API on this address (e.g. `127.0.0.1:8080`) |
 | `-mcp` | `false` | serve ranked agent context over MCP (stdio) |
 | `-q` | _(off)_ | one-shot retrieval query |
 | `-regex` | `false` | treat `-q` / the `/search` query as a regular expression (default: literal) |
 | `-limit` | `0` | cap matches printed/returned (`0` = no cap) |
 | `-top-k` | `20` | default ranked results per MCP query |
-| `-embed` | `auto` | dense embedder for `-mcp`: `auto`\|`onnx`\|`http`\|`none` |
+| `-embed` | `$MOEDEX_EMBED` (`auto`) | dense embedder for `-mcp`: `auto`\|`onnx`\|`http`\|`none` |
 | `-onnx-runtime` | `$ONNXRUNTIME_LIB_PATH` | path to the ONNX Runtime shared library (in-process embedder; requires an `-tags onnx` build) |
 | `-auth-token` | `$MOEDEX_AUTH_TOKEN` | if set, require `Authorization: Bearer <token>` on `-http` (except `/healthz`, `/metrics`) |
-| `-tls-cert` | _(off)_ | TLS certificate file; serve `-http` over HTTPS (requires `-tls-key`) |
-| `-tls-key` | _(off)_ | TLS private key file; serve `-http` over HTTPS (requires `-tls-cert`) |
+| `-tls-cert` | `$MOEDEX_TLS_CERT` | TLS certificate file; serve `-http` over HTTPS (requires `-tls-key`) |
+| `-tls-key` | `$MOEDEX_TLS_KEY` | TLS private key file; serve `-http` over HTTPS (requires `-tls-cert`) |
 | `-request-timeout` | `30s` | per-request HTTP timeout on `-http` (`503` on expiry) |
+
+### Configuration file (`-config`)
+
+`-config FILE` loads settings from a `KEY=VALUE` file before flags are applied —
+the same format as a systemd `EnvironmentFile` (and `deploy/moedex-serve.env.example`):
+one `VAR=value` per line, `#` comments and blank lines ignored, optional surrounding
+quotes. Keys are the env vars the daemon already reads:
+
+```
+# /etc/moedex/moedex-serve.env
+MOEDEX_SHARD_DIR=/srv/moedex/shards
+MOEDEX_HTTP_ADDR=127.0.0.1:8080
+MOEDEX_AUTH_TOKEN=s3cret
+# MOEDEX_TLS_CERT=/etc/moedex/tls/cert.pem
+# MOEDEX_TLS_KEY=/etc/moedex/tls/key.pem
+# MOEDEX_EMBED=onnx
+```
+
+Then `moedex-serve -config /etc/moedex/moedex-serve.env`. Precedence is **flag >
+file > env > built-in default**: a value in the file overrides the ambient
+environment, and an explicit flag overrides the file. (Under systemd you can use
+either this flag or the unit's `EnvironmentFile=` — they read the same file.)
 
 ## Retrieval daemon (`-http`)
 
