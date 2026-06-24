@@ -153,10 +153,16 @@ package eval
 // come from a small (~36-query) pooled set, so treat them as a regression watch
 // with a defensible floor, not a published claim.
 
-// CorpusGold returns the pooled multi-language gold set. ~36 queries:
-// ~10 C#, ~8 TypeScript, ~6 SQL, ~6 ColdFusion, + 6 NON-FILENAME-ALIGNED
-// (corpusGoldNonAligned) that deliberately sample the region the original 30
-// under-represent (see that function's header).
+// CorpusGold returns the pooled multi-language gold set used by the regression
+// gate and the headline measurements: ~36 ANSWERABLE queries — ~10 C#, ~8
+// TypeScript, ~6 SQL, ~6 ColdFusion, + 6 NON-FILENAME-ALIGNED (corpusGoldNonAligned).
+//
+// It deliberately EXCLUDES the synonym-gap / agent-style stratum
+// (corpusGoldAgentNL): those queries are answerable only by a semantic/dense match,
+// and this set gates the no-dense stack (lexical+path+symbol), where folding in
+// queries that stack structurally cannot answer would only depress the floor without
+// adding regression signal. The agent-NL stratum is measured on its own (see
+// TestCorpusAgentNLGap and the agent-NL split in TestCorpusONNXMeasurement).
 func CorpusGold() []GoldQuery {
 	var gold []GoldQuery
 	gold = append(gold, corpusGoldCSharp()...)
@@ -520,6 +526,72 @@ func corpusGoldNonAligned() []GoldQuery {
 			"src/TC.SslApi.Service/ISslService.cs":                                   1, // declares the contract
 			"src/TC.SslApi.Models/Vendor/SslResponseBase.cs":                         1, // ErrorMessage model
 			"src/TC.SslApi.Service/Vendors/TheSslStore/Maps/SslStoreResponseMaps.cs": 1, // vendor-specific parser
+		}},
+	}
+}
+
+// corpusGoldAgentNL is a SYNONYM-GAP / agent-style stratum (2026-06-24, added with
+// the dense-arm investigation). The non-aligned stratum (above) fixed FILENAME bias,
+// but its queries still match the SYMBOL name — which is exactly why the symbol arm
+// lifted that stratum 0.52->0.94. These go further: natural-language INTENT phrasings
+// whose terms overlap NEITHER the filename NOR the definer's identifier tokens, so
+// lexical, path, AND symbol are all starved and only a SEMANTIC (dense) match can
+// win. This is the half of the search space where a dense arm earns its keep, and the
+// natural pair to the UDCG agent metric — it asks what an agent asks ("migrate a
+// subscription", "is this domain transferable") rather than grepping a name. On this
+// stratum we EXPECT lexical/path/symbol to score low; it exists to measure whether
+// dense recovers them (see TestCorpusONNXMeasurement / the agent-NL split).
+//
+// Each definer was READ-verified (the function/method exists at the cited line and
+// implements the concept; two Explore-suggested CF candidates that did NOT exist were
+// dropped) and, for CF, grep-confirmed defined in exactly one _inc file. The CF
+// definers all live in act_functions3.cfm (an 8000+-line UDF library whose name
+// reveals nothing) — ideal for testing dense's CHUNK-level semantic match, since BM25
+// over the whole giant file ranks the relevant ~40-line window low. Per-query the
+// identifier overlap is noted (kept minimal/none).
+func corpusGoldAgentNL() []GoldQuery {
+	return []GoldQuery{
+		// convertBtToPPv4 (act_functions3.cfm:2296): converts a Braintree subscription
+		// to a PayPal-v4 recurring payment (braintreeSetup -> subscription().find ->
+		// payment token -> new PP plan). Query {migrate,recurring,subscription,payment,
+		// processor} overlaps NONE of {convert,bt,to,pp,v4}.
+		{Query: "migrate a recurring subscription from one payment processor to another", Relevant: map[string]int{
+			"_inc/act_functions3.cfm": 2,
+		}},
+		// GoDaddyAckReady (act_functions3.cfm:3591): calls GoDaddy's change-of-account
+		// transfer API to decide if a domain's transfer is ready/eligible. Query
+		// {domain,eligible,transfer,registrar} overlaps NONE of {godaddy,ack,ready}.
+		{Query: "check whether a domain is eligible to transfer to another registrar", Relevant: map[string]int{
+			"_inc/act_functions3.cfm": 2,
+		}},
+		// getCountryXIDFromIP (act_functions3.cfm:4139): resolves an IP to country
+		// id/name/code + phone (dialing) code. Query {visitor,location,dialing,network,
+		// address} avoids the symbol tokens {get,country,xid,ip} — the geolocation
+		// logic is named cryptically ("XID").
+		{Query: "determine a visitor's location and dialing code from their network address", Relevant: map[string]int{
+			"_inc/act_functions3.cfm": 2,
+		}},
+		// CheckValidSsl (SslCheckerHttpClient.cs:19): HTTPS GET with a browser UA to a
+		// URL to confirm the cert is live/installed; returns bool. Distinct small file.
+		// Query {certificate,installed,reachable,live,website} vs symbol {check,valid,ssl}.
+		{Query: "verify a certificate is actually installed and reachable on a live website", Relevant: map[string]int{
+			"src/TC.SslApi.Service/SslCheckerHttpClient.cs": 2,
+		}},
+		// LoadProducts: SslService.cs:85 IMPLEMENTS the vendor catalog sync (query
+		// vendor -> map -> upsert new/changed, recompute retail price, publish
+		// SslProductsUpdated); SslController.cs:89 is the thin endpoint that calls it
+		// (grade 1). Query {sync,catalog,vendor,discontinued} vs symbol {load,products}.
+		{Query: "sync the certificate catalog from the vendor and detect discontinued items", Relevant: map[string]int{
+			"src/TC.SslApi.Service/SslService.cs":        2,
+			"src/TC.SslApi/Controllers/SslController.cs": 1,
+		}},
+		// GetProductRetailPrice (SslService.cs:371): the markup formula
+		// floor(wholesale*1.3/5)*5 - 0.05 (rounds to a $X.95 five-dollar boundary).
+		// Pure logic, no vendor tokens; "markup"/"round" appear NOWHERE in the code.
+		// Query {markup,wholesale,cost,round,five,dollar} vs symbol {get,product,retail,
+		// price}.
+		{Query: "apply the markup formula to a wholesale cost and round to the nearest five dollar amount", Relevant: map[string]int{
+			"src/TC.SslApi.Service/SslService.cs": 2,
 		}},
 	}
 }

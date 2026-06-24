@@ -139,6 +139,44 @@ func TestCorpusONNXMeasurement(t *testing.T) {
 	if repFull.MeanNDCG < minDenseNDCG {
 		t.Errorf("full hybrid (+dense) MeanNDCG = %.4f, below floor %.4f (regression)", repFull.MeanNDCG, minDenseNDCG)
 	}
+
+	// --- AGENT-NL SPLIT: the synonym-gap stratum where ONLY a semantic match can win
+	// (corpusGoldAgentNL; the no-dense arms score ~0 here, pinned by
+	// TestCorpusAgentNLGap). This is the home turf where the dense arm is supposed to
+	// earn its keep, so it is the most honest single read on whether dense is worth
+	// keeping. We LOG the deltas (discovery, not a gate) and only fail if the dense arm
+	// makes this region WORSE than no-dense by more than denseSlack — dense should at
+	// minimum not hurt where it is meant to help.
+	nlGold := corpusGoldAgentNL()
+	nlLex, err := lexical.Evaluate(ctx, nlGold, k, topK)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nlProd, err := prod.Evaluate(ctx, nlGold, k, topK)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nlDense, err := dense.Evaluate(ctx, nlGold, k, topK)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nlFull, err := full.Evaluate(ctx, nlGold, k, topK)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logReport(t, "AGENT-NL / lexical+path (no dense)", nlLex)
+	logReport(t, "AGENT-NL / lexical+path+dense", nlDense)
+	t.Logf("AGENT-NL MeanNDCG    lexical+path=%.4f  +path+symbol=%.4f  +dense=%.4f  full(+dense+symbol)=%.4f",
+		nlLex.MeanNDCG, nlProd.MeanNDCG, nlDense.MeanNDCG, nlFull.MeanNDCG)
+	t.Logf("AGENT-NL MeanRecall@%d lexical+path=%.4f  +dense=%.4f  full=%.4f",
+		k, nlLex.MeanRecall, nlDense.MeanRecall, nlFull.MeanRecall)
+	t.Logf("AGENT-NL dense PAYOFF over no-dense production: %+.4f NDCG, %+.4f Recall@%d",
+		nlDense.MeanNDCG-nlProd.MeanNDCG, nlDense.MeanRecall-nlProd.MeanRecall, k)
+
+	if nlDense.MeanNDCG < nlProd.MeanNDCG-denseSlack {
+		t.Errorf("dense arm HURTS its own synonym-gap home turf: agent-NL no-dense=%.4f +dense=%.4f (slack %.4f)",
+			nlProd.MeanNDCG, nlDense.MeanNDCG, denseSlack)
+	}
 }
 
 // TestCorpusCodeModelMeasurement A/Bs a CODE-TRAINED embedder against the bundled
