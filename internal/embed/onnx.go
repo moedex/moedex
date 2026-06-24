@@ -140,21 +140,22 @@ func (e *ONNXEmbedder) Embed(ctx context.Context, texts []string) ([]Vector, err
 		return nil, err
 	}
 
-	// Tokenize each input sequentially rather than via EncodeBatch. EncodeBatch
-	// tokenizes in concurrent goroutines, and the byte-level pre-tokenizer in the
-	// forked tokenizer can PANIC on certain real source chunks (an
-	// index-out-of-range in normalizer.TransformRange). A panic in a goroutine
-	// EncodeBatch spawns is unrecoverable and crashes the whole process mid-build /
-	// mid-query. Running each Encode in our own goroutine lets us recover a bad
-	// chunk and substitute an empty encoding — which mean-pools to a zero vector, so
-	// that chunk simply carries no dense signal — instead of taking the build or the
-	// daemon down. We must return one vector per input, so a failed chunk yields a
-	// placeholder, never a gap.
+	// Tokenize each input sequentially rather than via EncodeBatch, with two layers
+	// of defense against the forked byte-level tokenizer's invalid-UTF-8 crash (an
+	// index-out-of-range in normalizer.TransformRange, hit by legacy Windows-1252
+	// ColdFusion). PRIMARY fix: toTokenizerSafeText coerces each input to valid
+	// UTF-8 first, which is what actually triggers the bug — so the chunk tokenizes
+	// for real. SAFETY NET: EncodeBatch tokenizes in goroutines where a panic is
+	// unrecoverable and would crash the process; doing each Encode in our own
+	// goroutine lets encodeRecover contain any residual panic and fall back to an
+	// empty encoding (mean-pools to a zero vector — no dense signal) rather than
+	// taking the build/daemon down. We must return one vector per input, so a failed
+	// chunk yields a placeholder, never a gap.
 	encs := make([]tokenizer.Encoding, len(texts))
 	skipped := 0
 	var firstBad string
 	for i, s := range texts {
-		enc, perr := encodeRecover(&e.tk, s)
+		enc, perr := encodeRecover(&e.tk, toTokenizerSafeText(s))
 		if perr != nil {
 			if skipped == 0 {
 				firstBad = s
@@ -169,8 +170,8 @@ func (e *ONNXEmbedder) Embed(ctx context.Context, texts []string) ([]Vector, err
 		if len(sample) > 80 {
 			sample = sample[:80]
 		}
-		log.Printf("embed/onnx: %d/%d chunks panicked in the byte-level tokenizer; "+
-			"substituting empty embeddings. first sample: %q", skipped, len(texts), sample)
+		log.Printf("embed/onnx: %d/%d chunks still panicked in the byte-level tokenizer "+
+			"after UTF-8 sanitization; substituting empty embeddings. first sample: %q", skipped, len(texts), sample)
 	}
 
 	// Pad/truncate every encoding to a common sequence length so the batch is a

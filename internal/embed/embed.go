@@ -377,6 +377,19 @@ func (s *Store) Search(ctx context.Context, e Embedder, query string, topK int) 
 	return hits, nil
 }
 
+// toTokenizerSafeText coerces s to valid UTF-8, replacing each run of invalid
+// bytes with a single space. The forked byte-level tokenizer used by the
+// in-process ONNX embedder PANICS on invalid UTF-8: Go's range over a string
+// expands every invalid byte to a 3-byte U+FFFD, and the tokenizer's alignment
+// bookkeeping indexes out of range on that expansion (normalizer.TransformRange).
+// Legacy Windows-1252 ColdFusion carries such bytes (smart quote 0x92, nbsp 0xA0,
+// en-dash 0x96). VALID multi-byte UTF-8 (accents, em-dash, emoji) tokenizes fine
+// and is left untouched, so this only normalizes genuinely undecodable bytes — no
+// loss for legitimate Unicode. A space (not "") preserves token boundaries.
+func toTokenizerSafeText(s string) string {
+	return strings.ToValidUTF8(s, " ")
+}
+
 func normalize(v Vector) Vector {
 	var sum float64
 	for _, x := range v {
