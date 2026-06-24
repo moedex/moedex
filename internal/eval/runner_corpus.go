@@ -28,9 +28,20 @@ func goldCorpusRepos() []CorpusRepo {
 		{
 			Repo:   "TC.SslApi",
 			RelDir: filepath.Join("Services.Registrar", "TC.SslApi"),
-			// All C# under src/.
+			// App C# under src/, EXCLUDING the test project and generated build
+			// output. This mirrors the TS sample's *.spec.ts/e2e exclusion: test files
+			// are not implementation, and C# unit tests are named after the method
+			// under test (CheckAllOrderStatuses_...), so indexing them pollutes every
+			// method-name query with an unlabeled distractor. obj/bin hold generated
+			// .cs (AssemblyInfo, etc.) — pure noise.
 			Keep: func(p string) bool {
-				return strings.HasPrefix(p, "src/") && strings.HasSuffix(p, ".cs")
+				if !strings.HasPrefix(p, "src/") || !strings.HasSuffix(p, ".cs") {
+					return false
+				}
+				if strings.Contains(p, ".Tests/") || strings.Contains(p, "/obj/") || strings.Contains(p, "/bin/") {
+					return false
+				}
+				return true
 			},
 		},
 		{

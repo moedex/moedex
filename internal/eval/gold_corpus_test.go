@@ -44,7 +44,7 @@ func TestCorpusMeasurement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	logReport(t, "pooled corpus (C#/TS/SQL/CF) / lexical only", repLexOnly)
+	logReport(t, "pooled corpus (C#/TS/SQL/CF + non-aligned) / lexical only", repLexOnly)
 
 	// Full production stack: lexical + path + symbol.
 	run.SetPathCoverage(0.6)

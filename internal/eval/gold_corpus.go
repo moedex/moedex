@@ -17,7 +17,12 @@ package eval
 //
 //	repo (relative to ~/TCGitlab)                lang   sampled subset
 //	-------------------------------------------  -----  ----------------------
-//	Services.Registrar/TC.SslApi                 C#     all *.cs under src/
+//	Services.Registrar/TC.SslApi                 C#     *.cs under src/, excluding
+//	                                                     the .Tests project + obj/bin
+//	                                                     (mirrors the TS spec/e2e
+//	                                                     exclusion; tests are named
+//	                                                     after the method under test
+//	                                                     and pollute name queries)
 //	UIs.Internal/dropcatchadminui                TS     app source *.ts under
 //	                                                     src/ (excl. *.spec.ts,
 //	                                                     e2e/)
@@ -115,30 +120,36 @@ package eval
 // additive: the 6 SQL queries are filename-mirror micro-script lookups already
 // won by lexical (see corpusGoldSQL).
 //
-// PATH ARM (2026-06-24). Ranking now includes a filename/path RRF arm, ON by
-// default (rank.Config.PathMinCoverage). It lifts this gold's full-stack NDCG
-// ~0.64 -> ~0.89 and fixes "federated server"/"administration service" (0.0 -> 1.0,
-// terms that live only in the path). It also SUBSUMES the symbol arm on this
-// filename-aligned corpus (the symbol gate was raised 0.5 -> 0.67 to stop it
-// casting marginal votes the path arm already covers) — see TestCorpusGoldGate's
-// four-arm note for the full breakdown and why the gate no longer asserts
-// symbol >= lexical.
+// PATH ARM + NON-ALIGNED STRATUM (2026-06-24). Ranking includes a filename/path
+// RRF arm, ON by default (rank.Config.PathMinCoverage). On the original 30 queries
+// (all filename-aligned, because TC names files for their concept) path SUBSUMED
+// the symbol arm. Adding corpusGoldNonAligned (6 queries whose definer filename
+// does NOT contain the query terms) rebalanced the set and revealed the two arms
+// are COMPLEMENTARY: full-stack NDCG ~0.66 -> ~0.93, beating either arm alone
+// (~0.84). Path wins the aligned half (and fixed "federated server"/"administration
+// service" 0.0 -> 1.0); symbol wins the non-aligned half. The symbol gate was
+// raised 0.5 -> 0.67 when the path arm landed. See TestCorpusGoldGate's four-arm
+// note for the breakdown.
 //
 // CONFIDENCE: every C#/TS/SQL label is grep/read-verified by two independent
-// judges and reconciled; the CF labels are single-judge pooled+read-verified.
-// This set GATES (see TestCorpusGoldGate): the lexical and lexical+symbol arms
-// must clear regression thresholds set below the measured baseline. Absolute
-// numbers still come from a small (~30-query) pooled set, so treat them as a
-// regression watch with a defensible floor, not a published claim.
+// judges and reconciled; the CF and non-aligned labels are single-judge
+// pooled+read-verified. This set GATES (see TestCorpusGoldGate): the lexical-only
+// baseline and the full production stack (lexical+path+symbol) must clear
+// regression thresholds set below the measured baseline. Absolute numbers still
+// come from a small (~36-query) pooled set, so treat them as a regression watch
+// with a defensible floor, not a published claim.
 
-// CorpusGold returns the pooled multi-language gold set. ~30 queries:
-// ~10 C#, ~8 TypeScript, ~6 SQL, ~6 ColdFusion.
+// CorpusGold returns the pooled multi-language gold set. ~36 queries:
+// ~10 C#, ~8 TypeScript, ~6 SQL, ~6 ColdFusion, + 6 NON-FILENAME-ALIGNED
+// (corpusGoldNonAligned) that deliberately sample the region the original 30
+// under-represent (see that function's header).
 func CorpusGold() []GoldQuery {
 	var gold []GoldQuery
 	gold = append(gold, corpusGoldCSharp()...)
 	gold = append(gold, corpusGoldTypeScript()...)
 	gold = append(gold, corpusGoldSQL()...)
 	gold = append(gold, corpusGoldColdFusion()...)
+	gold = append(gold, corpusGoldNonAligned()...)
 	return gold
 }
 
@@ -409,6 +420,82 @@ func corpusGoldColdFusion() []GoldQuery {
 		// Single definer in _inc.
 		{Query: "buying guide link", Relevant: map[string]int{
 			"_inc/qry_buyingGuideAll.cfm": 2,
+		}},
+	}
+}
+
+// corpusGoldNonAligned is a NON-FILENAME-ALIGNED stratum (2026-06-24), added to
+// correct a sampling bias the original 30 queries exposed once the path arm
+// landed: TC names files for their concept, so those queries were dominated by the
+// filename/path arm and the symbol/content arms were under-rewarded (see
+// TestCorpusGoldGate's four-arm note — path SUBSUMED symbol there). These queries
+// deliberately target concepts whose DEFINER FILENAME does NOT contain the query
+// terms, so the path arm cannot trivially win and the symbol/content (and, under
+// -tags onnx, dense) arms have to do the work. They measure the half of the search
+// space the original gold misses.
+//
+// The richest honest source is generically-named libraries that DEFINE many
+// concepts: ColdFusion's _inc/act_functions*.cfm (8000+-line UDF libraries whose
+// name says nothing about any one function) and C# SslService.cs (a service whose
+// method names express features no eponymous file carries). SQL/TS are absent here:
+// SQL files ARE their proc name (filename-aligned by construction) and the small
+// Angular app names every file for its feature.
+//
+// Each grade-2 definer was READ and verified: (1) it is the file that actually
+// DEFINES the named function/method (a <cffunction name="X"> tag, or a C# method
+// body — not a mention); (2) for CF, the name is defined in EXACTLY ONE _inc file
+// (grep-confirmed unique); (3) the FILENAME contains none of the query terms
+// (that is the whole point); (4) the query terms cover the definer's identifier
+// tokens enough to be answerable. Callers live in page templates / controllers
+// outside the indexed sample, so most are grade-2-only (like the existing CF/SQL
+// single-definer queries). RelPaths are repo-relative; CF (_inc/*.cfm) and C#
+// (src/*.cs) shapes are disjoint from each other and the rest of the gold.
+func corpusGoldNonAligned() []GoldQuery {
+	return []GoldQuery{
+		// "elasticsearch related domains": act_functions.cfm:3910 defines
+		// <cffunction name="ElasticSearchRelatedDomains"> (doc comment: "Search ...
+		// ElasticSearch data for related domain names"). The filename act_functions.cfm
+		// says nothing about elasticsearch/related/domains; the UDF name does.
+		{Query: "elasticsearch related domains", Relevant: map[string]int{
+			"_inc/act_functions.cfm": 2,
+		}},
+		// "parse user agent": act_functions3.cfm:4309 defines
+		// <cffunction name="parseUserAgent"> (returns a struct of mobile/family/bot).
+		{Query: "parse user agent", Relevant: map[string]int{
+			"_inc/act_functions3.cfm": 2,
+		}},
+		// "minfraud api factors": act_functions3.cfm:6473 defines
+		// <cffunction name="minFraudApiFactors"> (MaxMind minFraud scoring; queries the
+		// minFraudFactors table). Concept lives only in the UDF name.
+		{Query: "minfraud api factors", Relevant: map[string]int{
+			"_inc/act_functions3.cfm": 2,
+		}},
+		// "escape for json": act_functions3.cfm:7246 defines
+		// <cffunction name="escapeForJson"> (escapes quotes/slashes for JSON safety).
+		{Query: "escape for json", Relevant: map[string]int{
+			"_inc/act_functions3.cfm": 2,
+		}},
+		// "meta refresh": act_functions3.cfm:2440 defines
+		// <cffunction name="metaRefresh"> (emits an HTML <meta http-equiv="refresh">
+		// redirect). Filename act_functions3.cfm carries neither "meta" nor "refresh".
+		{Query: "meta refresh", Relevant: map[string]int{
+			"_inc/act_functions3.cfm": 2,
+		}},
+		// "parse vendor error messages": SslService.cs:639 defines
+		// ParseVendorErrorMessages (splits vendor "ErrorMessage:..." strings) — the
+		// grade-2 implementation; the file is the generic SslService aggregate, not
+		// named for the concept. Pooling (the symbol arm surfaced these) found the
+		// supporting cast, all read-verified -> grade 1: ISslService.cs:59 DECLARES the
+		// contract; SslResponseBase.cs defines the ErrorMessage model; and
+		// SslStoreResponseMaps.cs:129 (GetErrorMessages) regex-parses TheSslStore's
+		// vendor error strings into ErrorMessages (a vendor-specific handler of the
+		// same concept). The .Tests project is no longer indexed (see goldCorpusRepos),
+		// which removes the test-name distractor.
+		{Query: "parse vendor error messages", Relevant: map[string]int{
+			"src/TC.SslApi.Service/SslService.cs":                                    2, // ParseVendorErrorMessages impl
+			"src/TC.SslApi.Service/ISslService.cs":                                   1, // declares the contract
+			"src/TC.SslApi.Models/Vendor/SslResponseBase.cs":                         1, // ErrorMessage model
+			"src/TC.SslApi.Service/Vendors/TheSslStore/Maps/SslStoreResponseMaps.cs": 1, // vendor-specific parser
 		}},
 	}
 }
