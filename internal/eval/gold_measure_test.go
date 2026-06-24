@@ -56,11 +56,12 @@ func TestFixtureMeasurement(t *testing.T) {
 
 	// Polyglot symbol extraction (BuildMulti dispatches by file extension): the 4
 	// Go files (refund.go, charge.go, index.go, authenticate.go), the 2 C# files
-	// (RefundOrder.cs, SslOrderService.cs) and the 2 TS files (refund.component.ts,
-	// order.service.ts) all carry symbols; the 2 SQL and 1 YAML files have no
-	// extractor and contribute none. 4 + 2 + 2 = 8.
-	if symCount != 8 {
-		t.Errorf("expected 8 blobs with symbols (4 Go + 2 C# + 2 TS), got %d", symCount)
+	// (RefundOrder.cs, SslOrderService.cs), the 2 TS files (refund.component.ts,
+	// order.service.ts) and the 2 SQL files (refund_table.sql -> refund_log,
+	// orders.sql -> orders) all carry symbols; only the 1 YAML file has no
+	// extractor and contributes none. 4 + 2 + 2 + 2 = 10.
+	if symCount != 10 {
+		t.Errorf("expected 10 blobs with symbols (4 Go + 2 C# + 2 TS + 2 SQL), got %d", symCount)
 	}
 	// The harness must actually find relevant docs across languages.
 	if repBase.MeanRecall < 0.8 {

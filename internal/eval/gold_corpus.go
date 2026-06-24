@@ -1,10 +1,10 @@
 package eval
 
-// This file defines a POOLED, MULTI-LANGUAGE real-corpus gold set over three
-// repos in ~/TCGitlab, spanning C#, TypeScript, and SQL. It is the trustworthy
-// successor to the single-repo TCSslApiGold() set: every relevance label below
-// was produced by POOLING candidate documents from independent signals and then
-// judging each candidate by INSPECTING the real file contents.
+// This file defines a POOLED, MULTI-LANGUAGE real-corpus gold set over four
+// repos in ~/TCGitlab, spanning C#, TypeScript, SQL, and ColdFusion. It is the
+// trustworthy successor to the single-repo TCSslApiGold() set: every relevance
+// label below was produced by POOLING candidate documents from independent
+// signals and then judging each candidate by INSPECTING the real file contents.
 //
 // ---------------------------------------------------------------------------
 // REPOS, LANGUAGES, AND SAMPLING (documented so the eval is reproducible)
@@ -30,8 +30,19 @@ package eval
 //	                                                     hundreds of tables per
 //	                                                     file and so cannot be
 //	                                                     labeled per-file)
+//	coldfusion/hugedomains                       CFML   _inc/*.cfm only — the
+//	                                                     include/UDF library of
+//	                                                     small action scripts,
+//	                                                     each defining or calling
+//	                                                     a <cffunction>. The rest
+//	                                                     of the ~2200-file app is
+//	                                                     page templates, not
+//	                                                     labelable units. .cfm
+//	                                                     carries symbols
+//	                                                     (CFExtractor), so the
+//	                                                     symbol arm fires here.
 //
-// Rationale for these three repos:
+// Rationale for these four repos:
 //   - TC.SslApi is the one repo with prior hand labels (TCSslApiGold), so the C#
 //     arm here EXTENDS that work with pooled, verification-grade labels.
 //   - dropcatchadminui is a small Angular admin UI (~28 app .ts files) — small
@@ -39,10 +50,14 @@ package eval
 //   - mysql-scripts has 15 small, single-purpose .sql files (replication utils,
 //     partition maintenance, history-table generators) — granular enough that a
 //     query maps to a specific file, which a schema dump never would.
+//   - hugedomains/_inc is the ColdFusion include/UDF library: small action .cfm
+//     scripts that define <cffunction> UDFs — granular like mysql-scripts, and
+//     the lane that exercises the new CF symbol arm (CFExtractor).
 //
 // Relevance keys are RelPath WITHIN each repo (ingest sets RelPath relative to
-// the repo dir). The three repos have disjoint path shapes (src/TC.SslApi.* vs
-// src/app/* vs *.sql / athena/* / replication/*), so RelPaths do not collide.
+// the repo dir). The four repos have disjoint path shapes (src/TC.SslApi.* vs
+// src/app/* vs *.sql / athena/* / replication/* vs _inc/*.cfm), so RelPaths do
+// not collide.
 //
 // ---------------------------------------------------------------------------
 // POOLING + VERIFICATION METHOD (per query)
@@ -80,24 +95,42 @@ package eval
 //   - Vendor/OrderStatus.cs downgraded 2->1 for "order status enum" (it is a
 //     request CLASS, not the enum; the enum is SslOrderStatus.cs).
 // CATCH-ALL POLICY: aggregator files relevant to many queries (TS
-// administration.service.ts, src/api/api.ts; C# SslService.cs) are graded 1 (not
-// 2) on every query where they contain the specifically-named method/contract —
-// they support a feature without being its definer, and grade 1 caps their NDCG
+// administration.service.ts, src/api/api.ts; C# SslService.cs; CF
+// act_functions*.cfm — 50-100-UDF libraries included on every page) are graded 1
+// (not 2) on every query where they contain the specifically-named method — they
+// support a feature without being its definer, and grade 1 caps their NDCG
 // contribution so a single mega-file cannot dominate the ranking score.
 //
-// CONFIDENCE: every label is grep/read-verified by two independent judges and
-// reconciled. This set now GATES (see TestCorpusGoldGate): the lexical and
-// lexical+symbol arms must clear regression thresholds set below the measured
-// baseline. Absolute numbers still come from a small (24-query) pooled set, so
-// treat them as a regression watch with a defensible floor, not a published claim.
+// COLDFUSION LANE (2026-06-24, added with the CF symbol arm). The 6 ColdFusion
+// queries below are POOLED + READ-VERIFIED single-judge (not the two-annotator
+// pass the original 24 went through). Each grade-2 definer was confirmed unique
+// across _inc/ (the <cffunction> is defined in exactly one file), and each
+// grade-1 caller's call site was read to confirm it invokes that UDF (not a
+// same-named method on another object). They primarily exercise the new CF
+// symbol arm, whose headline lift is "void transaction" NDCG 0.689->0.964.
+//
+// SQL LANE (2026-06-24, added with the SQL symbol arm). SQLExtractor now pulls
+// top-level CREATE definition names, so all FOUR gold languages exercise the
+// symbol arm (the SQL no-op is closed). On THIS gold the SQL arm is neutral, not
+// additive: the 6 SQL queries are filename-mirror micro-script lookups already
+// won by lexical (see corpusGoldSQL). "federated server" is a standing NDCG-0.0
+// failure — relevant by filename only, which the content-only ranker cannot see.
+//
+// CONFIDENCE: every C#/TS/SQL label is grep/read-verified by two independent
+// judges and reconciled; the CF labels are single-judge pooled+read-verified.
+// This set GATES (see TestCorpusGoldGate): the lexical and lexical+symbol arms
+// must clear regression thresholds set below the measured baseline. Absolute
+// numbers still come from a small (~30-query) pooled set, so treat them as a
+// regression watch with a defensible floor, not a published claim.
 
-// CorpusGold returns the pooled multi-language gold set. ~24 queries:
-// ~10 C#, ~8 TypeScript, ~6 SQL.
+// CorpusGold returns the pooled multi-language gold set. ~30 queries:
+// ~10 C#, ~8 TypeScript, ~6 SQL, ~6 ColdFusion.
 func CorpusGold() []GoldQuery {
 	var gold []GoldQuery
 	gold = append(gold, corpusGoldCSharp()...)
 	gold = append(gold, corpusGoldTypeScript()...)
 	gold = append(gold, corpusGoldSQL()...)
+	gold = append(gold, corpusGoldColdFusion()...)
 	return gold
 }
 
@@ -266,9 +299,15 @@ func corpusGoldTypeScript() []GoldQuery {
 	}
 }
 
-// corpusGoldSQL: mysql-scripts. NOTE: .sql files carry NO symbols (no extractor),
-// so these queries are a pure lexical/dense test — honest coverage of the SQL
-// lane where the symbol arm is a no-op. Contents read per file.
+// corpusGoldSQL: mysql-scripts. .sql files DO carry symbols now (SQLExtractor
+// pulls top-level CREATE PROCEDURE/FUNCTION/TABLE/VIEW/TRIGGER/EVENT/DATABASE
+// names), so the symbol arm fires here. But it is MEASURABLY NEUTRAL on this gold:
+// these are micro-scripts whose proc name == its filename and appears in the
+// (tiny) body, so BM25 already ranks the definer #1 (5/6 queries are NDCG 1.0
+// lexically) and the symbol vote is redundant. The lane's value is coverage +
+// symbol-boundary context for the contextwin/MCP consumer, not a ranking lift
+// here — unlike ColdFusion, where "void transaction" had a symbol that beat
+// lexical. Contents read per file.
 func corpusGoldSQL() []GoldQuery {
 	return []GoldQuery{
 		// "partition maintenance procedure": partition_maintenance.sql defines
@@ -299,7 +338,14 @@ func corpusGoldSQL() []GoldQuery {
 			"history_tables/create_history_scripts.sql": 2,
 		}},
 		// "federated server": mysql_create_federated_server.sql is the only file
-		// that emits CREATE SERVER ... FOREIGN DATA WRAPPER 'mysql'. High confidence.
+		// that emits CREATE SERVER ... FOREIGN DATA WRAPPER 'mysql'. Relevant by
+		// CONCEPT, but a KNOWN content-only-ranker artifact: the word "federated"
+		// appears ONLY in the filename, never in the body (which is a SELECT
+		// CONCAT('CREATE SERVER ''',..) that BUILDS the DDL dynamically). The ranker
+		// scores content, not path, so this query is NDCG 0.0 — and the symbol arm
+		// cannot rescue it because the CREATE SERVER is dynamic SQL (no static name
+		// to extract, by the precision rule). Kept as an honest standing failure: it
+		// measures the gap a filename/path index (zoekt-style) would close.
 		{Query: "federated server", Relevant: map[string]int{
 			"mysql_create_federated_server.sql": 2,
 		}},
@@ -307,6 +353,56 @@ func corpusGoldSQL() []GoldQuery {
 		// (lines 2,29). Single definer. High confidence.
 		{Query: "heartbeat table", Relevant: map[string]int{
 			"heartbeat.sql": 2,
+		}},
+	}
+}
+
+// corpusGoldColdFusion: hugedomains/_inc (ColdFusion .cfm includes). The CF
+// symbol arm (CFExtractor) pulls <cffunction> names, so these queries exercise
+// it: each grade-2 definer is the single _inc file that DEFINES a <cffunction>
+// matching the query (verified unique across _inc — the function is defined in
+// exactly one file), and grade-1 mentions are files that CALL it, confirmed by
+// reading the call site (not just a name grep). RelPaths are repo-relative
+// (_inc/...), disjoint from the C#/TS/SQL path shapes so keys never collide.
+func corpusGoldColdFusion() []GoldQuery {
+	return []GoldQuery{
+		// "void transaction": act_voidTransaction.cfm:5 defines
+		// <cffunction name="voidTransaction"> (PayPal void). act_auctionCancelOldBids
+		// cfincludes it and calls voidTransaction() (:23) -> grade 1. NOTE: the
+		// voidTransaction in act_recurring-paypal-to-ppv4 is a gateway-object method
+		// (rInit.transaction().voidTransaction), a different symbol — DROPPED.
+		{Query: "void transaction", Relevant: map[string]int{
+			"_inc/act_voidTransaction.cfm":      2,
+			"_inc/act_auctionCancelOldBids.cfm": 1,
+		}},
+		// "unzip file": act_fun_zip.cfm defines gUnZip (:28) and gUnzipFile (:52).
+		// dsp_cachePre.cfm calls gUnZip() to decompress the page cache -> grade 1.
+		{Query: "unzip file", Relevant: map[string]int{
+			"_inc/act_fun_zip.cfm":  2,
+			"_inc/dsp_cachePre.cfm": 1,
+		}},
+		// "gzip compress": act_fun_zip.cfm:17 defines gZip. dsp_cachePost.cfm and
+		// dsp_cachePre.cfm call gZip() to compress page output -> grade 1.
+		{Query: "gzip compress", Relevant: map[string]int{
+			"_inc/act_fun_zip.cfm":   2,
+			"_inc/dsp_cachePost.cfm": 1,
+			"_inc/dsp_cachePre.cfm":  1,
+		}},
+		// "which payment plan version": act_paymentPlanSwitcher.cfm:15 defines
+		// <cffunction name="whichPaymentPlanVersion">. Single definer in _inc.
+		{Query: "which payment plan version", Relevant: map[string]int{
+			"_inc/act_paymentPlanSwitcher.cfm": 2,
+		}},
+		// "which shopping cart version": same file, :130 defines
+		// whichShoppingCartVersion — a distinct concept/symbol, same definer file.
+		{Query: "which shopping cart version", Relevant: map[string]int{
+			"_inc/act_paymentPlanSwitcher.cfm": 2,
+		}},
+		// "buying guide link": qry_buyingGuideAll.cfm defines buyingGuideNextLinkFunc
+		// (:46) and buyingGuidePreviousLinkFunc (:23), the prev/next nav-link UDFs.
+		// Single definer in _inc.
+		{Query: "buying guide link", Relevant: map[string]int{
+			"_inc/qry_buyingGuideAll.cfm": 2,
 		}},
 	}
 }

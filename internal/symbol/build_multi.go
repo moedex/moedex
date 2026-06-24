@@ -14,6 +14,8 @@ import (
 //	.go          -> GoExtractor
 //	.cs          -> CSharpExtractor
 //	.ts, .tsx    -> TSExtractor
+//	.cfm, .cfc   -> CFExtractor
+//	.sql         -> SQLExtractor
 //
 // The match is case-insensitive on the extension.
 func ExtractorForPath(relPath string) Extractor {
@@ -24,6 +26,10 @@ func ExtractorForPath(relPath string) Extractor {
 		return CSharpExtractor{}
 	case ".ts", ".tsx":
 		return TSExtractor{}
+	case ".cfm", ".cfc":
+		return CFExtractor{}
+	case ".sql":
+		return SQLExtractor{}
 	default:
 		return nil
 	}

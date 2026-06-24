@@ -57,23 +57,27 @@ func TestCorpusGoldGate(t *testing.T) {
 	t.Logf("GATE MeanMRR    lexical=%.4f  +symbol=%.4f", repLex.MeanMRR, repSym.MeanMRR)
 	t.Logf("GATE MeanRecall lexical=%.4f  +symbol=%.4f", repLex.MeanRecall, repSym.MeanRecall)
 
-	// The TS gold exercises the symbol arm (C#/TS files carry symbols; SQL does
-	// not). The arm must actually attach to some blobs.
+	// All four gold languages (C#/TS/ColdFusion/SQL) now carry symbols, so the
+	// symbol arm must actually attach to some blobs.
 	if symCount == 0 {
-		t.Error("symbol arm attached to 0 blobs; the TS/C# symbol lane is dead")
+		t.Error("symbol arm attached to 0 blobs; the C#/TS/CF/SQL symbol lane is dead")
 	}
 
 	// --- Hard floors (calibrated ~0.06 below the measured baseline) ---------
-	// MEASURED BASELINE (2026-06-23, reconciled two-annotator gold, 24 queries,
-	// 171 files, k=5): lexical NDCG=0.645 MRR=0.762 Recall=0.713; +symbol
-	// NDCG=0.726 MRR=0.762 Recall=0.807. Floors sit a margin below so noise on a
+	// MEASURED BASELINE (2026-06-24, reconciled two-annotator gold + ColdFusion
+	// and SQL symbol lanes, 30 queries, 349 files, k=5): lexical NDCG=0.640
+	// MRR=0.746 Recall=0.702; +symbol NDCG=0.758 MRR=0.803 Recall=0.784 (180 blobs
+	// carry symbols across C#/TS/CF/SQL). The CF symbol arm is the headline lift:
+	// e.g. "void transaction" NDCG 0.689->0.964. The SQL arm is neutral here (its
+	// 6 queries are already lexical-perfect filename lookups), so +symbol is
+	// unchanged from the CF-only baseline. Floors sit a margin below so noise on a
 	// small set passes but a real (tenth-scale) regression reds the gate.
 	const (
 		minLexNDCG   = 0.58
-		minLexRecall = 0.65
-		minLexMRR    = 0.70
-		minSymNDCG   = 0.66
-		minSymRecall = 0.74
+		minLexRecall = 0.64
+		minLexMRR    = 0.68
+		minSymNDCG   = 0.69
+		minSymRecall = 0.72
 	)
 	if repLex.MeanNDCG < minLexNDCG {
 		t.Errorf("lexical MeanNDCG = %.4f, below floor %.4f (regression)", repLex.MeanNDCG, minLexNDCG)

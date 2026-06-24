@@ -53,6 +53,18 @@ func goldCorpusRepos() []CorpusRepo {
 			// All .sql (this repo's .sql files are small, granular scripts).
 			Keep: func(p string) bool { return strings.HasSuffix(p, ".sql") },
 		},
+		{
+			Repo:   "hugedomains",
+			RelDir: filepath.Join("coldfusion", "hugedomains"),
+			// The _inc/ include library: action/UDF .cfm files, each a small
+			// purpose-named script that defines or uses a <cffunction>. Cohesive and
+			// granular (a query maps to a specific file), and it exercises the CF
+			// symbol arm (CFExtractor pulls <cffunction> names). Excludes the rest of
+			// the ~2200-file app, which is page templates, not labelable units.
+			Keep: func(p string) bool {
+				return strings.HasPrefix(p, "_inc/") && strings.HasSuffix(p, ".cfm")
+			},
+		},
 	}
 }
 

@@ -9,9 +9,9 @@ import (
 )
 
 // TestCorpusMeasurement runs the pooled, multi-language gold set (CorpusGold)
-// against a real index built from three ~/TCGitlab repos (C# / TS / SQL). It
-// reports lexical vs lexical+symbol numbers. It SKIPS cleanly when the corpus
-// root is absent, mirroring TestTCSslApiMeasurement.
+// against a real index built from four ~/TCGitlab repos (C# / TS / SQL /
+// ColdFusion). It reports lexical vs lexical+symbol numbers. It SKIPS cleanly
+// when the corpus root is absent, mirroring TestTCSslApiMeasurement.
 //
 // Honesty note: these are absolute numbers from a SINGLE-JUDGE pooled gold set.
 // They are a baseline to watch for regressions, not a published quality claim.
@@ -39,7 +39,7 @@ func TestCorpusMeasurement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	logReport(t, "pooled corpus (C#/TS/SQL) / lexical", repLex)
+	logReport(t, "pooled corpus (C#/TS/SQL/CF) / lexical", repLex)
 
 	// Symbol arm (a fresh runner over the same index files would re-ingest; instead
 	// build a second index from the same repos to keep runners independent).
@@ -51,7 +51,7 @@ func TestCorpusMeasurement(t *testing.T) {
 		t.Fatal(err)
 	}
 	logReport(t, "pooled corpus / lexical + symbol", repSym)
-	t.Logf("symbol arm: %d blobs carry symbols (C# + TS; SQL has no extractor)", symCount)
+	t.Logf("symbol arm: %d blobs carry symbols (C# + TS + ColdFusion + SQL)", symCount)
 
 	t.Logf("MeanMRR  lexical=%.4f  +symbol=%.4f", repLex.MeanMRR, repSym.MeanMRR)
 	t.Logf("MeanNDCG lexical=%.4f  +symbol=%.4f", repLex.MeanNDCG, repSym.MeanNDCG)

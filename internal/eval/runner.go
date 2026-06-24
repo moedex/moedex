@@ -73,11 +73,12 @@ func (run *Runner) rebuild() {
 	}
 }
 
-// EnableSymbols builds a multi-language symbol index (Go/C#/TypeScript, by file
-// extension) over the runner's corpus and wires it into the ranker as the
-// symbol-name RRF arm. Returns the number of blobs that carry symbols (0 when no
-// file has a recognized extractor, where the arm is a no-op). Lets a caller
-// measure ranking with vs. without the symbol arm by using two runners.
+// EnableSymbols builds a multi-language symbol index (Go/C#/TypeScript/
+// ColdFusion/SQL, by file extension) over the runner's corpus and wires it into
+// the ranker as the symbol-name RRF arm. Returns the number of blobs that carry
+// symbols (0 when no file has a recognized extractor, where the arm is a no-op).
+// Lets a caller measure ranking with vs. without the symbol arm by using two
+// runners.
 func (run *Runner) EnableSymbols() int {
 	run.syms = symbol.BuildMulti(run.ix)
 	run.rebuild()
