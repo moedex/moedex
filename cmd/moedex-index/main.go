@@ -440,11 +440,20 @@ func runCASRefresh(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("cas-refresh: changed=%d added=%d removed=%d\n", len(ds.ChangedRepos), len(ds.AddedRepos), len(ds.RemovedRepos))
+	fmt.Printf("cas-refresh: changed=%d added=%d removed=%d failed=%d\n",
+		len(ds.ChangedRepos), len(ds.AddedRepos), len(ds.RemovedRepos), len(ds.FailedRepos))
 	fmt.Printf("  delta: +%d blobs, +%.1f MB (%d dedup no-op Puts skipped)\n",
 		ds.BlobsAdded, float64(ds.BytesAdded)/1e6, ds.PutsSkipped)
 	fmt.Printf("  store now: %d unique blobs, %.1f MB stored, dedup ratio %.2fx\n",
 		m.Stats.UniqueBlobs, float64(m.Stats.StoredBytes)/1e6, m.Stats.DedupRatio())
+	if len(ds.FailedRepos) > 0 {
+		// Carried forward unchanged (no data lost); surfaced so the operator knows
+		// to investigate / expect a retry next refresh.
+		fmt.Fprintf(os.Stderr, "moedex-index: WARNING: %d repo(s) failed to re-ingest and were carried forward unchanged (retry next refresh):\n", len(ds.FailedRepos))
+		for _, r := range ds.FailedRepos {
+			fmt.Fprintf(os.Stderr, "  - %s\n", r)
+		}
+	}
 	return nil
 }
 

@@ -2,6 +2,7 @@ package blobstore
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -385,6 +386,100 @@ func TestRemovedRepoDropsFromManifestBlobsRemainUnreferenced(t *testing.T) {
 	}
 }
 
+// --- BUG 2 regression: transient re-ingest failure must not drop a repo ----
+
+// TestRefreshIngestFailureCarriesForwardRepo is the regression for the silent
+// data-loss bug: a CHANGED repo that is STILL ON DISK but whose re-ingest
+// transiently fails (a git/read hiccup) must NOT be classified as removed and
+// dropped. Doing so would erase all of that repo's previously searchable content
+// from every subsequent export. The repo's prior manifest entry must be carried
+// forward unchanged and the failure surfaced (ds.FailedRepos), so a future export
+// still finds its blobs and the next refresh retries it.
+func TestRefreshIngestFailureCarriesForwardRepo(t *testing.T) {
+	requireGit(t)
+	corpus := t.TempDir()
+	repoA := filepath.Join(corpus, "repoA")
+	repoB := filepath.Join(corpus, "repoB")
+	uniqueB := "package b\nconst ONLY_IN_B = 7\n"
+	commitGitRepo(t, repoA, map[string]string{"a.go": "package a\nconst A = 1\n"})
+	commitGitRepo(t, repoB, map[string]string{"b.go": uniqueB})
+
+	casDir := t.TempDir()
+	// Build with the REAL ingest so the store holds both repos' blobs.
+	m, err := buildCAS(corpus, casDir, ingest.DiscoverRepos, ingest.Repo, ingest.Head)
+	if err != nil {
+		t.Fatalf("buildCAS: %v", err)
+	}
+	rbOld, _ := m.RepoOf(repoB)
+	if len(rbOld.Files) == 0 {
+		t.Fatal("repoB should have files in the initial manifest")
+	}
+
+	// Make repoB "changed" (so refresh tries to re-ingest it) by committing a new
+	// file (bumps HEAD), then inject a re-ingest failure for repoB specifically.
+	// repoB is STILL ON DISK — discover returns it — so this is a transient
+	// failure, not a removal.
+	writeFiles(t, repoB, map[string]string{"c.go": "package b\nconst C = 9\n"})
+	gitCommitAll(t, repoB, "add c.go")
+
+	failingIngest := func(repoName, dir string) ([]ingest.File, error) {
+		if dir == repoB {
+			return nil, fmt.Errorf("injected transient git failure for %s", dir)
+		}
+		return ingest.Repo(repoName, dir)
+	}
+
+	m2, ds, err := refreshCAS(m, corpus, casDir, ingest.DiscoverRepos, failingIngest, ingest.Head)
+	if err != nil {
+		t.Fatalf("refreshCAS: %v", err)
+	}
+
+	// repoB must NOT be classified as removed, and MUST be surfaced as failed.
+	for _, r := range ds.RemovedRepos {
+		if r == repoB {
+			t.Error("BUG 2: still-present repoB was misclassified as removed on transient ingest failure")
+		}
+	}
+	if !contains(ds.FailedRepos, repoB) {
+		t.Errorf("repoB should be in FailedRepos, got %v", ds.FailedRepos)
+	}
+
+	// repoB's manifest entry must SURVIVE unchanged (carried forward).
+	rbNew, ok := m2.RepoOf(repoB)
+	if !ok {
+		t.Fatal("BUG 2: repoB dropped from manifest after a transient re-ingest failure (data loss)")
+	}
+	if !equalStrs(rbNew.SortedBlobs(), rbOld.SortedBlobs()) {
+		t.Errorf("repoB blob set changed despite carry-forward: old=%v new=%v",
+			rbOld.SortedBlobs(), rbNew.SortedBlobs())
+	}
+	if rbNew.Head != rbOld.Head {
+		t.Errorf("repoB HEAD changed despite carry-forward: %q -> %q", rbOld.Head, rbNew.Head)
+	}
+
+	// End-to-end: repoB's unique content is STILL findable after export.
+	shardDir := filepath.Join(t.TempDir(), "shards")
+	if _, err := ExportShardDir(casDir, shardDir, 1<<30); err != nil {
+		t.Fatalf("ExportShardDir: %v", err)
+	}
+	if !shardDirFinds(t, shardDir, "ONLY_IN_B") {
+		t.Error("BUG 2: repoB's content vanished from exported shards after a transient refresh failure")
+	}
+
+	// A subsequent refresh with ingest WORKING must recover repoB cleanly (retry).
+	m3, ds3, err := refreshCAS(m2, corpus, casDir, ingest.DiscoverRepos, ingest.Repo, ingest.Head)
+	if err != nil {
+		t.Fatalf("recovery refreshCAS: %v", err)
+	}
+	if contains(ds3.FailedRepos, repoB) {
+		t.Errorf("repoB still failing after ingest recovered: %v", ds3.FailedRepos)
+	}
+	rbRecovered, _ := m3.RepoOf(repoB)
+	if len(rbRecovered.Files) < 2 {
+		t.Errorf("after recovery repoB should have b.go+c.go, got %d files", len(rbRecovered.Files))
+	}
+}
+
 // --- E. manifest round-trip ----------------------------------------------
 
 func TestBlobManifestRoundTrip(t *testing.T) {
@@ -423,6 +518,94 @@ func TestBlobManifestRoundTrip(t *testing.T) {
 	r2, ok := m2.RepoOf("/corpus/r2")
 	if !ok || r2.Head != "" {
 		t.Errorf("commitless repo head not preserved: %+v", r2)
+	}
+}
+
+// --- BUG 1 regression: dirty-file SHA skew (content-true CAS) -------------
+
+// TestDirtyFileContentIsStoredNotSkipped is the regression for the dirty-file SHA
+// skew. ingest reads WORKING-TREE bytes but f.SHA is git's COMMITTED/index blob
+// SHA; for a file whose working tree differs from its committed blob the two
+// disagree. If the CAS keyed by f.SHA, a dirty file whose committed SHA is already
+// stored (by a sibling repo carrying that exact committed content) would be
+// dedup-skipped — its real working-tree bytes never stored, unfindable after
+// export. The CAS must be CONTENT-TRUE: a Put only dedups when the stored bytes
+// equal the new bytes.
+//
+// Construction: repoA commits content X (so the store will hold blob(X) keyed by
+// X's git SHA). repoB commits the SAME content X (so `git ls-files -s` reports
+// the SAME committed SHA), then its working tree is mutated to a DIFFERENT content
+// Y WITHOUT committing — so ingest reads Y while git still reports X's SHA. With a
+// SHA-keyed store the Put(SHA_X, Y) is a dedup no-op and Y is lost. With the
+// content-true key Y is stored and findable.
+func TestDirtyFileContentIsStoredNotSkipped(t *testing.T) {
+	requireGit(t)
+	corpus := t.TempDir()
+	repoA := filepath.Join(corpus, "repoA")
+	repoB := filepath.Join(corpus, "repoB")
+
+	committed := "package shared\nconst COMMITTED_NEEDLE = 1\n"
+	commitGitRepo(t, repoA, map[string]string{"shared.go": committed})
+	commitGitRepo(t, repoB, map[string]string{"shared.go": committed})
+
+	// Confirm the test premise: both repos' shared.go has the SAME committed SHA.
+	shaA := lsFilesSHA(t, repoA, "shared.go")
+	shaB := lsFilesSHA(t, repoB, "shared.go")
+	if shaA == "" || shaA != shaB {
+		t.Fatalf("test premise: committed SHAs must match, got %q vs %q", shaA, shaB)
+	}
+
+	// Make repoB's working tree DIRTY: replace the bytes WITHOUT committing, so
+	// `git ls-files -s` still reports the old committed SHA but ingest reads Y.
+	dirty := "package shared\nconst DIRTY_NEEDLE = 2\n"
+	writeFiles(t, repoB, map[string]string{"shared.go": dirty})
+	// Sanity: git still reports the OLD committed SHA for the dirty file.
+	if got := lsFilesSHA(t, repoB, "shared.go"); got != shaB {
+		t.Fatalf("test premise: dirty file should still report committed SHA %q, got %q", shaB, got)
+	}
+	// Sanity: ingest reads the DIRTY working-tree bytes.
+	if !ingestReads(t, repoB, "shared.go", dirty) {
+		t.Fatal("test premise: ingest must read the dirty working-tree bytes")
+	}
+
+	casDir := t.TempDir()
+	m, err := BuildCAS(corpus, casDir)
+	if err != nil {
+		t.Fatalf("BuildCAS: %v", err)
+	}
+
+	// The dirty bytes (Y) must be physically stored and findable in the CAS — the
+	// committed bytes (X) from repoA are stored too; they are distinct content.
+	s := openStore(t, casDir)
+	defer s.Close()
+	if !storeHoldsContent(t, s, dirty) {
+		t.Error("BUG 1: dirty working-tree content was dedup-skipped and is NOT in the CAS")
+	}
+	if !storeHoldsContent(t, s, committed) {
+		t.Error("committed content (repoA) missing from CAS")
+	}
+
+	// repoB's manifest entry must key its dirty file by the CONTENT of Y, not X's
+	// stale committed SHA, so Get returns the dirty bytes.
+	rbBKey := shaInRepo(t, m, repoB, "shared.go")
+	gotB, err := s.Get(rbBKey)
+	if err != nil {
+		t.Fatalf("Get(repoB shared.go key): %v", err)
+	}
+	if string(gotB) != dirty {
+		t.Errorf("repoB shared.go content = %q, want dirty %q", gotB, dirty)
+	}
+
+	// End-to-end: after export, the dirty needle is searchable in the served shards.
+	shardDir := filepath.Join(t.TempDir(), "shards")
+	if _, err := ExportShardDir(casDir, shardDir, 1<<30); err != nil {
+		t.Fatalf("ExportShardDir: %v", err)
+	}
+	if !shardDirFinds(t, shardDir, "DIRTY_NEEDLE") {
+		t.Error("BUG 1: exported shards cannot find the dirty file's content (under-approximation)")
+	}
+	if !shardDirFinds(t, shardDir, "COMMITTED_NEEDLE") {
+		t.Error("exported shards missing the committed content")
 	}
 }
 
@@ -603,6 +786,65 @@ func shaInRepo(t *testing.T, m *BlobManifest, repoDir, rel string) string {
 	}
 	t.Fatalf("file %s not in repo %s", rel, repoDir)
 	return ""
+}
+
+// lsFilesSHA returns the committed/index blob SHA `git ls-files -s` reports for a
+// repo-relative path (the value ingest takes as File.SHA), or "" if absent.
+func lsFilesSHA(t *testing.T, repoDir, rel string) string {
+	t.Helper()
+	cmd := exec.Command("git", "-C", repoDir, "ls-files", "-s", "--", rel)
+	cmd.Env = gitEnv()
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("git ls-files -s %s: %v", rel, err)
+	}
+	// "<mode> <sha> <stage>\t<path>"
+	fields := strings.Fields(string(out))
+	if len(fields) < 2 {
+		return ""
+	}
+	return fields[1]
+}
+
+// ingestReads reports whether ingest.Repo reads `want` as the content of rel in
+// the repo at dir (i.e. the working-tree bytes, confirming the dirty-file premise).
+func ingestReads(t *testing.T, dir, rel, want string) bool {
+	t.Helper()
+	files, err := ingest.Repo(filepath.Base(dir), dir)
+	if err != nil {
+		t.Fatalf("ingest.Repo(%s): %v", dir, err)
+	}
+	for _, f := range files {
+		if f.RelPath == rel {
+			return string(f.Content) == want
+		}
+	}
+	return false
+}
+
+// storeHoldsContent reports whether any blob physically stored in the CAS has the
+// given content (independent of how it is keyed) — the content-true check.
+func storeHoldsContent(t *testing.T, s *Store, content string) bool {
+	t.Helper()
+	for _, sha := range s.SHAs() {
+		got, err := s.Get(sha)
+		if err != nil {
+			t.Fatalf("Get(%s): %v", sha, err)
+		}
+		if string(got) == content {
+			return true
+		}
+	}
+	return false
+}
+
+func contains(ss []string, want string) bool {
+	for _, s := range ss {
+		if s == want {
+			return true
+		}
+	}
+	return false
 }
 
 func equalStrs(a, b []string) bool {

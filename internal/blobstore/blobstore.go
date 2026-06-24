@@ -13,13 +13,18 @@
 // repo (internal/parity/manifest.go), losing cross-shard dedup and re-indexing
 // far more than the change.
 //
-// A CAS keyed by git blob SHA stores each unique blob's content exactly ONCE for
-// the whole corpus. Because git already computes a content hash (`git ls-files
-// -s` -> ingest.File.SHA), a Put keyed on that SHA is idempotent: the second
-// repo that carries the same content adds nothing. That single primitive is
-// global cross-shard dedup. A repo's identity becomes its *set of blob SHAs*
-// (see manifest.go), so re-indexing a changed repo is a set-diff that touches
-// only its net-new blobs — the per-blob delta — and never its co-resident repos.
+// A CAS keyed by a content hash of the ingested bytes stores each unique blob's
+// content exactly ONCE for the whole corpus. The key is blobstore.contentKey: a
+// SHA-1 of the exact bytes ingested in git's blob-object form, which for a CLEAN
+// file equals git's `ls-files -s` SHA but for a DIRTY file (working tree !=
+// committed blob) is the true hash of the working-tree bytes ingest actually
+// read — NOT git's stale index SHA. Keying on the bytes-actually-stored makes a
+// Put idempotent AND content-true: the second repo that carries byte-identical
+// content adds nothing, while a file whose content differs from an already-stored
+// blob is never dedup-skipped. That single primitive is global cross-shard dedup.
+// A repo's identity becomes its *set of blob keys* (see manifest.go), so
+// re-indexing a changed repo is a set-diff that touches only its net-new blobs —
+// the per-blob delta — and never its co-resident repos.
 //
 // # On-disk layout (two files in a directory; all integers little-endian)
 //
@@ -189,8 +194,12 @@ func (s *Store) Has(sha string) bool {
 // Put stores content under sha if not already present and reports whether it was
 // newly added. It is idempotent: a Put of a SHA already present is a no-op that
 // returns added=false WITHOUT re-reading or comparing content — this is the
-// global cross-shard dedup primitive. The caller guarantees sha is git's content
-// hash of content (ingest does), so an existing SHA means identical content.
+// global cross-shard dedup primitive. CORRECTNESS CONTRACT: sha must be a content
+// hash of content (a hash of the exact bytes being stored), so that an existing
+// SHA provably means identical bytes and the dedup skip is content-true. The CAS
+// builders satisfy this via blobstore.contentKey (hash of the ingested bytes),
+// NOT git's index SHA — see build.go contentKey for why the distinction matters
+// for dirty files.
 func (s *Store) Put(sha string, content []byte) (added bool, err error) {
 	if _, ok := s.byID[sha]; ok {
 		return false, nil

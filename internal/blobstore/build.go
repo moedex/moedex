@@ -6,11 +6,35 @@ package blobstore
 // universe as a parity build — preserving the parity scope F (see export.go).
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"path/filepath"
 
 	"moedex/internal/ingest"
 )
+
+// contentKey is the CONTENT-TRUE blob key: the SHA-1 of the bytes actually
+// ingested (f.Content), computed in git's blob-object form ("blob <len>\0" +
+// content). This is the fix for the dirty-file SHA skew: ingest reads
+// working-tree bytes but f.SHA comes from `git ls-files -s` (the committed/index
+// blob SHA), so for a file whose working tree differs from its committed blob the
+// two disagree. Keying the CAS by f.SHA would dedup-skip a dirty file whose
+// committed SHA is already stored, dropping its real bytes; keying by a hash of
+// the ingested bytes guarantees a Put only dedups when the stored bytes are
+// genuinely identical.
+//
+// For a CLEAN file (working tree == committed blob) this reproduces git's blob
+// SHA exactly (verified against `git hash-object`), so on a clean corpus the CAS
+// keys are byte-identical to the f.SHA the direct parity build keys index.AddFile
+// by — the export stays byte-equivalent to a direct build. For a dirty file the
+// keys diverge precisely where they must, making the content findable.
+func contentKey(content []byte) string {
+	h := sha1.New()
+	fmt.Fprintf(h, "blob %d\x00", len(content))
+	h.Write(content)
+	return hex.EncodeToString(h.Sum(nil))
+}
 
 // DeltaStats reports what a RefreshCAS actually did, for honest measurement of
 // the per-blob delta: BlobsAdded is the number of net-new unique blobs physically
@@ -21,9 +45,15 @@ type DeltaStats struct {
 	ChangedRepos []string
 	AddedRepos   []string
 	RemovedRepos []string
-	BlobsAdded   int
-	BytesAdded   int64
-	PutsSkipped  int
+	// FailedRepos are repos still present on disk whose re-ingest transiently
+	// failed during this refresh. Their PRIOR manifest entry is carried forward
+	// unchanged (no data loss), so they remain fully searchable; the next refresh
+	// retries them. A failure here is NOT a removal — only a repo genuinely gone
+	// from disk is classified removed.
+	FailedRepos []string
+	BlobsAdded  int
+	BytesAdded  int64
+	PutsSkipped int
 }
 
 // ingestFn / headFn / discoverFn are injected in tests; production passes the
@@ -98,10 +128,14 @@ func ingestRepoBlobs(store *Store, dir string, ingestRepo ingestFn, head headFn)
 			continue // same abspath already in this repo's batch
 		}
 		seen[f.AbsPath] = true
-		if _, err := store.Put(f.SHA, f.Content); err != nil {
+		// Key by a hash of the bytes actually ingested, NOT git's index SHA, so a
+		// dirty file (working tree != committed blob) is stored under its real
+		// content hash and a Put only dedups against genuinely identical bytes.
+		key := contentKey(f.Content)
+		if _, err := store.Put(key, f.Content); err != nil {
 			return RepoBlobs{}, 0, 0, err
 		}
-		rb.Files = append(rb.Files, FileEntry{SHA: f.SHA, RelPath: f.RelPath})
+		rb.Files = append(rb.Files, FileEntry{SHA: key, RelPath: f.RelPath})
 		raw += int64(len(f.Content))
 	}
 	return rb, raw, len(rb.Files), nil
@@ -119,6 +153,10 @@ func ingestRepoBlobs(store *Store, dir string, ingestRepo ingestFn, head headFn)
 //     now-unreferenced blobs are LEFT in the append-only pack (compaction/GC is
 //     deferred — see package doc), so a future compactor has the manifest's
 //     referenced-set as a correct liveness signal;
+//   - for a repo whose re-ingest TRANSIENTLY FAILS but is still present on disk, it
+//     CARRIES FORWARD the prior manifest entry unchanged (so none of that repo's
+//     searchable content is lost) and records the repo in ds.FailedRepos; the next
+//     refresh retries it. Only a repo genuinely gone from disk is "removed";
 //   - an UNCHANGED repo is carried forward verbatim with zero Puts.
 //
 // HEAD comparison matches parity.DetectChanges: an unreadable current HEAD is
@@ -159,10 +197,14 @@ func refreshCAS(old *BlobManifest, root, casDir string, discover discoverFn, ing
 	for _, dir := range current {
 		oldRepo, known := old.RepoOf(dir)
 		if !known {
-			// Added repo: ingest fully.
+			// Added repo: ingest fully. A transient ingest failure of a brand-new
+			// repo has nothing to carry forward (it was never in the manifest), so
+			// it is simply omitted this round and surfaced as failed (the next
+			// refresh retries it) — matching parity.Build's skip-on-ingest-error.
 			ds.AddedRepos = append(ds.AddedRepos, dir)
 			rb, raw, refs, err := ingestRepoBlobs(store, dir, ingestRepo, head)
 			if err != nil {
+				ds.FailedRepos = append(ds.FailedRepos, dir)
 				continue
 			}
 			m.Repos = append(m.Repos, rb)
@@ -186,8 +228,18 @@ func refreshCAS(old *BlobManifest, root, casDir string, discover discoverFn, ing
 		ds.PutsSkipped += countPresent(store, ingestRepo, dir) // pre-count of dedup hits
 		rb, raw, refs, err := ingestRepoBlobs(store, dir, ingestRepo, head)
 		if err != nil {
-			// Re-ingest failed (repo vanished mid-refresh): treat as removed by omission.
-			ds.RemovedRepos = append(ds.RemovedRepos, dir)
+			// Re-ingest FAILED for a repo that is STILL ON DISK (discover found it):
+			// this is a transient git/read error, NOT a removal. Dropping it here
+			// would silently lose all of this repo's previously searchable content
+			// from every subsequent export. CARRY FORWARD the prior manifest entry
+			// unchanged so its blobs/paths survive, and surface the failure; the
+			// next refresh retries it. (Drop it from ChangedRepos — it did not
+			// actually change in the manifest this round.)
+			ds.ChangedRepos = ds.ChangedRepos[:len(ds.ChangedRepos)-1]
+			ds.FailedRepos = append(ds.FailedRepos, dir)
+			m.Repos = append(m.Repos, oldRepo)
+			m.Stats.RawBytes += rawBytesOf(store, oldRepo)
+			m.Stats.FileRefs += len(oldRepo.Files)
 			continue
 		}
 		m.Repos = append(m.Repos, rb)
@@ -245,7 +297,7 @@ func countPresent(store *Store, ingestRepo ingestFn, dir string) int {
 			continue
 		}
 		seen[f.AbsPath] = true
-		if store.Has(f.SHA) {
+		if store.Has(contentKey(f.Content)) {
 			n++
 		}
 	}
