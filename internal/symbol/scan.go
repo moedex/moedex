@@ -106,3 +106,63 @@ func lineEnd(content []byte, from int) int {
 	}
 	return i
 }
+
+// literalMask returns a bitmap, one entry per byte of content, that is true for
+// every byte that lies INSIDE a string/char/template literal or a line/block
+// comment (including the delimiters themselves). It uses the same lexing rules
+// as matchBlock, so the C# / TS reference passes can cheaply ask "is this
+// candidate offset real code?" by checking mask[off] == false and avoid
+// emitting references from inside literals and comments.
+//
+// The mask is allocated once per file and indexed in O(1); construction is a
+// single linear scan. It is bounds-safe and never panics.
+func literalMask(content []byte) []bool {
+	n := len(content)
+	mask := make([]bool, n)
+	i := 0
+	markRange := func(lo, hi int) {
+		if lo < 0 {
+			lo = 0
+		}
+		if hi > n {
+			hi = n
+		}
+		for j := lo; j < hi; j++ {
+			mask[j] = true
+		}
+	}
+	for i < n {
+		c := content[i]
+		switch c {
+		case '/':
+			if i+1 < n && content[i+1] == '/' {
+				start := i
+				i += 2
+				for i < n && content[i] != '\n' {
+					i++
+				}
+				markRange(start, i)
+				continue
+			}
+			if i+1 < n && content[i+1] == '*' {
+				start := i
+				i += 2
+				for i+1 < n && !(content[i] == '*' && content[i+1] == '/') {
+					i++
+				}
+				i += 2
+				markRange(start, i)
+				continue
+			}
+			i++
+		case '"', '\'', '`':
+			start := i
+			end := skipString(content, i, c)
+			markRange(start, end)
+			i = end
+		default:
+			i++
+		}
+	}
+	return mask
+}

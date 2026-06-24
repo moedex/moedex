@@ -12,7 +12,7 @@ import (
 // Binary sidecar format (all multi-byte integers little-endian via
 // binary.PutUvarint / Uvarint, i.e. variable-length unsigned for compactness):
 //
-//	magic     : 4 bytes  "SYM1"
+//	magic     : 4 bytes  "SYM2"
 //	blobCount : uvarint                 (number of blobs with symbols)
 //	repeated per blob (ascending blob ID):
 //	    blobID   : uvarint
@@ -24,12 +24,31 @@ import (
 //	        nameEnd   : uvarint
 //	        bodyStart : uvarint
 //	        bodyEnd   : uvarint
+//	refBlobCount : uvarint              (number of blobs with REFERENCE occs)
+//	repeated per blob (ascending blob ID):
+//	    blobID   : uvarint
+//	    refCount : uvarint
+//	    repeated per reference occurrence (in stored, Start-sorted order):
+//	        nameLen   : uvarint, name bytes
+//	        kind      : uvarint
+//	        role      : uvarint          (Role; always Reference in this section)
+//	        start     : uvarint
+//	        end       : uvarint
 //
 // Offsets are non-negative byte offsets, so uvarint is safe. The format is
-// self-describing and fully round-trippable: Load reconstructs every Symbol
-// field Save wrote, in the same order, so Enclosing yields identical results
-// before and after a round trip.
-var magic = []byte("SYM1")
+// self-describing and fully round-trippable: Load reconstructs every Symbol and
+// reference Occurrence Save wrote, so Enclosing/References/Definitions yield
+// identical results before and after a round trip.
+//
+// Backward compatibility: a legacy "SYM1" sidecar (no references section) loads
+// cleanly with zero references — readIndex stops after the symbols section when
+// it sees the SYM1 magic. New writes always use SYM2; the server's .meta
+// freshness sidecar forces a rebuild on any corpus change, so a stale SYM1 file
+// is rewritten as SYM2 on the next BuildSidecars regardless.
+var magic = []byte("SYM2")
+
+// magicV1 is the legacy symbols-only sidecar magic, still readable.
+var magicV1 = []byte("SYM1")
 
 // Save writes ix to path.
 func Save(ix *Index, path string) error {
@@ -102,6 +121,46 @@ func writeIndex(w io.Writer, ix *Index) error {
 			}
 		}
 	}
+
+	// References section (SYM2). Deterministic blob order.
+	refIDs := make([]uint64, 0, len(ix.refsByBlob))
+	for id := range ix.refsByBlob {
+		refIDs = append(refIDs, id)
+	}
+	sort.Slice(refIDs, func(i, j int) bool { return refIDs[i] < refIDs[j] })
+
+	if err := putU(uint64(len(refIDs))); err != nil {
+		return err
+	}
+	for _, id := range refIDs {
+		occs := ix.refsByBlob[id]
+		if err := putU(id); err != nil {
+			return err
+		}
+		if err := putU(uint64(len(occs))); err != nil {
+			return err
+		}
+		for _, o := range occs {
+			if err := putU(uint64(len(o.Name))); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(w, o.Name); err != nil {
+				return err
+			}
+			if err := putU(uint64(o.Kind)); err != nil {
+				return err
+			}
+			if err := putU(uint64(o.Role)); err != nil {
+				return err
+			}
+			if err := putU(uint64(o.Start)); err != nil {
+				return err
+			}
+			if err := putU(uint64(o.End)); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
@@ -121,7 +180,9 @@ func readIndex(r *bufio.Reader) (*Index, error) {
 	if _, err := io.ReadFull(r, hdr); err != nil {
 		return nil, fmt.Errorf("symbol: reading magic: %w", err)
 	}
-	if string(hdr) != string(magic) {
+	isV2 := string(hdr) == string(magic)
+	isV1 := string(hdr) == string(magicV1)
+	if !isV2 && !isV1 {
 		return nil, fmt.Errorf("symbol: bad magic %q", hdr)
 	}
 
@@ -132,6 +193,7 @@ func readIndex(r *bufio.Reader) (*Index, error) {
 	if err != nil {
 		return nil, err
 	}
+	symBlobs := make([]uint64, 0, blobCount)
 	for i := uint64(0); i < blobCount; i++ {
 		id, err := getU()
 		if err != nil {
@@ -184,6 +246,76 @@ func readIndex(r *bufio.Reader) (*Index, error) {
 		// it (Set would re-sort identically, but this keeps Load independent of
 		// Set's tie-break).
 		ix.byBlob[id] = syms
+		symBlobs = append(symBlobs, id)
+	}
+
+	// References section (SYM2 only). A SYM1 file ends after the symbols section,
+	// so no refs are read and References/Definitions surface definitions only.
+	if isV2 {
+		refBlobCount, err := getU()
+		if err != nil {
+			return nil, err
+		}
+		for i := uint64(0); i < refBlobCount; i++ {
+			id, err := getU()
+			if err != nil {
+				return nil, err
+			}
+			refCount, err := getU()
+			if err != nil {
+				return nil, err
+			}
+			occs := make([]Occurrence, 0, refCount)
+			for j := uint64(0); j < refCount; j++ {
+				nameLen, err := getU()
+				if err != nil {
+					return nil, err
+				}
+				nb := make([]byte, nameLen)
+				if _, err := io.ReadFull(r, nb); err != nil {
+					return nil, err
+				}
+				kind, err := getU()
+				if err != nil {
+					return nil, err
+				}
+				role, err := getU()
+				if err != nil {
+					return nil, err
+				}
+				start, err := getU()
+				if err != nil {
+					return nil, err
+				}
+				end, err := getU()
+				if err != nil {
+					return nil, err
+				}
+				occs = append(occs, Occurrence{
+					Name:  string(nb),
+					Kind:  Kind(kind),
+					Role:  Role(role),
+					Start: int(start),
+					End:   int(end),
+				})
+			}
+			ix.refsByBlob[id] = occs
+		}
+	}
+
+	// Rebuild the byName inverted view for every blob touched by the load
+	// (definitions + references) so References/Definitions work post-load. Done
+	// once here rather than via Set/SetRefs to keep the stored BodyStart order
+	// untouched.
+	touched := map[uint64]bool{}
+	for _, id := range symBlobs {
+		touched[id] = true
+	}
+	for id := range ix.refsByBlob {
+		touched[id] = true
+	}
+	for id := range touched {
+		ix.rebuildName(id)
 	}
 	return ix, nil
 }

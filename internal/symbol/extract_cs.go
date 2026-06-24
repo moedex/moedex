@@ -98,6 +98,67 @@ func (CSharpExtractor) Extract(content []byte) ([]Symbol, error) {
 	return syms, nil
 }
 
+// csCallRe matches a call/construction site: an optional `new` keyword, then an
+// identifier immediately followed by `(` (an optional generic argument list is
+// allowed between the name and the paren). It captures the identifier. This is
+// deliberately liberal — the literal/comment mask and the def-site exclusion in
+// ExtractRefs prune the false positives that matter.
+var csCallRe = regexp.MustCompile(`\b(?:(new)\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*(?:<[^<>;{}()]*>)?\s*\(`)
+
+// ExtractRefs scans C# content for reference occurrences: method/constructor
+// call sites (`Name(`) and `new` constructions (`new Type(`). It is best-effort
+// and NAME-BASED (no semantic resolution). It excludes:
+//
+//   - any match inside a string/char literal or a comment (via literalMask);
+//   - control-flow keywords that read like a call (`if (`, `while (`, ...);
+//   - the identifier of a definition this same content declares (so a method's
+//     own declaration site is not re-emitted as a reference, and a constructor
+//     declaration `public Foo(` is not double-counted) — done by excluding
+//     offsets that coincide with a Symbol.NameStart from Extract.
+//
+// Always returns a nil error.
+func (e CSharpExtractor) ExtractRefs(content []byte) ([]Occurrence, error) {
+	// Definition name offsets to exclude (method decl sites, type decl sites).
+	defSites := map[int]bool{}
+	defs, _ := e.Extract(content)
+	for _, s := range defs {
+		defSites[s.NameStart] = true
+	}
+
+	mask := literalMask(content)
+	var occs []Occurrence
+	for _, m := range csCallRe.FindAllSubmatchIndex(content, -1) {
+		// m: [full0 full1 new0 new1 name0 name1]
+		ns, ne := m[4], m[5]
+		if ns < 0 || ne < 0 {
+			continue
+		}
+		if mask[ns] {
+			continue // inside a string/char literal or a comment
+		}
+		name := string(content[ns:ne])
+		if csControlKeywords[name] {
+			continue
+		}
+		if defSites[ns] {
+			continue // this is the declaration site, not a use
+		}
+		// `new` construction -> Type reference; bare call -> Method reference.
+		kind := Method
+		if m[2] >= 0 {
+			kind = Type
+		}
+		occs = append(occs, Occurrence{
+			Name:  name,
+			Kind:  kind,
+			Role:  Reference,
+			Start: ns,
+			End:   ne,
+		})
+	}
+	return occs, nil
+}
+
 // bodyRange computes a [start, end) block for a declaration whose match ended at
 // declEnd. It searches forward for the next '{' (or ';') before any newline-run
 // that would clearly end the statement, brace-matches a '{' if found, and
