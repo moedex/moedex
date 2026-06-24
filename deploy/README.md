@@ -36,10 +36,9 @@ go build -o moedex-index ./cmd/moedex-index
 make build-dense          # -> ./moedex-serve-dense  (needs ONNXRUNTIME_LIB_PATH at run time)
 ```
 
-> **Gap (reported by Lane C).** There is no `make` target that emits a single
-> binary for the plain daemon — `make build` is `go build ./...` with no `-o`.
-> The Dockerfile and the commands above call `go build -o ...` directly. This
-> was **not** added to the Makefile (out of fence); flag it if you want a target.
+> **Note.** `make build` runs `go build ./...` (no `-o`); there is no make target
+> that emits a single plain-daemon binary, so build it with `go build -o ...` as
+> above (the Dockerfile does the same).
 
 ---
 
@@ -58,6 +57,24 @@ moedex-index refresh -shard-dir /srv/moedex/shards
 ```
 
 `MOEDEX_CORPUS` is the env fallback for `build -corpus`.
+
+---
+
+## Hardware sizing
+
+Measured on the ~5.2 GB / 484-repo corpus (953 MB indexed); see
+[`../P6-SCALE-REPORT.md`](../P6-SCALE-REPORT.md) for the full numbers and the 8 GB
+projection.
+
+| Phase | Footprint (5.2 GB corpus) | Notes |
+| --- | --- | --- |
+| **Serve** `-http` (lexical+symbol+path) | ~3 GB RSS (~1 GB heap + reclaimable mmap) | Working set is the **mmap'd postings** (file-backed, reclaimable), not the heap. Comfortable on **8 GB RAM**; ~p50 120 ms / p95 560 ms warm. |
+| **Serve** `-mcp` + dense (float32) | ~4 GB heap | Dense store is ~3.5× indexed content. Want **≥16 GB RAM**; `int8` quantization (future) would cut it ~4×. |
+| **Build / refresh** (`moedex-index`) | ~10 GB peak | The RAM-binding step (the sidecar build loads all content at once; not shard-bounded). Build on a **≥24–32 GB host**, then ship the shard dir to a modest serve host. |
+| **Disk** (servable shard dir) | 2.6 GB (no dense) / 5.4 GB (+dense) | Scales ~linearly to ~4 / ~8 GB at an 8 GB corpus. |
+
+**Rule of thumb:** serving is cheap (postings are mmap'd); building is the
+expensive step — separate the build host from the serve host if RAM is tight.
 
 ---
 
@@ -91,8 +108,9 @@ docker run -d --name moedex-serve \
 
 ```sh
 docker build -f Dockerfile.dense -t moedex-serve-dense .
-# override the ONNX Runtime version if needed:
-docker build -f Dockerfile.dense --build-arg ONNXRUNTIME_VERSION=1.21.0 \
+# ONNXRUNTIME_VERSION defaults to a known-good release in Dockerfile.dense
+# (the binding needs ORT >= 1.27.0); override only for a different runtime:
+docker build -f Dockerfile.dense --build-arg ONNXRUNTIME_VERSION=<version> \
   -t moedex-serve-dense .
 
 # Dense arm is -mcp only (stdio). Shard dir MUST be writable (embedding cache):
@@ -168,6 +186,18 @@ declares `ReadWritePaths=/srv/moedex/shards /srv/moedex` (shard dir **and** its
 parent). The serve unit only ever reads shards, so it uses
 `ReadOnlyPaths=/srv/moedex/shards`.
 
+### Refresh cost at scale
+
+`moedex-index refresh` is **shard-level**: it re-ingests every repo that shares a
+shard with a changed repo, so its cost depends on how the changes cluster. With no
+repo→shard locality, a **broad** update (many repos advancing at once) touches
+every shard and re-ingests ~all repos — about the same cost as a full rebuild, and
+it fragments the shard set (one shard per re-ingested repo). It pays off for
+**small, frequent** deltas (a few repos between hourly runs); for a large batch, a
+full `build` into a fresh dir + `systemctl reload` is equivalent and packs better.
+Refresh always serves correct, query-identical content (validated under concurrent
+load). See [`../P7-REFRESH-REPORT.md`](../P7-REFRESH-REPORT.md).
+
 ### Auth token as a secret
 
 `MOEDEX_AUTH_TOKEN` lives in `/etc/moedex/moedex-serve.env` (mode `0640`,
@@ -177,9 +207,6 @@ require `Authorization: Bearer <token>`; `/healthz` and `/metrics` stay open.
 the unconditional loopback bind are already in `cmd/moedex-serve`). For stronger
 secret handling, swap `EnvironmentFile=` for a systemd credential
 (`LoadCredential=` / `systemd-creds`) on hosts that support it.
-
-> The plan described `MOEDEX_AUTH_TOKEN` as "not yet consumed." That is now
-> **stale** — the auth lane has landed and the daemon reads it. No deferral.
 
 ### Cron alternative to the timer
 
