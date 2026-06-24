@@ -17,7 +17,7 @@ WORK       ?= $(CURDIR)/.parity-work
 
 GOBIN := $(shell go env GOPATH)/bin
 
-.PHONY: verify parity setup build vet test roundtrip health clean build-dense test-dense
+.PHONY: verify parity setup build vet test roundtrip health clean build-dense test-dense build-simd vet-simd bench-setops
 
 ## verify: master gate — everything must pass for DoD.
 verify: health roundtrip parity
@@ -75,6 +75,30 @@ build-dense:
 test-dense:
 	@echo "=== go test -tags onnx ./internal/embed/ ==="
 	go test -tags onnx ./internal/embed/ -count=1
+
+## build-simd: cross-build the whole tree with the optional native AVX2 set-ops
+## kernel (internal/setops). amd64-only — the kernel uses the experimental
+## simd/archsimd intrinsics, reachable only under GOEXPERIMENT=simd. The default
+## `make build` stays pure Go on every arch (the kernel falls back to goIntersect
+## anywhere this triple isn't satisfied), and go.mod is untouched (archsimd ships
+## with the toolchain, it is not a module dependency).
+build-simd:
+	@echo "=== GOEXPERIMENT=simd GOARCH=amd64 go build -tags moedex_simd ./... ==="
+	GOEXPERIMENT=simd GOOS=$(shell go env GOOS) GOARCH=amd64 go build -tags moedex_simd ./...
+	@echo "built (amd64). The native kernel runs only on an amd64 CPU with AVX2."
+
+## vet-simd: type-check the build-tagged SIMD kernel + its differential test
+## without an amd64 host (cross-compile the test binary). Proves the archsimd
+## code compiles. Running it requires an amd64 CPU (or Rosetta on Apple Silicon).
+vet-simd:
+	@echo "=== cross-compile SIMD test binary (linux/amd64) ==="
+	GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 go test -tags moedex_simd -c -o /dev/null ./internal/setops/
+	@echo "SIMD kernel + differential test compile OK (amd64)."
+
+## bench-setops: pure-Go set-ops benchmarks on the host arch (the always-built
+## baseline the amd64 SIMD kernel is compared against).
+bench-setops:
+	go test ./internal/setops/ -run '^$$' -bench 'BenchmarkIntersect|BenchmarkUnion' -benchmem -count=2
 
 clean:
 	rm -f test.log moedex-serve-dense
