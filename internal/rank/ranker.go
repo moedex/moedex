@@ -21,6 +21,18 @@ type Config struct {
 	RRFk     float64 // Reciprocal Rank Fusion constant (default 60)
 	MaxSpans int     // cap on LineSpans emitted per result (default 8)
 
+	// Fusion selects how the per-arm signals become a result's final Score. The
+	// zero value (FusionRRF) is the historical pure-RRF behavior — a byte-identical
+	// no-op relative to the pre-reranker code path. FusionLinear re-scores each
+	// fused candidate with an installed LinearReranker (SetReranker) over its
+	// FeatureVector; it falls back to RRF per candidate when no model is installed,
+	// so selecting the mode without a model can never produce all-zero scores. This
+	// is the OPTIONAL learned-reranker fusion mode (research/learned-reranker.md);
+	// it is post-fusion and recall-preserving (no candidate is dropped), so the
+	// ripgrep parity invariant — which lives in internal/parity and internal/search
+	// and never passes through rank — is structurally unaffected.
+	Fusion Fusion
+
 	// SymbolMinCoverage gates the symbol-name arm: a symbol contributes to a
 	// blob's arm score only when it matches at least this fraction of the query's
 	// DISTINCT terms. It stops a single coincidental subtoken match from casting a
@@ -138,9 +150,10 @@ func (c Config) withDefaults() Config {
 type Ranker struct {
 	ix    *index.Index
 	ti    *tokenindex.TokenIndex
-	store *embed.Store   // optional; nil disables the dense arm
-	emb   embed.Embedder // optional; nil disables the dense arm
-	syms  *symbol.Index  // optional; nil disables the symbol-name arm
+	store *embed.Store    // optional; nil disables the dense arm
+	emb   embed.Embedder  // optional; nil disables the dense arm
+	syms  *symbol.Index   // optional; nil disables the symbol-name arm
+	rr    *LinearReranker // optional; nil keeps pure RRF even when Fusion==FusionLinear
 	cfg   Config
 
 	// pathPostings is a small inverted index from a path token to the blobs whose
@@ -210,13 +223,35 @@ func (r *Ranker) SetDense(store *embed.Store, emb embed.Embedder) {
 	r.emb = emb
 }
 
+// SetReranker installs (or clears, when m is nil) the optional learned reranker
+// used by FusionLinear. With no reranker installed, FusionLinear falls back to RRF
+// per candidate, so the mode is safe to select before a model is trained. Symmetric
+// with SetSymbols/SetDense; lets a caller A/B RRF vs learned on one ranker.
+func (r *Ranker) SetReranker(m *LinearReranker) { r.rr = m }
+
+// SetFusion sets the fusion mode in place (without reconstructing the ranker).
+func (r *Ranker) SetFusion(f Fusion) { r.cfg.Fusion = f }
+
 // UseTokenCandidates switches lexical candidate generation to the token index
 // (see Ranker.tokenCandidates). Required for the corpus ranker, whose index has
 // no positional postings.
 func (r *Ranker) UseTokenCandidates(v bool) { r.tokenCandidates = v }
 
-// Rank scores query and returns up to topK results, best fused score first.
-func (r *Ranker) Rank(ctx context.Context, q string, topK int) ([]RankedResult, error) {
+// candidate is one fused blob: its FeatureVector (the per-arm signals captured at
+// fusion time) plus the salient spans. Both Rank and Features build candidates via
+// the SAME fuse() path, so the features a model is TRAINED on are byte-for-byte the
+// features it SCORES at inference — no divergence between train and serve.
+type candidate struct {
+	blob  uint64
+	feat  FeatureVector
+	spans []LineSpan
+}
+
+// fuse runs the four arms and aggregates them into per-blob candidates. It captures
+// the RRF score AND every per-arm raw score/rank into each candidate's
+// FeatureVector. RRF itself only needs feat.RRFScore; the extra fields are inert
+// under FusionRRF and feed the learned reranker under FusionLinear.
+func (r *Ranker) fuse(ctx context.Context, q string) ([]candidate, error) {
 	terms := tokenindex.Tokenize([]byte(q))
 
 	lex := r.lexicalArm(terms) // sorted desc by BM25
@@ -230,30 +265,29 @@ func (r *Ranker) Rank(ctx context.Context, q string, topK int) ([]RankedResult, 
 	sym := r.symbolArm(terms) // sorted desc by symbol-name match (nil if no arm)
 	path := r.pathArm(terms)  // sorted desc by filename/path match (nil if disabled)
 
-	// Reciprocal Rank Fusion: each arm contributes 1/(k+rank) at a blob's rank.
 	type agg struct {
-		blob    uint64
-		rrf     float64
-		lexical float64
-		dense   float64
-		hasLex  bool
+		blob  uint64
+		feat  FeatureVector
+		spans []LineSpan
 	}
 	byBlob := map[uint64]*agg{}
+	order := make([]uint64, 0) // first-seen order, so Rank's result-assembly order is stable
 	get := func(blob uint64) *agg {
 		a := byBlob[blob]
 		if a == nil {
 			a = &agg{blob: blob}
 			byBlob[blob] = a
+			order = append(order, blob)
 		}
 		return a
 	}
+
 	for i, s := range lex {
 		a := get(s.blob)
-		a.rrf += 1.0 / (r.cfg.RRFk + float64(i+1))
-		a.lexical = s.score
-		a.hasLex = true
+		a.feat.RRFScore += 1.0 / (r.cfg.RRFk + float64(i+1))
+		a.feat.BM25 = s.score
+		a.feat.LexRank = i + 1
 	}
-	denseSpan := map[uint64][]LineSpan{}
 	for i, s := range dense {
 		// Dense confidence gate: a too-weak cosine is noise (it displaces correct hits
 		// on keyword queries) so it does not vote. A non-positive DenseMinScore leaves
@@ -262,45 +296,71 @@ func (r *Ranker) Rank(ctx context.Context, q string, topK int) ([]RankedResult, 
 			continue
 		}
 		a := get(s.blob)
-		a.rrf += 1.0 / (r.cfg.RRFk + float64(i+1))
-		if s.score > a.dense {
-			a.dense = s.score
+		// RRF vote uses i+1 (the chunk's position in the score-sorted arm), exactly as
+		// before — the rank feature mirrors that same position so the feature and the
+		// RRF contribution agree, and the default RRF path is byte-identical.
+		a.feat.RRFScore += 1.0 / (r.cfg.RRFk + float64(i+1))
+		if s.score > a.feat.DenseCosine {
+			a.feat.DenseCosine = s.score
 		}
-		denseSpan[s.blob] = append(denseSpan[s.blob], s.span)
+		if a.feat.DenseRank == AbsentRank {
+			a.feat.DenseRank = i + 1
+		}
+		a.spans = append(a.spans, s.span)
 	}
-	// Third RRF arm: a blob whose symbol NAME matches the query is a strong
-	// signal. It folds into the same per-blob rrf aggregate as lexical/dense
-	// (1/(k+rank)); the symbol's name line seeds context assembly. There is no
-	// new RankedResult field — the contribution lives entirely in Score.
-	symSpan := map[uint64][]LineSpan{}
 	for i, s := range sym {
 		a := get(s.blob)
-		a.rrf += 1.0 / (r.cfg.RRFk + float64(i+1))
-		symSpan[s.blob] = append(symSpan[s.blob], s.span)
+		a.feat.RRFScore += 1.0 / (r.cfg.RRFk + float64(i+1))
+		a.feat.SymbolCoverage = s.score
+		a.feat.SymRank = i + 1
+		a.spans = append(a.spans, s.span)
 	}
-	// Fourth RRF arm: a blob whose file PATH matches the query (the zoekt-style
-	// filename signal). Folds into the same per-blob rrf aggregate; its span is the
-	// file head so a path-only hit still carries context.
-	pathSpan := map[uint64][]LineSpan{}
 	for i, s := range path {
 		a := get(s.blob)
-		a.rrf += 1.0 / (r.cfg.RRFk + float64(i+1))
-		pathSpan[s.blob] = append(pathSpan[s.blob], s.span)
+		a.feat.RRFScore += 1.0 / (r.cfg.RRFk + float64(i+1))
+		a.feat.PathCoverage = s.score
+		a.feat.PathRank = i + 1
+		a.spans = append(a.spans, s.span)
 	}
 
-	results := make([]RankedResult, 0, len(byBlob))
-	for blob, a := range byBlob {
-		b := r.ix.Blob(blob)
+	out := make([]candidate, 0, len(order))
+	for _, blob := range order {
+		a := byBlob[blob]
+		out = append(out, candidate{blob: blob, feat: a.feat, spans: a.spans})
+	}
+	return out, nil
+}
+
+// score turns a candidate's features into its final Score per the active fusion
+// mode. Under FusionRRF (the default) it is exactly the RRF aggregate; under
+// FusionLinear with a valid model it is the learned re-score; FusionLinear with no
+// valid model falls back to RRF.
+func (r *Ranker) score(feat FeatureVector) float64 {
+	if r.cfg.Fusion == FusionLinear && r.rr.Valid() {
+		return r.rr.Score(feat, r.cfg.RRFk)
+	}
+	return feat.RRFScore
+}
+
+// Rank scores query and returns up to topK results, best fused score first.
+func (r *Ranker) Rank(ctx context.Context, q string, topK int) ([]RankedResult, error) {
+	terms := tokenindex.Tokenize([]byte(q))
+	cands, err := r.fuse(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]RankedResult, 0, len(cands))
+	for _, c := range cands {
+		b := r.ix.Blob(c.blob)
 		spans := r.lexicalSpans(b, terms)
-		spans = append(spans, denseSpan[blob]...)
-		spans = append(spans, symSpan[blob]...)
-		spans = append(spans, pathSpan[blob]...)
+		spans = append(spans, c.spans...)
 		results = append(results, RankedResult{
-			Blob:      blob,
+			Blob:      c.blob,
 			Files:     b.Files,
-			Score:     a.rrf,
-			Lexical:   a.lexical,
-			Dense:     a.dense,
+			Score:     r.score(c.feat),
+			Lexical:   c.feat.BM25,
+			Dense:     c.feat.DenseCosine,
 			LineSpans: mergeSpans(spans, r.cfg.MaxSpans),
 		})
 	}
@@ -315,6 +375,27 @@ func (r *Ranker) Rank(ctx context.Context, q string, topK int) ([]RankedResult, 
 	}
 	return results, nil
 }
+
+// Features runs the four arms for q and returns the per-candidate FeatureVector
+// keyed by blob, WITHOUT applying any fusion mode. It is the training/analysis
+// entry point: the eval extracts these to build labeled rows, guaranteeing the
+// trained model sees exactly the features Rank scores. Ordering follows fuse()'s
+// first-seen order.
+func (r *Ranker) Features(ctx context.Context, q string) ([]BlobFeatures, error) {
+	cands, err := r.fuse(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]BlobFeatures, 0, len(cands))
+	for _, c := range cands {
+		out = append(out, BlobFeatures{Blob: c.blob, Files: r.ix.Blob(c.blob).Files, Feat: c.feat})
+	}
+	return out, nil
+}
+
+// RRFk exposes the configured RRF constant so callers extracting Features can flatten
+// the per-arm rank features on the same scale the ranker uses (FeatureVector.Slice).
+func (r *Ranker) RRFk() float64 { return r.cfg.RRFk }
 
 type lexScore struct {
 	blob  uint64
