@@ -32,6 +32,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"sync"
@@ -139,13 +140,37 @@ func (e *ONNXEmbedder) Embed(ctx context.Context, texts []string) ([]Vector, err
 		return nil, err
 	}
 
-	inputs := make([]tokenizer.EncodeInput, len(texts))
+	// Tokenize each input sequentially rather than via EncodeBatch. EncodeBatch
+	// tokenizes in concurrent goroutines, and the byte-level pre-tokenizer in the
+	// forked tokenizer can PANIC on certain real source chunks (an
+	// index-out-of-range in normalizer.TransformRange). A panic in a goroutine
+	// EncodeBatch spawns is unrecoverable and crashes the whole process mid-build /
+	// mid-query. Running each Encode in our own goroutine lets us recover a bad
+	// chunk and substitute an empty encoding — which mean-pools to a zero vector, so
+	// that chunk simply carries no dense signal — instead of taking the build or the
+	// daemon down. We must return one vector per input, so a failed chunk yields a
+	// placeholder, never a gap.
+	encs := make([]tokenizer.Encoding, len(texts))
+	skipped := 0
+	var firstBad string
 	for i, s := range texts {
-		inputs[i] = tokenizer.NewSingleEncodeInput(tokenizer.NewRawInputSequence(s))
+		enc, perr := encodeRecover(&e.tk, s)
+		if perr != nil {
+			if skipped == 0 {
+				firstBad = s
+			}
+			skipped++
+			continue // leave encs[i] as the zero Encoding (empty -> zero vector)
+		}
+		encs[i] = *enc
 	}
-	encs, err := e.tk.EncodeBatch(inputs, true)
-	if err != nil {
-		return nil, fmt.Errorf("embed/onnx: tokenize: %w", err)
+	if skipped > 0 {
+		sample := firstBad
+		if len(sample) > 80 {
+			sample = sample[:80]
+		}
+		log.Printf("embed/onnx: %d/%d chunks panicked in the byte-level tokenizer; "+
+			"substituting empty embeddings. first sample: %q", skipped, len(texts), sample)
 	}
 
 	// Pad/truncate every encoding to a common sequence length so the batch is a
@@ -218,6 +243,20 @@ func (e *ONNXEmbedder) Embed(ctx context.Context, texts []string) ([]Vector, err
 		out[b] = meanPool(hidden, mask, b, seqLen, e.dim)
 	}
 	return out, nil
+}
+
+// encodeRecover runs a single Encode, converting a tokenizer PANIC into an error.
+// The forked byte-level pre-tokenizer indexes out of range on some inputs; because
+// Encode runs synchronously in the caller's goroutine (unlike EncodeBatch's
+// workers), a deferred recover here contains the panic so the caller can fall back
+// to an empty encoding rather than crashing the process.
+func encodeRecover(tk *tokenizer.Tokenizer, s string) (enc *tokenizer.Encoding, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			enc, err = nil, fmt.Errorf("tokenizer panic: %v", r)
+		}
+	}()
+	return tk.Encode(tokenizer.NewSingleEncodeInput(tokenizer.NewRawInputSequence(s)), true)
 }
 
 // meanPool computes the attention-masked mean of token embeddings for batch item
