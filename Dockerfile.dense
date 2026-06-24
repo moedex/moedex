@@ -1,0 +1,87 @@
+# moedex dense image (optional in-process ONNX embedder).
+#
+# Mirrors `make build-dense` (`go build -tags onnx -o ... ./cmd/moedex-serve`)
+# but with an explicit -o path, and bundles the ONNX Runtime Linux x64 shared
+# library so the binding can dlopen it at run time. The dense arm is -mcp only
+# (see the moedex-serve package doc + README), so the default CMD is the
+# -mcp -embed onnx path. Lexical/symbol/path retrieval still works without ONNX;
+# this image is only needed when you want the in-process dense embedder.
+#
+# Build:
+#   docker build -f Dockerfile.dense -t moedex-serve-dense .
+#   docker build -f Dockerfile.dense --build-arg ONNXRUNTIME_VERSION=1.21.0 -t moedex-serve-dense .
+#
+# Run (dense -mcp over stdio; shard dir MUST be writable — the embedder persists
+# corpus-embeddings.store / its cache next to the shards):
+#   docker run --rm -i \
+#     -v /srv/moedex/shards:/shards \
+#     moedex-serve-dense
+#
+# UNCERTAINTY (validate on a Linux host): ONNX Runtime version 1.21.0 is paired
+# here with the yalue/onnxruntime_go v1.21.0 binding from go.mod; confirm the
+# release-asset path/layout below still matches that tag on the deploy host.
+
+# --- builder ---------------------------------------------------------------
+FROM golang:1.26-bookworm AS build
+WORKDIR /src
+
+ENV GOTOOLCHAIN=local
+# Try CGO_ENABLED=0 first: the yalue/onnxruntime_go binding dlopens the runtime
+# at run time, not at link time, so a CGO-free build is expected to work.
+# If a Linux dense build fails (e.g. the binding requires cgo for symbol stubs),
+# rebuild with CGO_ENABLED=1 and install a C toolchain (gcc/g++) in this stage.
+ENV CGO_ENABLED=0
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+# -tags onnx mirrors `make build-dense` semantics, with an explicit -o path.
+RUN go build -trimpath -tags onnx -o /out/moedex-serve-dense ./cmd/moedex-serve
+
+# --- onnx runtime fetch ----------------------------------------------------
+# Download + extract libonnxruntime.so* from the official microsoft/onnxruntime
+# GitHub release tarball (Linux x64) for the requested version.
+FROM debian:12-slim AS onnxrt
+ARG ONNXRUNTIME_VERSION=1.21.0
+ARG TARGETARCH=amd64
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl ca-certificates tar \
+ && rm -rf /var/lib/apt/lists/*
+RUN set -eux; \
+    case "${TARGETARCH}" in \
+      amd64) ORT_ARCH=x64 ;; \
+      arm64) ORT_ARCH=aarch64 ;; \
+      *) echo "unsupported TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; \
+    esac; \
+    url="https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/onnxruntime-linux-${ORT_ARCH}-${ONNXRUNTIME_VERSION}.tgz"; \
+    curl -fsSL "$url" -o /tmp/ort.tgz; \
+    mkdir -p /opt/ort; \
+    tar -xzf /tmp/ort.tgz -C /opt/ort --strip-components=1; \
+    mkdir -p /out/lib; \
+    cp -av /opt/ort/lib/libonnxruntime.so* /out/lib/
+
+# --- runtime ---------------------------------------------------------------
+# debian:12-slim (glibc) hosts libonnxruntime.so — alpine's musl cannot.
+FROM debian:12-slim
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && groupadd -r moedex && useradd -r -g moedex moedex
+
+COPY --from=build   /out/moedex-serve-dense /usr/local/bin/moedex-serve-dense
+COPY --from=onnxrt  /out/lib/               /usr/local/lib/
+RUN ldconfig
+
+# The binding reads ONNXRUNTIME_LIB_PATH (also the -onnx-runtime flag default).
+ENV ONNXRUNTIME_LIB_PATH=/usr/local/lib/libonnxruntime.so
+ENV MOEDEX_SHARD_DIR=/shards
+
+USER moedex
+
+# Dense arm is -mcp only. -embed onnx selects the in-process embedder; building
+# it embeds the whole corpus at boot and persists the cache next to the shards,
+# so the shard dir must be mounted :rw (not :ro).
+ENTRYPOINT ["moedex-serve-dense"]
+CMD ["-shard-dir", "/shards", "-mcp", "-embed", "onnx"]

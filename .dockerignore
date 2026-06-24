@@ -1,0 +1,40 @@
+# Keep the Docker build context small. go.mod/go.sum + the Go source are all the
+# builder needs; everything below is irrelevant to a build and/or large.
+
+# VCS
+.git
+.gitignore
+
+# Built daemon binaries. These are gitignored (see .gitignore) and never
+# committed. The working tree may hold a large UNTRACKED build artifact named
+# `moedex-serve` (~10-100 MB depending on build) — exclude it so it never
+# bloats the context or shadows the freshly-built binary.
+/moedex-serve
+/moedex-serve-dense
+/moedex-index
+
+# Parity harness scratch dirs (one per latency run; large).
+.parity-work
+.parity-work-*
+
+# Generated latency/parity reports and CSVs.
+*.csv
+*-REPORT.md
+PARITY-REPORT.md
+
+# Research notes (not needed to build).
+research/
+
+# Local logs and editor cruft.
+test.log
+*.log
+.DS_Store
+.idea/
+.vscode/
+
+# Deploy + CI infra (not needed inside the image).
+deploy/
+.gitlab-ci.yml
+Dockerfile
+Dockerfile.dense
+.dockerignore

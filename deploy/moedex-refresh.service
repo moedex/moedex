@@ -1,0 +1,58 @@
+# moedex-refresh — rebuild the shard set from the corpus and signal the live
+# daemon to hot-reload. Driven by moedex-refresh.timer (or run on demand:
+# `sudo systemctl start moedex-refresh`).
+#
+# moedex-index refresh does an atomic directory swap (build a fresh shard dir,
+# then rename it into place), so this unit needs WRITE access to BOTH the shard
+# dir and its PARENT (rename writes the parent directory entry).
+#
+# Install:
+#   sudo install -m 0644 deploy/moedex-refresh.service /etc/systemd/system/
+#   sudo install -m 0644 deploy/moedex-refresh.timer   /etc/systemd/system/
+#   sudo install -m 0755 moedex-index /usr/local/bin/moedex-index
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now moedex-refresh.timer
+
+[Unit]
+Description=moedex shard refresh (atomic rebuild + hot reload)
+Documentation=https://gitlab.tcdevops.com/Zak/moedex
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=moedex
+Group=moedex
+
+# Reuses the daemon's EnvironmentFile for MOEDEX_SHARD_DIR (and MOEDEX_CORPUS if
+# you set it there; otherwise refresh defaults the corpus root to the manifest's
+# recorded Root).
+EnvironmentFile=/etc/moedex/moedex-serve.env
+
+# refresh -shard-dir DIR  (corpus root defaults to the manifest's Root).
+ExecStart=/usr/local/bin/moedex-index refresh -shard-dir ${MOEDEX_SHARD_DIR}
+
+# After a successful refresh, tell the running daemon to hot-reload the new
+# shards. `|| true` keeps the timer green if the daemon happens to be down.
+ExecStartPost=/bin/sh -c '/bin/systemctl reload moedex-serve.service || true'
+
+# --- Hardening -------------------------------------------------------------
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# refresh rewrites shards via an atomic rename, which needs write on the shard
+# dir AND its parent. Adjust both if you change MOEDEX_SHARD_DIR.
+ReadWritePaths=/srv/moedex/shards /srv/moedex

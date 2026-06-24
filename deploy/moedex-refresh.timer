@@ -1,0 +1,21 @@
+# Schedule for moedex-refresh.service. Hourly by default; Persistent=true so a
+# missed run (host asleep/down) fires on next boot.
+#
+# Enable:
+#   sudo systemctl enable --now moedex-refresh.timer
+# Inspect:
+#   systemctl list-timers moedex-refresh.timer
+
+[Unit]
+Description=Hourly moedex shard refresh
+Documentation=https://gitlab.tcdevops.com/Zak/moedex
+
+[Timer]
+OnCalendar=hourly
+# Spread load off the exact top-of-hour and survive missed runs.
+RandomizedDelaySec=120
+Persistent=true
+Unit=moedex-refresh.service
+
+[Install]
+WantedBy=timers.target
