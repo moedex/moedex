@@ -149,13 +149,18 @@ package eval
 // judges and reconciled; the CF and non-aligned labels are single-judge
 // pooled+read-verified. This set GATES (see TestCorpusGoldGate): the lexical-only
 // baseline and the full production stack (lexical+path+symbol) must clear
-// regression thresholds set below the measured baseline. Absolute numbers still
-// come from a small (~36-query) pooled set, so treat them as a regression watch
-// with a defensible floor, not a published claim.
+// regression thresholds set below the measured baseline. Absolute numbers come
+// from an 82-query pooled set (P8-expanded from 36), so treat them as a regression
+// watch with a defensible floor, not a published claim.
 
 // CorpusGold returns the pooled multi-language gold set used by the regression
-// gate and the headline measurements: ~36 ANSWERABLE queries — ~10 C#, ~8
-// TypeScript, ~6 SQL, ~6 ColdFusion, + 6 NON-FILENAME-ALIGNED (corpusGoldNonAligned).
+// gate and the headline measurements: 82 ANSWERABLE queries (P8-expanded from 36)
+// — 26 C#, 18 TypeScript, 11 SQL, 6 ColdFusion filename-aligned, 6
+// NON-FILENAME-ALIGNED (corpusGoldNonAligned), + 15 ColdFusion library UDFs
+// (corpusGoldCFLibrary). The expansion deliberately weighted the harder,
+// non-filename-aligned half (symbol/dense territory), correcting the 36-query set's
+// filename-aligned sampling bias; absolute scores dropped accordingly (see
+// TestCorpusGoldGate's four-arm note) but the set is more representative.
 //
 // It deliberately EXCLUDES the synonym-gap / agent-style stratum
 // (corpusGoldAgentNL): those queries are answerable only by a semantic/dense match,
@@ -170,6 +175,7 @@ func CorpusGold() []GoldQuery {
 	gold = append(gold, corpusGoldSQL()...)
 	gold = append(gold, corpusGoldColdFusion()...)
 	gold = append(gold, corpusGoldNonAligned()...)
+	gold = append(gold, corpusGoldCFLibrary()...)
 	return gold
 }
 
@@ -268,6 +274,84 @@ func corpusGoldCSharp() []GoldQuery {
 			"src/TC.SslApi.Models/Vendor/OrderStatus.cs":    1,
 			"src/TC.SslApi.Models/Dtos/CheckOrderStatus.cs": 1,
 		}},
+		// "rsa key pair generation": src/TC.SslApi.Service/CsrHelper.cs: GenerateKeyPair — private static AsymmetricCipherKeyPair GenerateKeyPair() builds an RsaKeyPairGenerator with 2048-bit KeyGenerationParameters and returns the generated key pair; only definition in the indexed subset
+		{Query: "rsa key pair generation", Relevant: map[string]int{
+			"src/TC.SslApi.Service/CsrHelper.cs": 2, // GenerateKeyPair
+		}},
+		// "parse certificate subject": src/TC.SslApi.Service/CsrHelper.cs: ParseX509Name — public static Csr ParseX509Name(X509Name) regex-parses the X509 subject DN (CN/OU/O/C/ST/L) into a Csr; paired with ParseCsr (line 72) which reads the PEM and calls it. Unique to CsrHelper.
+		{Query: "parse certificate subject", Relevant: map[string]int{
+			"src/TC.SslApi.Service/CsrHelper.cs": 2, // ParseX509Name
+		}},
+		// "product retail price calculation": src/TC.SslApi.Service/SslService.cs: GetProductRetailPrice — public decimal GetProductRetailPrice(decimal wholesalePrice) implements the markup formula (wholesale*1.3 rounded to .x5) - the only implementation
+		{Query: "product retail price calculation", Relevant: map[string]int{
+			"src/TC.SslApi.Service/SslService.cs":  2, // GetProductRetailPrice
+			"src/TC.SslApi.Service/ISslService.cs": 1, // GetProductRetailPrice
+		}},
+		// "check website ssl valid": src/TC.SslApi.Service/SslCheckerHttpClient.cs: CheckValidSsl — public async Task<bool> CheckValidSsl(string url) - issues an HTTPS GET with a browser UA and returns true only if it succeeds; the SSL-reachability checker implementation
+		{Query: "check website ssl valid", Relevant: map[string]int{
+			"src/TC.SslApi.Service/SslCheckerHttpClient.cs":  2, // CheckValidSsl
+			"src/TC.SslApi.Service/ISslCheckerHttpClient.cs": 1, // CheckValidSsl
+		}},
+		// "load products job": src/TC.SslJobs/Jobs/LoadProductsJob.cs: LoadProductsJob — public class LoadProductsJob : Job whose ExecuteAsync calls _sslService.LoadProducts(); the scheduled job class
+		{Query: "load products job", Relevant: map[string]int{
+			"src/TC.SslJobs/Jobs/LoadProductsJob.cs": 2, // LoadProductsJob
+			"src/TC.SslApi.Service/SslService.cs":    1, // LoadProducts
+		}},
+		// "sync expiration date job": src/TC.SslJobs/Jobs/SyncExpirationDateJob.cs: SyncExpirationDateJob — public class SyncExpirationDateJob : Job; ExecuteAsync calls _sslService.SyncAllOrderExpirationDates()
+		{Query: "sync expiration date job", Relevant: map[string]int{
+			"src/TC.SslJobs/Jobs/SyncExpirationDateJob.cs": 2, // SyncExpirationDateJob
+			"src/TC.SslApi.Service/SslService.cs":          1, // SyncAllOrderExpirationDates
+		}},
+		// "ssl monitor scheduled job": src/TC.SslJobs/Jobs/SslMonitorJob.cs: SslMonitorJob — public class SslMonitorJob : Job; ExecuteAsync calls _sslService.CheckAllSslMonitors() - the monitor-running job
+		{Query: "ssl monitor scheduled job", Relevant: map[string]int{
+			"src/TC.SslJobs/Jobs/SslMonitorJob.cs": 2, // SslMonitorJob
+			"src/TC.SslApi.Service/SslService.cs":  1, // CheckAllSslMonitors
+		}},
+		// "check all ssl monitors": src/TC.SslApi.Service/SslService.cs: CheckAllSslMonitors — public async Task CheckAllSslMonitors() loads all OrderMonitorItems, runs CheckValidSsl on each, and publishes SslMonitorTestFailed when invalid - the implementation
+		{Query: "check all ssl monitors", Relevant: map[string]int{
+			"src/TC.SslApi.Service/SslService.cs":  2, // CheckAllSslMonitors
+			"src/TC.SslJobs/Jobs/SslMonitorJob.cs": 1, // CheckAllSslMonitors
+			"src/TC.SslApi.Service/ISslService.cs": 1, // CheckAllSslMonitors
+		}},
+		// "apply order sort direction": src/TC.SslApi.Service/Data/SslDataRepository.cs: ApplySort — public IQueryable<SslOrderItem> ApplySort(query, SslSort sort, ListSortDirection) - the switch that maps each SslSort enum value to an OrderBy/OrderByDescending; only definition
+		{Query: "apply order sort direction", Relevant: map[string]int{
+			"src/TC.SslApi.Service/Data/SslDataRepository.cs": 2, // ApplySort
+			"src/TC.SslApi.Service/Models/SslSort.cs":         1, // SslSort
+		}},
+		// "ssl monitor test failed event": src/TC.SslApi.Models/Events/SslMonitorTestFailed.cs: SslMonitorTestFailed — [TcServiceBusEvent] public class SslMonitorTestFailed - the service-bus event DTO (Domain/TestUrl/EmailNotifications/TestFailureTimeUTC)
+		{Query: "ssl monitor test failed event", Relevant: map[string]int{
+			"src/TC.SslApi.Models/Events/SslMonitorTestFailed.cs": 2, // SslMonitorTestFailed
+			"src/TC.SslApi.Service/SslService.cs":                 1, // SslMonitorTestFailed
+		}},
+		// "ssl order approved event": src/TC.SslApi.Models/Events/SslOrderApproved.cs: SslOrderApproved — [TcServiceBusEvent] public class SslOrderApproved - event published when a certificate order becomes active (AccountId/SslOrderId/Domain)
+		{Query: "ssl order approved event", Relevant: map[string]int{
+			"src/TC.SslApi.Models/Events/SslOrderApproved.cs": 2, // SslOrderApproved
+			"src/TC.SslApi.Service/SslService.cs":             1, // SslOrderApproved
+		}},
+		// "thesslstore vendor integration": src/TC.SslApi.Service/Vendors/TheSslStore/TheSslStoreVendor.cs: TheSslStoreVendor — public class TheSslStoreVendor : ISslVendor - the concrete TheSSLStore.com API integration implementing every vendor operation (NewOrder/OrderStatus/RefundRequest/...)
+		{Query: "thesslstore vendor integration", Relevant: map[string]int{
+			"src/TC.SslApi.Service/Vendors/TheSslStore/TheSslStoreVendor.cs": 2, // TheSslStoreVendor
+			"src/TC.SslApi.Service/ISslVendor.cs":                            1, // ISslVendor
+		}},
+		// "vendor api request authentication": src/TC.SslApi.Service/Vendors/TheSslStore/SslStoreHttpClient.cs: AddAuthentication — private void AddAuthentication<T>(T request) injects SslStoreAuth (AuthToken + PartnerCode) onto each outbound request; called from SendRequest (line 22). Only the http client adds vendor auth.
+		{Query: "vendor api request authentication", Relevant: map[string]int{
+			"src/TC.SslApi.Service/Vendors/TheSslStore/SslStoreHttpClient.cs":  2, // AddAuthentication
+			"src/TC.SslApi.Service/Vendors/TheSslStore/Models/SslStoreAuth.cs": 1, // SslStoreAuth
+		}},
+		// "delete test orders": src/TC.SslApi.Service/SslService.cs: DeleteTestOrders — public async Task<int> DeleteTestOrders(DeleteTestOrders) - guards against Production then calls the repo to bulk-delete orders by account id; the business-logic definer
+		{Query: "delete test orders", Relevant: map[string]int{
+			"src/TC.SslApi.Service/SslService.cs":             2, // DeleteTestOrders
+			"src/TC.SslApi.Service/Data/SslDataRepository.cs": 1, // DeleteOrdersByAccountIds
+			"src/TC.SslApi.Models/Dtos/DeleteOrders.cs":       1, // DeleteTestOrders
+		}},
+		// "submit order validation": src/TC.SslApi.Service/Validation/SubmitOrderValidator.cs: SubmitOrderValidator — AbstractValidator with 7 RuleFor rules
+		{Query: "submit order validation", Relevant: map[string]int{
+			"src/TC.SslApi.Service/Validation/SubmitOrderValidator.cs": 2, // SubmitOrderValidator
+		}},
+		// "create new order validation": src/TC.SslApi.Service/Validation/CreateNewOrderValidator.cs: CreateNewOrderValidator — AbstractValidator with 4 RuleFor rules
+		{Query: "create new order validation", Relevant: map[string]int{
+			"src/TC.SslApi.Service/Validation/CreateNewOrderValidator.cs": 2, // CreateNewOrderValidator
+		}},
 	}
 }
 
@@ -338,6 +422,50 @@ func corpusGoldTypeScript() []GoldQuery {
 		{Query: "administration service", Relevant: map[string]int{
 			"src/app/services/administration.service.ts": 2,
 		}},
+		// "staging environment guard": src/app/admin-staging.guard.ts: AdminStagingGuard — DEFINER: CanActivate guard that allows routes only when !config.production (i.e. non-prod/staging); used to gate createAuctions & catchBackorders in app.routing.ts.
+		{Query: "staging environment guard", Relevant: map[string]int{
+			"src/app/admin-staging.guard.ts":                                       2,  // AdminStagingGuard
+			"src/app/administration-sub-menu/administration-sub-menu.component.ts": -1, // AdministrationSubMenuComponent.isProd$
+		}},
+		// "administration sub menu": src/app/administration-sub-menu/administration-sub-menu.component.ts: AdministrationSubMenuComponent — DEFINER: the 'admin-sub-menu' component; unique class, only declared/imported elsewhere in app.module.ts.
+		{Query: "administration sub menu", Relevant: map[string]int{
+			"src/app/administration-sub-menu/administration-sub-menu.component.ts": 2, // AdministrationSubMenuComponent
+		}},
+		// "edit notification item": src/app/global-notifications/global-notification-item/global-notification-item.component.ts: GlobalNotificationItemComponent.toggleEdit — DEFINER: single notification row component with edit-mode toggle (_isEditMode/toggleEdit, line 68), editForm, and submitUpdate; unique class declared once in app.module.ts.
+		{Query: "edit notification item", Relevant: map[string]int{
+			"src/app/global-notifications/global-notification-item/global-notification-item.component.ts": 2, // GlobalNotificationItemComponent.toggleEdit
+		}},
+		// "paged list interface": src/app/models/app.models.ts: IPagedList — DEFINER: generic IPagedList<T> { items; totalRecords } plus PagedResponse/PagedRequest; this models file is the sole definition; consumed by catch-backorders & administration.service.
+		{Query: "paged list interface", Relevant: map[string]int{
+			"src/app/models/app.models.ts": 2, // IPagedList
+		}},
+		// "admin configuration interface": src/app/environment/IDropCatchAdminConfiguration.ts: IDropCatchAdminConfiguration — DEFINER: the app config interface (extends IEnvironmentConfiguration/IAuthenticationConfiguration; clientId, pageSizeOptions, impersonationLink, log* fields).
+		{Query: "admin configuration interface", Relevant: map[string]int{
+			"src/app/environment/IDropCatchAdminConfiguration.ts": 2, // IDropCatchAdminConfiguration
+			"src/app/environment/DefaultConfiguration.ts":         1, // DefaultConfiguration implements IDropCatchAdminConfiguration
+		}},
+		// "environment state base": src/environments/environment-state-base.ts: EnvironmentStateBase — DEFINER: abstract base class extended by all environment.*.ts files; defines isEmptyState$/isStaticData$ and setEmptyState/setStaticData.
+		{Query: "environment state base", Relevant: map[string]int{
+			"src/environments/environment-state-base.ts": 2, // EnvironmentStateBase
+		}},
+		// "navigation menu component": src/app/nav-menu/nav-menu.component.ts: NavMenuComponent — DEFINER: the 'nav-menu' component; unique class, sole definition site for the app's navigation menu.
+		{Query: "navigation menu component", Relevant: map[string]int{
+			"src/app/nav-menu/nav-menu.component.ts": 2, // NavMenuComponent
+		}},
+		// "notification type enum": src/app/models/global-notification.ts: GlobalNotificationType — export enum GlobalNotificationType (sole definer)
+		{Query: "notification type enum", Relevant: map[string]int{
+			"src/app/models/global-notification.ts": 2, // GlobalNotificationType
+			"src/api/api.ts":                        1, // GlobalNotificationType
+		}},
+		// "environment type enum": src/environments/environment-type.ts: EnvironmentType — export enum EnvironmentType
+		{Query: "environment type enum", Relevant: map[string]int{
+			"src/environments/environment-type.ts": 2, // EnvironmentType
+		}},
+		// "default configuration class": src/app/environment/DefaultConfiguration.ts: DefaultConfiguration — class DefaultConfiguration implements IDropCatchAdminConfiguration
+		{Query: "default configuration class", Relevant: map[string]int{
+			"src/app/environment/DefaultConfiguration.ts":         2, // DefaultConfiguration
+			"src/app/environment/IDropCatchAdminConfiguration.ts": 1, // IDropCatchAdminConfiguration
+		}},
 	}
 }
 
@@ -397,6 +525,28 @@ func corpusGoldSQL() []GoldQuery {
 		// (lines 2,29). Single definer. High confidence.
 		{Query: "heartbeat table", Relevant: map[string]int{
 			"heartbeat.sql": 2,
+		}},
+		// "replication turbo button": replication/util_replication_turbo_button.sql: util_replication_turbo_button — CREATE PROCEDURE that temporarily flips innodb_flush_log_at_trx_commit=2 and sync_binlog=0 to speed replication catch-up, then restores them. Sole file mentioning innodb_flush_log_at_trx_commit/sync_binlog/turbo (grep-unique).
+		{Query: "replication turbo button", Relevant: map[string]int{
+			"replication/util_replication_turbo_button.sql": 2, // util_replication_turbo_button
+		}},
+		// "export whois text": athena/export_whois_text.sql: export_whois_text — CREATE PROCEDURE export_whois_text: cursor-driven dynamic SELECT ... INTO OUTFILE that writes whois_record_text rows to per-prefix .txt files. Sole match for the export_whois_text proc name (grep-unique).
+		{Query: "export whois text", Relevant: map[string]int{
+			"athena/export_whois_text.sql": 2, // export_whois_text
+		}},
+		// "create whois record table": athena/athena_create_table_whois_data.whois_record_text.sql: whois_record_text — CREATE EXTERNAL TABLE whois_record_text (plus CREATE DATABASE whois_data) -- the DDL that DEFINES the Athena whois table. Only file with 'CREATE EXTERNAL TABLE `whois_record_text`' (grep-unique).
+		{Query: "create whois record table", Relevant: map[string]int{
+			"athena/athena_create_table_whois_data.whois_record_text.sql": 2,  // whois_record_text
+			"athena/alter_whois_record.sql":                               -1, // ALTER TABLE whois_data.whois_record_text ADD PARTITION
+		}},
+		// "google search athena table": athena/googlesearch.athena.sql: google_search — CREATE EXTERNAL TABLE google_search (+ google_search_attribute, + CREATE DATABASE domaindatatst 'test database for google scrape data'). Sole file matching google_search/google scrape (grep-unique). Table id google_search appears only in body (filename token is 'googlesearch').
+		{Query: "google search athena table", Relevant: map[string]int{
+			"athena/googlesearch.athena.sql": 2, // google_search
+		}},
+		// "detect stopped slave gtid": replication/util_help_replication.sql: util_help_replication — NON-ALIGNED: filename says 'help' but the proc DEFINES a stopped-slave detector -- samples gtid_slave_pos twice 5s apart, compares per-slave GTIDs and reports 'SlaveN Is Not replicatiing' + computes a repaired GTID. Sole file matching gtid_slave_pos / 'Is Not replicatiing' (grep-unique).
+		{Query: "detect stopped slave gtid", Relevant: map[string]int{
+			"replication/util_help_replication.sql":              2,  // util_help_replication
+			"replication/util_replication_show_slave_status.sql": -1, // util_replication_show_slave_status
 		}},
 	}
 }
@@ -526,6 +676,81 @@ func corpusGoldNonAligned() []GoldQuery {
 			"src/TC.SslApi.Service/ISslService.cs":                                   1, // declares the contract
 			"src/TC.SslApi.Models/Vendor/SslResponseBase.cs":                         1, // ErrorMessage model
 			"src/TC.SslApi.Service/Vendors/TheSslStore/Maps/SslStoreResponseMaps.cs": 1, // vendor-specific parser
+		}},
+	}
+}
+
+// corpusGoldCFLibrary is a SYMBOL-aligned, NON-filename-aligned ColdFusion stratum
+// (2026-06-24, P8 gold expansion). Unlike corpusGoldColdFusion (small purpose-named
+// _inc/*.cfm whose FILENAME carries the concept), these definers live in the giant
+// generically-named UDF libraries _inc/act_functions{,2,3}.cfm (each thousands of
+// lines, dozens of <cffunction> UDFs). The filename reveals nothing about any one
+// function, so the path arm cannot win; the concept lives only in the <cffunction>
+// name (and its body), exercising the symbol arm (and, under -tags onnx, dense
+// chunk matching over a ~40-line window of an 8000-line file). Each grade-2 definer
+// was READ and grep-confirmed defined in EXACTLY ONE _inc file. RelPaths are
+// repo-relative (_inc/*.cfm), disjoint from the C#/TS/SQL shapes.
+func corpusGoldCFLibrary() []GoldQuery {
+	return []GoldQuery{
+		// "parse phone country dialing code": _inc/act_functions2.cfm: parsePhoneNumber — Splits a full phone string into international country dialing code (e.g. +44) and national number using a country-codes lookup query.
+		{Query: "parse phone country dialing code", Relevant: map[string]int{
+			"_inc/act_functions2.cfm": 2, // parsePhoneNumber
+		}},
+		// "credit card BIN lookup": _inc/act_functions2.cfm: apiBinlist — Looks up bank/card metadata for a 6-digit card BIN (bank identification number) from a binlist cache/API.
+		{Query: "credit card BIN lookup", Relevant: map[string]int{
+			"_inc/act_functions2.cfm": 2, // apiBinlist
+		}},
+		// "disposable email validation api": _inc/act_functions2.cfm: doMailboxLayerApi — Validates an email address via the MailboxLayer (apilayer.net) API and records free/disposable-domain status, caching for 30 days.
+		{Query: "disposable email validation api", Relevant: map[string]int{
+			"_inc/act_functions2.cfm": 2, // doMailboxLayerApi
+		}},
+		// "ordinal number suffix st nd rd th": _inc/act_functions2.cfm: numberStNdRdTh — Returns an integer with its ordinal suffix (1st, 2nd, 3rd, 4th, 21st...).
+		{Query: "ordinal number suffix st nd rd th", Relevant: map[string]int{
+			"_inc/act_functions2.cfm": 2, // numberStNdRdTh
+		}},
+		// "detect po box and free email": _inc/act_functions2.cfm: isPoBoxAndFree — Returns 1 if a customer's billing address matches PO-box patterns AND their email domain is flagged free/disposable.
+		{Query: "detect po box and free email", Relevant: map[string]int{
+			"_inc/act_functions2.cfm": 2, // isPoBoxAndFree
+		}},
+		// "kount fraud score for order": _inc/act_functions2.cfm: getKountScore — Retrieves the Kount fraud-risk score for an order, joining live/refunded orders against kountScore tables.
+		{Query: "kount fraud score for order", Relevant: map[string]int{
+			"_inc/act_functions2.cfm": 2, // getKountScore
+		}},
+		// "clear bounced email suppression list": _inc/act_functions2.cfm: removeSendGridBouncedEmail — Removes an email from SendGrid v3 suppression endpoints (bounces, blocks, invalid_emails, spam_reports) so it can be mailed again.
+		{Query: "clear bounced email suppression list", Relevant: map[string]int{
+			"_inc/act_functions2.cfm": 2, // removeSendGridBouncedEmail
+		}},
+		// "round number down to nearest five": _inc/act_functions3.cfm: roundDownFive — Rounds a numeric input down to the nearest multiple of five via int(num/5)*5.
+		{Query: "round number down to nearest five", Relevant: map[string]int{
+			"_inc/act_functions3.cfm": 2, // roundDownFive
+		}},
+		// "split domain name into words": _inc/act_functions3.cfm: camelCaseDomain — Calls the domain-splitter API to break a domain into camel-cased component words (e.g. tacoburrito.com -> TacoBurrito).
+		{Query: "split domain name into words", Relevant: map[string]int{
+			"_inc/act_functions3.cfm": 2, // camelCaseDomain
+		}},
+		// "phone area code location lookup": _inc/act_functions.cfm: showAreaCodeLocation — Resolves the geographic location/region for a phone area code, stripping non-numeric input first.
+		{Query: "phone area code location lookup", Relevant: map[string]int{
+			"_inc/act_functions.cfm": 2, // showAreaCodeLocation
+		}},
+		// "title case each word": _inc/act_functions.cfm: capFirstAll — cffunction capFirstAll: title-cases each word
+		{Query: "title case each word", Relevant: map[string]int{
+			"_inc/act_functions.cfm": 2, // capFirstAll
+		}},
+		// "domain quality score": _inc/act_functions3.cfm: getQualityScore — cffunction getQualityScore: domain quality-score lookup
+		{Query: "domain quality score", Relevant: map[string]int{
+			"_inc/act_functions3.cfm": 2, // getQualityScore
+		}},
+		// "fetch domain whois": _inc/act_functions.cfm: getWhoIs — cffunction getWhoIs: fetches domain WHOIS
+		{Query: "fetch domain whois", Relevant: map[string]int{
+			"_inc/act_functions.cfm": 2, // getWhoIs
+		}},
+		// "normalize customer phone": _inc/act_functions3.cfm: fixCustPhone — cffunction fixCustPhone: normalizes customer phone format
+		{Query: "normalize customer phone", Relevant: map[string]int{
+			"_inc/act_functions3.cfm": 2, // fixCustPhone
+		}},
+		// "convert epoch time to date": _inc/act_functions2.cfm: EpochTimeToDate — cffunction EpochTimeToDate: converts epoch seconds to date
+		{Query: "convert epoch time to date", Relevant: map[string]int{
+			"_inc/act_functions2.cfm": 2, // EpochTimeToDate
 		}},
 	}
 }
