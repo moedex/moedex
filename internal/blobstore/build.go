@@ -9,10 +9,24 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"moedex/internal/ingest"
 )
+
+// dirExists reports whether a repo's working tree is still present on disk,
+// using the SAME signal DiscoverRepos keys on: the repo dir contains a ".git"
+// (dir OR file — a worktree/submodule gitlink is a ".git" file). This makes
+// "still present" symmetric with discovery, so a repo classified as removed is
+// precisely one whose git repo is genuinely gone, not one a discovery walk
+// transiently skipped. A bare dir whose .git vanished is treated as removed.
+func dirExists(repoDir string) bool {
+	if _, err := os.Stat(filepath.Join(repoDir, ".git")); err == nil {
+		return true
+	}
+	return false
+}
 
 // contentKey is the CONTENT-TRUE blob key: the SHA-1 of the bytes actually
 // ingested (f.Content), computed in git's blob-object form ("blob <len>\0" +
@@ -29,6 +43,18 @@ import (
 // keys are byte-identical to the f.SHA the direct parity build keys index.AddFile
 // by — the export stays byte-equivalent to a direct build. For a dirty file the
 // keys diverge precisely where they must, making the content findable.
+//
+// BOM SEMANTICS (intentional, parity-safe): contentKey is computed on the bytes
+// ingest actually produced — i.e. AFTER ingest.Repo strips a leading UTF-8 BOM.
+// So a BOM-prefixed file and a non-BOM file with identical post-strip content map
+// to the SAME key and dedup to ONE CAS blob, whereas a direct `moedex-index build`
+// (which keys its index by git's blob SHA of the UNstripped file) keeps them as
+// two blobs. This does NOT break parity: BOTH paths trigram-index and search the
+// SAME BOM-stripped bytes (ingest strips before either path sees content), so the
+// searchable content and (file,line) match results are identical. The CAS merely
+// dedups MORE — one blob carrying BOTH file refs instead of two blobs carrying one
+// ref each — which surfaces every matching path (no ref dropped) and cannot
+// under-approximate. (See TestBOMAndNonBOMDedupToOneBlobBothPathsSurface.)
 func contentKey(content []byte) string {
 	h := sha1.New()
 	fmt.Fprintf(h, "blob %d\x00", len(content))
@@ -149,14 +175,17 @@ func ingestRepoBlobs(store *Store, dir string, ingestRepo ingestFn, head headFn)
 //     idempotent Put means only the repo's net-new blob SHAs are physically added,
 //     and — crucially — its co-resident repos are NOT re-ingested (the win over
 //     parity.Rebuild, which re-ingests every repo sharing an affected shard);
-//   - for a REMOVED repo (gone from disk), it drops the repo's manifest entry; its
-//     now-unreferenced blobs are LEFT in the append-only pack (compaction/GC is
-//     deferred — see package doc), so a future compactor has the manifest's
-//     referenced-set as a correct liveness signal;
-//   - for a repo whose re-ingest TRANSIENTLY FAILS but is still present on disk, it
-//     CARRIES FORWARD the prior manifest entry unchanged (so none of that repo's
-//     searchable content is lost) and records the repo in ds.FailedRepos; the next
-//     refresh retries it. Only a repo genuinely gone from disk is "removed";
+//   - for a REMOVED repo (its .git is genuinely gone from disk), it drops the
+//     repo's manifest entry; its now-unreferenced blobs are LEFT in the
+//     append-only pack (compaction/GC is deferred — see package doc), so a future
+//     compactor has the manifest's referenced-set as a correct liveness signal;
+//   - for a repo whose re-ingest TRANSIENTLY FAILS but is still present on disk,
+//     OR an old-manifest repo that the current discovery walk did not return but
+//     whose .git is still present on disk (a transient discovery MISS — same
+//     data-loss class, different trigger), it CARRIES FORWARD the prior manifest
+//     entry unchanged (so none of that repo's searchable content is lost) and
+//     records the repo in ds.FailedRepos; the next refresh retries it. Only a repo
+//     whose .git is genuinely gone is "removed";
 //   - an UNCHANGED repo is carried forward verbatim with zero Puts.
 //
 // HEAD comparison matches parity.DetectChanges: an unreadable current HEAD is
@@ -246,11 +275,27 @@ func refreshCAS(old *BlobManifest, root, casDir string, discover discoverFn, ing
 		m.Stats.RawBytes += raw
 		m.Stats.FileRefs += refs
 	}
-	// Removed repos: in old manifest, gone from disk now. Dropped by omission.
+	// Old-manifest repos absent from the current discovered set. A discovery MISS
+	// is NOT proof of removal: DiscoverRepos can transiently fail to return a repo
+	// (an unreadable parent dir is skipped mid-walk, a racing rename, etc.). Stat
+	// the dir before classifying — same data-loss class as the re-ingest-failure
+	// path, different trigger:
+	//   - dir GONE from disk  -> a genuine removal; drop the entry by omission.
+	//   - dir STILL on disk   -> a transient discovery miss; CARRY FORWARD the
+	//     prior manifest entry unchanged (no content lost) and surface it as
+	//     failed, so the next refresh retries it. Only a dir truly absent is removed.
 	for _, r := range old.Repos {
-		if !currentSet[r.Dir] {
-			ds.RemovedRepos = append(ds.RemovedRepos, r.Dir)
+		if currentSet[r.Dir] {
+			continue // handled in the main loop above
 		}
+		if dirExists(r.Dir) {
+			ds.FailedRepos = append(ds.FailedRepos, r.Dir)
+			m.Repos = append(m.Repos, r)
+			m.Stats.RawBytes += rawBytesOf(store, r)
+			m.Stats.FileRefs += len(r.Files)
+			continue
+		}
+		ds.RemovedRepos = append(ds.RemovedRepos, r.Dir)
 	}
 
 	m.Stats.UniqueBlobs = store.Len()

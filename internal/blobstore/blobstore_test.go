@@ -480,6 +480,106 @@ func TestRefreshIngestFailureCarriesForwardRepo(t *testing.T) {
 	}
 }
 
+// --- BUG 2b regression: transient discovery MISS must not drop a repo ------
+
+// TestRefreshDiscoveryMissCarriesForwardStillPresentRepo is the regression for
+// the discovery-miss data-loss path (same class as BUG 2, different trigger): an
+// old-manifest repo that the current discovery walk did NOT return — but whose
+// .git is still on disk — must NOT be classified as removed and dropped. A
+// DiscoverRepos walk can transiently skip a repo (an unreadable parent dir is
+// SkipDir'd mid-walk, a racing rename, an I/O hiccup); treating that as removal
+// would erase all of the repo's searchable content from subsequent exports. Such
+// a repo must be carried forward unchanged and surfaced as failed; ONLY a repo
+// whose .git is genuinely gone is a real removal.
+func TestRefreshDiscoveryMissCarriesForwardStillPresentRepo(t *testing.T) {
+	requireGit(t)
+	corpus := t.TempDir()
+	repoA := filepath.Join(corpus, "repoA")
+	repoB := filepath.Join(corpus, "repoB")
+	repoGone := filepath.Join(corpus, "repoGone")
+	uniqueB := "package b\nconst ONLY_IN_B = 7\n"
+	uniqueGone := "package g\nconst ONLY_IN_GONE = 9\n"
+	commitGitRepo(t, repoA, map[string]string{"a.go": "package a\nconst A = 1\n"})
+	commitGitRepo(t, repoB, map[string]string{"b.go": uniqueB})
+	commitGitRepo(t, repoGone, map[string]string{"g.go": uniqueGone})
+
+	casDir := t.TempDir()
+	m, err := buildCAS(corpus, casDir, ingest.DiscoverRepos, ingest.Repo, ingest.Head)
+	if err != nil {
+		t.Fatalf("buildCAS: %v", err)
+	}
+	rbBOld, _ := m.RepoOf(repoB)
+	if len(rbBOld.Files) == 0 {
+		t.Fatal("repoB should have files in the initial manifest (test premise)")
+	}
+
+	// repoGone is genuinely deleted from disk (a real removal). repoB is STILL on
+	// disk but the injected discovery returns ONLY repoA — simulating a transient
+	// miss of repoB AND not returning repoGone either. So both repoB and repoGone
+	// are "absent from the discovered set", but only repoGone's .git is gone.
+	if err := os.RemoveAll(repoGone); err != nil {
+		t.Fatal(err)
+	}
+	missingDiscover := func(string) ([]string, error) { return []string{repoA}, nil }
+
+	m2, ds, err := refreshCAS(m, corpus, casDir, missingDiscover, ingest.Repo, ingest.Head)
+	if err != nil {
+		t.Fatalf("refreshCAS: %v", err)
+	}
+
+	// repoB (still on disk, missed by discovery) must be carried forward, NOT removed.
+	if contains(ds.RemovedRepos, repoB) {
+		t.Error("BUG 2b: still-present repoB (discovery miss) was misclassified as removed")
+	}
+	if !contains(ds.FailedRepos, repoB) {
+		t.Errorf("repoB should be surfaced in FailedRepos, got %v", ds.FailedRepos)
+	}
+	rbBNew, ok := m2.RepoOf(repoB)
+	if !ok {
+		t.Fatal("BUG 2b: repoB dropped from manifest on a transient discovery miss (data loss)")
+	}
+	if !equalStrs(rbBNew.SortedBlobs(), rbBOld.SortedBlobs()) {
+		t.Errorf("repoB blob set changed despite carry-forward: old=%v new=%v",
+			rbBOld.SortedBlobs(), rbBNew.SortedBlobs())
+	}
+	if rbBNew.Head != rbBOld.Head {
+		t.Errorf("repoB HEAD changed despite carry-forward: %q -> %q", rbBOld.Head, rbBNew.Head)
+	}
+
+	// repoGone (genuinely deleted) MUST still be correctly removed, NOT carried.
+	if !contains(ds.RemovedRepos, repoGone) {
+		t.Errorf("repoGone (.git deleted) should be removed, got RemovedRepos=%v", ds.RemovedRepos)
+	}
+	if contains(ds.FailedRepos, repoGone) {
+		t.Errorf("repoGone is genuinely gone and must not be carried forward as failed: %v", ds.FailedRepos)
+	}
+	if _, ok := m2.RepoOf(repoGone); ok {
+		t.Error("repoGone should be dropped from the manifest (genuine removal)")
+	}
+
+	// End-to-end: repoB's unique content STILL findable after export; repoGone's
+	// content is no longer referenced (it was genuinely removed).
+	shardDir := filepath.Join(t.TempDir(), "shards")
+	if _, err := ExportShardDir(casDir, shardDir, 1<<30); err != nil {
+		t.Fatalf("ExportShardDir: %v", err)
+	}
+	if !shardDirFinds(t, shardDir, "ONLY_IN_B") {
+		t.Error("BUG 2b: repoB's content vanished from exported shards after a discovery miss")
+	}
+
+	// A subsequent refresh with discovery WORKING recovers repoB cleanly (retry).
+	m3, ds3, err := refreshCAS(m2, corpus, casDir, ingest.DiscoverRepos, ingest.Repo, ingest.Head)
+	if err != nil {
+		t.Fatalf("recovery refreshCAS: %v", err)
+	}
+	if contains(ds3.FailedRepos, repoB) {
+		t.Errorf("repoB still failing after discovery recovered: %v", ds3.FailedRepos)
+	}
+	if _, ok := m3.RepoOf(repoB); !ok {
+		t.Error("repoB missing from manifest after recovery refresh")
+	}
+}
+
 // --- E. manifest round-trip ----------------------------------------------
 
 func TestBlobManifestRoundTrip(t *testing.T) {
