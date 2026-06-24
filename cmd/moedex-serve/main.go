@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -46,7 +48,17 @@ func main() {
 	topK := flag.Int("top-k", 20, "default ranked results per MCP query")
 	embedKind := flag.String("embed", "auto", "dense embedder for -mcp: auto|onnx|http|none (auto = onnx if -onnx-runtime/ONNXRUNTIME_LIB_PATH set, else http if MOEDEX_EMBED_URL set, else none)")
 	onnxRuntime := flag.String("onnx-runtime", os.Getenv("ONNXRUNTIME_LIB_PATH"), "path to the ONNX Runtime shared library (in-process embedder; requires -tags onnx build)")
+	authToken := flag.String("auth-token", "", "if set (or MOEDEX_AUTH_TOKEN), require `Authorization: Bearer <token>` on -http (except /healthz, /metrics)")
+	tlsCert := flag.String("tls-cert", "", "TLS certificate file; serve -http over HTTPS (requires -tls-key)")
+	tlsKey := flag.String("tls-key", "", "TLS private key file; serve -http over HTTPS (requires -tls-cert)")
+	requestTimeout := flag.Duration("request-timeout", 30*time.Second, "per-request HTTP timeout on -http (503 on expiry; the underlying scan still runs to completion)")
 	flag.Parse()
+
+	// Auth precedence: MOEDEX_AUTH_TOKEN is the base, -auth-token overrides it.
+	authTok := os.Getenv("MOEDEX_AUTH_TOKEN")
+	if *authToken != "" {
+		authTok = *authToken
+	}
 
 	if *shardDir == "" {
 		fmt.Fprintln(os.Stderr, "moedex-serve: -shard-dir is required (or set MOEDEX_SHARD_DIR)")
@@ -79,7 +91,18 @@ func main() {
 		runOneShot(corpus, *q, *isRegex, *limit)
 		return
 	}
-	if err := runHTTP(corpus, *httpAddr, *shardDir); err != nil {
+	cfg := httpConfig{
+		addr:           *httpAddr,
+		shardDir:       *shardDir,
+		token:          authTok,
+		tlsCert:        *tlsCert,
+		tlsKey:         *tlsKey,
+		requestTimeout: *requestTimeout,
+		bootElapsed:    time.Since(start),
+		shards:         corpus.NumShards(),
+		blobs:          corpus.NumBlobs(),
+	}
+	if err := runHTTP(corpus, cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "moedex-serve: %v\n", err)
 		os.Exit(1)
 	}
@@ -229,17 +252,61 @@ func runOneShot(c *server.Corpus, pattern string, isRegex bool, limit int) {
 	fmt.Fprintf(os.Stderr, "moedex-serve: %d match(es)\n", len(matches))
 }
 
+// httpConfig carries the resolved -http settings into runHTTP so the boot-line
+// reporting and server wiring stay in one place.
+type httpConfig struct {
+	addr           string
+	shardDir       string
+	token          string
+	tlsCert        string
+	tlsKey         string
+	requestTimeout time.Duration
+	bootElapsed    time.Duration
+	shards         int
+	blobs          int
+}
+
 // runHTTP serves the corpus over a minimal JSON API until SIGINT/SIGTERM. A
 // SIGHUP re-opens shardDir and hot-swaps the served corpus without dropping any
 // in-flight request (see reload.go); a failed reload keeps the current corpus.
-func runHTTP(c *server.Corpus, addr, shardDir string) error {
+//
+// The mux is wrapped with the hardening chain (recover/log/timeout/auth — see
+// middleware.go); /metrics and /healthz stay open. Server timeouts bound slow
+// clients; the per-request timeout is an HTTP-layer bound only (the scan is not
+// cancellable, see withTimeout).
+func runHTTP(c *server.Corpus, cfg httpConfig) error {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, nil)))
+
+	// TLS is all-or-nothing: a half-configured pair is a usage error, mirroring
+	// the flag-validation style in main().
+	tls := cfg.tlsCert != "" && cfg.tlsKey != ""
+	if (cfg.tlsCert != "") != (cfg.tlsKey != "") {
+		fmt.Fprintln(os.Stderr, "moedex-serve: -tls-cert and -tls-key must be set together")
+		os.Exit(2)
+	}
+
+	effAddr := resolveAddr(cfg.addr, cfg.token)
+	slog.Info("boot", "shards", cfg.shards, "blobs", cfg.blobs,
+		"elapsed_ms", cfg.bootElapsed.Milliseconds(),
+		"requested_addr", cfg.addr, "effective_addr", effAddr, "tls", tls)
+	if cfg.token == "" {
+		if isLoopback(effAddr) {
+			slog.Warn("no auth token configured; /search and /stats are open (loopback bind)")
+		} else {
+			slog.Warn("no auth token AND non-loopback bind; /search and /stats are open to the network",
+				"effective_addr", effAddr)
+		}
+	}
+
 	holder := newCorpusHolder(c)
+	m := newMetrics()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok\n"))
 	})
+	mux.Handle("/metrics", metricsHandler(holder, m))
 	mux.HandleFunc("/stats", func(w http.ResponseWriter, r *http.Request) {
 		snap := holder.acquire()
 		defer snap.release()
@@ -254,10 +321,23 @@ func runHTTP(c *server.Corpus, addr, shardDir string) error {
 		handleSearch(snap.c, w, r)
 	})
 
-	srv := &http.Server{Addr: addr, Handler: mux}
+	srv := &http.Server{
+		Addr:              effAddr,
+		Handler:           chain(mux, cfg.token, cfg.requestTimeout, m),
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      cfg.requestTimeout + 5*time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
 	errCh := make(chan error, 1)
-	go func() { errCh <- srv.ListenAndServe() }()
-	fmt.Fprintf(os.Stderr, "moedex-serve: HTTP listening on %s (SIGHUP to reload)\n", addr)
+	go func() {
+		if tls {
+			errCh <- srv.ListenAndServeTLS(cfg.tlsCert, cfg.tlsKey)
+		} else {
+			errCh <- srv.ListenAndServe()
+		}
+	}()
+	slog.Info("listening", "addr", effAddr, "tls", tls, "auth", cfg.token != "")
 
 	// SIGHUP -> reload. Processed one at a time on its own goroutine so reloads
 	// never overlap and never block request serving.
@@ -266,16 +346,18 @@ func runHTTP(c *server.Corpus, addr, shardDir string) error {
 	go func() {
 		for range hup {
 			start := time.Now()
-			fmt.Fprintln(os.Stderr, "moedex-serve: SIGHUP — reloading shards")
-			nc, err := server.Open(shardDir)
+			slog.Info("reload requested (SIGHUP)")
+			nc, err := server.Open(cfg.shardDir)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "moedex-serve: reload failed (%v); keeping current corpus\n", err)
+				m.incReload("fail")
+				slog.Error("reload failed; keeping current corpus", "err", err.Error())
 				continue
 			}
 			old := holder.swap(nc)
 			go old.retire() // unmap the previous corpus once its readers drain
-			fmt.Fprintf(os.Stderr, "moedex-serve: reloaded %d shards, %d blobs in %s\n",
-				nc.NumShards(), nc.NumBlobs(), time.Since(start).Round(time.Millisecond))
+			m.incReload("ok")
+			slog.Info("reloaded", "shards", nc.NumShards(), "blobs", nc.NumBlobs(),
+				"elapsed_ms", time.Since(start).Milliseconds())
 		}
 	}()
 
@@ -287,9 +369,22 @@ func runHTTP(c *server.Corpus, addr, shardDir string) error {
 	case <-stop:
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		fmt.Fprintln(os.Stderr, "\nmoedex-serve: shutting down")
+		slog.Info("shutting down")
 		return srv.Shutdown(ctx)
 	}
+}
+
+// isLoopback reports whether addr binds a loopback host (for the no-token
+// warning severity).
+func isLoopback(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return false
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.IsLoopback()
+	}
+	return host == "localhost"
 }
 
 // searchResponse is the JSON shape returned by GET /search.

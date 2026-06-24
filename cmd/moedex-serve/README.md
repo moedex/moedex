@@ -5,7 +5,7 @@ and answers queries with zero cold-start, in one of three modes:
 
 | Mode | Flag | Surface | What it serves |
 |------|------|---------|----------------|
-| Retrieval daemon | `-http :8080` | HTTP JSON (`/search`, `/stats`, `/healthz`) | line-granular literal/regex matches, parity-proven against ripgrep |
+| Retrieval daemon | `-http :8080` | HTTP JSON (`/search`, `/stats`, `/healthz`, `/metrics`) | line-granular literal/regex matches, parity-proven against ripgrep |
 | One-shot query | `-q PATTERN` | stdout (`repo/relpath:line`) | a single retrieval query, for validation/scripting |
 | Ranked agent context | `-mcp` | MCP over stdio (`search_context` tool) | ranked, deduplicated, token-budgeted context blocks |
 
@@ -61,12 +61,20 @@ corpus must not be queried (the memory is unmapped); `Close` is idempotent.
 | `-top-k` | `20` | default ranked results per MCP query |
 | `-embed` | `auto` | dense embedder for `-mcp`: `auto`\|`onnx`\|`http`\|`none` |
 | `-onnx-runtime` | `$ONNXRUNTIME_LIB_PATH` | path to the ONNX Runtime shared library (in-process embedder; requires an `-tags onnx` build) |
+| `-auth-token` | `$MOEDEX_AUTH_TOKEN` | if set, require `Authorization: Bearer <token>` on `-http` (except `/healthz`, `/metrics`) |
+| `-tls-cert` | _(off)_ | TLS certificate file; serve `-http` over HTTPS (requires `-tls-key`) |
+| `-tls-key` | _(off)_ | TLS private key file; serve `-http` over HTTPS (requires `-tls-cert`) |
+| `-request-timeout` | `30s` | per-request HTTP timeout on `-http` (`503` on expiry) |
 
 ## Retrieval daemon (`-http`)
 
 A minimal JSON API backed by `server.Corpus`. It runs until `SIGINT`/`SIGTERM`,
 then shuts down gracefully (5 s drain); `SIGHUP` hot-reloads the shards (see
-[Hot reload](#hot-reload-sighup)).
+[Hot reload](#hot-reload-sighup)). It binds **loopback by default** (see
+[Bind address](#bind-address-loopback-default--behavior-change)), can require a
+[bearer token](#authentication), serve [TLS](#tls) directly, bound each request
+with a [timeout](#per-request-timeout), and expose Prometheus
+[`/metrics`](#get-metrics).
 
 ### `GET /search`
 
@@ -113,6 +121,88 @@ blob-ID space to reconcile.
 concurrently (bounded by `runtime.NumCPU`), then merge and sort. The aggregated
 `search.Stats` sums per-shard candidate blobs/bytes/lines; `query_all` is true
 only when **every** shard fell back to scanning all candidates.
+
+### Bind address (loopback default — behavior change)
+
+**`-http :8080` (and any address with an empty host, e.g. `8080`) now binds
+`127.0.0.1` — loopback only, not all interfaces.** This is a deliberate
+safe-by-default change: a bare port no longer exposes the daemon to the network.
+The effective bind address is logged at boot (`effective_addr`).
+
+To expose the daemon beyond loopback, give an explicit host — it is honored
+verbatim:
+
+```sh
+moedex-serve -shard-dir DIR -http 0.0.0.0:8080      # all interfaces
+moedex-serve -shard-dir DIR -http 192.168.1.5:8080  # one interface
+```
+
+The loopback default applies regardless of whether a token is set.
+
+### Authentication
+
+`/search` and `/stats` can require a bearer token; `/healthz` and `/metrics`
+are **always open** (so liveness probes and Prometheus scrapes work without a
+credential).
+
+Configure the token by flag or env (the flag wins):
+
+```sh
+export MOEDEX_AUTH_TOKEN=s3cret      # base
+moedex-serve ... -auth-token s3cret  # -auth-token overrides MOEDEX_AUTH_TOKEN
+```
+
+Precedence: `MOEDEX_AUTH_TOKEN` is the base value; a non-empty `-auth-token`
+overrides it. With **no** token configured, `/search` and `/stats` are open and
+the daemon logs a warning at boot (a louder warning if it is also bound to a
+non-loopback host).
+
+Authenticated requests send `Authorization: Bearer <token>`. A missing or wrong
+token yields `401` with `{"error":"unauthorized"}` and a `WWW-Authenticate: Bearer`
+header.
+
+### TLS
+
+Serve HTTPS directly by giving both a cert and a key (they are all-or-nothing —
+setting exactly one is a usage error):
+
+```sh
+moedex-serve -shard-dir DIR -http 0.0.0.0:8443 \
+  -tls-cert /path/cert.pem -tls-key /path/key.pem
+```
+
+Alternatively, terminate TLS at a reverse proxy (nginx/Caddy/envoy) and keep
+the daemon on loopback HTTP — often simpler operationally and the recommended
+path when a proxy is already in front of it.
+
+### Per-request timeout
+
+`-request-timeout` (default `30s`) bounds each HTTP response: on expiry the
+client gets `503`. Server-side `Read`/`Write`/`Idle` timeouts also guard against
+slow clients.
+
+**Caveat:** this is an **HTTP-layer bound only.** `Corpus.Regex`/`Corpus.Literal`
+take no `context.Context`, so a slow scan keeps running to completion after the
+client receives the `503`. Deep cancellation (threading `ctx` through
+`internal/server` + `internal/search`) is a tracked follow-up.
+
+### `GET /metrics`
+
+Prometheus text exposition (`Content-Type: text/plain; version=0.0.4`),
+**unauthenticated** like `/healthz`. Stdlib-only — no `client_golang`. Exposes:
+
+- `moedex_http_requests_total{code="2xx|4xx|5xx"}` — counter
+- `moedex_http_panics_total` — counter (handler panics recovered)
+- `moedex_reloads_total{result="ok|fail"}` — counter (SIGHUP reloads)
+- `moedex_http_request_duration_seconds` — histogram (fixed buckets + `_sum`/`_count`)
+- `moedex_corpus_shards`, `moedex_corpus_blobs` — gauges, read from the live
+  corpus at scrape time (so they track hot swaps)
+
+### Observability
+
+All daemon logging on `-http` is structured JSON on stderr (`log/slog`): boot,
+listening, per-request `access` lines (method/path/status/bytes/dur_ms/remote),
+reloads, and shutdown.
 
 ## One-shot query (`-q`)
 
