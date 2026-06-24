@@ -220,6 +220,54 @@ func TestDetectChanges(t *testing.T) {
 	}
 }
 
+// TestDetectChangesCommitlessRepoStable guards a freshness regression: a repo
+// with no commits (unborn HEAD, e.g. an empty placeholder repo in the corpus)
+// must NOT be reported as "changed" on every check. ingest.Head records "" for
+// such a repo at build time; DetectChanges must compare an unreadable current
+// HEAD against that recorded "" and find them equal, rather than conservatively
+// flagging it changed forever (which would make the steady-state refresh cron
+// rebuild needlessly every cycle).
+func TestDetectChangesCommitlessRepoStable(t *testing.T) {
+	requireGit(t)
+	corpus := t.TempDir()
+	repoA := filepath.Join(corpus, "repoA")
+	commitGitRepo(t, repoA, map[string]string{"a.go": "package a\n"})
+
+	// A commitless repo: `git init` only, no commit -> `git rev-parse HEAD` errors.
+	repoEmpty := filepath.Join(corpus, "repoEmpty")
+	if err := os.MkdirAll(repoEmpty, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("git", "-C", repoEmpty, "init", "-q")
+	cmd.Env = gitEnv()
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v\n%s", err, out)
+	}
+	if _, err := ingest.Head(repoEmpty); err == nil {
+		t.Fatal("expected ingest.Head to error on a commitless repo (test premise)")
+	}
+
+	work := t.TempDir()
+	if _, err := Build(Config{Root: corpus, WorkDir: work, Seed: 1, ShardBytes: 1 << 30}); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	m, err := LoadManifest(filepath.Join(work, "shards", ManifestName))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Right after build, and again on a second check, nothing has changed.
+	for i := 0; i < 2; i++ {
+		ch, err := DetectChanges(m, corpus, ingest.DiscoverRepos, ingest.Head)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ch.Any() {
+			t.Errorf("check #%d: expected no changes for a commitless repo, got %+v", i+1, ch)
+		}
+	}
+}
+
 // TestRebuildOnlyAffectedShard mutates one repo, rebuilds, and asserts the
 // unchanged shard is carried forward byte-for-byte while the changed repo's new
 // content becomes findable.

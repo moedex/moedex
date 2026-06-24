@@ -256,9 +256,14 @@ func DetectChanges(m *Manifest, root string,
 		}
 		now, err := headFn(dir)
 		if err != nil {
-			// Unreadable HEAD -> conservatively rebuild.
-			ch.Changed = append(ch.Changed, dir)
-			continue
+			// HEAD unreadable now (a commitless/empty repo, or a broken one).
+			// Normalize to "" and fall through to the comparison below: ingest.Head
+			// records "" at build time for exactly this condition, so a repo that
+			// never had a readable HEAD compares equal to its recorded "" and is
+			// NOT a perpetual rebuild trigger. A repo that HAD a real HEAD and is
+			// now unreadable still differs from its recorded SHA, so it is still
+			// (conservatively) flagged changed.
+			now = ""
 		}
 		if now != old {
 			ch.Changed = append(ch.Changed, dir)
