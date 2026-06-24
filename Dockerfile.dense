@@ -9,7 +9,7 @@
 #
 # Build:
 #   docker build -f Dockerfile.dense -t moedex-serve-dense .
-#   docker build -f Dockerfile.dense --build-arg ONNXRUNTIME_VERSION=1.21.0 -t moedex-serve-dense .
+#   docker build -f Dockerfile.dense --build-arg ONNXRUNTIME_VERSION=1.27.0 -t moedex-serve-dense .
 #
 # Run (dense -mcp over stdio; shard dir MUST be writable — the embedder persists
 # corpus-embeddings.store / its cache next to the shards):
@@ -17,20 +17,22 @@
 #     -v /srv/moedex/shards:/shards \
 #     moedex-serve-dense
 #
-# UNCERTAINTY (validate on a Linux host): ONNX Runtime version 1.21.0 is paired
-# here with the yalue/onnxruntime_go v1.21.0 binding from go.mod; confirm the
-# release-asset path/layout below still matches that tag on the deploy host.
+# ONNX Runtime version: the yalue/onnxruntime_go v1.21.0 binding needs a runtime
+# whose ORT API is >= what the binding was built against. ORT 1.21.0 is too old
+# (the binding fails at init with "Error setting ORT API base"); 1.27.0 works
+# (validated in-container, and it matches the host's Homebrew ORT). Newer ORT is
+# backward-compatible with the binding's API, so bump this rather than pin low.
 
 # --- builder ---------------------------------------------------------------
 FROM golang:1.26-bookworm AS build
 WORKDIR /src
 
 ENV GOTOOLCHAIN=local
-# Try CGO_ENABLED=0 first: the yalue/onnxruntime_go binding dlopens the runtime
-# at run time, not at link time, so a CGO-free build is expected to work.
-# If a Linux dense build fails (e.g. the binding requires cgo for symbol stubs),
-# rebuild with CGO_ENABLED=1 and install a C toolchain (gcc/g++) in this stage.
-ENV CGO_ENABLED=0
+# CGO is REQUIRED: the yalue/onnxruntime_go binding's sources are cgo-gated, so a
+# CGO_ENABLED=0 build fails with "build constraints exclude all Go files". The
+# golang:1.26-bookworm base already ships gcc, so no extra toolchain install is
+# needed; the binding still dlopens libonnxruntime.so at run time.
+ENV CGO_ENABLED=1
 
 COPY go.mod go.sum ./
 RUN go mod download
@@ -44,8 +46,11 @@ RUN go build -trimpath -tags onnx -o /out/moedex-serve-dense ./cmd/moedex-serve
 # Download + extract libonnxruntime.so* from the official microsoft/onnxruntime
 # GitHub release tarball (Linux x64) for the requested version.
 FROM debian:12-slim AS onnxrt
-ARG ONNXRUNTIME_VERSION=1.21.0
-ARG TARGETARCH=amd64
+ARG ONNXRUNTIME_VERSION=1.27.0
+# TARGETARCH is auto-populated by BuildKit to the target platform's arch
+# (amd64/arm64). Do NOT give it a default — a default shadows the auto value and
+# would fetch the wrong-arch ONNX runtime (x64 lib next to an arm64 binary).
+ARG TARGETARCH
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl ca-certificates tar \
  && rm -rf /var/lib/apt/lists/*
@@ -66,7 +71,7 @@ RUN set -eux; \
 # debian:12-slim (glibc) hosts libonnxruntime.so — alpine's musl cannot.
 FROM debian:12-slim
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates \
+ && apt-get install -y --no-install-recommends ca-certificates libstdc++6 libgomp1 \
  && rm -rf /var/lib/apt/lists/* \
  && groupadd -r moedex && useradd -r -g moedex moedex
 

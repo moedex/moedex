@@ -56,13 +56,16 @@ ENV MOEDEX_SHARD_DIR=/shards
 EXPOSE 8080
 
 # /healthz returns 200 "ok" and stays open even with auth on (auth excludes
-# /healthz and /metrics). The daemon binds 127.0.0.1 by default (resolveAddr),
-# so probe the in-container loopback explicitly.
+# /healthz and /metrics). The daemon binds 0.0.0.0:8080 in-container (see CMD),
+# which includes loopback, so this in-container probe reaches it.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
   CMD wget -qO- http://127.0.0.1:8080/healthz || exit 1
 
-# Bind 127.0.0.1 explicitly (the daemon would default to loopback anyway) and
-# publish only to the host loopback (-p 127.0.0.1:8080:8080) behind a trusted
-# proxy. Pass MOEDEX_AUTH_TOKEN to require Bearer auth on /search and /stats.
+# Bind 0.0.0.0 INSIDE the container: the container's network namespace is the
+# isolation boundary, and a 127.0.0.1 bind here would be unreachable through a
+# published port (-p). Publish only to the host loopback (-p 127.0.0.1:8080:8080)
+# and front it with a trusted proxy. Always set MOEDEX_AUTH_TOKEN when exposing
+# it (Bearer auth on /search and /stats); the daemon deliberately WARNs on a
+# tokenless non-loopback bind, which is exactly this in-container case.
 ENTRYPOINT ["moedex-serve"]
-CMD ["-shard-dir", "/shards", "-http", "127.0.0.1:8080"]
+CMD ["-shard-dir", "/shards", "-http", "0.0.0.0:8080"]
