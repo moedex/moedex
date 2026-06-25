@@ -1,0 +1,61 @@
+# moedex-corpus built-in group allowlist — top-level GitLab namespaces to mirror.
+# This is the default curated scope (the set today's ~484-repo mirror spans).
+# One group per line; '#' comments and blank lines are ignored.
+# Override at runtime with `moedex-corpus clone -groups FILE`.
+# Regenerate this list from a populated mirror with `moedex-corpus groups --from-disk`.
+Ansible-Plays
+Ansible-Roles
+Ansible.Public
+Communications
+Development.Documentation
+Development.Infrastructure
+Development.Testing
+Libraries.Common
+Libraries.DomainResell
+Libraries.Logging
+Libraries.Search
+Libraries.Testing
+Libraries.UI
+Mysql.Utilities
+PartnerIntegrations
+Products.DomainAcquisition
+Products.DomainResell
+Products.DropCatch
+Products.HugeDomains
+Products.NameBright
+Products.TurnCommerce
+Services.Accounts
+Services.Auction
+Services.BrandTrace
+Services.ContentManagement
+Services.DomainData
+Services.DomainResell
+Services.Domains
+Services.Enterprise
+Services.Finance
+Services.Globalization
+Services.Infrastructure
+Services.Integration
+Services.Payment
+Services.Registrar
+Services.Search
+Services.Validation
+UIs.Internal
+ansible
+coldfusion
+developer.pipelines
+docker
+infrastructure
+jarvis
+kubernetes
+migrate-test
+old-svn-repos
+packages
+products.bettercontact
+products.core
+services.turncommerce
+teamcore
+terraform
+third-party
+ui.domainresell
+utilities

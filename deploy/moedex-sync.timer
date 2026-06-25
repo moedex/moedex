@@ -1,0 +1,28 @@
+# Schedule for moedex-sync.service. Hourly by default; Persistent=true so a
+# missed run (host asleep/down) fires on next boot. The per-blob delta path is
+# cheap, so hourly keeps the corpus close to fresh without much work; dial
+# OnCalendar to taste (e.g. *:0/15 for every 15 min, or daily).
+#
+# This timer supersedes moedex-refresh.timer for a GitLab-connected host:
+# moedex-sync pulls AND re-indexes AND reloads, where moedex-refresh only
+# re-indexes an already-updated local corpus. Enable ONE of them, not both.
+#
+# Enable:
+#   sudo systemctl enable --now moedex-sync.timer
+# Inspect:
+#   systemctl list-timers moedex-sync.timer
+#   journalctl -u moedex-sync.service -f
+
+[Unit]
+Description=Hourly moedex corpus sync + reindex
+Documentation=https://gitlab.tcdevops.com/Zak/moedex
+
+[Timer]
+OnCalendar=hourly
+# Spread load off the top of the hour (this one hits the network).
+RandomizedDelaySec=300
+Persistent=true
+Unit=moedex-sync.service
+
+[Install]
+WantedBy=timers.target
