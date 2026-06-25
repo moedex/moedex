@@ -423,6 +423,159 @@ func (a *ContentStoreAppender) Write(outPath string) error {
 	return os.Rename(tmp, outPath)
 }
 
+// CompactContentStore rewrites the MOECONT1 store at srcPath into outPath keeping
+// ONLY the content whose key is in live, dropping every unreferenced (dead) blob,
+// and writes the result atomically (temp+rename). It is the in-place CHEAP space
+// reclaim for the shared content store: it rewrites the EXISTING store from its own
+// live entries rather than re-exporting every shard from the CAS (the expensive
+// path). live is the conservative liveness set — the union of content-hash refs of
+// every live MOEDEX05 shard (DedupedShardSHAs) — so a key NOT in live is provably
+// referenced by no live shard and safe to drop.
+//
+// SACRED CONSTRAINT: a key present in `live` but ABSENT from the source store is a
+// caller bug (a shard references content the store does not hold) and is reported as
+// an error rather than silently dropped — dropping it would under-approximate. The
+// kept entries preserve their content bytes exactly; only dead bytes are reclaimed.
+// outPath may equal srcPath (the rename swaps the new file in after the source is
+// fully read). It returns the number of blobs kept and the content bytes kept.
+//
+// The written store is a valid MOECONT1 file: the same mmap working-set property and
+// the same content-integrity verify (OpenContentStoreVerified / GitBlobSHA1) apply,
+// because each kept entry's key is copied with its exact bytes — a re-hash still
+// matches. Insertion order of the kept entries follows the source's directory order
+// (deterministic given the source).
+func CompactContentStore(srcPath, outPath string, live map[string]bool) (keptBlobs int, keptBytes int64, err error) {
+	cs, err := OpenContentStore(srcPath)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer cs.Close()
+
+	// Verify every live key is present in the source BEFORE writing anything, so a
+	// caller bug surfaces as a loud error and never as a silent dropped reference.
+	for sha := range live {
+		if _, ok := cs.bySHA[sha]; !ok {
+			return 0, 0, fmt.Errorf("diskstore: compact content store: live key %s not in source store %s (would under-approximate)", sha, srcPath)
+		}
+	}
+
+	// Rebuild from the source's directory order so the output is deterministic and
+	// the carried-forward content keeps a stable layout. We read each kept blob's
+	// bytes from the mmap and re-Put them into a fresh writer (which assigns new,
+	// gap-free offsets — that is the space reclaim).
+	w := NewContentStoreWriter()
+	// Iterate in directory insertion order. The mmap directory map is unordered, so
+	// re-derive order by walking the on-disk directory section.
+	order, err := dedupedStoreOrder(srcPath)
+	if err != nil {
+		return 0, 0, err
+	}
+	for _, sha := range order {
+		if !live[sha] {
+			continue // dead: drop it (the reclaim)
+		}
+		content, ok := cs.Content(sha)
+		if !ok {
+			// Cannot happen (we verified above), but never silently drop.
+			return 0, 0, fmt.Errorf("diskstore: compact content store: key %s vanished mid-compaction", sha)
+		}
+		w.PutContent(sha, content)
+	}
+	if err := w.Write(outPath); err != nil {
+		return 0, 0, err
+	}
+	return w.Len(), w.BytesStored(), nil
+}
+
+// ContentStoreSHAs returns every content-hash key physically present in the MOECONT1
+// store at path, in on-disk directory (insertion) order, reading only the header +
+// directory section (O(numBlobs), no content payload). It is the public liveness/
+// audit probe — the full set of keys the store holds, of which compaction keeps only
+// the referenced subset.
+func ContentStoreSHAs(path string) ([]string, error) {
+	return dedupedStoreOrder(path)
+}
+
+// dedupedStoreOrder returns the content keys of the MOECONT1 store at path in their
+// on-disk directory (insertion) order, reading only the header + directory section
+// (O(numBlobs), no content payload). It is the order-preserving companion to the
+// unordered bySHA map OpenContentStore builds.
+func dedupedStoreOrder(path string) ([]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	if len(data) < contentHeaderSize || string(data[0:8]) != contentMagic {
+		return nil, fmt.Errorf("diskstore: bad content store magic in %s", path)
+	}
+	numBlobs := binary.LittleEndian.Uint64(data[16:24])
+	dirOff := binary.LittleEndian.Uint64(data[24:32])
+	if dirOff > uint64(len(data)) {
+		return nil, fmt.Errorf("diskstore: corrupt content store directory offset")
+	}
+	out := make([]string, 0, numBlobs)
+	r := &reader{b: data[dirOff:]}
+	for i := uint64(0); i < numBlobs; i++ {
+		sha, err := r.lenBytes()
+		if err != nil {
+			return nil, fmt.Errorf("diskstore: content dir entry %d sha: %w", i, err)
+		}
+		if _, err := r.u64(); err != nil { // contentOff (skip)
+			return nil, err
+		}
+		if _, err := r.u64(); err != nil { // contentLen (skip)
+			return nil, err
+		}
+		out = append(out, string(sha))
+	}
+	return out, nil
+}
+
+// DedupedShardSHAs reads ONLY the content-less blob section of a MOEDEX05 shard at
+// path and returns the set of content-hash keys it references — WITHOUT a shared
+// content store and WITHOUT touching the postings or content payload. It is the
+// liveness probe for served-store compaction: the union over all live shards is the
+// conservative set of content that must be kept. A non-MOEDEX05 / unreadable shard
+// is reported as an error (the caller must not treat "couldn't read a shard" as
+// "that shard references nothing" — that would under-approximate liveness).
+func DedupedShardSHAs(path string) ([]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	hdr, err := parseDedupedHeader(data)
+	if err != nil {
+		return nil, err
+	}
+	sec := data[hdr.blobOff:hdr.postOff]
+	r := &reader{b: sec}
+	out := make([]string, 0, hdr.numBlobs)
+	for i := uint64(0); i < hdr.numBlobs; i++ {
+		sha, err := r.lenBytes()
+		if err != nil {
+			return nil, fmt.Errorf("diskstore: deduped shard %s blob %d sha: %w", path, i, err)
+		}
+		numFiles, err := r.u32()
+		if err != nil {
+			return nil, fmt.Errorf("diskstore: deduped shard %s blob %d numFiles: %w", path, i, err)
+		}
+		// Skip the file refs (repo, rel, abs) — we only need the SHA.
+		for j := uint32(0); j < numFiles; j++ {
+			if _, err := r.lenBytes(); err != nil { // repo
+				return nil, fmt.Errorf("diskstore: deduped shard %s blob %d file %d repo: %w", path, i, j, err)
+			}
+			if _, err := r.lenBytes(); err != nil { // rel
+				return nil, fmt.Errorf("diskstore: deduped shard %s blob %d file %d rel: %w", path, i, j, err)
+			}
+			if _, err := r.lenBytes(); err != nil { // abs
+				return nil, fmt.Errorf("diskstore: deduped shard %s blob %d file %d abs: %w", path, i, j, err)
+			}
+		}
+		out = append(out, string(sha))
+	}
+	return out, nil
+}
+
 // ContentStore is a read-only, mmap'd view of a shared content store. It serves
 // each blob's content as a zero-copy sub-slice of the mapping, so content stays on
 // disk / mmap'd (off the Go heap). The mapping must stay open as long as any blob
