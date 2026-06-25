@@ -215,14 +215,22 @@ func CompactCAS(casDir string) (CASCompactStats, error) {
 	return st, nil
 }
 
-// casDirIsComplete reports whether dir is a complete CAS dir: it has BOTH a pack
-// (blobs.pack) AND a manifest (blobmanifest.json, written LAST as the completeness
-// marker). The manifest's presence is the durable "compaction finished" signal.
+// casDirIsComplete reports whether dir is a complete CAS dir: it has a pack
+// (blobs.pack present) AND a manifest (blobmanifest.json) that actually PARSES. The
+// manifest is written LAST as the completeness marker, so its valid presence is the
+// durable "compaction finished" signal recovery rolls a tmp dir FORWARD on.
+//
+// Defense-in-depth (hardening, not a fix for a reachable crash window — the manifest
+// is fsynced before the swap, and a tmp dir is only rolled forward when the live dir
+// is ABSENT, i.e. after the swap began, by which point the manifest is already
+// durable): we LoadBlobManifest rather than mere os.Stat, so a present-but-corrupt
+// manifest (bit-rot, a partial external copy) is treated as incomplete (recovery rolls
+// BACK to the prior dir) instead of being rolled forward as if finished.
 func casDirIsComplete(dir string) bool {
 	if _, err := os.Stat(filepath.Join(dir, packName)); err != nil {
 		return false
 	}
-	if _, err := os.Stat(filepath.Join(dir, BlobManifestName)); err != nil {
+	if _, err := LoadBlobManifest(filepath.Join(dir, BlobManifestName)); err != nil {
 		return false
 	}
 	return true
@@ -373,14 +381,40 @@ func CompactDedupedShardDir(outShardDir string) (DedupedCompactStats, error) {
 		return st, fmt.Errorf("blobstore: compact deduped: dir is not deduped (no %s): %w", diskstore.ContentStoreName, err)
 	}
 
-	// Liveness = union of every live shard's referenced content keys. A shard we
+	// AUTHORITATIVE shard set: the SERVED set is what `filepath.Glob(dir,"*.idx")`
+	// (sorted) returns — that is the EXACT signal server.Open / loadUnified key on to
+	// decide what to serve, NOT the manifest's shard list. A GC tool that DELETES data
+	// MUST derive both its liveness set and its carry-forward set from this identical
+	// signal: if the glob set ever exceeds the manifest list (an orphan *.idx the
+	// manifest does not record), keying off the manifest would (a) omit that shard's
+	// content from `live` so its content is dropped, AND (b) never carry the shard file
+	// forward — the swap deletes both, and matches the server returned pre-compaction
+	// vanish. That is the SACRED under-approximation this lane forbids. We carry EVERY
+	// globbed shard + its content forward; orphan shards (no manifest entry) get a
+	// synthesized manifest entry rather than being dropped.
+	shardPaths, err := filepath.Glob(filepath.Join(outShardDir, "*.idx"))
+	if err != nil {
+		return st, fmt.Errorf("blobstore: compact deduped: glob shards: %w", err)
+	}
+	sortStrings(shardPaths)
+	if len(shardPaths) == 0 {
+		return st, fmt.Errorf("blobstore: compact deduped: no *.idx shards under %s", outShardDir)
+	}
+	// Index the manifest's per-shard metadata by basename so we reuse Repos/ContentBytes
+	// when a globbed shard matches a manifest entry, and synthesize for orphans.
+	manifestByBase := map[string]parity.ShardManifest{}
+	for _, sm := range served.Shards {
+		manifestByBase[filepath.Base(sm.Path)] = sm
+	}
+
+	// Liveness = union of EVERY globbed shard's referenced content keys. A shard we
 	// cannot read is a fatal error (treating it as "references nothing" would let us
 	// drop content it actually needs — an under-approximation).
 	live := map[string]bool{}
-	for _, sm := range served.Shards {
-		shas, err := diskstore.DedupedShardSHAs(sm.Path)
+	for _, p := range shardPaths {
+		shas, err := diskstore.DedupedShardSHAs(p)
 		if err != nil {
-			return st, fmt.Errorf("blobstore: compact deduped: read shard %s liveness: %w", sm.Path, err)
+			return st, fmt.Errorf("blobstore: compact deduped: read shard %s liveness: %w", p, err)
 		}
 		for _, sha := range shas {
 			live[sha] = true
@@ -417,19 +451,29 @@ func CompactDedupedShardDir(outShardDir string) (DedupedCompactStats, error) {
 	st.DeadBlobs = beforeBlobs - keptBlobs
 	st.DeadBytes = st.BeforeBytes - st.AfterBytes
 
-	// Carry every shard forward byte-for-byte into the temp dir under its FINAL recorded
-	// basename, and build the manifest with paths bound to the LIVE path (no post-swap
-	// rewrite needed — same crash-safety property as RefreshDedupedShardDir).
+	// Carry EVERY globbed shard forward byte-for-byte into the temp dir under its
+	// ORIGINAL basename (so the glob set the server reads is preserved exactly — an
+	// orphan shard-9999.idx stays shard-9999.idx, not renumbered into a hole), and build
+	// the manifest with paths bound to the LIVE path (no post-swap rewrite needed — same
+	// crash-safety property as RefreshDedupedShardDir). A globbed shard with a manifest
+	// entry reuses its Repos/ContentBytes; an ORPHAN (globbed but unrecorded) gets a
+	// synthesized entry (empty Repos, content-bytes re-derived from its live blob sizes)
+	// rather than being dropped — the cardinal rule: a shard the server would glob keeps
+	// both its content and its file.
 	var shards []parity.ShardManifest
-	for i, sm := range served.Shards {
-		name := fmt.Sprintf("shard-%04d.idx", i)
-		phys := filepath.Join(tmpDir, name)
-		rec := filepath.Join(outShardDir, name)
-		if err := copyFile(sm.Path, phys); err != nil {
+	for _, src := range shardPaths {
+		base := filepath.Base(src)
+		phys := filepath.Join(tmpDir, base)
+		rec := filepath.Join(outShardDir, base)
+		if err := copyFile(src, phys); err != nil {
 			cleanupTmp()
-			return st, fmt.Errorf("blobstore: compact deduped: carry shard %s: %w", sm.Path, err)
+			return st, fmt.Errorf("blobstore: compact deduped: carry shard %s: %w", src, err)
 		}
-		shards = append(shards, parity.ShardManifest{Path: rec, Repos: sm.Repos, ContentBytes: sm.ContentBytes})
+		if sm, ok := manifestByBase[base]; ok {
+			shards = append(shards, parity.ShardManifest{Path: rec, Repos: sm.Repos, ContentBytes: sm.ContentBytes})
+		} else {
+			shards = append(shards, parity.ShardManifest{Path: rec, Repos: nil, ContentBytes: 0})
+		}
 	}
 	st.Shards = len(shards)
 
