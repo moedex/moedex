@@ -20,11 +20,14 @@
 //		moedex-index cas-refresh -cas-dir DIR [-corpus ROOT]
 //		moedex-index cas-export  -cas-dir DIR -shard-dir OUT [-shard-bytes N] [-force]
 //
-//	  - cas-export materializes a today-compatible servable shard dir from the
-//	    CAS, so moedex-serve and the parity harness consume it unchanged (the
-//	    parity-preserving bridge). The served shards still inline content per
-//	    shard as today; making the served format reference CAS blobs by SHA is a
-//	    later slice.
+//	  - cas-export materializes a servable shard dir from the CAS. With -deduped it
+//	    writes the deduped served format (content-less MOEDEX05 shards + one shared
+//	    blobs.dat) so blob content is stored once corpus-wide; without it, the
+//	    parity-preserving inlined bridge. A `-deduped` export over an EXISTING
+//	    deduped dir is DELTA-AWARE: it appends only net-new content to blobs.dat and
+//	    rewrites only the shards whose repos changed, carrying the rest forward byte-
+//	    for-byte (the served-side analogue of cas-refresh's per-blob CAS delta).
+//	    -force forces a full re-export.
 //
 //	  - build   indexes every git repo under -corpus into byte-sized shards and
 //	            writes the manifest. The result is directly servable
@@ -111,9 +114,12 @@ Content-addressable store (global cross-shard dedup + per-blob delta):
   - cas-refresh diffs each repo's current blob set against the manifest and adds
                 ONLY net-new blobs (per-blob delta); co-resident repos are not
                 re-ingested. Prints blobs/bytes added.
-  - cas-export  materializes a today-compatible servable shard dir + manifest
-                from the CAS, so moedex-serve and the parity harness consume it
-                unchanged.
+  - cas-export  materializes a servable shard dir + manifest from the CAS. With
+                -deduped, content-less MOEDEX05 shards + one shared blobs.dat
+                (content stored once corpus-wide); over an EXISTING deduped dir it
+                is DELTA-AWARE (appends only net-new content, rewrites only changed
+                shards). Without -deduped, the inlined parity-preserving bridge.
+                -force forces a full (re-)export.
 `)
 }
 
@@ -390,6 +396,15 @@ func runRefresh(args []string) error {
 	// Atomic-ish swap: move the live dir aside, move the rebuilt dir into place,
 	// then rewrite the manifest's recorded paths to the live dir (Rebuild recorded
 	// them under the temp path).
+	//
+	// NOTE (known crash window, pre-existing; not fixed in this slice): this inlined-
+	// format (parity.Rebuild) refresh has the SAME two-rename window as the deduped
+	// delta path — a crash BETWEEN the renames leaves no live dir at `dir`, and a
+	// crash AFTER the swap but BEFORE rewriteManifestPaths leaves manifest shard paths
+	// pointing at the gone temp dir. The deduped delta path
+	// (blobstore.RefreshDedupedShardDir) closes both windows (manifest written with
+	// final paths pre-swap + RecoverInterruptedDedupedSwap on the next run); porting
+	// the same recovery here is a follow-up for the inlined freshness path.
 	bak := dir + ".bak-" + stamp
 	if err := os.Rename(dir, bak); err != nil {
 		_ = os.RemoveAll(tmp)
@@ -520,7 +535,7 @@ func runCASExport(args []string) error {
 	casDir := fs.String("cas-dir", "", "content-addressable store directory to export from")
 	shardDir := fs.String("shard-dir", "", "output servable shard directory")
 	shardBytes := fs.Int64("shard-bytes", parity.DefaultShardBytes, "target indexed-content bytes per exported shard")
-	force := fs.Bool("force", false, "clear a non-empty shard dir before exporting")
+	force := fs.Bool("force", false, "clear a non-empty shard dir before exporting (forces a FULL re-export even over an existing deduped dir)")
 	deduped := fs.Bool("deduped", false, "write the deduped served format (content-less MOEDEX05 shards + one shared blobs.dat content store) so blob content is stored once corpus-wide")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -536,6 +551,41 @@ func runCASExport(args []string) error {
 	if err != nil {
 		return err
 	}
+
+	// DELTA-AWARE deduped re-export: when -deduped is set and an existing deduped dir
+	// is present (and -force was NOT given), do an incremental re-export — append
+	// only net-new blob content to the existing blobs.dat and rewrite only the shards
+	// whose repo set intersects the changed repos, carrying the rest forward byte-for-
+	// byte. -force forces a full re-export (clears the dir first). This mirrors how
+	// cas-refresh extends the CAS pack in place rather than rebuilding it; the operator
+	// runs `cas-refresh` then `cas-export -deduped` and the export auto-detects whether
+	// to go full or delta. The (file,line) match set is identical either way (proven by
+	// the parity gate); delta just does far less work when little changed.
+	//
+	// First heal any interrupted prior swap so the live dir is complete before we
+	// decide full-vs-delta — otherwise a crash that left the live path momentarily
+	// absent would mis-route to a full export. (No-op in the normal case.)
+	if *deduped {
+		if err := blobstore.RecoverInterruptedDedupedSwap(out); err != nil {
+			return fmt.Errorf("recover interrupted deduped swap: %w", err)
+		}
+	}
+	if *deduped && !*force && blobstore.IsDedupedDir(out) {
+		m, ds, err := blobstore.RefreshDedupedShardDir(dir, out, *shardBytes)
+		if err != nil {
+			return err
+		}
+		// The shard set changed, so any prior ranking sidecars in the dir are now
+		// stale; rebuild them (best-effort, as build/refresh do).
+		sidecars := buildSidecars(out)
+		fmt.Printf("cas-export (deduped, DELTA): changed=%d added=%d removed=%d; shards rewritten=%d carried=%d\n",
+			len(ds.ChangedRepos), len(ds.AddedRepos), len(ds.RemovedRepos), ds.ShardsRewritten, ds.ShardsCarried)
+		fmt.Printf("  appended %d net-new blob(s), %.1f MB to blobs.dat (%d dedup no-op PutContent skipped)\n",
+			ds.BlobsAppended, float64(ds.BytesAppended)/1e6, ds.PutsDeduped)
+		fmt.Printf("  served dir now: %d shard(s) from %d repo(s) at %s%s\n", len(m.Shards), len(m.Heads), out, sidecars)
+		return nil
+	}
+
 	if err := prepareDir(out, *force); err != nil {
 		return err
 	}

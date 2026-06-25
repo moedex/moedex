@@ -48,6 +48,17 @@ const (
 	headerSizeV5    = 48 // same shape as MOEDEX03
 )
 
+// contentRegistrar is the shared-content-store sink SaveDeduped registers each
+// blob's content with. Both the full-export writer (*ContentStoreWriter) and the
+// delta-export appender (*ContentStoreAppender) satisfy it, so the SAME shard
+// serializer drives both the full and the incremental deduped export — the shard
+// on-disk format is byte-identical regardless of which sink stored the content.
+// PutContent is idempotent on the content hash (a present hash is a no-op), the
+// cross-shard / co-resident dedup primitive.
+type contentRegistrar interface {
+	PutContent(sha string, content []byte) ContentRef
+}
+
 // SaveDeduped writes ix to path in the MOEDEX05 (content-less) format and records
 // each unique blob's content in cw (the shared content store writer). The shard
 // stores only the SHA + file refs per blob; cw stores the content ONCE keyed by
@@ -57,6 +68,20 @@ const (
 // CONTRACT: ix.Blob(id).SHA must be a content hash of the blob's content (the CAS
 // invariant), so cw's idempotent PutContent dedups correctly across shards.
 func SaveDeduped(ix *index.Index, path string, cw *ContentStoreWriter) error {
+	return saveDeduped(ix, path, cw)
+}
+
+// SaveDedupedAppender is the DELTA-export shard serializer: identical to
+// SaveDeduped but registers content with a *ContentStoreAppender (which carries an
+// existing store forward and appends only net-new content). The shard bytes are
+// byte-identical to what SaveDeduped would write for the same index — only the
+// content-store sink differs — so a delta-rewritten shard is indistinguishable on
+// disk from a fully-re-exported one.
+func SaveDedupedAppender(ix *index.Index, path string, a *ContentStoreAppender) error {
+	return saveDeduped(ix, path, a)
+}
+
+func saveDeduped(ix *index.Index, path string, cw contentRegistrar) error {
 	blobs := ix.Snapshot()
 	trigrams := ix.Trigrams()
 
