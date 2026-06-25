@@ -74,6 +74,36 @@ holds production MeanNDCG ~0.93 against a 0.85 floor
 
 ---
 
+## Slice C — Corpus bootstrap & freshness (`moedex-corpus`) — DONE
+
+Added after the spine: a first-class **setup experience**. The spine assumed the
+corpus already existed on disk (cloned out-of-band); this closes that gap with a
+new operator tool, `cmd/moedex-corpus` (+ `internal/corpus`), kept strictly
+separate from the engine — it is the only component that shells out to `glab` /
+`git`, behind a `Runner` seam, and is never imported by `internal/*`.
+
+- **doctor** — checks `glab` is installed + authenticated to `gitlab.tcdevops.com`
+  **only** (delegated to glab; no token handling), and `git` is present; reports
+  the projected repo count with exact fixes on failure.
+- **clone** — shallow (`--depth 1`), parallel, idempotent clone of the curated
+  set (top-level-group allowlist over all visible non-archived projects ≈ today's
+  484-repo mirror; the default list is embedded) into `<root>/<namespace>`.
+- **sync** — reconcile (clone-new / fetch-reset-existing / report-missing,
+  scoped so narrowing the allowlist never prunes out-of-scope repos), with opt-in
+  `-prune`; `-reindex` drives the chosen **per-blob-delta** path (`cas-refresh` →
+  `cas-export -deduped`) + daemon reload, via the `moedex-index` binary.
+- **deploy** — `moedex-sync.{service,timer}` run `sync -reindex` **hourly**
+  (supersedes `moedex-refresh.*` on a GitLab-connected host); runbook in
+  `deploy/README.md`. Credentials/sandbox need Linux-host validation.
+
+Unit-tested throughout (Runner fake) and live-validated against the real GitLab +
+`moedex-index`/`moedex-serve` (clone→build→servable→delta-sync round-trip). Mascot:
+Moe. **Done when** — a from-zero machine reaches a queryable, self-freshening
+corpus via `doctor → clone -reindex → sync timer`. (Met; the systemd units await a
+Linux validation pass like the rest of `deploy/`.)
+
+---
+
 ## Remaining slices to production (prioritized)
 
 Ordering rationale: get the daemon **safe and operable** (auth, observability,

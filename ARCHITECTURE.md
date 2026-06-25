@@ -50,12 +50,14 @@ All library code lives under `internal/`; executables under `cmd/`.
 | parity | [`internal/parity`](internal/parity) | Full-corpus exact-match retrieval parity harness + shard-level freshness | `Config`, `RunConfig`, `Run`; `Build`, `Built`, `FileTable`, `DefaultShardBytes`; `Generate`, `Battery`, `Query`, `Bucket`; `QueryResult`, `Verdict`; `WriteReport`, `ReportMeta`; `Manifest`, `ShardManifest`, `RepoHead`, `WriteManifest`, `LoadManifest`, `DetectChanges`, `Changes`, `Rebuild` |
 | server | [`internal/server`](internal/server) | Warm multi-shard serving spine: mmap'd retrieval + ranked agent context | `Corpus`, `Open`, `(*Corpus) Regex/Literal/NumShards/NumBlobs/Close`; `RankCorpus`, `RankConfig`, `OpenRank`, `(*RankCorpus) SearchContext`; `BuildSidecars` |
 | mcp | [`internal/mcp`](internal/mcp) | Serve `search_context` over MCP (JSON-RPC/stdio) | `ContextSearcher`; `Server`, `NewServer`, `Serve`; `IndexSearcher`, `NewIndexSearcher`, `SetEnclosingBytes`, `SearchContext` |
+| corpus | [`internal/corpus`](internal/corpus) | Corpus acquisition + freshness over glab/git (the only package that shells out to them; **not imported by the engine**) | `Runner`, `ExecRunner`; `Config`, `DefaultGroups`; `Project`, `Enumerate`; `Doctor`, `Report`; `CloneArgs`, `CloneProjects`; `Reconcile`, `PlanSync`, `SyncProjects`; `Reindex` |
 | moedex | [`cmd/moedex`](cmd/moedex) | CLI: index one repo, run a literal/regex query | — |
 | moedex-mcp | [`cmd/moedex-mcp`](cmd/moedex-mcp) | Single-repo MCP server binary | — |
 | moedex-serve | [`cmd/moedex-serve`](cmd/moedex-serve) | Warm retrieval daemon over a prebuilt shard dir: `-http` retrieval API, `-q` one-shot, `-mcp` ranked context | — |
 | moedex-index | [`cmd/moedex-index`](cmd/moedex-index) | Offline shard-dir builder/freshness tool: `build` / `check` / `refresh`, plus the CAS commands `cas-build` / `cas-refresh` / `cas-export` | — |
 | scale | [`cmd/scale`](cmd/scale) | Index many repos, report size/throughput/mmap memory | — |
 | moedex-parity | [`cmd/moedex-parity`](cmd/moedex-parity) | Full-corpus parity gate: build + battery + oracles + `PARITY-REPORT.md`, non-zero exit on failure | — |
+| moedex-corpus | [`cmd/moedex-corpus`](cmd/moedex-corpus) | Corpus setup + freshness CLI: `doctor` / `clone` / `sync` (`-reindex`) / `groups`, scoped to gitlab.tcdevops.com | — |
 
 ---
 
@@ -314,6 +316,41 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
   (`auto|onnx|http|none`): `auto` picks `onnx` when an ONNX Runtime library path is
   given, else `http` when `MOEDEX_EMBED_URL` is set, else `none`.
 
+## Corpus acquisition & freshness (`internal/corpus` + `cmd/moedex-corpus`)
+
+Everything above assumes the corpus is already on disk. `moedex-corpus` is the
+setup-and-freshness operator that *puts* it there and keeps it current — the one
+component that reaches outside the box, to TurnCommerce's internal GitLab
+(`gitlab.tcdevops.com`, and only that host). It is deliberately quarantined from
+the engine: it lives in its own package, shells out to `glab`, `git`, and the
+`moedex-index` binary behind a `Runner` seam (so all of its logic is unit-tested
+without a network), and is **never imported by** `internal/*` or the daemon — the
+engine's pure-Go, zero-dependency posture is untouched.
+
+- **doctor** ([`doctor.go`](internal/corpus/doctor.go)) — preflight: is `glab`
+  installed, authenticated to the host (delegated entirely to glab — moedex never
+  handles tokens), and is `git` present? It reports the projected repo count and,
+  on failure, the exact remediation (`glab auth login --hostname …`).
+- **clone** ([`clone.go`](internal/corpus/clone.go)) — enumerate the curated
+  projects (a top-level-group allowlist over all *visible* non-archived projects,
+  which reproduces today's ~484-repo mirror; the default list is embedded), then
+  shallow-clone (`--depth 1 --single-branch`, LFS skipped, non-interactive ssh)
+  each into `<root>/<path_with_namespace>` with a bounded-concurrency worker pool.
+  Idempotent.
+- **sync** ([`sync.go`](internal/corpus/sync.go)) — reconcile the enumerated set
+  against disk into clone / update / missing (missing is scoped to the allowlist,
+  so narrowing it never prunes out-of-scope repos), then clone the new and
+  fetch-and-reset the existing (shallow-safe, change-detected) concurrently, with
+  optional `-prune` of the gone-on-server repos.
+- **reindex** ([`reindex.go`](internal/corpus/reindex.go)) — `clone`/`sync
+  -reindex` drive the per-blob-delta path through the `moedex-index` binary:
+  `cas-build` the first time, else `cas-refresh`, then `cas-export -deduped`
+  (delta-aware), then an optional daemon reload.
+
+`cmd/moedex-corpus` is the thin CLI; `deploy/moedex-sync.{service,timer}` run
+`sync -reindex` hourly. The mascot — Moe, an eight-tentacled octopus — is the
+tool's voice (the parallel clones are his tentacles).
+
 ## Current state & deliberately deferred
 
 **Built and working today:**
@@ -340,6 +377,12 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
 - **Shard-level freshness** (`internal/parity` manifest + `cmd/moedex-index`
   `build`/`check`/`refresh`): detect changed repos by git HEAD and rebuild only the
   affected shards.
+- **Corpus acquisition + freshness** (`internal/corpus` + `cmd/moedex-corpus`): a
+  setup tool that checks/guides glab auth (gitlab.tcdevops.com only), shallow-clones
+  the curated repo set using the operator's own access, and on a schedule pulls
+  fresh + drives the per-blob-delta reindex (`cas-refresh` → `cas-export -deduped`)
+  + reloads the daemon. Shells out to glab/git/moedex-index; the engine never
+  imports it.
 - **Content-addressable store with global dedup + per-blob delta** (`internal/blobstore`
   + `cmd/moedex-index` `cas-build`/`cas-refresh`/`cas-export`): a corpus-wide CAS
   keyed by git blob SHA stores each unique blob exactly once (idempotent `Put` is the
