@@ -1,12 +1,14 @@
 # PRODUCTION-ROADMAP — moedex to production
 
 > Companion to [`zoekt-2026-redesign.md`](zoekt-2026-redesign.md) (northstar),
-> [`ARCHITECTURE.md`](ARCHITECTURE.md) (what exists), [`GOAL.md`](GOAL.md) (the
-> v0.1 retrieval-parity contract, MET), and [`LATENCY-SPEC.md`](LATENCY-SPEC.md)
-> (the query-tail effort, largely done). This document enumerates the remaining
-> work to take moedex from "the retrieval + ranking + serving spine is built and
-> validated" to "an operable internal service." Every claim below is grounded in
-> a file, test, or binary that was read, not in lore.
+> [`ARCHITECTURE.md`](ARCHITECTURE.md) (what exists today), and the ADRs in
+> [`docs/adr/`](docs/adr) (the decisions, with evidence — including the v0.1
+> ripgrep-parity contract [`0003`](docs/adr/0003-cox-reduction-ripgrep-parity.md),
+> MET, and the query-tail latency work
+> [`0012`](docs/adr/0012-search-latency-positional-verify.md)). This document
+> enumerates the remaining work to take moedex from "the retrieval + ranking +
+> serving spine is built and validated" to "an operable internal service." Every
+> claim below is grounded in a file, test, or binary that was read, not in lore.
 
 > **Batch-1 status (2026-06-24): DONE + verified live.** P1 (auth), P2
 > (observability), P4 (sidecars), P5 (resilience) implemented and verified on a
@@ -45,94 +47,30 @@ breaks, and trust who can reach it — for one box, one corpus, one team.
 
 ## Done / the spine (verified)
 
-Each line cites the package/binary/test that backs it.
+The built-and-validated spine — the retrieval core, the four-arm hybrid ranker,
+the polyglot symbol layer, the optional dense arm, the agent-context API, the warm
+serving spine, shard-level freshness, the content-addressable store, and the
+evaluation + parity gates — is described in [`ARCHITECTURE.md`](ARCHITECTURE.md),
+with each decision and its evidence recorded in the ADRs under
+[`docs/adr/`](docs/adr):
 
-**Retrieval core**
-- Positional byte-trigram index with git-blob-SHA content dedup —
-  `internal/index` (`AddFile`, `Posting`), `internal/trigram`.
-- Regex → boolean trigram (Cox) reduction, never-under-approximate by
-  construction — `internal/query/cox.go` (`FromRegexp`, fold-aware
-  `foldedLiteralInfo`).
-- Candidate retrieval + RE2 verify to ripgrep parity — `internal/search`
-  (`Literal`, `Regex`), `internal/search/parity_test.go` (shells out to `rg`).
-- On-disk persistence with mmap'd compact varint-delta postings (`MOEDEX03`) —
-  `internal/diskstore` (`Save`, `Load`, `LoadMmap`, `LoadBlobs`),
-  `internal/index/codec.go`.
-- **Full-corpus ripgrep parity, validated.** `internal/parity` +
-  `cmd/moedex-parity`, gated by `make verify`/`make parity`. `PARITY-REPORT.md`
-  records **PASS**: 484/484 repos, |F|=60,883, AC-D3 1000/1000 (no
-  under-approximation), AC-D4 0 (no over-approximation), seed-reproducible
-  ≥1000-query 9-bucket battery (`internal/parity/battery.go`).
+| Area | ADR(s) |
+|---|---|
+| Scope, memory envelope, pure-Go default | [0001](docs/adr/0001-single-node-scope-pure-go-default.md), [0013](docs/adr/0013-pure-go-defer-simd.md) |
+| Retrieval core (positional trigrams, Cox reduction, ripgrep parity) | [0002](docs/adr/0002-positional-trigram-core-byte-offsets.md), [0003](docs/adr/0003-cox-reduction-ripgrep-parity.md) |
+| Storage (CAS dedup, mmap compact postings) | [0004](docs/adr/0004-content-addressable-blob-store.md), [0005](docs/adr/0005-mmap-compact-postings.md) |
+| Ranking + symbols + dense + agent context | [0006](docs/adr/0006-rrf-hybrid-ranking.md), [0007](docs/adr/0007-optional-dense-arm.md), [0008](docs/adr/0008-polyglot-symbol-sidecar.md), [0009](docs/adr/0009-agent-context-api.md) |
+| Serving spine + freshness | [0010](docs/adr/0010-warm-serving-spine.md), [0011](docs/adr/0011-shard-level-freshness.md) |
+| Search latency + evaluation gate | [0012](docs/adr/0012-search-latency-positional-verify.md), [0014](docs/adr/0014-eval-harness-gold-gate.md) |
 
-**Query latency**
-- The original p95 was the top follow-up (15.3 s in `PARITY-REPORT.md`). It is
-  now largely fixed: `LATENCY-SPEC.md` Phase-3-reopened (positional verification
-  for the `(?i)` tail, commit `cf86f58`, `internal/search/positional_test.go`)
-  reports **full-corpus p95 1.443 s, p50 179 ms, max 12.7 s** under the
-  query-parallel battery, with single-query serving latency ~350–650 ms on the
-  worst surviving shapes — all while the parity gate stayed GREEN (AC-D3
-  1000/1000). The residual tail is inherent/degenerate (`\p{Greek}` class scans,
-  `[0-9]{4}`, sub-trigram `;`, fold-dirty `k`/`s` literals), explicitly parked.
-
-**Ranking (multi-arm RRF hybrid)** — `internal/rank/ranker.go`
-- BM25 lexical arm, always on (`lexicalArm`, K1=1.2, B=0.75).
-- Filename/path arm, **on by default** (`pathArm`, `PathMinCoverage`=0.6).
-- Symbol-name arm, on when a symbol index is attached via `SetSymbols`
-  (`symbolArm`, `SymbolMinCoverage`=0.67) — wired in serving at
-  `internal/server/rankcorpus.go:126` and `cmd/moedex-mcp`.
-- Dense/embedding arm, **on by default, gated by query length** (`denseArm`,
-  `DenseMinQueryTerms`=5; commit `baa9b5a`) — purely additive.
-- Fusion: Reciprocal Rank Fusion (`RRFk`=60) across all attached arms.
-
-**Polyglot symbol layer** — `internal/symbol`
-- Extractors for Go (`extract.go`, `go/parser`), C# (`extract_cs.go`),
-  TypeScript (`extract_ts.go`), SQL (`extract_sql.go`), ColdFusion
-  (`extract_cf.go`), dispatched by extension in `build_multi.go`
-  (`ExtractorForPath`/`BuildMulti`); each has tests. `SYM1` persistence codec
-  exists (`codec.go`).
-
-**Dense arm** — `internal/embed`
-- In-process ONNX embedder behind the `onnx` build tag (`onnx.go`,
-  `st-codesearch-distilroberta-base`, 768-d, int8 ~78 MB, embedded model +
-  tokenizer), with a no-op stub on the default build (`onnx_disabled.go`); plus
-  an HTTP embedder (`HTTPEmbedder`). Flat brute-force cosine store (`MDXE` codec)
-  — no ANN yet. Boot embeddings persisted + fingerprint-validated
-  (`corpus-embeddings.store` + `.meta`).
-
-**Evaluation harness** — `internal/eval`
-- Recall@k, Precision@k, MRR, NDCG@k (`metrics.go`) **plus** UDCG
-  (distraction-aware, arXiv 2510.21440) in `metrics.go` with 9 hand-computed
-  cases in `metrics_udcg_test.go`.
-- A **real hard CI gold gate**: `gold_gate_test.go` asserts production
-  MeanNDCG ≥ 0.85 (currently ~0.93) and lexical-only ≥ 0.58 via `t.Errorf`, and
-  fails if the symbol arm attaches to 0 blobs. Dense gates
-  (`gold_densegate_test.go`, `gold_onnx_test.go`) assert additivity but `t.Skip`
-  when no ONNX runtime/corpus is present.
-- Gold set = **42 queries** (`gold_corpus.go`): 10 C# + 8 TS + 6 SQL + 6 CF +
-  6 non-filename-aligned (= 36 in `CorpusGold()`) + 6 synonym-gap/agent-NL
-  (measured separately).
-
-**Warm serving spine** — `cmd/moedex-serve` + `internal/server`
-- `server.Corpus` mmaps a `*.idx` shard dir once and fans retrieval queries out
-  across shards (bounded by NumCPU), merging by repo/relpath/line — no
-  cross-shard blob-ID reconciliation needed because matches carry absolute/repo
-  paths (`corpus.go`).
-- `server.RankCorpus` builds a content-only unified index across shards with
-  global blob IDs, so BM25 IDF and RRF fusion are computed corpus-wide, not
-  per-shard (`rankcorpus.go`).
-- Three modes: `-http` (`/search`, `/stats`, `/healthz`), `-q` one-shot,
-  `-mcp` ranked context; `-embed auto|onnx|http|none`. SIGHUP hot-reload and
-  SIGINT/SIGTERM graceful shutdown for `-http`; reload tested
-  (`reload_test.go`). MCP hardening: 30 s per-call timeout, 8-way concurrency,
-  1 MiB message / 8 KiB query caps, panic recovery (`internal/mcp`,
-  `hardening_test.go`).
-
-**Freshness / incremental** — `internal/parity/manifest.go` + `cmd/moedex-index`
-- `manifest.json` records per-shard repo membership and per-repo git HEAD.
-- `moedex-index build|check|refresh`: `DetectChanges` classifies
-  changed/added/removed repos by HEAD diff; `Rebuild` rebuilds only affected
-  shards and atomically swaps; lifecycle is tested (`main_test.go`,
-  `manifest_test.go`).
+Two headline results these gates produced, which the remaining slices must not
+regress: the full-corpus ripgrep-parity gate (`PARITY-REPORT.md`, `make
+verify`/`make parity`) records **PASS** — 484/484 repos, |F|=60,883, **AC-D3
+1000/1000** (no under-approximation), **AC-D4 0** (no over-approximation); and
+query **p95 is 1.443 s**, down from the original 15.3 s
+([0012](docs/adr/0012-search-latency-positional-verify.md)). The gold ranking gate
+holds production MeanNDCG ~0.93 against a 0.85 floor
+([0014](docs/adr/0014-eval-harness-gold-gate.md)).
 
 ---
 
@@ -325,8 +263,9 @@ internal single-node v1; listed so the roadmap is honest about scope:
 
 - **Multi-node / distribution / sharding across machines** — `zoekt-2026-redesign.md`.
 - **SIMD intersection/verification kernel** — `research/simd-kernel.md`
-  (`LATENCY-SPEC.md` shows the tail is scan-bound, not intersection-bound, so this
-  is low-leverage now).
+  (ADR [`0012`](docs/adr/0012-search-latency-positional-verify.md) /
+  [`0013`](docs/adr/0013-pure-go-defer-simd.md) show the tail is scan-bound, not
+  intersection-bound, so this is low-leverage now).
 - **FM-index compressed cold tier** — `research/fm-index-cold-tier.md`.
 - **Learned reranker (GBDT / cross-encoder)** — `research/learned-reranker.md`;
   staged behind the gold-set/UDCG work (P8) and explicitly "only if eval shows

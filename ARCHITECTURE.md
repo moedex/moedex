@@ -17,8 +17,9 @@ build tag (which is the only thing that pulls the `github.com/sugarme/tokenizer`
 server**. Neither is needed for lexical/symbol/path retrieval.
 
 The design lineage lives in [`zoekt-2026-redesign.md`](zoekt-2026-redesign.md)
-(the northstar) and the [`research/`](research) notes; this document describes the
-code as it actually exists today.
+(the northstar) and the [`research/`](research) notes; the **architectural
+decisions — with their evidence — are recorded as ADRs in [`docs/adr/`](docs/adr)**.
+This document describes the code as it actually exists today.
 
 > **Note on stability.** `internal/search`, `internal/rank`, and `internal/symbol`
 > are under active development. Their *exported* surface (the contracts other
@@ -172,46 +173,24 @@ block is always emitted even if it alone exceeds budget; any later skip sets
 
 ## Key design decisions & rationale
 
-- **Byte offsets, not rune offsets.** Zoekt used rune offsets;
-  [`internal/trigram`](internal/trigram/trigram.go) documents the clean-room choice
-  to use bytes: content stays 1× in memory, the positional-distance delta for a
-  literal is a fixed byte length, and candidate verification is byte-exact like
-  ripgrep — correct over UTF-8 regardless of where trigrams straddle rune
-  boundaries.
-- **Content dedup by git blob SHA.** `index.AddFile` indexes identical content once
-  and accumulates `FileRef`s, so a blob can back several paths. This is the
-  Blackbird content-addressable instinct from the northstar; distribution/sharding
-  remains a future seam the design leaves room for but does not yet pay for.
-- **mmap'd compact postings.** Posting lists are the memory wall (~16 bytes each,
-  ~one per byte of corpus). [`index/codec.go`](internal/index/codec.go) compresses
-  them with **grouped varint delta coding** (per blob: blob-id delta, count, then
-  offset deltas), typically 1–2 bytes per posting. `diskstore.LoadMmap` maps the
-  whole file and hands the index self-contained byte sub-slices per trigram, so a
-  query decodes only the trigrams it touches and the bulk of postings never enter
-  the Go heap. `cmd/scale` measures this directly (`MOEDEX_MMAP=1`).
-- **Optional dense arm (zero-dep default).** The dense arm lives behind the
-  `Embedder` interface and is `nil`-able; `rank.New(ix, ti, nil, nil, cfg)` yields
-  ranking with no external dependencies. Two backends satisfy `Embedder`: an
-  **in-process ONNX code embedder** (`embed.ONNXEmbedder`,
-  st-codesearch-distilroberta-base, 768-d, int8-quantized to ~78MB embedded in the
-  binary) compiled in only under `-tags onnx` — the default build links a no-op stub
-  ([`onnx_disabled.go`](internal/embed/onnx_disabled.go)) so the core keeps zero ML
-  deps — and a **local HTTP embedding server** (`embed.HTTPEmbedder`, any
-  OpenAI/ollama-style `/embeddings` endpoint), which needs no build tag. Vectors are
-  L2-normalized so cosine reduces to a dot product over a flat (brute-force) store —
-  an ANN index is a later optimization behind the same `Search` API.
-- **RRF fusion (not a learned reranker).** Reciprocal Rank Fusion needs no score
-  calibration between the BM25, cosine, symbol-name, and path arms and is the
-  northstar's conservative default; a learned reranker is explicitly deferred (see
-  [`research/learned-reranker.md`](research/learned-reranker.md)).
-- **Necessary-condition query reduction.** [`internal/query`](internal/query/query.go)
-  guarantees ripgrep parity by only ever producing a *necessary* condition for a
-  match (it may over-approximate, never under-approximate); when unsure any node
-  degrades to `All` (scan everything). `FromRegexp` uses the full Cox-style
-  bottom-up analysis ([`cox.go`](internal/query/cox.go)) with per-node
-  exact/prefix/suffix sets (capped at 8) and boundary-trigram synthesis across
-  concatenation. `search.Regex` selects candidates with this query, then verifies
-  each candidate line with Go's real `regexp` engine.
+The *why* behind each decision — with its supporting evidence — is recorded in the
+ADRs under [`docs/adr/`](docs/adr). This table maps the load-bearing ones to the
+code that embodies them; read the ADR for the alternatives weighed and the numbers.
+
+| Decision | Embodied in | ADR |
+|---|---|---|
+| Keep the positional-trigram core; **byte** offsets, not rune offsets | `internal/trigram`, `internal/index` | [0002](docs/adr/0002-positional-trigram-core-byte-offsets.md) |
+| Necessary-condition regex→trigram (Cox) reduction; ripgrep parity, never under-approximate | `internal/query`, `internal/search`, `internal/parity` | [0003](docs/adr/0003-cox-reduction-ripgrep-parity.md) |
+| Content addressing by git blob SHA — global dedup, per-blob delta, deduped served format | `internal/index`, `internal/blobstore`, `internal/diskstore` | [0004](docs/adr/0004-content-addressable-blob-store.md) |
+| mmap'd compact (varint-delta) postings — postings off-heap | `internal/index/codec.go`, `internal/diskstore` | [0005](docs/adr/0005-mmap-compact-postings.md) |
+| Multi-arm hybrid ranking fused via RRF (not a learned reranker) | `internal/rank` | [0006](docs/adr/0006-rrf-hybrid-ranking.md) |
+| Optional dense arm — zero-dep default (ONNX behind `-tags onnx` / local HTTP) | `internal/embed` | [0007](docs/adr/0007-optional-dense-arm.md) |
+| Polyglot symbol layer as a precomputed sidecar (not tree-sitter in-binary) | `internal/symbol` | [0008](docs/adr/0008-polyglot-symbol-sidecar.md) |
+| Agent-first context API — token-budgeted, deduped, symbol-scoped windows over MCP | `internal/contextwin`, `internal/mcp` | [0009](docs/adr/0009-agent-context-api.md) |
+| Pure-Go execution; native SIMD kernel deferred | `internal/setops`, `simd/archsimd` | [0013](docs/adr/0013-pure-go-defer-simd.md) |
+
+The full index — including scope, the serving spine, freshness, the search-latency
+work, and the evaluation gate — is in [`docs/adr/README.md`](docs/adr/README.md).
 
 ---
 

@@ -331,7 +331,8 @@ func writeZoekt(b *strings.Builder, res *Result) {
 }
 
 // writeLatencyBreakdown renders per-bucket moedex latency and the slowest queries
-// (Phase-0 tail-profiling, see LATENCY-SPEC.md). No-op if per-query timing absent.
+// (tail-profiling, see docs/adr/0012-search-latency-positional-verify.md). No-op
+// if per-query timing absent.
 func writeLatencyBreakdown(b *strings.Builder, res *Result) {
 	w := func(f string, a ...any) { fmt.Fprintf(b, f, a...) }
 	if len(res.MoeDur) == 0 || len(res.MoeDur) != len(res.Results) {

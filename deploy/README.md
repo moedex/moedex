@@ -62,9 +62,10 @@ moedex-index refresh -shard-dir /srv/moedex/shards
 
 ## Hardware sizing
 
-Measured on the ~5.2 GB / 484-repo corpus (953 MB indexed); see
-[`../P6-SCALE-REPORT.md`](../P6-SCALE-REPORT.md) for the full numbers and the 8 GB
-projection.
+Measured on the ~5.2 GB / 484-repo corpus (953 MB indexed); see ADR
+[`0001`](../docs/adr/0001-single-node-scope-pure-go-default.md) and
+[`0005`](../docs/adr/0005-mmap-compact-postings.md) for the full numbers and the
+8 GB projection.
 
 | Phase | Footprint (5.2 GB corpus) | Notes |
 | --- | --- | --- |
@@ -196,7 +197,7 @@ it fragments the shard set (one shard per re-ingested repo). It pays off for
 **small, frequent** deltas (a few repos between hourly runs); for a large batch, a
 full `build` into a fresh dir + `systemctl reload` is equivalent and packs better.
 Refresh always serves correct, query-identical content (validated under concurrent
-load). See [`../P7-REFRESH-REPORT.md`](../P7-REFRESH-REPORT.md).
+load). See ADR [`0011`](../docs/adr/0011-shard-level-freshness.md).
 
 ### Auth token as a secret
 

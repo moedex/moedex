@@ -1,0 +1,24 @@
+# Architecture Decision Records — moedex
+
+These ADRs capture the architectural decisions behind moedex, a clean-room, single-node trigram code-search engine and agent-context API (a Zoekt successor). They were consolidated from a sprint's worth of spike/latency/scale/parity working notes (2026-06); those throwaway reports have since been **removed and their evidence baked into the relevant ADRs** below.
+
+| # | Decision | Status |
+|---|---|---|
+| [0001](./0001-single-node-scope-pure-go-default.md) | Single-node scope, ~8 GB corpus, pure-Go zero-dependency default | Accepted |
+| [0002](./0002-positional-trigram-core-byte-offsets.md) | Keep the positional-trigram core; byte offsets, not rune offsets | Accepted |
+| [0003](./0003-cox-reduction-ripgrep-parity.md) | Regex → boolean-trigram (Cox) reduction, verified to ripgrep parity — never under-approximate | Accepted |
+| [0004](./0004-content-addressable-blob-store.md) | Content-addressable storage by git blob SHA — global dedup, per-blob delta, deduped served format | Accepted |
+| [0005](./0005-mmap-compact-postings.md) | mmap'd compact (varint-delta) postings as the memory strategy | Accepted |
+| [0006](./0006-rrf-hybrid-ranking.md) | Hybrid multi-arm ranking fused via RRF — not a learned reranker | Accepted |
+| [0007](./0007-optional-dense-arm.md) | Optional dense arm — zero-dep default, ONNX behind a build tag or local HTTP | Accepted |
+| [0008](./0008-polyglot-symbol-sidecar.md) | Polyglot syntactic symbol layer as a precomputed sidecar — not tree-sitter in the binary | Accepted |
+| [0009](./0009-agent-context-api.md) | Agent-first context API — token-budgeted, deduplicated, symbol-scoped windows over MCP | Accepted |
+| [0010](./0010-warm-serving-spine.md) | Warm multi-shard serving spine — mmap retrieval daemon + ranked context, sidecar persistence, hardening | Accepted |
+| [0011](./0011-shard-level-freshness.md) | Shard-level freshness via a git-HEAD manifest — rebuild only affected shards | Accepted |
+| [0012](./0012-search-latency-positional-verify.md) | Search latency — fold-aware candidate prefilter + positional-postings verification | Accepted |
+| [0013](./0013-pure-go-defer-simd.md) | Pure-Go execution; native SIMD kernel deferred (tried, no consistent win at scale) | Accepted |
+| [0014](./0014-eval-harness-gold-gate.md) | Evaluation harness + hard gold gate — NDCG floor and a distraction-aware (UDCG) metric | Accepted |
+
+**Companion docs** (repo root): [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) (what the code is today), [`../../zoekt-2026-redesign.md`](../../zoekt-2026-redesign.md) (the northstar / design lineage), [`../../PRODUCTION-ROADMAP.md`](../../PRODUCTION-ROADMAP.md) (remaining work to an operable service), [`../../research/`](../../research) (the deep-research notes these decisions rest on), and `../../PARITY-REPORT.md` (the generated correctness-gate artifact, see [0003](./0003-cox-reduction-ripgrep-parity.md)).
+
+> Format: lightweight ADR — Status · Context · Decision · Consequences · Evidence · Related. One decision per record.
