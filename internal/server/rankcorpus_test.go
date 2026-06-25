@@ -2,14 +2,65 @@ package server
 
 import (
 	"context"
+	"encoding/binary"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
+	"moedex/internal/diskstore"
 	"moedex/internal/embed"
+	"moedex/internal/index"
 	"moedex/internal/rank"
 )
+
+// buildDedupedDir writes a real deduped served dir (one MOEDEX05 shard per repo +
+// one shared blobs.dat), keyed by the canonical git-blob SHA-1 so the default-on
+// content verification accepts it. repos maps repo label -> {relpath -> content}.
+// It returns the dir. This stays within diskstore + index (no blobstore/git
+// dependency) so it is a fast, hermetic server-package unit fixture.
+func buildDedupedDir(t *testing.T, repos map[string]map[string]string) string {
+	t.Helper()
+	dir := t.TempDir()
+	cw := diskstore.NewContentStoreWriter()
+	labels := make([]string, 0, len(repos))
+	for label := range repos {
+		labels = append(labels, label)
+	}
+	sort.Strings(labels)
+	for i, label := range labels {
+		ix := index.New()
+		files := repos[label]
+		rels := make([]string, 0, len(files))
+		for rel := range files {
+			rels = append(rels, rel)
+		}
+		sort.Strings(rels)
+		for _, rel := range rels {
+			content := []byte(files[rel])
+			sha := diskstore.GitBlobSHA1(content)
+			ix.AddFile(label, rel, filepath.Join("/abs", label, rel), sha, content)
+		}
+		shardPath := filepath.Join(dir, "shard-"+pad4(i)+".idx")
+		if err := diskstore.SaveDeduped(ix, shardPath, cw); err != nil {
+			t.Fatalf("SaveDeduped %s: %v", shardPath, err)
+		}
+	}
+	if err := cw.Write(filepath.Join(dir, diskstore.ContentStoreName)); err != nil {
+		t.Fatalf("write content store: %v", err)
+	}
+	return dir
+}
+
+func pad4(i int) string {
+	s := []byte{'0', '0', '0', '0'}
+	for d := 3; d >= 0 && i > 0; d-- {
+		s[d] = byte('0' + i%10)
+		i /= 10
+	}
+	return string(s)
+}
 
 // conceptEmbedder is a deterministic, network-free Embedder for tests. It
 // projects text onto two concept axes by substring, so lexically-disjoint text
@@ -301,6 +352,146 @@ func TestRankCorpusSidecarsInvalidatedByCorpusChange(t *testing.T) {
 	}
 	if !third.TokensFromCache() || !third.SymbolsFromCache() {
 		t.Error("third open should LOAD the re-persisted sidecars")
+	}
+}
+
+// TestCorpusFingerprintIncludesContentStore is the GAP-2 test: the rank sidecar
+// fingerprint must fold in the shared content store (blobs.dat), so a change to the
+// shared content store invalidates the fingerprint even when the shard files are
+// byte-for-byte unchanged. Without this, a deduped dir could reuse token/symbol/
+// embedding sidecars built over OLD content after blobs.dat was rewritten.
+func TestCorpusFingerprintIncludesContentStore(t *testing.T) {
+	dir := t.TempDir()
+	shard := filepath.Join(dir, "shard-0000.idx")
+	if err := os.WriteFile(shard, []byte("MOEDEX05 stand-in shard bytes"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	shardPaths := []string{shard}
+
+	// Legacy dir (no blobs.dat): a baseline fingerprint.
+	legacyFP := corpusFingerprint(shardPaths)
+
+	// Write a shared content store; the fingerprint MUST change (a legacy vs deduped
+	// dir with the same shard files are different corpora).
+	csPath := filepath.Join(dir, "blobs.dat")
+	writeFakeContentStore(t, csPath, 3, "alpha")
+	withStoreFP := corpusFingerprint(shardPaths)
+	if withStoreFP == legacyFP {
+		t.Error("adding blobs.dat did not change the fingerprint (content store not folded in)")
+	}
+
+	// Change ONLY the content store (shard files untouched): the fingerprint MUST
+	// change again. This is the core GAP-2 invariant — stale-content detection.
+	writeFakeContentStore(t, csPath, 4, "alpha-grown") // different numBlobs AND size
+	changedFP := corpusFingerprint(shardPaths)
+	if changedFP == withStoreFP {
+		t.Error("changing blobs.dat did not change the fingerprint (stale sidecars would be reused)")
+	}
+
+	// A content store with the SAME byte length but a different MOECONT1 header
+	// (numBlobs/dirOff) must STILL change the fingerprint — header folding, not just
+	// size. Rewrite with the same payload length but a different blob count.
+	writeFakeContentStore(t, csPath, 4, "alpha-grown") // re-establish a known state
+	sameSizeFP := corpusFingerprint(shardPaths)
+	writeFakeContentStoreSameLen(t, csPath, 9) // same total length, different numBlobs in header
+	headerChangedFP := corpusFingerprint(shardPaths)
+	if headerChangedFP == sameSizeFP {
+		t.Error("a same-size content store with a different MOECONT1 header did not change the fingerprint")
+	}
+}
+
+// writeFakeContentStore writes a minimal MOECONT1-shaped file: a 32-byte header
+// (magic, version, reserved, numBlobs, dirOff) followed by payload bytes. It is
+// only for fingerprint tests (corpusFingerprint reads name+size+header, not the
+// directory), so the body need not be a valid directory.
+func writeFakeContentStore(t *testing.T, path string, numBlobs uint64, payload string) {
+	t.Helper()
+	buf := make([]byte, 32)
+	copy(buf[0:8], "MOECONT1")
+	binary.LittleEndian.PutUint32(buf[8:12], 1)
+	binary.LittleEndian.PutUint64(buf[16:24], numBlobs)
+	binary.LittleEndian.PutUint64(buf[24:32], uint64(32+len(payload)))
+	buf = append(buf, []byte(payload)...)
+	if err := os.WriteFile(path, buf, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// writeFakeContentStoreSameLen rewrites path keeping its TOTAL byte length but with
+// a different numBlobs in the header, to prove the fingerprint folds the header
+// (not just the file size).
+func writeFakeContentStoreSameLen(t *testing.T, path string, numBlobs uint64) {
+	t.Helper()
+	fi, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	total := int(fi.Size())
+	if total < 32 {
+		t.Fatalf("existing store too small (%d)", total)
+	}
+	buf := make([]byte, total)
+	copy(buf[0:8], "MOECONT1")
+	binary.LittleEndian.PutUint32(buf[8:12], 1)
+	binary.LittleEndian.PutUint64(buf[16:24], numBlobs)
+	binary.LittleEndian.PutUint64(buf[24:32], uint64(total))
+	if err := os.WriteFile(path, buf, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestDedupedSidecarsInvalidatedByContentStoreChange is the end-to-end GAP-2 proof:
+// over a REAL deduped dir, mutating blobs.dat after sidecars are built makes the
+// next OpenRank treat them as stale and rebuild (rather than silently reusing
+// sidecars derived from the old content). It exercises the actual load-or-build
+// path, not just corpusFingerprint in isolation.
+func TestDedupedSidecarsInvalidatedByContentStoreChange(t *testing.T) {
+	dir := buildDedupedDir(t, map[string]map[string]string{
+		"repoA": {"a.go": "package a\nfunc Alpha() {}\n"},
+		"repoB": {"b.go": "package b\nfunc Bravo() {}\n"},
+	})
+
+	// First open builds + persists the sidecars.
+	rc1, err := OpenRank(context.Background(), dir, RankConfig{TopK: 5})
+	if err != nil {
+		t.Fatalf("initial OpenRank: %v", err)
+	}
+	_ = rc1.Close()
+
+	// Second open over the unchanged dir LOADS the sidecars from cache.
+	rc2, err := OpenRank(context.Background(), dir, RankConfig{TopK: 5})
+	if err != nil {
+		t.Fatalf("second OpenRank: %v", err)
+	}
+	cachedBefore := rc2.TokensFromCache() && rc2.SymbolsFromCache()
+	_ = rc2.Close()
+	if !cachedBefore {
+		t.Fatal("second open over an unchanged deduped dir should LOAD both sidecars from cache")
+	}
+
+	// Mutate ONLY blobs.dat (append a byte): its size + header-derived identity
+	// changes, the shard files do not. The fingerprint must now differ, forcing a
+	// sidecar rebuild — proving stale-content sidecars are not reused.
+	csPath := filepath.Join(dir, "blobs.dat")
+	data, err := os.ReadFile(csPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(csPath, append(data, 0x00), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// The appended trailing byte does not corrupt the directory (it is read via the
+	// dirOff in the header), so the store still opens + verifies; only the
+	// fingerprint changes. Disable content verification for this open since the
+	// padding byte is not part of any blob's content but does not affect parsing.
+	t.Setenv("MOEDEX_VERIFY_CONTENT", "0")
+	rc3, err := OpenRank(context.Background(), dir, RankConfig{TopK: 5})
+	if err != nil {
+		t.Fatalf("OpenRank after blobs.dat change: %v", err)
+	}
+	defer rc3.Close()
+	if rc3.TokensFromCache() || rc3.SymbolsFromCache() {
+		t.Error("a changed blobs.dat must invalidate both sidecars (expected rebuild, got cache load)")
 	}
 }
 

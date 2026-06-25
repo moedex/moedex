@@ -183,6 +183,94 @@ func TestLoadMmapDedupedMissingContentErrors(t *testing.T) {
 	}
 }
 
+// TestContentStoreVerifyAcceptsCorrectKeys asserts a store whose keys are the real
+// git-blob SHA-1 of their content passes Verify (no false positives), and that
+// OpenContentStoreVerified returns the usable store.
+func TestContentStoreVerifyAcceptsCorrectKeys(t *testing.T) {
+	cw := NewContentStoreWriter()
+	a := []byte("alpha content")
+	b := []byte("bravo content longer")
+	cw.PutContent(GitBlobSHA1(a), a)
+	cw.PutContent(GitBlobSHA1(b), b)
+	path := filepath.Join(t.TempDir(), ContentStoreName)
+	if err := cw.Write(path); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	cs, err := OpenContentStoreVerified(path, GitBlobSHA1)
+	if err != nil {
+		t.Fatalf("OpenContentStoreVerified on a correctly-keyed store: %v", err)
+	}
+	defer cs.Close()
+	if got, ok := cs.Content(GitBlobSHA1(a)); !ok || string(got) != string(a) {
+		t.Errorf("Content = %q,%v, want %q,true", got, ok, a)
+	}
+}
+
+// TestContentStoreVerifyDetectsWrongBytes is the GAP-1 integrity test: a content
+// store with a present key whose bytes do NOT hash to that key (corruption / a
+// mismatched store) must FAIL LOUDLY under Verify / OpenContentStoreVerified, never
+// silently serve the wrong content.
+//
+// It also pins the PRE-FIX behavior to show the integrity check is what catches it:
+// the plain OpenContentStore (no verification) succeeds and Content silently returns
+// the wrong bytes — exactly the silent under-approximation the verified path closes.
+func TestContentStoreVerifyDetectsWrongBytes(t *testing.T) {
+	good := []byte("the real indexed content\n")
+	key := GitBlobSHA1(good) // the correct content-addressed key for `good`
+
+	// Build a store that stores DIFFERENT bytes under `key` (simulating bit-rot or a
+	// truncated/garbled blobs.dat that still parses structurally).
+	corrupt := []byte("WRONG bytes — not what this key addresses\n")
+	cw := NewContentStoreWriter()
+	cw.PutContent(key, corrupt)
+	path := filepath.Join(t.TempDir(), ContentStoreName)
+	if err := cw.Write(path); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+
+	// PRE-FIX behavior (no verification): the store opens fine and SILENTLY serves the
+	// wrong bytes. This is the bug the integrity check exists to prevent; asserting it
+	// here proves the verified path below is load-bearing, not a no-op.
+	plain, err := OpenContentStore(path)
+	if err != nil {
+		t.Fatalf("OpenContentStore (no verify) unexpectedly failed: %v", err)
+	}
+	got, ok := plain.Content(key)
+	if !ok {
+		plain.Close()
+		t.Fatal("plain store: key absent; expected it to serve (wrong) bytes")
+	}
+	if string(got) == string(good) {
+		plain.Close()
+		t.Fatal("test premise broken: corrupt bytes equal the good content")
+	}
+	plain.Close() // confirmed: without verification the wrong bytes are served silently
+
+	// THE FIX — Verify must catch the mismatch and fail loudly.
+	cs, err := OpenContentStore(path)
+	if err != nil {
+		t.Fatalf("OpenContentStore: %v", err)
+	}
+	if verr := cs.Verify(GitBlobSHA1); verr == nil {
+		cs.Close()
+		t.Fatal("Verify accepted a present-key-but-wrong-bytes store; want a loud corruption error")
+	}
+	cs.Close()
+
+	// OpenContentStoreVerified must likewise refuse to return a corrupt store.
+	if cs2, err := OpenContentStoreVerified(path, GitBlobSHA1); err == nil {
+		cs2.Close()
+		t.Fatal("OpenContentStoreVerified returned a corrupt store; want a loud error")
+	}
+
+	// A nil hasher is an explicit opt-out: verification is skipped (store opens).
+	cs3, err := OpenContentStoreVerified(path, nil)
+	if err != nil {
+		t.Fatalf("OpenContentStoreVerified with nil hasher (opt-out) failed: %v", err)
+	}
+	cs3.Close()
+}
+
 // TestIsDedupedRejectsLegacy asserts IsDeduped is false for a MOEDEX03 shard, so
 // the serving spine keeps loading legacy dirs via the inlined-content path.
 func TestIsDedupedRejectsLegacy(t *testing.T) {

@@ -39,7 +39,13 @@ func openSharedContent(dir string, shardPaths []string) (*diskstore.ContentStore
 		}
 		return nil, fmt.Errorf("server: stat shared content store: %w", err)
 	}
-	cs, err := diskstore.OpenContentStore(csPath)
+	// Integrity: the store is content-addressed, so its keys ARE the expected content
+	// hashes. Verify every entry's bytes against its key at open (a one-time O(corpus)
+	// sequential hash over the mmap) so a corrupt/garbled shared store FAILS THE BOOT
+	// rather than silently serving wrong-or-empty content (a parity-violating silent
+	// under-approximation). Default-on; an operator with a very large corpus can opt
+	// out by setting MOEDEX_VERIFY_CONTENT=0 (the boot then trusts the store as-is).
+	cs, err := diskstore.OpenContentStoreVerified(csPath, contentHasher())
 	if err != nil {
 		return nil, fmt.Errorf("server: open shared content store: %w", err)
 	}
@@ -50,6 +56,20 @@ func openSharedContent(dir string, shardPaths []string) (*diskstore.ContentStore
 		}
 	}
 	return cs, nil
+}
+
+// contentHasher returns the content-store integrity hasher used at open, or nil to
+// disable verification. It is the canonical git-blob SHA-1 (matching the deduped
+// export's key scheme) unless MOEDEX_VERIFY_CONTENT is set to a false-y value
+// ("0"/"false"/"no"/"off"), which lets an operator skip the one-time hash pass on a
+// very large corpus. The default (unset) verifies.
+func contentHasher() func([]byte) string {
+	switch os.Getenv("MOEDEX_VERIFY_CONTENT") {
+	case "0", "false", "no", "off", "FALSE", "No", "Off":
+		return nil
+	default:
+		return diskstore.GitBlobSHA1
+	}
 }
 
 // openShard loads one shard for the retrieval Corpus, dispatching on format: a

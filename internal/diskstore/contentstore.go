@@ -37,10 +37,22 @@ package diskstore
 // Content bytes are stored contiguously and unframed so a loader can hand out a
 // zero-copy sub-slice of the mmap for any blob. The SHA is an opaque variable-
 // length key (SHA-1 today, SHA-256-ready), matching blobstore.
+//
+// # Integrity (content-addressed self-verification)
+//
+// Because the store is content-addressed, each directory key IS the expected hash
+// of its bytes. OpenContentStoreVerified (used by the serving path) re-hashes every
+// entry against its key at open (Verify), so a corrupt/garbled store — a present
+// key whose bytes no longer hash to it — FAILS LOUDLY at boot instead of silently
+// serving wrong-or-empty content (a parity-violating silent under-approximation).
+// It is a one-time O(corpus-bytes) sequential pass over the mmap; an operator with
+// a very large corpus can opt out (nil hasher) and trust the store as-is.
 
 import (
 	"bufio"
+	"crypto/sha1"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"os"
 )
@@ -243,6 +255,61 @@ func (cs *ContentStore) Content(sha string) (content []byte, ok bool) {
 		return nil, false
 	}
 	return cs.region.data[ref.Offset : ref.Offset+ref.Len], true
+}
+
+// GitBlobSHA1 is the canonical content-store key hasher: the SHA-1 of content in
+// git's blob-object form ("blob <len>\0" + content), hex-encoded. It is BYTE-
+// IDENTICAL to blobstore.contentKey (the scheme the deduped export keys blobs by),
+// so passing it to Verify re-derives each entry's expected key from its stored
+// bytes. It lives here, not in blobstore, so the serving path (which loads the
+// store but does not import blobstore) can verify without a layering inversion; a
+// future SHA-256 migration adds a sibling hasher and the format needs no change
+// (keys are opaque strings).
+func GitBlobSHA1(content []byte) string {
+	h := sha1.New()
+	fmt.Fprintf(h, "blob %d\x00", len(content))
+	h.Write(content)
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// Verify re-hashes every stored blob's content with hasher and asserts it equals
+// the directory key, failing LOUDLY on the first mismatch. Because the store is
+// content-addressed, the key IS the expected hash, so a present-key-but-wrong-bytes
+// entry (bit-rot, a truncated/garbled blobs.dat, an offset/length corruption that
+// still parsed) is corruption that — absent this check — would be served as
+// wrong-or-empty content: a SILENT under-approximation, the one thing parity
+// forbids. This is a one-time O(corpus-bytes) hash pass at load (acceptable startup
+// cost; the bytes are mmap'd, so it is a sequential read, not extra RAM). Pass
+// GitBlobSHA1 for the current key scheme. A nil hasher is a no-op (verification
+// disabled) so a caller can explicitly opt out for a huge corpus.
+func (cs *ContentStore) Verify(hasher func([]byte) string) error {
+	if hasher == nil {
+		return nil
+	}
+	for sha, ref := range cs.bySHA {
+		got := hasher(cs.region.data[ref.Offset : ref.Offset+ref.Len])
+		if got != sha {
+			return fmt.Errorf("diskstore: content store corruption: blob keyed %s hashes to %s (%d bytes) — wrong-or-corrupt content, refusing to serve", sha, got, ref.Len)
+		}
+	}
+	return nil
+}
+
+// OpenContentStoreVerified opens the store and verifies every entry's content
+// against its key with hasher in one call (the default serving path), so a corrupt
+// shared store fails the boot rather than silently serving bad content. On a
+// verification failure it closes the mapping and returns the error. Pass a nil
+// hasher to skip verification (explicit opt-out for very large corpora).
+func OpenContentStoreVerified(path string, hasher func([]byte) string) (*ContentStore, error) {
+	cs, err := OpenContentStore(path)
+	if err != nil {
+		return nil, err
+	}
+	if err := cs.Verify(hasher); err != nil {
+		cs.Close()
+		return nil, err
+	}
+	return cs, nil
 }
 
 // Len returns the number of unique blobs in the store.
