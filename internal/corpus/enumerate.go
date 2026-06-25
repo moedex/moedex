@@ -19,9 +19,18 @@ type Project struct {
 	// SSHURL is the git clone URL (ssh_url_to_repo). Clones use SSH so they ride
 	// the operator's existing key/auth — the same identity glab uses.
 	SSHURL string `json:"ssh_url_to_repo"`
-	// DefaultBranch is the branch to clone (for --single-branch). May be empty for
-	// an empty repo, in which case the clone uses the server default.
+	// DefaultBranch is the branch to clone (for --single-branch). NOTE: GitLab
+	// reports a *nominal* default branch (e.g. "main") even for a repo with zero
+	// commits, where that ref does not actually exist on the remote — so a
+	// non-empty value here does NOT mean the branch is clonable. Use EmptyRepo,
+	// not DefaultBranch, to decide whether there is anything to clone.
 	DefaultBranch string `json:"default_branch"`
+	// EmptyRepo is true when the project has no commits (and thus no real branch).
+	// Such repos contribute nothing to the corpus and must be skipped: a
+	// `git clone --branch <nominal-default>` of one fails with "Remote branch …
+	// not found in upstream origin". This field is only present in GitLab's full
+	// project representation, so Enumerate must NOT request `simple=true`.
+	EmptyRepo bool `json:"empty_repo"`
 }
 
 // TopLevelGroup returns the first path segment of the project's namespace — the
@@ -96,8 +105,11 @@ func FilterByGroups(projects []Project, allow []string) []Project {
 // undershoots it by ~145 repos — almost all internal-visibility infra repos
 // (Ansible roles/plays) the operator can read but isn't an explicit member of.
 func Enumerate(ctx context.Context, r Runner, cfg Config) ([]Project, error) {
+	// Full representation (no simple=true): we need the empty_repo flag, which the
+	// simple representation omits. The extra fields are harmless and the payload is
+	// fine at corpus scale (~500 projects, ~5 pages).
 	res, err := r.Run(ctx, "glab", "api", "--hostname", cfg.Host, "--paginate",
-		"projects?archived=false&simple=true&per_page=100")
+		"projects?archived=false&per_page=100")
 	if err != nil {
 		return nil, fmt.Errorf("run glab api projects: %w", err)
 	}

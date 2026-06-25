@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -20,6 +21,7 @@ type fakeRunner struct {
 	paths   map[string]string
 	runs    map[string]Result
 	calls   *[]call
+	callsMu *sync.Mutex // guards calls; required when the runner is used under concurrency (clone/sync fan-out)
 	fail    func(cmd string) bool
 	respond func(cmd string) (Result, bool) // full control; checked before runs
 }
@@ -43,7 +45,13 @@ func (f fakeRunner) Run(ctx context.Context, name string, args ...string) (Resul
 func (f fakeRunner) RunEnv(_ context.Context, env []string, name string, args ...string) (Result, error) {
 	cmd := strings.TrimSpace(name + " " + strings.Join(args, " "))
 	if f.calls != nil {
+		if f.callsMu != nil {
+			f.callsMu.Lock()
+		}
 		*f.calls = append(*f.calls, call{cmd: cmd, env: env})
+		if f.callsMu != nil {
+			f.callsMu.Unlock()
+		}
 	}
 	if f.fail != nil && f.fail(cmd) {
 		return Result{Code: 1, Stderr: []byte("simulated clone failure")}, nil
@@ -248,8 +256,9 @@ func TestCloneArgs(t *testing.T) {
 		t.Fatalf("args = %v, want %v", args, want)
 	}
 
-	// An empty repo advertises no default branch — the -b flag must be omitted
-	// (git clone -b "" would fail).
+	// A project with no default branch — the -b flag must be omitted (git clone
+	// -b "" would fail). (Note: empty repos are skipped earlier via EmptyRepo; this
+	// guards the blank-DefaultBranch edge regardless.)
 	_, args2 := CloneArgs(cfg, Project{PathWithNamespace: "g/empty", SSHURL: "git@h:g/empty.git"})
 	for _, a := range args2 {
 		if a == "--branch" {
@@ -272,8 +281,9 @@ func TestCloneProjects(t *testing.T) {
 
 	var calls []call
 	r := fakeRunner{
-		calls: &calls,
-		fail:  func(cmd string) bool { return strings.Contains(cmd, "g/bad.git") },
+		calls:   &calls,
+		callsMu: &sync.Mutex{},
+		fail:    func(cmd string) bool { return strings.Contains(cmd, "g/bad.git") },
 	}
 	cfg := Config{Root: root, Concurrency: 4}
 
@@ -309,6 +319,48 @@ func TestCloneProjects(t *testing.T) {
 	fails := rep.Failures()
 	if len(fails) != 1 || fails[0].Project.PathWithNamespace != "g/bad" || fails[0].Detail == "" {
 		t.Fatalf("failure not captured with detail: %+v", fails)
+	}
+}
+
+// TestCloneProjects_EmptyReposSkipped covers both ways an empty (no-commit) repo
+// is recognized: the GitLab empty_repo flag (skip before git), and — defensively —
+// the git "Remote branch … not found" failure when the flag was absent/stale. Both
+// must yield the Empty outcome (never Failed), so an empty repo can never make the
+// pass exit non-zero.
+func TestCloneProjects_EmptyReposSkipped(t *testing.T) {
+	root := t.TempDir()
+
+	flagged := Project{PathWithNamespace: "g/empty-flag", SSHURL: "git@h:g/empty-flag.git", DefaultBranch: "main", EmptyRepo: true}
+	good := Project{PathWithNamespace: "g/good", SSHURL: "git@h:g/good.git", DefaultBranch: "main"}
+	// Not flagged empty, but git fails the way an empty repo does (flag was stale).
+	stale := Project{PathWithNamespace: "g/empty-stale", SSHURL: "git@h:g/empty-stale.git", DefaultBranch: "main"}
+
+	var calls []call
+	r := fakeRunner{
+		calls:   &calls,
+		callsMu: &sync.Mutex{},
+		respond: func(cmd string) (Result, bool) {
+			if strings.Contains(cmd, "g/empty-stale.git") {
+				return Result{Code: 128, Stderr: []byte("fatal: Remote branch main not found in upstream origin")}, true
+			}
+			return Result{}, false
+		},
+	}
+	cfg := Config{Root: root, Concurrency: 4}
+
+	rep := CloneProjects(context.Background(), r, cfg, []Project{flagged, good, stale}, nil)
+
+	if rep.Cloned != 1 || rep.Empty != 2 || rep.Failed != 0 {
+		t.Fatalf("counts: cloned=%d empty=%d failed=%d (want 1/2/0)", rep.Cloned, rep.Empty, rep.Failed)
+	}
+	if rep.Results[0].Outcome != Empty || rep.Results[1].Outcome != Cloned || rep.Results[2].Outcome != Empty {
+		t.Fatalf("outcomes = %v %v %v", rep.Results[0].Outcome, rep.Results[1].Outcome, rep.Results[2].Outcome)
+	}
+	// The flag-detected empty repo must NOT invoke git at all.
+	for _, c := range calls {
+		if strings.Contains(c.cmd, "g/empty-flag.git") {
+			t.Fatalf("flagged empty repo should not run git: %s", c.cmd)
+		}
 	}
 }
 
