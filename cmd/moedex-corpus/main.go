@@ -24,6 +24,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 
 	"moedex/internal/corpus"
@@ -182,6 +183,69 @@ func resolveGroups(path string) ([]string, error) {
 	return groups, nil
 }
 
+// reindexFlags are the shared -reindex options registered on both clone and sync.
+type reindexFlags struct {
+	enabled    *bool
+	casDir     *string
+	shardDir   *string
+	shardBytes *int64
+	indexBin   *string
+	reload     *string
+}
+
+func addReindexFlags(fs *flag.FlagSet) reindexFlags {
+	return reindexFlags{
+		enabled:    fs.Bool("reindex", false, "after the git step, rebuild served shards (cas-build/refresh -> cas-export -deduped) and reload"),
+		casDir:     fs.String("cas-dir", "", "content-addressable store dir (required with -reindex)"),
+		shardDir:   fs.String("shard-dir", "", "served deduped shard dir for moedex-serve (required with -reindex)"),
+		shardBytes: fs.Int64("shard-bytes", 0, "target bytes per exported shard (0 = moedex-index default)"),
+		indexBin:   fs.String("index-bin", "moedex-index", "moedex-index binary to drive"),
+		reload:     fs.String("reload", "", "command to reload the daemon after export, e.g. 'systemctl reload moedex-serve' (empty = skip)"),
+	}
+}
+
+// maybeReindex runs the per-blob-delta reindex chain when -reindex was given.
+// Shared by clone (first run → cas-build) and sync (steady state → cas-refresh).
+func maybeReindex(ctx context.Context, r corpus.Runner, cfg corpus.Config, rf reindexFlags) error {
+	if !*rf.enabled {
+		return nil
+	}
+	if *rf.casDir == "" || *rf.shardDir == "" {
+		return fmt.Errorf("-reindex requires -cas-dir and -shard-dir")
+	}
+	opts := corpus.ReindexOptions{
+		Root:       cfg.Root,
+		CASDir:     *rf.casDir,
+		ShardDir:   *rf.shardDir,
+		ShardBytes: *rf.shardBytes,
+		IndexBin:   *rf.indexBin,
+	}
+	if strings.TrimSpace(*rf.reload) != "" {
+		opts.Reload = strings.Fields(*rf.reload)
+	}
+
+	fmt.Println()
+	fmt.Println("Moe is re-indexing the corpus (per-blob delta)...")
+	rep, err := corpus.Reindex(ctx, r, opts)
+	for _, s := range rep.Steps {
+		fmt.Printf("  • %s\n", s.Name)
+		for _, ln := range strings.Split(s.Output, "\n") {
+			if strings.TrimSpace(ln) != "" {
+				fmt.Printf("      %s\n", ln)
+			}
+		}
+	}
+	if err != nil {
+		return err
+	}
+	if rep.Reloaded {
+		fmt.Println("  ↻ daemon reloaded — fresh shards are live.")
+	} else {
+		fmt.Println("  (shards updated; reload the daemon to serve them — pass -reload)")
+	}
+	return nil
+}
+
 // ---------------------------------------------------------------------------
 // clone
 // ---------------------------------------------------------------------------
@@ -193,6 +257,7 @@ func runClone(args []string) error {
 	concurrency := fs.Int("concurrency", corpus.DefaultConcurrency(), "max parallel clones (Moe's tentacles)")
 	dryRun := fs.Bool("dry-run", false, "list what would be cloned/skipped without running git")
 	noBanner := fs.Bool("no-banner", false, "suppress the Moe banner")
+	rf := addReindexFlags(fs)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -263,6 +328,9 @@ func runClone(args []string) error {
 
 	report := corpus.CloneProjects(ctx, r, cfg, projects, progress)
 	printCloneSummary(report)
+	if err := maybeReindex(ctx, r, cfg, rf); err != nil {
+		return err
+	}
 	if report.Failed > 0 {
 		return fmt.Errorf("%d repo(s) failed to clone (see %s above) — re-run to retry; already-cloned repos are skipped", report.Failed, markFail)
 	}
@@ -304,6 +372,7 @@ func runSync(args []string) error {
 	prune := fs.Bool("prune", false, "remove local repos that are gone from the server (default: keep + report)")
 	dryRun := fs.Bool("dry-run", false, "show the plan (clone/update/missing) without running git")
 	noBanner := fs.Bool("no-banner", false, "suppress the Moe banner")
+	rf := addReindexFlags(fs)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -378,6 +447,9 @@ func runSync(args []string) error {
 		return err
 	}
 	printSyncSummary(report)
+	if err := maybeReindex(ctx, r, cfg, rf); err != nil {
+		return err
+	}
 	if report.Failed > 0 {
 		return fmt.Errorf("%d repo(s) failed to sync (see %s above) — re-run to retry", report.Failed, markFail)
 	}

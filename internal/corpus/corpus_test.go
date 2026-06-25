@@ -441,6 +441,93 @@ func TestSyncProjects_MissingKeptWithoutPrune(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// reindex
+// ---------------------------------------------------------------------------
+
+func TestReindex_FreshBuild(t *testing.T) {
+	casDir := t.TempDir()   // empty → no blobmanifest.json → cas-build
+	shardDir := t.TempDir() // export target
+	var calls []call
+	r := fakeRunner{
+		paths: map[string]string{"moedex-index": "/bin/moedex-index"},
+		calls: &calls,
+	}
+	rep, err := Reindex(context.Background(), r, ReindexOptions{
+		Root: "/corpus", CASDir: casDir, ShardDir: shardDir,
+		IndexBin: "moedex-index", Reload: []string{"echo", "reloaded"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !rep.Built {
+		t.Error("fresh CAS should report Built=true")
+	}
+	if !rep.Reloaded {
+		t.Error("reload command should have run")
+	}
+	// Sequence: cas-build → cas-export → reload.
+	if len(calls) != 3 ||
+		!strings.Contains(calls[0].cmd, "cas-build") ||
+		!strings.Contains(calls[1].cmd, "cas-export") ||
+		!strings.Contains(calls[1].cmd, "-deduped") ||
+		!strings.Contains(calls[2].cmd, "echo reloaded") {
+		t.Fatalf("unexpected call sequence:\n%v", calls)
+	}
+}
+
+func TestReindex_DeltaRefresh(t *testing.T) {
+	casDir := t.TempDir()
+	// Mark the CAS as already initialized.
+	if err := os.WriteFile(filepath.Join(casDir, casManifestName), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var calls []call
+	r := fakeRunner{paths: map[string]string{"moedex-index": "/bin/moedex-index"}, calls: &calls}
+	rep, err := Reindex(context.Background(), r, ReindexOptions{
+		Root: "/corpus", CASDir: casDir, ShardDir: t.TempDir(), IndexBin: "moedex-index",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Built {
+		t.Error("initialized CAS should delta-refresh, not build")
+	}
+	if rep.Reloaded {
+		t.Error("no reload command was given")
+	}
+	if len(calls) != 2 || !strings.Contains(calls[0].cmd, "cas-refresh") || !strings.Contains(calls[1].cmd, "cas-export") {
+		t.Fatalf("want cas-refresh then cas-export, got:\n%v", calls)
+	}
+}
+
+func TestReindex_MissingBinary(t *testing.T) {
+	r := fakeRunner{} // moedex-index not on PATH
+	_, err := Reindex(context.Background(), r, ReindexOptions{
+		Root: "/corpus", CASDir: t.TempDir(), ShardDir: t.TempDir(),
+	})
+	if err == nil || !strings.Contains(err.Error(), "moedex-index") {
+		t.Fatalf("want missing-binary error, got %v", err)
+	}
+}
+
+func TestReindex_ExportFailureStops(t *testing.T) {
+	r := fakeRunner{
+		paths: map[string]string{"moedex-index": "/bin/moedex-index"},
+		fail:  func(cmd string) bool { return strings.Contains(cmd, "cas-export") },
+	}
+	rep, err := Reindex(context.Background(), r, ReindexOptions{
+		Root: "/corpus", CASDir: t.TempDir(), ShardDir: t.TempDir(), IndexBin: "moedex-index",
+		Reload: []string{"echo", "should-not-run"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "cas-export") {
+		t.Fatalf("want cas-export failure, got %v", err)
+	}
+	if rep.Reloaded {
+		t.Error("reload must not run after a failed export")
+	}
+}
+
 func pathsOf(ps []Project) []string {
 	out := make([]string, len(ps))
 	for i, p := range ps {
