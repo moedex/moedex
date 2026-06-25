@@ -58,7 +58,21 @@ func (allQ) String() string { return "ALL" }
 func (noneQ) Eval(*index.Index) []uint64 { return nil }
 func (noneQ) String() string             { return "NONE" }
 
+// Eval is the central parity gate for the selective index. A triQ on a gram the
+// index did NOT materialize (IndexedGram false) has UNKNOWN postings — its empty
+// list does not mean "zero occurrences" — so it must evaluate to the full blob
+// set (All semantics), forcing the candidate set to widen and the real regexp
+// engine (in package search) to verify. Intersecting a deselected gram to empty
+// would drop true matches and break ripgrep parity; returning All here can only
+// ever over-approximate, which verification then cleans up.
+//
+// On the default (all-trigram) build IndexedGram is universally true and
+// Selective() is false, so this short-circuits to the original behavior exactly,
+// at the cost of one cheap bool check.
 func (q triQ) Eval(ix *index.Index) []uint64 {
+	if ix.Selective() && !ix.IndexedGram(q.t) {
+		return allQ{}.Eval(ix) // non-indexed gram: force scan, never intersect to empty
+	}
 	ps := ix.Postings(q.t)
 	var out []uint64
 	for i, p := range ps {

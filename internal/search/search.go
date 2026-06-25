@@ -119,6 +119,28 @@ func LiteralWithStats(ctx context.Context, ix *index.Index, q string) ([]Match, 
 	end := trigram.Trigram{qb[len(qb)-3], qb[len(qb)-2], qb[len(qb)-1]}
 	off := len(qb) - trigram.N
 
+	// Selective-index gate: the positional begin/end intersection relies on BOTH
+	// grams having complete posting lists. If either was deselected, its postings
+	// are UNKNOWN and the intersection would under-approximate (drop true
+	// matches). Fall back to the line-by-line scan over every blob — always sound
+	// (it never consults the index), just coarser. On the all-trigram build
+	// IndexedGram is universally true, so this never triggers.
+	if ix.Selective() && (!ix.IndexedGram(begin) || !ix.IndexedGram(end)) {
+		ids := make([]uint64, ix.NumBlobs())
+		for i := range ids {
+			ids[i] = uint64(i)
+		}
+		var cancel bool
+		matches, stats, cancel = scanLiteralLines(ctx, ix, ids, qb)
+		stats.CandidateBlobs = len(ids)
+		stats.LineFilter = "literal-subtrigram-deselected"
+		stats.QueryAll = false
+		if cancel {
+			return dedupe(matches), stats, ctx.Err()
+		}
+		return dedupe(matches), stats, nil
+	}
+
 	// Positional intersection via merge-join. Both posting lists are sorted by
 	// (Blob, Offset) (see index.AddFile), so instead of building a cache-hostile
 	// map[uint64]map[int]bool we walk them in lockstep: for each begin-gram we
@@ -402,7 +424,17 @@ func positionalTrigrams(ix *index.Index, f lineFilter) ([]trigram.Trigram, bool)
 			if len(lit) != trigram.N {
 				return nil, false
 			}
-			tris = append(tris, trigram.Trigram{lit[0], lit[1], lit[2]})
+			t := trigram.Trigram{lit[0], lit[1], lit[2]}
+			// Selective-index gate: a deselected gram has UNKNOWN postings, so its
+			// posting list is NOT a sound driver (it would under-approximate the set
+			// of lines the filter could pass). Mark this litSet non-reducible so the
+			// caller falls back to the content scan — exactly the existing "not a
+			// usable trigram" path. On the all-trigram build IndexedGram is always
+			// true, so this is a no-op.
+			if ix.Selective() && !ix.IndexedGram(t) {
+				return nil, false
+			}
+			tris = append(tris, t)
 		}
 		return tris, true
 	case allFilter:

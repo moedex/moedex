@@ -63,6 +63,10 @@ func Restore(blobs []BlobData, postings map[trigram.Trigram][]Posting) *Index {
 // RestoreLazy rebuilds an index whose postings are served on demand by pp.
 // Blob content and metadata are materialized as in Restore; only the postings
 // stay lazy, which is what keeps a loaded index's heap near content size.
+//
+// Membership: the resulting index's IndexedGram defers to pp when pp implements
+// gramMember (a selective shard's provider); otherwise the index is treated as
+// all-indexed (legacy / all-trigram shards), preserving exact back-compat.
 func RestoreLazy(blobs []BlobData, pp PostingProvider) *Index {
 	ix := restoreBlobs(blobs)
 	ix.pp = pp

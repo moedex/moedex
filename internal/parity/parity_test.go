@@ -191,6 +191,46 @@ func TestLatencyAttributionSynthetic(t *testing.T) {
 	}
 }
 
+// literalCandidateBlobs must apply the IndexedGram gate on a selective index:
+// when a query's begin/end trigram is deselected its postings are UNKNOWN, so the
+// helper must report all=true (force-scan widening) rather than under-count by
+// reading the (empty) postings directly. On the all-trigram build it returns the
+// exact candidate set with all=false.
+func TestLiteralCandidateBlobsSelectiveGate(t *testing.T) {
+	// "xyz" occurs in every blob (df=1.0) so df<=0.5 drops it; "rar" is rare.
+	contents := []string{
+		"xyz alpha rare token\n",
+		"xyz beta\n",
+		"xyz gamma\n",
+		"xyz delta\n",
+	}
+	b := index.NewSelective(index.FrequencyThresholdSelector{MaxDocFraction: 0.5})
+	for i, c := range contents {
+		abs := filepath.Join("/synthetic", fmt.Sprintf("f%d.txt", i))
+		sha := fmt.Sprintf("%x", sha1.Sum([]byte(c)))
+		b.AddFile("synthetic", filepath.Base(abs), abs, sha, []byte(c))
+	}
+	ix := b.Finalize()
+	if !ix.Selective() {
+		t.Fatal("expected a selective index")
+	}
+
+	// A literal whose begin gram "xyz" was dropped must yield all-candidates.
+	if ids, all := literalCandidateBlobs(ix, []byte("xyz alpha")); !all || ids != nil {
+		t.Errorf("deselected-begin-gram literal: ids=%v all=%v, want nil/true (force-scan)", ids, all)
+	}
+
+	// A literal whose begin AND end grams are kept yields the exact candidate set
+	// with all=false (here "rare" -> begin "rar"/end "are", both rare = kept).
+	ids, all := literalCandidateBlobs(ix, []byte("rare"))
+	if all {
+		t.Errorf("kept-gram literal reported all-candidates; want exact set")
+	}
+	if len(ids) != 1 {
+		t.Errorf("kept-gram literal candidate blobs = %d, want 1", len(ids))
+	}
+}
+
 // --- AC-D3/AC-D4: full pipeline parity on a controlled git corpus ----------
 
 // makeGitRepo creates a git repo with the given files staged (ls-files-visible).
@@ -239,49 +279,81 @@ func TestFullPipelineParitySmall(t *testing.T) {
 		"dup2.txt": "ZZUNIQUEDUPTOKEN here\nshared line\n",
 	})
 
-	work := t.TempDir()
-	res, err := Run(RunConfig{
-		Build: Config{
-			Root:       corpus,
-			WorkDir:    work,
-			Seed:       7,
-			ShardBytes: 60, // below a single repo's content → forces multiple shards (union path)
-		},
-		Floor:        20,
-		SkipZoekt:    true,
-		ScanParallel: 2,
-		RGParallel:   2,
-	})
-	if err != nil {
-		t.Fatalf("Run: %v", err)
+	// Run the same gate over the default all-trigram build AND the opt-in
+	// selective build. AC-D3 (gold \ moedex empty — no under-approximation) MUST
+	// hold for both: the selective path drops near-universal grams but forces a
+	// full scan for any deselected gram via IndexedGram, so it can only ever
+	// WIDEN the candidate set. gram-max-df=0.5 is small enough that several grams
+	// in this tiny corpus are dropped, so the selective force-scan path is
+	// genuinely exercised (not a degenerate all-kept build).
+	cases := []struct {
+		name     string
+		selector index.GramSelector
+	}{
+		{"all-trigram", nil},
+		{"selective-df0.5", index.FrequencyThresholdSelector{MaxDocFraction: 0.5}},
 	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			work := t.TempDir()
+			res, err := Run(RunConfig{
+				Build: Config{
+					Root:       corpus,
+					WorkDir:    work,
+					Seed:       7,
+					ShardBytes: 60, // below a single repo's content → forces multiple shards (union path)
+					Selector:   tc.selector,
+				},
+				Floor:        20,
+				SkipZoekt:    true,
+				ScanParallel: 2,
+				RGParallel:   2,
+			})
+			if err != nil {
+				t.Fatalf("Run: %v", err)
+			}
 
-	if res.Built.GitEntryCount != 2 {
-		t.Errorf("expected 2 .git entries, got %d", res.Built.GitEntryCount)
-	}
-	if len(res.Built.Repos) != 2 {
-		t.Errorf("expected 2 repos discovered, got %d", len(res.Built.Repos))
-	}
-	if len(res.Built.Shards) < 2 {
-		t.Errorf("expected multiple shards with tiny ShardBytes, got %d", len(res.Built.Shards))
-	}
-	if !res.RGAvailable || len(res.RGErrors) > 0 {
-		t.Errorf("ripgrep unavailable or errored: avail=%v errs=%d", res.RGAvailable, len(res.RGErrors))
-	}
-	if len(res.UnderApprox) > 0 {
-		t.Errorf("AC-D3 under-approximations: %d", len(res.UnderApprox))
-		for _, id := range res.UnderApprox {
-			qr := res.Results[id]
-			t.Logf("  under-approx %s missed=%d", qr.Q, len(qr.GoldMinusMoe))
-		}
-	}
-	if len(res.OverApprox) > 0 {
-		t.Errorf("AC-D4 over-approximations: %d", len(res.OverApprox))
-	}
-	if !res.HardPass() {
-		t.Errorf("hard parity gate failed; engine quirks=%d", len(res.EngineQuirks))
-		for _, id := range res.EngineQuirks {
-			t.Logf("  quirk %s", res.Results[id].Q)
-		}
+			if res.Built.GitEntryCount != 2 {
+				t.Errorf("expected 2 .git entries, got %d", res.Built.GitEntryCount)
+			}
+			if len(res.Built.Repos) != 2 {
+				t.Errorf("expected 2 repos discovered, got %d", len(res.Built.Repos))
+			}
+			if len(res.Built.Shards) < 2 {
+				t.Errorf("expected multiple shards with tiny ShardBytes, got %d", len(res.Built.Shards))
+			}
+			// The selective build must actually persist a selective shard (some gram
+			// dropped), else this subtest would silently degrade to all-trigram.
+			if tc.selector != nil {
+				ix, closer, err := diskstore.LoadMmap(res.Built.Shards[0])
+				if err != nil {
+					t.Fatalf("load selective shard: %v", err)
+				}
+				selective := ix.Selective()
+				_ = closer.Close()
+				if !selective {
+					t.Errorf("expected a selective shard (some gram dropped at df=0.5), got all-indexed")
+				}
+			}
+			if !res.RGAvailable || len(res.RGErrors) > 0 {
+				t.Errorf("ripgrep unavailable or errored: avail=%v errs=%d", res.RGAvailable, len(res.RGErrors))
+			}
+			if len(res.UnderApprox) > 0 {
+				t.Errorf("AC-D3 under-approximations: %d", len(res.UnderApprox))
+				for _, id := range res.UnderApprox {
+					qr := res.Results[id]
+					t.Logf("  under-approx %s missed=%d", qr.Q, len(qr.GoldMinusMoe))
+				}
+			}
+			if len(res.OverApprox) > 0 {
+				t.Errorf("AC-D4 over-approximations: %d", len(res.OverApprox))
+			}
+			if !res.HardPass() {
+				t.Errorf("hard parity gate failed; engine quirks=%d", len(res.EngineQuirks))
+				for _, id := range res.EngineQuirks {
+					t.Logf("  quirk %s", res.Results[id].Q)
+				}
+			}
+		})
 	}
 }

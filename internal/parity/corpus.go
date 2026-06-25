@@ -105,7 +105,14 @@ type Config struct {
 	ShardBytes int64 // target indexed-content bytes per shard (build RAM control)
 	MaxRepos   int   // 0 = all; >0 caps repo count (small-scale tests)
 	Verbose    bool
-	Logf       func(string, ...any)
+	// Selector, when non-nil, routes every shard through the opt-in selective
+	// (FREE-style) builder (index.NewSelective/AddFile/Finalize) instead of the
+	// eager all-trigram index.New()+AddFile path. The retrieval/adjudication path
+	// is unchanged: a deselected gram forces a full scan via IndexedGram, so the
+	// gold oracle still proves moedex ⊆ gold (no under-approximation). When nil,
+	// the build is byte-identical to the default all-trigram parity build.
+	Selector index.GramSelector
+	Logf     func(string, ...any)
 }
 
 func (c *Config) logf(format string, a ...any) {
@@ -166,12 +173,16 @@ func Build(cfg Config) (*Built, error) {
 		Pool:          newTermPool(cfg.Seed),
 	}
 
+	if cfg.Selector != nil {
+		cfg.logf("selective index enabled: %s", cfg.Selector.Describe())
+	}
+
 	start := time.Now()
 	// mb accumulates repo->shard membership + per-repo git HEAD so a freshness
 	// sidecar manifest can be written after the build (see manifest.go).
 	mb := newManifestBuilder(cfg.Root, shardDir)
 	var (
-		ix         = index.New()
+		sb         = newShardBuilder(cfg.Selector)
 		shardBytes int64
 		shardIdx   int
 		anyInShard bool
@@ -181,6 +192,13 @@ func Build(cfg Config) (*Built, error) {
 		if !anyInShard {
 			return nil
 		}
+		// finalize() materializes the per-shard *Index: the eager path returns the
+		// index it has been writing into; the selective path runs the second pass
+		// (apply selector, emit kept-gram postings). diskstore.Save then writes a
+		// MOEDEX04 shard whenever the index is selective (SelectedGrams != nil) and
+		// a plain MOEDEX03 shard otherwise — LoadMmap reconstructs IndexedGram from
+		// the persisted keep-set, so the scan phase is selective-aware end to end.
+		ix := sb.finalize()
 		path := filepath.Join(shardDir, fmt.Sprintf("shard-%04d.idx", shardIdx))
 		if err := diskstore.Save(ix, path); err != nil {
 			return fmt.Errorf("save shard %d: %w", shardIdx, err)
@@ -189,7 +207,7 @@ func Build(cfg Config) (*Built, error) {
 		mb.flushed()
 		cfg.logf("  flushed shard %d: %d blobs, %.1f MB content", shardIdx, ix.NumBlobs(), float64(shardBytes)/1e6)
 		shardIdx++
-		ix = index.New()
+		sb = newShardBuilder(cfg.Selector)
 		shardBytes = 0
 		anyInShard = false
 		runtime.GC() // release the builder's posting map before the next shard
@@ -213,7 +231,7 @@ func Build(cfg Config) (*Built, error) {
 			if err := writeMirror(mirrorDir, id, f.Content); err != nil {
 				return nil, fmt.Errorf("mirror %s: %w", f.AbsPath, err)
 			}
-			ix.AddFile(f.Repo, f.RelPath, f.AbsPath, f.SHA, f.Content)
+			sb.AddFile(f.Repo, f.RelPath, f.AbsPath, f.SHA, f.Content)
 			b.Pool.observe(f.Content)
 			b.ContentBytes += int64(len(f.Content))
 			shardBytes += int64(len(f.Content))
@@ -244,6 +262,56 @@ func Build(cfg Config) (*Built, error) {
 		b.NumFiles, float64(b.ContentBytes)/1e6, len(b.Shards), b.BuildWall.Round(time.Millisecond),
 		float64(b.BuildPeakRSS)/1e6)
 	return b, nil
+}
+
+// shardBuilder unifies the all-trigram (*index.Index) and selective
+// (*index.Builder) build paths behind the AddFile / NumBlobs / finalize trio the
+// packing loop needs. When sel is nil it uses the eager index.New()+AddFile path
+// (each AddFile materializes every trigram immediately, exactly as before); when
+// sel is non-nil it uses the two-pass index.Builder (count document frequency,
+// then prune at Finalize). The retrieval and adjudication paths are identical for
+// both: a deselected gram only ever widens the candidate set (force-scan via
+// IndexedGram), so the gold oracle still proves moedex ⊆ gold either way. This
+// mirrors cmd/moedex-index's shardBuilder so the parity harness exercises the
+// same selective build the production indexer ships.
+type shardBuilder struct {
+	eag *index.Index   // all-trigram path (sel == nil)
+	bld *index.Builder // selective path (sel != nil)
+}
+
+func newShardBuilder(sel index.GramSelector) *shardBuilder {
+	sb := &shardBuilder{}
+	if sel == nil {
+		sb.eag = index.New()
+	} else {
+		sb.bld = index.NewSelective(sel)
+	}
+	return sb
+}
+
+func (sb *shardBuilder) AddFile(repo, rel, abs, sha string, content []byte) {
+	if sb.eag != nil {
+		sb.eag.AddFile(repo, rel, abs, sha, content)
+		return
+	}
+	sb.bld.AddFile(repo, rel, abs, sha, content)
+}
+
+func (sb *shardBuilder) NumBlobs() int {
+	if sb.eag != nil {
+		return sb.eag.NumBlobs()
+	}
+	return sb.bld.NumBlobs()
+}
+
+// finalize returns the per-shard *Index. The eager path returns the index it has
+// been writing into; the selective path runs Builder.Finalize (apply selector,
+// emit kept-gram postings, record the keep-set so IndexedGram is exact).
+func (sb *shardBuilder) finalize() *index.Index {
+	if sb.eag != nil {
+		return sb.eag
+	}
+	return sb.bld.Finalize()
 }
 
 // writeMirror materializes one file's indexed content under mirrorDir as a flat,

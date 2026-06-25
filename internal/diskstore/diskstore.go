@@ -40,6 +40,25 @@
 // maps the whole file and hands the index sub-slices of the mapping; a query
 // decodes only the few trigrams it touches, and the postings never enter the
 // Go heap.
+//
+// # MOEDEX04 — selective (workload-aware) shards
+//
+// A selective index (built via index.Builder, which keeps only the grams a
+// GramSelector chose) is written in a superset format, MOEDEX04, with a larger
+// 64-byte header (the MOEDEX03 fields plus selOff/selCount) and one extra
+// trailing section:
+//
+//	SELECTION SECTION (starts at selOff; selCount records)
+//	  per kept gram: b0,b1,b2  byte byte byte   the three trigram bytes
+//
+// Only kept grams have posting lists, so the postings section is identical in
+// shape to MOEDEX03 (and bounded above by selOff rather than EOF). The selection
+// section is the persisted membership oracle: a loaded MOEDEX04 shard answers
+// index.IndexedGram(t)==true exactly for the kept grams, and false for every
+// deselected gram (which the query layer then treats as force-scan, never as
+// zero occurrences). A default all-trigram build still writes MOEDEX03 verbatim,
+// and a MOEDEX03 shard loads as all-indexed, so existing servable shard dirs
+// keep exact ripgrep parity with no rebuild.
 package diskstore
 
 import (
@@ -58,10 +77,31 @@ const (
 	magic         = "MOEDEX03"
 	formatVersion = 3
 	headerSize    = 48
+
+	// MOEDEX04 adds a SELECTION section for selective (workload-aware) shards.
+	// Its header is 64 bytes: the MOEDEX03 layout (through postOff at 40:48) plus
+	// selOff (48:56) and selCount (56:64). The selection section, at selOff, is
+	// selCount records of 3 trigram bytes each — the authoritative keep-set the
+	// selector chose. A loaded MOEDEX04 shard reports IndexedGram true exactly for
+	// those grams and false for every other (deselected → force-scan) gram.
+	//
+	// Back-compat: a default (all-trigram) build still writes MOEDEX03 verbatim
+	// (Save only emits MOEDEX04 when the index carries a selection set), so every
+	// existing servable shard dir and the daemon keep reading the old format
+	// unchanged, and a MOEDEX03 shard loads as all-indexed (IndexedGram universally
+	// true) with no rebuild.
+	magicSelective  = "MOEDEX04"
+	formatVersionV4 = 4
+	headerSizeV4    = 64
 )
 
-// Save writes ix to path in the format described in the package doc.
+// Save writes ix to path. A selective index (ix.SelectedGrams() != nil) is
+// written in the MOEDEX04 format with a selection section; an all-trigram index
+// is written in the back-compatible MOEDEX03 format described in the package doc.
 func Save(ix *index.Index, path string) error {
+	if sel := ix.SelectedGrams(); sel != nil {
+		return saveSelective(ix, sel, path)
+	}
 	blobs := ix.Snapshot()
 	trigrams := ix.Trigrams()
 
@@ -112,6 +152,74 @@ func Save(ix *index.Index, path string) error {
 	return w.Flush()
 }
 
+// saveSelective writes a MOEDEX04 shard: the MOEDEX03 sections plus a SELECTION
+// section enumerating the keep-set. Only the kept grams have posting lists (they
+// are exactly ix.Trigrams() for a selective index, since dropped grams were
+// never materialized), so the postings section is identical in shape to MOEDEX03
+// — just smaller. The selection section is what lets the loader answer
+// IndexedGram for a gram with NO postings (a kept gram that happens to occur in
+// zero blobs cannot arise here, but a deselected gram that DOES occur must read
+// as not-indexed, which the keep-set membership gives us).
+func saveSelective(ix *index.Index, sel map[trigram.Trigram]struct{}, path string) error {
+	blobs := ix.Snapshot()
+	trigrams := ix.Trigrams()
+
+	blobBuf := make([]byte, 0, 1<<16)
+	for _, b := range blobs {
+		blobBuf = appendBlob(blobBuf, b)
+	}
+	blobOff := uint64(headerSizeV4)
+	postOff := blobOff + uint64(len(blobBuf))
+
+	// Postings buffer, so we know where the selection section begins.
+	postBuf := make([]byte, 0, 1<<16)
+	scratch := make([]byte, 3+8)
+	for _, t := range trigrams {
+		enc := index.EncodePostings(ix.Postings(t))
+		scratch[0], scratch[1], scratch[2] = t[0], t[1], t[2]
+		binary.LittleEndian.PutUint64(scratch[3:11], uint64(len(enc)))
+		postBuf = append(postBuf, scratch...)
+		postBuf = append(postBuf, enc...)
+	}
+	selOff := postOff + uint64(len(postBuf))
+
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	w := bufio.NewWriter(f)
+
+	hdr := make([]byte, headerSizeV4)
+	copy(hdr[0:8], magicSelective)
+	binary.LittleEndian.PutUint32(hdr[8:12], formatVersionV4)
+	binary.LittleEndian.PutUint32(hdr[12:16], 0)
+	binary.LittleEndian.PutUint64(hdr[16:24], uint64(len(blobs)))
+	binary.LittleEndian.PutUint64(hdr[24:32], uint64(len(trigrams)))
+	binary.LittleEndian.PutUint64(hdr[32:40], blobOff)
+	binary.LittleEndian.PutUint64(hdr[40:48], postOff)
+	binary.LittleEndian.PutUint64(hdr[48:56], selOff)
+	binary.LittleEndian.PutUint64(hdr[56:64], uint64(len(sel)))
+	if _, err := w.Write(hdr); err != nil {
+		return err
+	}
+	if _, err := w.Write(blobBuf); err != nil {
+		return err
+	}
+	if _, err := w.Write(postBuf); err != nil {
+		return err
+	}
+	// SELECTION section: 3 bytes per kept gram.
+	selBuf := make([]byte, 0, len(sel)*3)
+	for t := range sel {
+		selBuf = append(selBuf, t[0], t[1], t[2])
+	}
+	if _, err := w.Write(selBuf); err != nil {
+		return err
+	}
+	return w.Flush()
+}
+
 func appendBlob(buf []byte, b index.BlobData) []byte {
 	buf = appendU32LenBytes(buf, []byte(b.SHA))
 	buf = binary.LittleEndian.AppendUint64(buf, uint64(len(b.Content)))
@@ -147,13 +255,25 @@ func Load(path string) (*index.Index, error) {
 		return nil, err
 	}
 	postings := make(map[trigram.Trigram][]index.Posting, hdr.numTrigrams)
-	err = walkPostings(data[hdr.postOff:], int(hdr.numTrigrams), func(t trigram.Trigram, enc []byte) {
+	err = walkPostings(data[hdr.postOff:postEnd(data, hdr)], int(hdr.numTrigrams), func(t trigram.Trigram, enc []byte) {
 		postings[t] = index.DecodePostings(enc)
 	})
 	if err != nil {
 		return nil, err
 	}
+	if hdr.selective {
+		return index.RestoreSelective(blobs, postings, loadSelection(data, hdr)), nil
+	}
 	return index.Restore(blobs, postings), nil
+}
+
+// postEnd returns the byte offset at which the postings section ends: the start
+// of the SELECTION section for a MOEDEX04 shard, or end-of-file for MOEDEX03.
+func postEnd(data []byte, hdr header) uint64 {
+	if hdr.selective {
+		return hdr.selOff
+	}
+	return uint64(len(data))
 }
 
 // LoadBlobs reads only the blob section of a shard — every blob's content and
@@ -196,24 +316,57 @@ func LoadMmap(path string) (*index.Index, io.Closer, error) {
 	}
 	// Map each trigram to a sub-slice of the mapping — no copy.
 	raw := make(map[trigram.Trigram][]byte, hdr.numTrigrams)
-	err = walkPostings(data[hdr.postOff:], int(hdr.numTrigrams), func(t trigram.Trigram, enc []byte) {
+	err = walkPostings(data[hdr.postOff:postEnd(data, hdr)], int(hdr.numTrigrams), func(t trigram.Trigram, enc []byte) {
 		raw[t] = enc
 	})
 	if err != nil {
 		region.Close()
 		return nil, nil, err
 	}
-	ix := index.RestoreLazy(blobs, &mmapProvider{raw: raw})
+	base := &mmapProvider{raw: raw}
+	if hdr.selective {
+		// A selective shard wraps the provider in one that ALSO reports gram
+		// membership (index.gramMember), so IndexedGram answers from the small
+		// heap-copied keep-set without the postings on heap. A non-selective shard
+		// uses the plain mmapProvider, which does NOT implement gramMember, so the
+		// loaded index keeps the all-indexed (universal-true) fast path and never
+		// pays the per-gram membership check.
+		ix := index.RestoreLazy(blobs, &selectiveMmapProvider{
+			mmapProvider: base,
+			selected:     loadSelection(data, hdr),
+		})
+		return ix, region, nil
+	}
+	ix := index.RestoreLazy(blobs, base)
 	return ix, region, nil
 }
 
-// mmapProvider decodes posting lists from sub-slices of an mmap'd file.
+// mmapProvider decodes posting lists from sub-slices of an mmap'd file. It is the
+// all-trigram (non-selective) provider; it does NOT implement gram membership, so
+// an index restored from it stays on the all-indexed universal-true fast path.
 type mmapProvider struct {
 	raw map[trigram.Trigram][]byte
 }
 
 func (p *mmapProvider) Postings(t trigram.Trigram) []index.Posting {
 	return index.DecodePostings(p.raw[t])
+}
+
+// selectiveMmapProvider is a MOEDEX04 (selective) shard's provider: it adds the
+// authoritative keep-set so IndexedGram can report a deselected gram as
+// not-indexed (forcing the query layer to scan) — the membership oracle for a
+// lazily-loaded selective shard. The keep-set is small (3 bytes/gram) so it lives
+// on the heap for O(1) lookups; the postings still stay mmap'd.
+type selectiveMmapProvider struct {
+	*mmapProvider
+	selected map[trigram.Trigram]struct{}
+}
+
+// IndexedGram implements index.gramMember: a gram is a trustworthy filter iff it
+// is in the keep-set.
+func (p *selectiveMmapProvider) IndexedGram(t trigram.Trigram) bool {
+	_, ok := p.selected[t]
+	return ok
 }
 
 // PostingCount returns how many postings t has without materializing them: it
@@ -260,28 +413,72 @@ type header struct {
 	numTrigrams uint64
 	blobOff     uint64
 	postOff     uint64
+	// selective is true for a MOEDEX04 shard; then selOff/selCount locate the
+	// SELECTION section (the authoritative keep-set). For a MOEDEX03 shard
+	// selective is false and the index loads as all-indexed (back-compat).
+	selective bool
+	selOff    uint64
+	selCount  uint64
 }
 
 func parseHeader(data []byte) (header, error) {
 	if len(data) < headerSize {
 		return header{}, fmt.Errorf("diskstore: file too small (%d bytes)", len(data))
 	}
-	if string(data[0:8]) != magic {
+	switch string(data[0:8]) {
+	case magic:
+		if v := binary.LittleEndian.Uint32(data[8:12]); v != formatVersion {
+			return header{}, fmt.Errorf("diskstore: unsupported version %d", v)
+		}
+		h := header{
+			numBlobs:    binary.LittleEndian.Uint64(data[16:24]),
+			numTrigrams: binary.LittleEndian.Uint64(data[24:32]),
+			blobOff:     binary.LittleEndian.Uint64(data[32:40]),
+			postOff:     binary.LittleEndian.Uint64(data[40:48]),
+		}
+		if h.blobOff > uint64(len(data)) || h.postOff > uint64(len(data)) || h.blobOff > h.postOff {
+			return header{}, fmt.Errorf("diskstore: corrupt section offsets")
+		}
+		return h, nil
+	case magicSelective:
+		if len(data) < headerSizeV4 {
+			return header{}, fmt.Errorf("diskstore: selective file too small (%d bytes)", len(data))
+		}
+		if v := binary.LittleEndian.Uint32(data[8:12]); v != formatVersionV4 {
+			return header{}, fmt.Errorf("diskstore: unsupported version %d", v)
+		}
+		h := header{
+			numBlobs:    binary.LittleEndian.Uint64(data[16:24]),
+			numTrigrams: binary.LittleEndian.Uint64(data[24:32]),
+			blobOff:     binary.LittleEndian.Uint64(data[32:40]),
+			postOff:     binary.LittleEndian.Uint64(data[40:48]),
+			selective:   true,
+			selOff:      binary.LittleEndian.Uint64(data[48:56]),
+			selCount:    binary.LittleEndian.Uint64(data[56:64]),
+		}
+		if h.blobOff > uint64(len(data)) || h.postOff > uint64(len(data)) ||
+			h.selOff > uint64(len(data)) || h.blobOff > h.postOff || h.postOff > h.selOff {
+			return header{}, fmt.Errorf("diskstore: corrupt section offsets")
+		}
+		if h.selOff+h.selCount*trigram.N > uint64(len(data)) {
+			return header{}, fmt.Errorf("diskstore: corrupt selection section")
+		}
+		return h, nil
+	default:
 		return header{}, fmt.Errorf("diskstore: bad magic %q", data[0:8])
 	}
-	if v := binary.LittleEndian.Uint32(data[8:12]); v != formatVersion {
-		return header{}, fmt.Errorf("diskstore: unsupported version %d", v)
+}
+
+// loadSelection reads the SELECTION section (3 bytes per kept gram) into a set.
+// Only valid when h.selective.
+func loadSelection(data []byte, h header) map[trigram.Trigram]struct{} {
+	sel := make(map[trigram.Trigram]struct{}, h.selCount)
+	base := h.selOff
+	for i := uint64(0); i < h.selCount; i++ {
+		off := base + i*trigram.N
+		sel[trigram.Trigram{data[off], data[off+1], data[off+2]}] = struct{}{}
 	}
-	h := header{
-		numBlobs:    binary.LittleEndian.Uint64(data[16:24]),
-		numTrigrams: binary.LittleEndian.Uint64(data[24:32]),
-		blobOff:     binary.LittleEndian.Uint64(data[32:40]),
-		postOff:     binary.LittleEndian.Uint64(data[40:48]),
-	}
-	if h.blobOff > uint64(len(data)) || h.postOff > uint64(len(data)) || h.blobOff > h.postOff {
-		return header{}, fmt.Errorf("diskstore: corrupt section offsets")
-	}
-	return h, nil
+	return sel
 }
 
 // walkPostings iterates the postings section, calling fn with each trigram and

@@ -3,6 +3,14 @@
 // slice-1 in-memory engine starts to strain.
 //
 // Usage: scale ROOT [sampleRegex]
+//
+// Environment knobs:
+//
+//	MOEDEX_MMAP=1            persist, reload with postings mmap'd, report heap delta.
+//	MOEDEX_SELECTIVE=<frac>  opt-in FREE-style selective index: keep a trigram only
+//	                         if it occurs in at most <frac> of blobs (e.g. 0.5). The
+//	                         all-trigram path is the default (knob unset). Parity is
+//	                         preserved by the IndexedGram force-scan fallback.
 package main
 
 import (
@@ -12,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"time"
 
 	"moedex/internal/diskstore"
@@ -31,10 +40,23 @@ func main() {
 		sample = os.Args[2]
 	}
 
+	// Optional selective build (MOEDEX_SELECTIVE=<frac>). nil selector => default
+	// all-trigram path, so existing scale runs are unchanged.
+	var sel index.GramSelector
+	if v := os.Getenv("MOEDEX_SELECTIVE"); v != "" {
+		frac, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "bad MOEDEX_SELECTIVE=%q: %v\n", v, err)
+			os.Exit(2)
+		}
+		sel = index.FrequencyThresholdSelector{MaxDocFraction: frac}
+		fmt.Printf("selective build: %s\n", sel.Describe())
+	}
+
 	repos := findRepos(root)
 	fmt.Printf("found %d git repos under %s\n", len(repos), root)
 
-	ix := index.New()
+	sb := newScaleBuilder(sel)
 	var totalFiles int
 	var totalBytes int64
 	start := time.Now()
@@ -45,11 +67,12 @@ func main() {
 			continue
 		}
 		for _, f := range files {
-			ix.AddFile(f.Repo, f.RelPath, f.AbsPath, f.SHA, f.Content)
+			sb.AddFile(f.Repo, f.RelPath, f.AbsPath, f.SHA, f.Content)
 			totalFiles++
 			totalBytes += int64(len(f.Content))
 		}
 	}
+	ix := sb.finalize()
 	buildDur := time.Since(start)
 
 	var postings int64
@@ -129,6 +152,36 @@ func main() {
 			}
 		}
 	}
+}
+
+// scaleBuilder unifies the all-trigram (*index.Index) and selective
+// (*index.Builder) build paths for the scale harness. A nil selector keeps the
+// default eager path so an ordinary scale run is unchanged.
+type scaleBuilder struct {
+	eag *index.Index
+	bld *index.Builder
+}
+
+func newScaleBuilder(sel index.GramSelector) *scaleBuilder {
+	if sel == nil {
+		return &scaleBuilder{eag: index.New()}
+	}
+	return &scaleBuilder{bld: index.NewSelective(sel)}
+}
+
+func (sb *scaleBuilder) AddFile(repo, rel, abs, sha string, content []byte) {
+	if sb.eag != nil {
+		sb.eag.AddFile(repo, rel, abs, sha, content)
+		return
+	}
+	sb.bld.AddFile(repo, rel, abs, sha, content)
+}
+
+func (sb *scaleBuilder) finalize() *index.Index {
+	if sb.eag != nil {
+		return sb.eag
+	}
+	return sb.bld.Finalize()
 }
 
 func findRepos(root string) []string {
