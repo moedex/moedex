@@ -12,3 +12,4 @@
 
 # Claude Code worktrees (transient; never commit the gitlink)
 .claude/worktrees/
+.DS_Store
