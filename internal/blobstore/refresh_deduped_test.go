@@ -1,0 +1,295 @@
+package blobstore
+
+// Delta-deduped-reexport INCREMENTAL-MEASUREMENT gate (PROOF 2).
+//
+// Proves the delta is actually incremental: a 1-repo change over an existing
+// deduped served dir appends ONLY that repo's net-new blob content to blobs.dat
+// (co-resident repos' content NOT re-appended), and rewrites ONLY the shards
+// intersecting the changed repo (unaffected shards carried byte-for-byte).
+
+import (
+	"crypto/sha256"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"moedex/internal/diskstore"
+	"moedex/internal/parity"
+)
+
+// fileDigest returns a SHA-256 of a file's bytes, for byte-for-byte carry-forward
+// assertions on the shard files.
+func fileDigest(t *testing.T, path string) [32]byte {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	return sha256.Sum256(b)
+}
+
+// shardDigestsByBasename maps shard-file basename -> content digest for a dir.
+func shardDigestsByBasename(t *testing.T, dir string) map[string][32]byte {
+	t.Helper()
+	paths, err := filepath.Glob(filepath.Join(dir, "*.idx"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := map[string][32]byte{}
+	for _, p := range paths {
+		out[filepath.Base(p)] = fileDigest(t, p)
+	}
+	return out
+}
+
+// TestDeltaDedupedReexportIsIncremental is PROOF (2): the measured delta.
+func TestDeltaDedupedReexportIsIncremental(t *testing.T) {
+	requireGit(t)
+	corpus := t.TempDir()
+
+	// Four repos, each with content large enough that a tiny shardBytes lands each in
+	// its OWN shard — so "rewrite only intersecting shards" and "carry the rest byte-
+	// for-byte" are both observable. No cross-repo sharing here, so the net-new bytes
+	// of a change are unambiguous.
+	repoA := filepath.Join(corpus, "repoA")
+	repoB := filepath.Join(corpus, "repoB")
+	repoC := filepath.Join(corpus, "repoC")
+	repoD := filepath.Join(corpus, "repoD")
+	commitGitRepo(t, repoA, map[string]string{"a.go": "package a\n" + largeBody("AlphaBody", 80)})
+	commitGitRepo(t, repoB, map[string]string{"b.go": "package b\n" + largeBody("BravoBody", 80)})
+	commitGitRepo(t, repoC, map[string]string{"c.go": "package c\n" + largeBody("CharlieBody", 80)})
+	commitGitRepo(t, repoD, map[string]string{"d.go": "package d\n" + largeBody("DeltaBody", 80)})
+
+	const shardBytes = 1 << 10 // each repo's body >> 1 KiB => one repo per shard
+
+	casDir := t.TempDir()
+	if _, err := BuildCAS(corpus, casDir); err != nil {
+		t.Fatalf("BuildCAS: %v", err)
+	}
+	deltaDir := filepath.Join(t.TempDir(), "deduped")
+	baselineManifest, _, err := ExportDedupedShardDir(casDir, deltaDir, shardBytes)
+	if err != nil {
+		t.Fatalf("ExportDedupedShardDir: %v", err)
+	}
+	if len(baselineManifest.Shards) < 3 {
+		t.Fatalf("expected >=3 shards (one per repo) for an observable carry-forward, got %d", len(baselineManifest.Shards))
+	}
+
+	// Record the baseline shard files keyed by the repo they carry, and the baseline
+	// blobs.dat size + record count.
+	baselineShardByRepo := map[string]parity.ShardManifest{}
+	for _, sm := range baselineManifest.Shards {
+		if len(sm.Repos) != 1 {
+			t.Fatalf("test premise: expected one repo per shard, shard %s has %v", sm.Path, sm.Repos)
+		}
+		baselineShardByRepo[sm.Repos[0]] = sm
+	}
+	csPath := filepath.Join(deltaDir, diskstore.ContentStoreName)
+	csBefore, err := diskstore.OpenContentStore(csPath)
+	if err != nil {
+		t.Fatalf("open baseline content store: %v", err)
+	}
+	bytesStoredBefore := csBefore.BytesStored()
+	recordsBefore := csBefore.Len()
+	csBefore.Close()
+
+	baselineDigests := shardDigestsByBasename(t, deltaDir)
+
+	// Compute the byte-for-byte digests of the UNCHANGED repos' shard files so we can
+	// later confirm they were carried forward verbatim. We key by the file's content
+	// digest (not its post-swap name, which is reassigned).
+	carriedDigests := map[[32]byte]string{} // digest -> repo it carries
+	for _, repo := range []string{repoA, repoC, repoD} {
+		sm := baselineShardByRepo[repo]
+		carriedDigests[fileDigest(t, sm.Path)] = repo
+	}
+
+	// --- Mutate ONLY repoB: add a NEW file with NEW unique content; keep b.go as-is.
+	newContent := "package b\nfunc FreshlyAdded() string { return \"unique_new_bravo_body\" }\n" +
+		largeBody("FreshFiller", 5)
+	writeFiles(t, repoB, map[string]string{"fresh.go": newContent})
+	gitCommitAll(t, repoB, "add fresh.go to repoB")
+
+	// Refresh the CAS, then delta-refresh the deduped dir.
+	cm1, err := LoadBlobManifest(filepath.Join(casDir, BlobManifestName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := RefreshCAS(cm1, corpus, casDir); err != nil {
+		t.Fatalf("RefreshCAS: %v", err)
+	}
+	newManifest, ds, err := RefreshDedupedShardDir(casDir, deltaDir, shardBytes)
+	if err != nil {
+		t.Fatalf("RefreshDedupedShardDir: %v", err)
+	}
+
+	// (1) Classification: exactly repoB changed.
+	if len(ds.ChangedRepos) != 1 || ds.ChangedRepos[0] != repoB {
+		t.Errorf("ChangedRepos = %v, want [repoB]", ds.ChangedRepos)
+	}
+	if len(ds.AddedRepos) != 0 || len(ds.RemovedRepos) != 0 {
+		t.Errorf("unexpected added/removed: %+v", ds)
+	}
+
+	// (2) APPEND minimality: exactly one net-new blob (fresh.go), and the bytes
+	// appended == its content length. Co-resident/unchanged content is NOT appended.
+	if ds.BlobsAppended != 1 {
+		t.Errorf("BlobsAppended = %d, want 1 (only fresh.go is net-new content)", ds.BlobsAppended)
+	}
+	if ds.BytesAppended != int64(len(newContent)) {
+		t.Errorf("BytesAppended = %d, want exactly fresh.go content (%d)", ds.BytesAppended, len(newContent))
+	}
+	// b.go is re-packed (same shard as fresh.go) but its content was already in the
+	// store, so its PutContent is a dedup no-op.
+	if ds.PutsDeduped < 1 {
+		t.Errorf("PutsDeduped = %d, want >=1 (b.go's content already present)", ds.PutsDeduped)
+	}
+
+	// (3) The on-disk content store grew by EXACTLY the net-new content, and by
+	// exactly one record (the other repos' blobs are untouched).
+	csAfter, err := diskstore.OpenContentStore(csPath)
+	if err != nil {
+		t.Fatalf("open refreshed content store: %v", err)
+	}
+	defer csAfter.Close()
+	if got := csAfter.BytesStored() - bytesStoredBefore; got != int64(len(newContent)) {
+		t.Errorf("blobs.dat content grew by %d, want exactly fresh.go (%d)", got, len(newContent))
+	}
+	if got := csAfter.Len() - recordsBefore; got != 1 {
+		t.Errorf("blobs.dat record count grew by %d, want 1", got)
+	}
+
+	// (4) REWRITE minimality: exactly one shard rewritten (repoB's), the rest carried.
+	if ds.ShardsRewritten != 1 {
+		t.Errorf("ShardsRewritten = %d, want 1 (only repoB's shard intersects the change)", ds.ShardsRewritten)
+	}
+	if ds.ShardsCarried != 3 {
+		t.Errorf("ShardsCarried = %d, want 3 (repoA/repoC/repoD untouched)", ds.ShardsCarried)
+	}
+
+	// (5) Carry-forward is BYTE-FOR-BYTE: every unchanged repo's shard file appears
+	// in the new dir with an identical content digest (regardless of reassigned name).
+	afterDigests := shardDigestsByBasename(t, deltaDir)
+	afterDigestSet := map[[32]byte]bool{}
+	for _, d := range afterDigests {
+		afterDigestSet[d] = true
+	}
+	for dig, repo := range carriedDigests {
+		if !afterDigestSet[dig] {
+			t.Errorf("unchanged repo %s's shard was NOT carried forward byte-for-byte (digest absent after refresh)", repo)
+		}
+	}
+	// And at least one baseline shard digest must NOT survive (repoB's old shard was
+	// rewritten — its content changed).
+	survived := 0
+	for _, d := range baselineDigests {
+		if afterDigestSet[d] {
+			survived++
+		}
+	}
+	if survived != 3 {
+		t.Errorf("%d baseline shard digests survived, want exactly 3 (the 3 carried; repoB's rewritten)", survived)
+	}
+
+	// (6) The refreshed manifest still covers all four repos.
+	if len(newManifest.Heads) != 4 {
+		t.Errorf("refreshed manifest heads = %d, want 4", len(newManifest.Heads))
+	}
+}
+
+// TestDeltaDedupedReexportHandlesRemovedRepo locks down the removal path: a repo
+// genuinely gone from the corpus (and thus dropped from the CAS by RefreshCAS) is
+// classified removed, its shard rewritten without it (here, since it owned its own
+// shard, the shard simply drops out), the other shards carried forward, and the
+// served dir no longer surfaces its content.
+func TestDeltaDedupedReexportHandlesRemovedRepo(t *testing.T) {
+	requireGit(t)
+	corpus := t.TempDir()
+	repoA := filepath.Join(corpus, "repoA")
+	repoB := filepath.Join(corpus, "repoB")
+	repoC := filepath.Join(corpus, "repoC")
+	commitGitRepo(t, repoA, map[string]string{"a.go": "package a\n" + largeBody("KeepAlpha", 60)})
+	commitGitRepo(t, repoB, map[string]string{"b.go": "package b\n" + largeBody("GoneBravo", 60)})
+	commitGitRepo(t, repoC, map[string]string{"c.go": "package c\n" + largeBody("KeepCharlie", 60)})
+
+	const shardBytes = 1 << 10
+	casDir := t.TempDir()
+	if _, err := BuildCAS(corpus, casDir); err != nil {
+		t.Fatalf("BuildCAS: %v", err)
+	}
+	deltaDir := filepath.Join(t.TempDir(), "deduped")
+	base, _, err := ExportDedupedShardDir(casDir, deltaDir, shardBytes)
+	if err != nil {
+		t.Fatalf("ExportDedupedShardDir: %v", err)
+	}
+	baseShards := len(base.Shards)
+
+	// Genuinely remove repoB from disk, refresh the CAS (drops it), then delta-export.
+	if err := os.RemoveAll(repoB); err != nil {
+		t.Fatal(err)
+	}
+	cm1, err := LoadBlobManifest(filepath.Join(casDir, BlobManifestName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := RefreshCAS(cm1, corpus, casDir); err != nil {
+		t.Fatalf("RefreshCAS: %v", err)
+	}
+	m, ds, err := RefreshDedupedShardDir(casDir, deltaDir, shardBytes)
+	if err != nil {
+		t.Fatalf("RefreshDedupedShardDir: %v", err)
+	}
+
+	if len(ds.RemovedRepos) != 1 || ds.RemovedRepos[0] != repoB {
+		t.Errorf("RemovedRepos = %v, want [repoB]", ds.RemovedRepos)
+	}
+	if len(ds.ChangedRepos) != 0 || len(ds.AddedRepos) != 0 {
+		t.Errorf("unexpected changed/added on a pure removal: %+v", ds)
+	}
+	// repoB owned its own shard, so that shard is rewritten without any surviving
+	// repo => it drops out; the other two shards carry forward.
+	if ds.ShardsCarried != baseShards-1 {
+		t.Errorf("ShardsCarried = %d, want %d", ds.ShardsCarried, baseShards-1)
+	}
+	if got := len(m.Heads); got != 2 {
+		t.Errorf("refreshed manifest heads = %d, want 2 (repoB removed)", got)
+	}
+	for _, h := range m.Heads {
+		if h.Dir == repoB {
+			t.Error("repoB still present in refreshed served manifest after removal")
+		}
+	}
+
+	// The removed repo's unique content must no longer be findable; the survivors are.
+	cs, err := diskstore.OpenContentStore(filepath.Join(deltaDir, diskstore.ContentStoreName))
+	if err != nil {
+		t.Fatalf("open content store: %v", err)
+	}
+	defer cs.Close()
+	// Note: append-only blobs.dat does NOT GC repoB's now-unreferenced content (it is
+	// carried forward in the store), but NO live shard references it, so it cannot be
+	// served — the search-visible removal is what parity requires. We assert no
+	// surviving SHARD references repoB's content.
+	for _, p := range globIdx(t, deltaDir) {
+		bs, err := diskstore.LoadBlobsDeduped(p, cs)
+		if err != nil {
+			t.Fatalf("LoadBlobsDeduped %s: %v", p, err)
+		}
+		for _, b := range bs {
+			for _, fr := range b.Files {
+				if fr.Repo == filepath.Base(repoB) {
+					t.Errorf("shard %s still references removed repoB file %s", filepath.Base(p), fr.RelPath)
+				}
+			}
+		}
+	}
+}
+
+func globIdx(t *testing.T, dir string) []string {
+	t.Helper()
+	ps, err := filepath.Glob(filepath.Join(dir, "*.idx"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ps
+}

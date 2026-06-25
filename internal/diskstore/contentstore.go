@@ -55,6 +55,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -180,6 +181,231 @@ func (w *ContentStoreWriter) Write(path string) error {
 		return err
 	}
 	return os.Rename(tmp, path)
+}
+
+// ContentStoreAppender is the DELTA-aware writer for the shared content store: it
+// APPENDS only net-new blob content to an EXISTING MOECONT1 store, carrying every
+// already-present blob's content forward byte-for-byte at its exact prior offset.
+// It is the served-side analogue of the CAS pack's append-only Put (blobstore):
+// PutContent on an already-present content hash is a dedup no-op (no bytes added),
+// and the existing content section is never rewritten — Write streams the prior
+// content bytes through verbatim and only the (small) directory is re-emitted.
+//
+// Because the MOECONT1 directory section lives AFTER the content section, a
+// raw-file in-place append is not possible without moving the directory; this
+// appender instead writes a fresh file whose content section is [old content bytes
+// (copied byte-for-byte) ++ new content bytes], preserving every existing blob's
+// absolute offset, so the file the prior store referenced by offset is reproduced
+// exactly plus the appended tail. The directory then covers old+new in insertion
+// order. This keeps the delta minimal (BytesAppended == sum of net-new content
+// lengths) while remaining a single atomic temp+rename write.
+//
+// NOT safe for concurrent use.
+type ContentStoreAppender struct {
+	srcPath string                // the existing store being extended (streamed forward)
+	srcLen  int64                 // existing content-section byte length (== old pos)
+	dir     map[string]ContentRef // sha -> ref over the COMBINED (old+new) store
+	order   []string              // SHAs in combined insertion order (old first, then new)
+	newSHAs []string              // SHAs appended this round (the net-new content)
+	newBuf  [][]byte              // new content slices, parallel to newSHAs
+	pos     int64                 // running content offset (next write position)
+	added   int64                 // net-new content bytes appended (the delta footprint)
+}
+
+// OpenContentStoreAppender opens the existing MOECONT1 store at path for delta
+// extension, seeding the appender with its directory (sha -> {offset,len}) and
+// insertion order WITHOUT loading the content payload into memory (it is streamed
+// from the file at Write time). A subsequent PutContent of a present sha is a
+// dedup no-op; a new sha is queued for append. Write(out) then emits a complete
+// store (old content carried forward byte-for-byte + new content appended).
+//
+// The seeding reads only the fixed header and the O(numBlobs) directory section,
+// so opening a multi-GB store is cheap; the content section is never mapped here.
+func OpenContentStoreAppender(path string) (*ContentStoreAppender, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	hdr := make([]byte, contentHeaderSize)
+	if _, err := io.ReadFull(f, hdr); err != nil {
+		return nil, fmt.Errorf("diskstore: read content store header: %w", err)
+	}
+	if string(hdr[0:8]) != contentMagic {
+		return nil, fmt.Errorf("diskstore: bad content store magic %q", hdr[0:8])
+	}
+	if v := binary.LittleEndian.Uint32(hdr[8:12]); v != contentStoreVersion {
+		return nil, fmt.Errorf("diskstore: unsupported content store version %d", v)
+	}
+	numBlobs := binary.LittleEndian.Uint64(hdr[16:24])
+	dirOff := binary.LittleEndian.Uint64(hdr[24:32])
+	if dirOff < contentHeaderSize {
+		return nil, fmt.Errorf("diskstore: corrupt content store directory offset %d", dirOff)
+	}
+
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if dirOff > uint64(fi.Size()) {
+		return nil, fmt.Errorf("diskstore: content store directory offset %d past EOF %d", dirOff, fi.Size())
+	}
+
+	// Read just the directory section (O(numBlobs)); the content payload stays on
+	// disk and is streamed at Write time.
+	dirBytes := make([]byte, uint64(fi.Size())-dirOff)
+	if _, err := f.ReadAt(dirBytes, int64(dirOff)); err != nil && err != io.EOF {
+		return nil, fmt.Errorf("diskstore: read content store directory: %w", err)
+	}
+
+	a := &ContentStoreAppender{
+		srcPath: path,
+		srcLen:  int64(dirOff) - contentHeaderSize,
+		dir:     make(map[string]ContentRef, numBlobs),
+	}
+	r := &reader{b: dirBytes}
+	for i := uint64(0); i < numBlobs; i++ {
+		sha, err := r.lenBytes()
+		if err != nil {
+			return nil, fmt.Errorf("diskstore: content dir entry %d sha: %w", i, err)
+		}
+		off, err := r.u64()
+		if err != nil {
+			return nil, fmt.Errorf("diskstore: content dir entry %d off: %w", i, err)
+		}
+		clen, err := r.u64()
+		if err != nil {
+			return nil, fmt.Errorf("diskstore: content dir entry %d len: %w", i, err)
+		}
+		// Stored offsets are ABSOLUTE (content base == contentHeaderSize); normalize
+		// to a content-relative offset for the combined store's directory, matching
+		// the convention ContentStoreWriter uses internally (ref.Offset is relative).
+		key := string(sha)
+		a.dir[key] = ContentRef{Offset: int64(off) - contentHeaderSize, Len: int64(clen)}
+		a.order = append(a.order, key)
+	}
+	a.pos = a.srcLen
+	return a, nil
+}
+
+// PutContent records content under sha if not already present (in the existing
+// store OR queued this round) and returns its content-relative reference. It is
+// idempotent: a present sha returns the existing ref and adds ZERO bytes — the
+// delta dedup primitive, identical in contract to ContentStoreWriter.PutContent
+// and blobstore.Store.Put. sha must be a content hash of the exact bytes.
+func (a *ContentStoreAppender) PutContent(sha string, content []byte) ContentRef {
+	if ref, ok := a.dir[sha]; ok {
+		return ref
+	}
+	ref := ContentRef{Offset: a.pos, Len: int64(len(content))}
+	a.dir[sha] = ref
+	a.order = append(a.order, sha)
+	a.newSHAs = append(a.newSHAs, sha)
+	a.newBuf = append(a.newBuf, append([]byte(nil), content...))
+	a.pos += int64(len(content))
+	a.added += int64(len(content))
+	return ref
+}
+
+// Ref returns the stored reference for sha and whether it is present.
+func (a *ContentStoreAppender) Ref(sha string) (ContentRef, bool) {
+	ref, ok := a.dir[sha]
+	return ref, ok
+}
+
+// Len returns the number of unique content records in the combined store.
+func (a *ContentStoreAppender) Len() int { return len(a.order) }
+
+// BytesStored returns the total content bytes the combined store holds (old+new).
+func (a *ContentStoreAppender) BytesStored() int64 { return a.pos }
+
+// BytesAppended returns ONLY the net-new content bytes queued this round — the
+// honest delta footprint (the bytes physically appended beyond the prior store).
+func (a *ContentStoreAppender) BytesAppended() int64 { return a.added }
+
+// BlobsAppended returns the number of net-new unique blobs queued this round.
+func (a *ContentStoreAppender) BlobsAppended() int { return len(a.newSHAs) }
+
+// Write serializes the combined store to outPath atomically (temp+rename). The
+// content section is the prior store's content bytes (streamed byte-for-byte from
+// the source, preserving every existing blob's offset) followed by the net-new
+// content; the directory covers old+new in insertion order. outPath may equal the
+// source path (the rename swaps the new file into place after the source is fully
+// read into the temp file). A crash mid-write leaves the durable source intact.
+func (a *ContentStoreAppender) Write(outPath string) error {
+	tmp := outPath + ".tmp"
+	f, err := os.Create(tmp)
+	if err != nil {
+		return err
+	}
+	bw := bufio.NewWriter(f)
+
+	dirOff := uint64(contentHeaderSize) + uint64(a.pos)
+	hdr := make([]byte, contentHeaderSize)
+	copy(hdr[0:8], contentMagic)
+	binary.LittleEndian.PutUint32(hdr[8:12], contentStoreVersion)
+	binary.LittleEndian.PutUint32(hdr[12:16], 0)
+	binary.LittleEndian.PutUint64(hdr[16:24], uint64(len(a.order)))
+	binary.LittleEndian.PutUint64(hdr[24:32], dirOff)
+	if _, err := bw.Write(hdr); err != nil {
+		f.Close()
+		return err
+	}
+
+	// CONTENT section — old content bytes streamed forward byte-for-byte (preserving
+	// every prior blob's absolute offset), then the appended net-new content.
+	if a.srcLen > 0 {
+		src, err := os.Open(a.srcPath)
+		if err != nil {
+			f.Close()
+			return err
+		}
+		// Copy exactly the prior content section [contentHeaderSize, contentHeaderSize+srcLen).
+		if _, err := src.Seek(contentHeaderSize, io.SeekStart); err != nil {
+			src.Close()
+			f.Close()
+			return err
+		}
+		if _, err := io.CopyN(bw, src, a.srcLen); err != nil {
+			src.Close()
+			f.Close()
+			return fmt.Errorf("diskstore: copy prior content section: %w", err)
+		}
+		src.Close()
+	}
+	for _, c := range a.newBuf {
+		if _, err := bw.Write(c); err != nil {
+			f.Close()
+			return err
+		}
+	}
+
+	// DIRECTORY section — absolute offsets (content base == contentHeaderSize).
+	for _, sha := range a.order {
+		ref := a.dir[sha]
+		var rec []byte
+		rec = appendU32LenBytes(rec, []byte(sha))
+		rec = binary.LittleEndian.AppendUint64(rec, uint64(contentHeaderSize)+uint64(ref.Offset))
+		rec = binary.LittleEndian.AppendUint64(rec, uint64(ref.Len))
+		if _, err := bw.Write(rec); err != nil {
+			f.Close()
+			return err
+		}
+	}
+
+	if err := bw.Flush(); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp, outPath)
 }
 
 // ContentStore is a read-only, mmap'd view of a shared content store. It serves
