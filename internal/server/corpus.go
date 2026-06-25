@@ -34,14 +34,28 @@ type shard struct {
 // Corpus is a warm, read-only view over a set of mmap'd shards. It is safe for
 // concurrent use by multiple goroutines: Open and Close mutate it, but the
 // query methods only read immutable shard state.
+//
+// When the shard dir is a DEDUPED export (MOEDEX05 shards + a shared content store
+// blobs.dat — see blobstore.ExportDedupedShardDir), Corpus also holds that shared
+// content store mmap'd for its lifetime: the shards carry only content-hash
+// references, and each blob's content is a zero-copy sub-slice of the one shared
+// mapping. A blob whose repos span several shards is mapped ONCE, not once per
+// shard, so the served corpus inherits the CAS's cross-shard dedup and content
+// stays off the Go heap. A legacy inlined-content dir leaves content nil.
 type Corpus struct {
-	dir    string
-	shards []shard
+	dir     string
+	shards  []shard
+	content *diskstore.ContentStore // non-nil only for a deduped (MOEDEX05) dir
 }
 
 // Open mmaps every "*.idx" shard under dir (in sorted filename order) and
 // returns a queryable Corpus. On any load failure it closes whatever it had
 // already mapped and returns the error, so a partial mapping is never leaked.
+//
+// It transparently handles both shard formats: a legacy inlined-content dir
+// (MOEDEX03/04) loads via diskstore.LoadMmap, and a deduped dir (MOEDEX05 + the
+// shared blobs.dat content store) loads each shard against the once-opened shared
+// store. The format is detected per dir; the external API is unchanged.
 func Open(dir string) (*Corpus, error) {
 	paths, err := filepath.Glob(filepath.Join(dir, "*.idx"))
 	if err != nil {
@@ -53,8 +67,13 @@ func Open(dir string) (*Corpus, error) {
 	sort.Strings(paths)
 
 	c := &Corpus{dir: dir}
+	cs, err := openSharedContent(dir, paths)
+	if err != nil {
+		return nil, err
+	}
+	c.content = cs
 	for _, p := range paths {
-		ix, closer, err := diskstore.LoadMmap(p)
+		ix, closer, err := openShard(p, cs)
 		if err != nil {
 			_ = c.Close()
 			return nil, fmt.Errorf("server: load shard %s: %w", p, err)
@@ -64,8 +83,9 @@ func Open(dir string) (*Corpus, error) {
 	return c, nil
 }
 
-// Close unmaps every shard. After Close the Corpus must not be queried —
-// querying mapped-out memory crashes. Close is idempotent.
+// Close unmaps every shard and the shared content store (if any). After Close the
+// Corpus must not be queried — querying mapped-out memory crashes. Close is
+// idempotent.
 func (c *Corpus) Close() error {
 	var first error
 	for i := range c.shards {
@@ -77,6 +97,12 @@ func (c *Corpus) Close() error {
 		}
 	}
 	c.shards = nil
+	if c.content != nil {
+		if err := c.content.Close(); err != nil && first == nil {
+			first = err
+		}
+		c.content = nil
+	}
 	return first
 }
 

@@ -521,6 +521,7 @@ func runCASExport(args []string) error {
 	shardDir := fs.String("shard-dir", "", "output servable shard directory")
 	shardBytes := fs.Int64("shard-bytes", parity.DefaultShardBytes, "target indexed-content bytes per exported shard")
 	force := fs.Bool("force", false, "clear a non-empty shard dir before exporting")
+	deduped := fs.Bool("deduped", false, "write the deduped served format (content-less MOEDEX05 shards + one shared blobs.dat content store) so blob content is stored once corpus-wide")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -537,6 +538,18 @@ func runCASExport(args []string) error {
 	}
 	if err := prepareDir(out, *force); err != nil {
 		return err
+	}
+	if *deduped {
+		m, storedBytes, err := blobstore.ExportDedupedShardDir(dir, out, *shardBytes)
+		if err != nil {
+			return err
+		}
+		// Build the ranking sidecars so the exported dir is immediately servable
+		// warm (BuildSidecars reads the shared content store transparently).
+		sidecars := buildSidecars(out)
+		fmt.Printf("cas-export (deduped): %d shard(s) from %d repo(s) into %s; shared content store %d bytes%s\n",
+			len(m.Shards), len(m.Heads), out, storedBytes, sidecars)
+		return nil
 	}
 	m, err := blobstore.ExportShardDir(dir, out, *shardBytes)
 	if err != nil {
