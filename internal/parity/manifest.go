@@ -103,17 +103,53 @@ func (m *Manifest) HeadOf(dir string) (string, bool) {
 }
 
 // WriteManifest serializes m to path as indented JSON (atomically via a temp
-// file + rename so a crash mid-write never leaves a half-manifest).
+// file + rename so a crash mid-write never leaves a half-manifest), and makes the
+// write DURABLE: it fsyncs the temp file before the rename (so the manifest's bytes
+// are on disk before the directory entry that exposes them) and fsyncs the parent
+// directory after the rename (so the rename itself survives a hard crash).
+//
+// This durability matters because the deduped delta re-export
+// (blobstore.RefreshDedupedShardDir) treats the PRESENCE of manifest.json as the
+// "this export dir is complete" marker its crash-recovery (RecoverInterrupted
+// DedupedSwap) keys on: data files are fsynced first, then this manifest is written
+// LAST, so "manifest present" reliably implies "data + manifest durably on disk"
+// even across power loss / kernel panic — not just a clean process kill. Every
+// caller writes exactly one manifest at the end of a build/export/refresh (no
+// tight per-iteration loop), so the one fsync per call is negligible.
 func WriteManifest(path string, m *Manifest) error {
 	data, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
 		return err
 	}
 	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, path)
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		return err
+	}
+	// fsync the temp file's contents to disk BEFORE the rename, so the manifest bytes
+	// are durable before the directory entry exposing them.
+	if err := f.Sync(); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return err
+	}
+	// fsync the parent directory so the rename (the directory entry creation) is
+	// itself durable across a hard crash. Best-effort: some platforms reject fsync on
+	// a directory handle — that does not invalidate the file-content fsync above.
+	if d, err := os.Open(filepath.Dir(path)); err == nil {
+		_ = d.Sync()
+		_ = d.Close()
+	}
+	return nil
 }
 
 // LoadManifest reads and parses a manifest written by WriteManifest.
