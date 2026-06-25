@@ -8,14 +8,14 @@
 
 ## TL;DR — first thing to do on the new machine
 
-1. Clone fresh and fetch all branches:
+1. Clone fresh:
    ```
    git clone git@gitlab.tcdevops.com:Zak/moedex.git && cd moedex
-   git fetch origin
    ```
 2. Make sure the corpus is present: **`~/TCGitlab`** (5.2 GB, ~484 git repos). The parity gates need it. It does NOT travel in the repo — copy/clone it onto the new host.
-3. The **only unmerged lane** is `redesign/compaction-gc` (pushed, SHA `c0e3f1a`). Everything else is already merged into `main` and pushed.
-4. Check the result of the full-corpus compaction parity gate (it was *running* when this was written — see "Compaction-GC lane" below). If it PASSED, merge `redesign/compaction-gc` into `main`. If it FAILED, fix per the gauntlet before merging.
+3. **The redesign is COMPLETE and merged.** compaction-GC (the final lane) was merged into `main` (`b0213a4`) and pushed on 2026-06-25 after its full-corpus parity gate PASSED. Nothing left to merge. `git pull` gets everything.
+4. **Proceed to the 128GB-unblocked parked items** (section below) — that's the real remaining work. Verify `go build ./... && go build -tags onnx ./... && go vet ./... && go test ./...` is green on the new host first (sanity check the toolchain + corpus).
+5. This handoff file can be deleted once you've read it — its resume-the-lane purpose is done; the durable record lives in the `moedex-redesign-slices-fanout` memory note.
 
 ---
 
@@ -24,7 +24,7 @@
 | Ref | SHA | Meaning |
 |---|---|---|
 | `main` | `b9a9f59` | 8 redesign slices + served-shard dedup + delta-deduped re-export, then your ADR consolidation (added ADRs, removed stale P6/P7 reports). Pushed. |
-| `redesign/compaction-gc` | `c0e3f1a` | The 9th lane — compaction-GC. **Pushed, NOT merged.** Forks from `c011074` (pre-ADR main); only touches `internal/blobstore`, `internal/diskstore`, `cmd/moedex-index` → clean merge into current `main` (ADRs are docs, no overlap). |
+| `redesign/compaction-gc` | `c0e3f1a` | The 9th lane — compaction-GC. **MERGED into `main` at `b0213a4` (merge commit) and pushed 2026-06-25.** Branch retained on origin for history; safe to delete. |
 
 **Local-only state that does NOT transfer** (recreate as needed on the new host):
 - git worktrees under `/Users/ZKeown/Code/moedex-wt/` — gone. Just `git checkout redesign/compaction-gc` on the new machine.
@@ -58,16 +58,9 @@
   ```
   (`MAXREPOS=0` = full corpus; copies it to a temp mutable dir, NEVER mutates `~/TCGitlab`. Set a smaller `MAXREPOS` e.g. 60 for a fast run.) Result: 484 repos / **186 deduped shards**; both stores `748226256B → 747931161B` reclaiming **28 dead blobs / 295 KB** (real removed-repo + churned content); **971 queries** with `CAS!=pre=0 dedup!=pre=0 CAS!=direct=0 dedup!=direct=0`; **vs-rg under(cas=0 dedup=0) over(cas=0 dedup=0)**, 1 rg-skipped. AC-D3=0 / AC-D4=0 at full scale with real dead content reclaimed → SACRED invariant holds. Optional to re-run on the new machine for fresh confirmation, but the lane is verified merge-ready.
 
-**STATUS: compaction-GC has cleared the full gauntlet and is MERGE-READY.** The merge had not been performed at handoff time (machine transition). See merge instructions below.
+**STATUS: compaction-GC cleared the full gauntlet and was MERGED into `main` (`b0213a4`, pushed) on 2026-06-25.** Build (default + onnx) + vet + full `go test ./...` sweep green on the merged main before push. The zoekt-2026 redesign is now functionally complete vs. the northstar, modulo the 128GB-gated items below.
 
-**Merge instructions (once the corpus gate PASSES):**
-```
-git checkout main && git pull
-git merge --no-ff redesign/compaction-gc -m "merge redesign/compaction-gc into main"
-go build ./... && go build -tags onnx ./... && go vet ./... && go test ./...
-git push
-```
-Then update the memory note `moedex-redesign-slices-fanout.md` (mark compaction-GC merged) and delete this handoff file.
+**Merge: DONE.** `git merge --no-ff redesign/compaction-gc` → `b0213a4`, built/vetted/tested green, pushed. No action needed on the new machine.
 
 ---
 
