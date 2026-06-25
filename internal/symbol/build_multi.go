@@ -67,6 +67,15 @@ func BuildMulti(ix *index.Index) *Index {
 			continue
 		}
 		out.Set(id, syms)
+		// References (find-refs scaffolding) only for extractors that implement
+		// the optional RefExtractor capability — Go (precise) and C#
+		// (best-effort) in this slice; TS/CFML/SQL produce definitions only and
+		// simply carry no references.
+		if refExt, ok := ext.(RefExtractor); ok {
+			if occs, rerr := refExt.ExtractRefs(blob.Content); rerr == nil && len(occs) > 0 {
+				out.SetRefs(id, occs)
+			}
+		}
 	}
 	return out
 }
