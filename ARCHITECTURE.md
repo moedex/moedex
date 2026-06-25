@@ -378,9 +378,10 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
   silent-failure guards: the shared store is **self-verifying** at open (every entry
   re-hashed against its content-addressed key, so corruption fails the boot rather
   than serving wrong content; default-on, `MOEDEX_VERIFY_CONTENT=0` opts out), and the
-  rank-sidecar fingerprint **folds in `blobs.dat`** (name + size + `MOECONT1` header)
-  so a content-store change invalidates stale token/symbol/embedding caches even when
-  the shard files are unchanged.
+  rank-sidecar fingerprint **folds in a content-true hash of `blobs.dat`'s directory**
+  (its list of content-hash keys — `O(numBlobs)`, not `O(content bytes)`) so a
+  content-store change invalidates stale token/symbol/embedding caches even when the
+  shard files — and the store's total size and `MOECONT1` header — are unchanged.
 - An IR-metrics evaluation harness (recall@k, precision@k, MRR, nDCG@k).
 - A full-corpus exact-match retrieval parity harness (`internal/parity`,
   `cmd/moedex-parity`): sharded whole-corpus build, seeded ≥1000-query battery,

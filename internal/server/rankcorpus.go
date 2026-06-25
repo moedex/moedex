@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -253,13 +252,20 @@ type storeMeta struct {
 // For a DEDUPED dir the shards are content-less (sha + file refs only); the actual
 // indexed bytes live in the shared content store (blobs.dat). So a change to the
 // shared content store — same shard files, different content (e.g. a re-export that
-// rewrote blobs.dat while a shard's size happened to be unchanged) — would NOT show
-// up in the shard-file sizes alone, and a token/symbol/embedding sidecar built over
-// the OLD content could be silently reused over the NEW content. We therefore fold
-// the shared content store's identity (its basename + byte size + MOECONT1 header,
-// which encodes numBlobs and the directory offset) into the fingerprint when it is
-// present. The store is a sibling of the shards, so we derive it from their dir; a
-// legacy dir has no blobs.dat and the fingerprint is unchanged from before.
+// rewrote blobs.dat) — would NOT show up in the shard-file sizes alone, and a
+// token/symbol/embedding sidecar built over the OLD content could be silently reused
+// over the NEW content (a ranking-freshness bug: retrieval reads the verified live
+// content, but BM25/symbol/embedding scores would be computed on stale content).
+//
+// We therefore fold the content store's CONTENT-TRUE identity — a hash of its
+// DIRECTORY SECTION (the list of content-hash keys + offsets + lengths) — into the
+// fingerprint when blobs.dat is present. Because each key IS the content hash of its
+// blob, the directory uniquely identifies the entire content set: any added/removed/
+// changed/reordered blob changes a key (or the record set) and thus the fingerprint,
+// EVEN when the file's total size and MOECONT1 header (numBlobs/dirOff) are
+// unchanged. This is O(numBlobs) (the directory), not O(total content bytes), so it
+// stays cheap on boot. The store is a sibling of the shards, so we derive it from
+// their dir; a legacy dir has no blobs.dat and the fingerprint is unchanged.
 func corpusFingerprint(shardPaths []string) string {
 	h := sha256.New()
 	for _, p := range shardPaths {
@@ -273,32 +279,15 @@ func corpusFingerprint(shardPaths []string) string {
 		csPath := filepath.Join(filepath.Dir(shardPaths[0]), diskstore.ContentStoreName)
 		if fi, err := os.Stat(csPath); err == nil {
 			fmt.Fprintf(h, "%s:%d\n", diskstore.ContentStoreName, fi.Size())
-			// The MOECONT1 header (32 bytes: magic/version/reserved/numBlobs/dirOff)
-			// distinguishes two stores of the same byte length but different blob sets
-			// or layout — a stronger identity than size alone, read with one cheap I/O.
-			if hdr := contentStoreHeader(csPath); hdr != nil {
-				h.Write(hdr)
+			// Content-true identity: a hash of the directory of content-hash keys, so
+			// a same-size/same-header re-export with different content still changes
+			// the fingerprint. Best-effort — an unreadable store degrades to size only.
+			if dig := diskstore.ContentStoreDirDigest(csPath); dig != "" {
+				fmt.Fprintf(h, "dir:%s\n", dig)
 			}
 		}
 	}
 	return fmt.Sprintf("%x", h.Sum(nil))
-}
-
-// contentStoreHeader reads the fixed 32-byte MOECONT1 header of a shared content
-// store, or nil if it cannot be read. It folds numBlobs + dirOff into the corpus
-// fingerprint so a content-store change is detected even when the file size happens
-// to coincide. Best-effort: a read failure degrades to size-only fingerprinting.
-func contentStoreHeader(path string) []byte {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil
-	}
-	defer f.Close()
-	hdr := make([]byte, 32)
-	if _, err := io.ReadFull(f, hdr); err != nil {
-		return nil
-	}
-	return hdr
 }
 
 // loadPersistedStore loads storePath iff its sibling .meta matches the current

@@ -51,6 +51,7 @@ package diskstore
 import (
 	"bufio"
 	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -244,6 +245,35 @@ func OpenContentStore(path string) (*ContentStore, error) {
 		bySHA[string(sha)] = ContentRef{Offset: int64(off), Len: int64(clen)}
 	}
 	return &ContentStore{region: region, bySHA: bySHA}, nil
+}
+
+// ContentStoreDirDigest returns a SHA-256 of the store's DIRECTORY SECTION — the
+// list of (content-hash key, offset, length) records — hex-encoded, or "" if the
+// store cannot be read (best-effort; callers degrade to header-only identity).
+//
+// This is the CONTENT-TRUE identity of the store at O(numBlobs) cost, NOT
+// O(total content bytes): because each directory key IS the content hash of its
+// blob, the set of keys uniquely identifies the entire content set. Any
+// added/removed/changed/reordered blob changes a key (or the record set), so two
+// stores with identical byte size AND identical MOECONT1 header (same numBlobs/
+// dirOff) but DIFFERENT content necessarily differ here — which is exactly the
+// header-only collision this closes. It deliberately hashes the directory bytes
+// (keys + offsets + lengths) and never the content payload, so it stays cheap on
+// boot.
+func ContentStoreDirDigest(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	if len(data) < contentHeaderSize || string(data[0:8]) != contentMagic {
+		return ""
+	}
+	dirOff := binary.LittleEndian.Uint64(data[24:32])
+	if dirOff > uint64(len(data)) {
+		return ""
+	}
+	sum := sha256.Sum256(data[dirOff:])
+	return hex.EncodeToString(sum[:])
 }
 
 // Content returns the zero-copy content sub-slice for sha, or ok=false if absent.

@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/binary"
 	"os"
 	"path/filepath"
 	"sort"
@@ -367,77 +366,114 @@ func TestCorpusFingerprintIncludesContentStore(t *testing.T) {
 		t.Fatal(err)
 	}
 	shardPaths := []string{shard}
+	csPath := filepath.Join(dir, "blobs.dat")
 
 	// Legacy dir (no blobs.dat): a baseline fingerprint.
 	legacyFP := corpusFingerprint(shardPaths)
 
-	// Write a shared content store; the fingerprint MUST change (a legacy vs deduped
-	// dir with the same shard files are different corpora).
-	csPath := filepath.Join(dir, "blobs.dat")
-	writeFakeContentStore(t, csPath, 3, "alpha")
+	// Write a real shared content store; the fingerprint MUST change (a legacy vs
+	// deduped dir with the same shard files are different corpora).
+	writeRealContentStore(t, csPath, [][]byte{[]byte("alpha content")})
 	withStoreFP := corpusFingerprint(shardPaths)
 	if withStoreFP == legacyFP {
 		t.Error("adding blobs.dat did not change the fingerprint (content store not folded in)")
 	}
 
-	// Change ONLY the content store (shard files untouched): the fingerprint MUST
-	// change again. This is the core GAP-2 invariant — stale-content detection.
-	writeFakeContentStore(t, csPath, 4, "alpha-grown") // different numBlobs AND size
+	// Add a blob (changes numBlobs AND size): the fingerprint MUST change.
+	writeRealContentStore(t, csPath, [][]byte{[]byte("alpha content"), []byte("bravo content longer")})
 	changedFP := corpusFingerprint(shardPaths)
 	if changedFP == withStoreFP {
-		t.Error("changing blobs.dat did not change the fingerprint (stale sidecars would be reused)")
-	}
-
-	// A content store with the SAME byte length but a different MOECONT1 header
-	// (numBlobs/dirOff) must STILL change the fingerprint — header folding, not just
-	// size. Rewrite with the same payload length but a different blob count.
-	writeFakeContentStore(t, csPath, 4, "alpha-grown") // re-establish a known state
-	sameSizeFP := corpusFingerprint(shardPaths)
-	writeFakeContentStoreSameLen(t, csPath, 9) // same total length, different numBlobs in header
-	headerChangedFP := corpusFingerprint(shardPaths)
-	if headerChangedFP == sameSizeFP {
-		t.Error("a same-size content store with a different MOECONT1 header did not change the fingerprint")
+		t.Error("changing blobs.dat (added blob) did not change the fingerprint")
 	}
 }
 
-// writeFakeContentStore writes a minimal MOECONT1-shaped file: a 32-byte header
-// (magic, version, reserved, numBlobs, dirOff) followed by payload bytes. It is
-// only for fingerprint tests (corpusFingerprint reads name+size+header, not the
-// directory), so the body need not be a valid directory.
-func writeFakeContentStore(t *testing.T, path string, numBlobs uint64, payload string) {
-	t.Helper()
-	buf := make([]byte, 32)
-	copy(buf[0:8], "MOECONT1")
-	binary.LittleEndian.PutUint32(buf[8:12], 1)
-	binary.LittleEndian.PutUint64(buf[16:24], numBlobs)
-	binary.LittleEndian.PutUint64(buf[24:32], uint64(32+len(payload)))
-	buf = append(buf, []byte(payload)...)
-	if err := os.WriteFile(path, buf, 0o644); err != nil {
+// TestCorpusFingerprintContentTrueOnSameSizeHeader is the GAP-2-final collision
+// test: two content stores with IDENTICAL total byte size AND identical MOECONT1
+// header (same numBlobs/dirOff) but DIFFERENT content — hence different content-hash
+// directory keys — must produce DIFFERENT fingerprints, forcing a sidecar rebuild. A
+// header-only fingerprint would COLLIDE here (same size, same header) and silently
+// reuse stale BM25/symbol/embedding sidecars. This is the case the directory-section
+// hash closes.
+func TestCorpusFingerprintContentTrueOnSameSizeHeader(t *testing.T) {
+	dir := t.TempDir()
+	shard := filepath.Join(dir, "shard-0000.idx")
+	if err := os.WriteFile(shard, []byte("MOEDEX05 stand-in shard bytes"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	shardPaths := []string{shard}
+	csPath := filepath.Join(dir, "blobs.dat")
+
+	// Two single-blob stores whose contents have the SAME length (so the content
+	// section length, dirOff, numBlobs, key length, and total file size are all
+	// identical) but DIFFERENT bytes (so the content-hash key differs).
+	contentA := []byte("the original indexed content AAAA\n")
+	contentB := []byte("the original indexed content BBBB\n") // same length, different bytes
+	if len(contentA) != len(contentB) {
+		t.Fatalf("test premise: contents must be equal length (%d vs %d)", len(contentA), len(contentB))
+	}
+
+	writeRealContentStore(t, csPath, [][]byte{contentA})
+	fpA := corpusFingerprint(shardPaths)
+	sizeA := mustSize(t, csPath)
+	hdrA := mustHeader(t, csPath)
+
+	writeRealContentStore(t, csPath, [][]byte{contentB})
+	fpB := corpusFingerprint(shardPaths)
+	sizeB := mustSize(t, csPath)
+	hdrB := mustHeader(t, csPath)
+
+	// Premise: the two stores are indistinguishable by size + header alone.
+	if sizeA != sizeB {
+		t.Fatalf("test premise broken: stores differ in size (%d vs %d)", sizeA, sizeB)
+	}
+	if string(hdrA) != string(hdrB) {
+		t.Fatalf("test premise broken: stores differ in MOECONT1 header (a header-only fingerprint would already distinguish them)")
+	}
+	// The fix: they MUST still differ because the directory's content-hash key differs.
+	if fpA == fpB {
+		t.Error("same-size + same-header stores with DIFFERENT content produced the same fingerprint — stale sidecars would be reused (directory-hash fold missing)")
+	}
+
+	// Sanity: the directory digest is non-empty for a valid store (the load-bearing
+	// primitive behind the fingerprint distinction above).
+	if diskstore.ContentStoreDirDigest(csPath) == "" {
+		t.Fatal("ContentStoreDirDigest returned empty for a valid store")
+	}
 }
 
-// writeFakeContentStoreSameLen rewrites path keeping its TOTAL byte length but with
-// a different numBlobs in the header, to prove the fingerprint folds the header
-// (not just the file size).
-func writeFakeContentStoreSameLen(t *testing.T, path string, numBlobs uint64) {
+// writeRealContentStore writes a genuine MOECONT1 store (via the production writer)
+// containing the given blobs, keyed by their canonical content hash — so its
+// directory section is real and ContentStoreDirDigest is meaningful.
+func writeRealContentStore(t *testing.T, path string, contents [][]byte) {
+	t.Helper()
+	cw := diskstore.NewContentStoreWriter()
+	for _, c := range contents {
+		cw.PutContent(diskstore.GitBlobSHA1(c), c)
+	}
+	if err := cw.Write(path); err != nil {
+		t.Fatalf("write content store: %v", err)
+	}
+}
+
+func mustSize(t *testing.T, path string) int64 {
 	t.Helper()
 	fi, err := os.Stat(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	total := int(fi.Size())
-	if total < 32 {
-		t.Fatalf("existing store too small (%d)", total)
-	}
-	buf := make([]byte, total)
-	copy(buf[0:8], "MOECONT1")
-	binary.LittleEndian.PutUint32(buf[8:12], 1)
-	binary.LittleEndian.PutUint64(buf[16:24], numBlobs)
-	binary.LittleEndian.PutUint64(buf[24:32], uint64(total))
-	if err := os.WriteFile(path, buf, 0o644); err != nil {
+	return fi.Size()
+}
+
+func mustHeader(t *testing.T, path string) []byte {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
 		t.Fatal(err)
 	}
+	if len(data) < 32 {
+		t.Fatalf("store too small (%d)", len(data))
+	}
+	return append([]byte(nil), data[:32]...)
 }
 
 // TestDedupedSidecarsInvalidatedByContentStoreChange is the end-to-end GAP-2 proof:
