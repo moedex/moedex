@@ -65,17 +65,18 @@ func (h *corpusHolder) swap(c *server.Corpus) *corpusSnapshot {
 	return old
 }
 
-// rankSnapshot is one generation of the ranked corpus. Unlike Corpus it holds no
-// mmap (RankCorpus loads blob content into the heap), so a stale reference is
-// merely GC'able rather than unsafe; the refcount is kept for symmetry and so a
-// future resource-holding RankCorpus stays correct.
+// rankSnapshot is one generation of the ranked corpus. A RankCorpus over a DEDUPED
+// shard dir holds a shared content-store mmap (its blob content aliases that
+// mapping), so a retired generation MUST be Closed after in-flight searches drain
+// — otherwise each SIGHUP reload would leak an mmap. (Over a legacy dir Close is a
+// no-op; the refcount makes the retire safe in both cases.)
 type rankSnapshot struct {
 	rc *server.RankCorpus
 	wg sync.WaitGroup
 }
 
 func (s *rankSnapshot) release() { s.wg.Done() }
-func (s *rankSnapshot) retire()  { s.wg.Wait() } // nothing to close; drop for GC
+func (s *rankSnapshot) retire()  { s.wg.Wait(); _ = s.rc.Close() } // drain readers, then release mmap
 
 // rankHolder hot-swaps a *server.RankCorpus and satisfies mcp.ContextSearcher, so
 // the MCP server delegates every search to the current generation.

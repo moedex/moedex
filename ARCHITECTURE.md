@@ -38,8 +38,8 @@ All library code lives under `internal/`; executables under `cmd/`.
 | ingest | [`internal/ingest`](internal/ingest) | Read a git repo's tracked text files; discover all repos under a root | `File`; `Repo(repoName, dir) ([]File, error)`; `DiscoverRepos(root) ([]string, error)`; `CountGitEntries(root) (int, error)` |
 | query | [`internal/query`](internal/query) | Regex → boolean trigram query (Cox reduction) | `Query` (`Eval`, `String`); `All`; `And`, `Or`; `FromRegexp(pattern) (Query, error)` |
 | search | [`internal/search`](internal/search) | Candidate retrieval + verify → line matches | `Match`; `Literal(ix, q) []Match`; `Regex(ix, pattern) ([]Match, error)` |
-| diskstore | [`internal/diskstore`](internal/diskstore) | Persist/reload the index; mmap postings | `Save(ix, path)`; `Load(path)`; `LoadMmap(path) (*index.Index, io.Closer, error)` |
-| blobstore | [`internal/blobstore`](internal/blobstore) | Global content-addressable store (CAS): each unique blob stored once corpus-wide (cross-shard dedup) + per-blob delta refresh | `Store`, `Open`, `(*Store) Has/Put/Get/Len/BytesStored/SHAs/Close`; `BlobManifest`, `RepoBlobs`, `Stats`, `WriteBlobManifest`, `LoadBlobManifest`; `BuildCAS`, `RefreshCAS`, `DeltaStats`, `ExportShardDir` |
+| diskstore | [`internal/diskstore`](internal/diskstore) | Persist/reload the index; mmap postings; the deduped served format + shared content store | `Save(ix, path)`; `Load(path)`; `LoadMmap(path) (*index.Index, io.Closer, error)`; `LoadBlobs`; `SaveDeduped`, `LoadMmapDeduped`, `LoadBlobsDeduped`, `IsDeduped`; `ContentStoreWriter`, `NewContentStoreWriter`, `ContentStore`, `OpenContentStore`, `ContentStoreName` |
+| blobstore | [`internal/blobstore`](internal/blobstore) | Global content-addressable store (CAS): each unique blob stored once corpus-wide (cross-shard dedup) + per-blob delta refresh + deduped served export | `Store`, `Open`, `(*Store) Has/Put/Get/Len/BytesStored/SHAs/Close`; `BlobManifest`, `RepoBlobs`, `Stats`, `WriteBlobManifest`, `LoadBlobManifest`; `BuildCAS`, `RefreshCAS`, `DeltaStats`, `ExportShardDir`, `ExportDedupedShardDir` |
 | tokenindex | [`internal/tokenindex`](internal/tokenindex) | Persistent inverted index of BM25 term stats | `TokenIndex`; `Build(ix)`; `Tokenize(text)`; `NumDocs/AvgDocLen/DocLen/DocFreq/TermFreq`; `Save`, `Load` |
 | embed | [`internal/embed`](internal/embed) | Dense arm: chunk → vector → cosine search | `Vector`, `Embedder`; `HTTPEmbedder`, `NewHTTPEmbedder`; `ONNXEmbedder`, `NewONNXEmbedder`, `NewONNXEmbedderFromFiles` (real only under `-tags onnx`; a no-op stub otherwise); `Chunk`, `ChunkBlob`; `Store`, `BuildStore`, `Hit`, `(*Store) Search/Save/Len/Dim`; `LoadStore` |
 | rank | [`internal/rank`](internal/rank) | Fuse lexical + dense + symbol + path arms via RRF | `RankedResult`, `LineSpan`; `Config`; `Ranker`, `New`, `(*Ranker) Rank/SetSymbols/SetDense/UseTokenCandidates` |
@@ -217,11 +217,13 @@ block is always emitted even if it alone exceeds budget; any later skip sets
 
 ## On-disk formats
 
-All five binary sidecar/store formats are little-endian and round-trippable.
+All binary sidecar/store formats are little-endian and round-trippable.
 
 | Format | Magic | Writer | Layout |
 |---|---|---|---|
-| Trigram index | `MOEDEX03` (v3) | [`diskstore`](internal/diskstore/diskstore.go) | 48-byte header (magic, version, reserved, numBlobs, numTrigrams, blobOff, postOff), then a **blob section** (per blob: SHA, content, file refs) and a **postings section** (per trigram: 3 bytes + uint64 encLen + varint-delta encoded list). Each list is an individually-addressable byte range so `LoadMmap` can hand out sub-slices. |
+| Trigram index | `MOEDEX03` (v3) | [`diskstore`](internal/diskstore/diskstore.go) | 48-byte header (magic, version, reserved, numBlobs, numTrigrams, blobOff, postOff), then a **blob section** (per blob: SHA, content, file refs) and a **postings section** (per trigram: 3 bytes + uint64 encLen + varint-delta encoded list). Each list is an individually-addressable byte range so `LoadMmap` can hand out sub-slices. The direct `moedex-index build` path writes this (or `MOEDEX04` for a selective build). |
+| Deduped trigram index | `MOEDEX05` (v5) | [`diskstore/dedupstore.go`](internal/diskstore/dedupstore.go) | The **served-shard-dedup** format. Same 48-byte header shape as `MOEDEX03`, but the **blob section is content-less** (per blob: SHA + file refs only — no inlined content); the postings section is identical. Blob content lives once in the shared content store (below) and is resolved by SHA at load. `LoadMmapDeduped`/`LoadBlobsDeduped` take a `*ContentStore` and serve each blob's content as a zero-copy mmap sub-slice — so a blob whose repos span several shards is stored once for the whole served corpus, and content stays off the Go heap. Written by `blobstore.ExportDedupedShardDir` (`cas-export -deduped`). |
+| Shared content store | `MOECONT1` (v1) | [`diskstore/contentstore.go`](internal/diskstore/contentstore.go) | The single `blobs.dat` backing a deduped (`MOEDEX05`) shard dir. 32-byte header (magic, version, reserved, numBlobs, dirOff), a **content section** (each unique blob's raw bytes, contiguous & unframed so a loader hands out zero-copy mmap sub-slices), then a **directory section** (per blob: sha, absolute contentOff, contentLen). `PutContent` is idempotent on the content hash (cross-shard dedup); the file is written atomically (temp+rename). The SHA is an opaque variable-length key, matching the CAS. **Self-verifying:** because the key is the content hash, the serving path (`OpenContentStoreVerified`) re-hashes every entry against its key at open, so a corrupt store fails the boot rather than silently serving wrong content (default-on; opt out with `MOEDEX_VERIFY_CONTENT=0`). |
 | CAS blob store | `MOEBLOB1` (v1) | [`blobstore`](internal/blobstore/blobstore.go) | Two files. `blobs.pack`: append-only, one record per **unique** blob (`shaLen`+sha, `contentLen`+content) — each unique content stored once for the whole corpus. `blobs.idx`: 32-byte header (magic, version, reserved, numBlobs, packBytes) then per blob a directory entry (sha, packOff, packLen, contentLen), written atomically (temp+rename) only after the pack is fsynced, so a crash never indexes non-durable bytes. The SHA is an opaque variable-length key (SHA-1 today, SHA-256-ready). |
 | Token index | `TKI1` (v1) | [`tokenindex/codec.go`](internal/tokenindex/codec.go) | 4-byte magic + version, then the BM25 term statistics; `Save`/`Load` round-trip them. |
 | Embedding store | `MDXE` (v1) | [`embed/codec.go`](internal/embed/codec.go) | 4-byte magic, version, dim, count; then `count` chunk records (blob, startLine/endLine as uint32, startByte/endByte as uint64); then `count` contiguous float32 vectors. |
@@ -366,6 +368,20 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
   net-new blobs (its co-resident repos are untouched — the win over `parity.Rebuild`).
   `cas-export` materializes a today-compatible servable shard dir from the CAS so the
   daemon and parity harness consume it unchanged.
+- **Deduped served format** (`cas-export -deduped` → `MOEDEX05` content-less shards +
+  one shared `blobs.dat` content store, `internal/diskstore`): the served corpus now
+  inherits the CAS's cross-shard dedup — each unique blob's content is stored once
+  corpus-wide (footprint ≈ the CAS `StoredBytes`) and `server.Corpus`/`RankCorpus`
+  resolve it from one mmap'd shared store (content stays off the Go heap), returning
+  byte-identical `(file,line)` matches. Proven parity-clean against the direct build
+  and ripgrep by the deduped arm of `blobstore.TestCASExportParityCorpus`. Two
+  silent-failure guards: the shared store is **self-verifying** at open (every entry
+  re-hashed against its content-addressed key, so corruption fails the boot rather
+  than serving wrong content; default-on, `MOEDEX_VERIFY_CONTENT=0` opts out), and the
+  rank-sidecar fingerprint **folds in a content-true hash of `blobs.dat`'s directory**
+  (its list of content-hash keys — `O(numBlobs)`, not `O(content bytes)`) so a
+  content-store change invalidates stale token/symbol/embedding caches even when the
+  shard files — and the store's total size and `MOECONT1` header — are unchanged.
 - An IR-metrics evaluation harness (recall@k, precision@k, MRR, nDCG@k).
 - A full-corpus exact-match retrieval parity harness (`internal/parity`,
   `cmd/moedex-parity`): sharded whole-corpus build, seeded ≥1000-query battery,
@@ -375,16 +391,23 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
 **Deliberately deferred (design intentions, not yet built)** — tracked in the
 northstar and [`research/`](research):
 
-- **Incremental / delta indexing** — a **per-blob delta path now exists at the
-  storage layer**: the content-addressable store (`internal/blobstore`) dedups blobs
-  globally across the corpus and `cas-refresh` adds only a changed repo's net-new
-  blobs. What remains deferred is making the **served** shard format reference CAS
-  blobs by SHA so the retrieval path also dedups — today `cas-export` still inlines a
-  blob's content into every shard that holds a repo carrying it (exactly as a direct
-  `build` does), and the legacy `moedex-index refresh` path is still shard-level
-  (rebuilds whole affected shards). CAS pack compaction/GC of blobs no longer
-  referenced by any repo is also deferred (the append-only pack grows monotonically;
-  the blob manifest's referenced-set is the liveness signal a future compactor needs).
+- **Incremental / delta indexing** — a **per-blob delta path exists at the storage
+  layer** (the content-addressable store, `internal/blobstore`, dedups blobs globally
+  and `cas-refresh` adds only a changed repo's net-new blobs) **and the served format
+  now dedups too**: `cas-export -deduped` writes content-less `MOEDEX05` shards that
+  reference one shared content store (`blobs.dat`) by content hash, so the served
+  corpus stores each unique blob's content once corpus-wide (footprint ≈ the CAS
+  `StoredBytes`) instead of re-inlining it per shard, and the serving spine
+  (`server.Corpus`/`RankCorpus`) resolves content from that one mmap'd store —
+  validated parity-clean against the direct build and ripgrep by the deduped arm of
+  `TestCASExportParityCorpus`. What remains: the legacy `moedex-index refresh` path is
+  still shard-level (rebuilds whole affected shards), `cas-export` without `-deduped`
+  still writes the inlined `MOEDEX03` bridge (kept as the proven default), and a
+  delta-aware deduped re-export (append a changed repo's net-new content + rewrite only
+  affected shards, instead of re-exporting the whole dir) is not yet built. CAS pack
+  compaction/GC of blobs no longer referenced by any repo is also deferred (the
+  append-only pack grows monotonically; the blob manifest's referenced-set is the
+  liveness signal a future compactor needs).
 - **Distribution / sharding** — sharded on disk and served as a multi-shard corpus,
   but still **single-node**: there is no cross-node distribution or replication.
 - **Native SIMD intersection/verification kernel** — see
@@ -496,7 +519,7 @@ The content-addressable family operates the CAS (`internal/blobstore`):
 ```sh
 moedex-index cas-build   -corpus ROOT -cas-dir DIR
 moedex-index cas-refresh -cas-dir DIR [-corpus ROOT]
-moedex-index cas-export  -cas-dir DIR -shard-dir OUT [-shard-bytes N] [-force]
+moedex-index cas-export  -cas-dir DIR -shard-dir OUT [-shard-bytes N] [-force] [-deduped]
 ```
 
 `cas-build` ingests every repo into a global content-addressed blob store, storing
@@ -506,10 +529,15 @@ stored bytes). `cas-refresh` diffs each repo's current blob set against the mani
 and physically appends only net-new blobs (per-blob delta — co-resident repos are not
 re-ingested), printing the blobs/bytes added and the dedup no-op Puts skipped; the
 corpus root defaults to the manifest's `Root`. `cas-export` materializes a
-today-compatible servable shard dir + `manifest.json` from the CAS (the
-parity-preserving bridge), so `moedex-serve` and the parity harness consume it
-unchanged. The exported shards still inline content per shard as a direct `build`
-does; switching the served format to reference CAS blobs by SHA is a later slice.
+servable shard dir + `manifest.json` from the CAS so `moedex-serve` and the parity
+harness consume it unchanged. By default it writes the parity-preserving
+inlined-content bridge (`MOEDEX03`, content re-inlined per shard exactly as a direct
+`build`). With **`-deduped`** it writes the deduped served format instead:
+content-less `MOEDEX05` shards plus one shared `blobs.dat` content store, so each
+unique blob's content is stored once corpus-wide (footprint ≈ the CAS `StoredBytes`)
+rather than re-inlined per shard. `server.Open`/`OpenRank` auto-detect the shared
+store and resolve content from it — returning byte-identical `(file,line)` matches
+(parity-validated against the direct build and ripgrep).
 
 ### `moedex-serve` — warm retrieval / context daemon
 

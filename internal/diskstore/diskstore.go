@@ -606,6 +606,13 @@ type mmapRegion struct {
 }
 
 func mmapOpen(path string) (*mmapRegion, error) {
+	return mmapOpenMin(path, headerSize)
+}
+
+// mmapOpenMin maps path read-only, requiring at least minSize bytes. Shard loaders
+// pass headerSize (48); the shared content store passes its own contentHeaderSize
+// (32), which is smaller — an empty (header-only) content store is still mappable.
+func mmapOpenMin(path string, minSize int) (*mmapRegion, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -616,7 +623,7 @@ func mmapOpen(path string) (*mmapRegion, error) {
 		return nil, err
 	}
 	size := int(fi.Size())
-	if size < headerSize {
+	if size < minSize {
 		return nil, fmt.Errorf("diskstore: file too small (%d bytes)", size)
 	}
 	data, err := syscall.Mmap(int(f.Fd()), 0, size, syscall.PROT_READ, syscall.MAP_SHARED)

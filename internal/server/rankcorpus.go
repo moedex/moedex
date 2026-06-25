@@ -66,11 +66,26 @@ type RankCorpus struct {
 	ix          *index.Index
 	ti          *tokenindex.TokenIndex
 	syms        *symbol.Index
-	store       *embed.Store // nil when the dense arm is disabled
-	denseCached bool         // true when the store was loaded from a persisted sidecar
-	tokenCached bool         // true when the token index was loaded from a persisted sidecar
-	symsCached  bool         // true when the symbol index was loaded from a persisted sidecar
+	store       *embed.Store            // nil when the dense arm is disabled
+	content     *diskstore.ContentStore // non-nil only for a deduped (MOEDEX05) dir
+	denseCached bool                    // true when the store was loaded from a persisted sidecar
+	tokenCached bool                    // true when the token index was loaded from a persisted sidecar
+	symsCached  bool                    // true when the symbol index was loaded from a persisted sidecar
 	searcher    *mcp.IndexSearcher
+}
+
+// Close releases the shared content store mmap (deduped dir) backing the corpus'
+// blob content. It is required for a deduped dir, where the unified index's blob
+// content aliases the shared store's mapping; a legacy dir copies content onto the
+// heap, so Close is a harmless no-op there. Close is idempotent and safe to call
+// even on a RankCorpus over a legacy dir.
+func (rc *RankCorpus) Close() error {
+	if rc.content != nil {
+		err := rc.content.Close()
+		rc.content = nil
+		return err
+	}
+	return nil
 }
 
 // OpenRank builds the corpus ranker from every "*.idx" shard under dir. When
@@ -78,10 +93,19 @@ type RankCorpus struct {
 // corpus under ctx — the boot-time dense-arm cost — so callers should pass a
 // cancellable context.
 func OpenRank(ctx context.Context, dir string, cfg RankConfig) (*RankCorpus, error) {
-	ix, paths, err := loadUnified(dir)
+	ix, paths, cs, err := loadUnified(dir)
 	if err != nil {
 		return nil, err
 	}
+	// For a deduped dir the unified index's blob content aliases cs's mmap, so cs
+	// must stay open for the RankCorpus' lifetime; on any error before we hand
+	// ownership to the returned RankCorpus, close it here to avoid a leaked mapping.
+	ok := false
+	defer func() {
+		if !ok && cs != nil {
+			cs.Close()
+		}
+	}()
 
 	// Token index: load a matching persisted sidecar, else build + best-effort
 	// persist. Default the path under dir so the cache is on by default.
@@ -146,7 +170,8 @@ func OpenRank(ctx context.Context, dir string, cfg RankConfig) (*RankCorpus, err
 	searcher := mcp.NewIndexSearcher(ix, ranker, cfg.TopK)
 	searcher.SetEnclosingBytes(syms.EnclosingBytesFunc())
 
-	return &RankCorpus{ix: ix, ti: ti, syms: syms, store: store, denseCached: cached, tokenCached: tokenCached, symsCached: symsCached, searcher: searcher}, nil
+	ok = true // hand cs ownership to the RankCorpus; the deferred close is now a no-op
+	return &RankCorpus{ix: ix, ti: ti, syms: syms, store: store, content: cs, denseCached: cached, tokenCached: tokenCached, symsCached: symsCached, searcher: searcher}, nil
 }
 
 // loadUnified globs the "*.idx" shards under dir (sorted), concatenates their
@@ -156,25 +181,47 @@ func OpenRank(ctx context.Context, dir string, cfg RankConfig) (*RankCorpus, err
 // share this helper). Returns the sorted shard paths so callers can fingerprint
 // the same set. The postings are nil: the corpus ranker never does trigram
 // search (candidates come from the token index).
-func loadUnified(dir string) (*index.Index, []string, error) {
+//
+// For a deduped dir (MOEDEX05 + a shared content store) it opens the shared store
+// ONCE and resolves every shard's blob content from it as zero-copy mmap sub-
+// slices; the returned *ContentStore must stay open for as long as the returned
+// index's blob content is used (its Content aliases the store mmap). For a legacy
+// dir the store is nil and content is heap-copied as before. The CONCATENATION
+// ORDER and resulting global blob IDs are identical to a legacy dir built from the
+// same repos, because the deduped export packs repos into shards identically — so
+// the corpus fingerprint and sidecar reuse semantics are unchanged.
+func loadUnified(dir string) (*index.Index, []string, *diskstore.ContentStore, error) {
 	paths, err := filepath.Glob(filepath.Join(dir, "*.idx"))
 	if err != nil {
-		return nil, nil, fmt.Errorf("server: glob shards: %w", err)
+		return nil, nil, nil, fmt.Errorf("server: glob shards: %w", err)
 	}
 	if len(paths) == 0 {
-		return nil, nil, fmt.Errorf("server: no *.idx shards under %s", dir)
+		return nil, nil, nil, fmt.Errorf("server: no *.idx shards under %s", dir)
 	}
 	sort.Strings(paths)
 
+	cs, err := openSharedContent(dir, paths)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	var blobs []index.BlobData
 	for _, p := range paths {
-		bs, err := diskstore.LoadBlobs(p)
+		var bs []index.BlobData
+		if cs != nil && diskstore.IsDeduped(p) {
+			bs, err = diskstore.LoadBlobsDeduped(p, cs)
+		} else {
+			bs, err = diskstore.LoadBlobs(p)
+		}
 		if err != nil {
-			return nil, nil, fmt.Errorf("server: load blobs %s: %w", p, err)
+			if cs != nil {
+				cs.Close()
+			}
+			return nil, nil, nil, fmt.Errorf("server: load blobs %s: %w", p, err)
 		}
 		blobs = append(blobs, bs...)
 	}
-	return index.Restore(blobs, nil), paths, nil
+	return index.Restore(blobs, nil), paths, cs, nil
 }
 
 // cacheTag renders the load-vs-build outcome for a one-line stderr trace.
@@ -201,6 +248,24 @@ type storeMeta struct {
 
 // corpusFingerprint hashes the shard set (sorted basename + byte size) so any
 // add/remove/regrow of shards changes it — invalidating a stale embedding cache.
+//
+// For a DEDUPED dir the shards are content-less (sha + file refs only); the actual
+// indexed bytes live in the shared content store (blobs.dat). So a change to the
+// shared content store — same shard files, different content (e.g. a re-export that
+// rewrote blobs.dat) — would NOT show up in the shard-file sizes alone, and a
+// token/symbol/embedding sidecar built over the OLD content could be silently reused
+// over the NEW content (a ranking-freshness bug: retrieval reads the verified live
+// content, but BM25/symbol/embedding scores would be computed on stale content).
+//
+// We therefore fold the content store's CONTENT-TRUE identity — a hash of its
+// DIRECTORY SECTION (the list of content-hash keys + offsets + lengths) — into the
+// fingerprint when blobs.dat is present. Because each key IS the content hash of its
+// blob, the directory uniquely identifies the entire content set: any added/removed/
+// changed/reordered blob changes a key (or the record set) and thus the fingerprint,
+// EVEN when the file's total size and MOECONT1 header (numBlobs/dirOff) are
+// unchanged. This is O(numBlobs) (the directory), not O(total content bytes), so it
+// stays cheap on boot. The store is a sibling of the shards, so we derive it from
+// their dir; a legacy dir has no blobs.dat and the fingerprint is unchanged.
 func corpusFingerprint(shardPaths []string) string {
 	h := sha256.New()
 	for _, p := range shardPaths {
@@ -209,6 +274,18 @@ func corpusFingerprint(shardPaths []string) string {
 			size = fi.Size()
 		}
 		fmt.Fprintf(h, "%s:%d\n", filepath.Base(p), size)
+	}
+	if len(shardPaths) > 0 {
+		csPath := filepath.Join(filepath.Dir(shardPaths[0]), diskstore.ContentStoreName)
+		if fi, err := os.Stat(csPath); err == nil {
+			fmt.Fprintf(h, "%s:%d\n", diskstore.ContentStoreName, fi.Size())
+			// Content-true identity: a hash of the directory of content-hash keys, so
+			// a same-size/same-header re-export with different content still changes
+			// the fingerprint. Best-effort — an unreadable store degrades to size only.
+			if dig := diskstore.ContentStoreDirDigest(csPath); dig != "" {
+				fmt.Fprintf(h, "dir:%s\n", dig)
+			}
+		}
 	}
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
@@ -335,9 +412,15 @@ func savePersistedSymbols(syms *symbol.Index, symbolPath string, shardPaths []st
 // (they need the embedder; that is a serve-time concern). Returns the two data
 // paths written.
 func BuildSidecars(dir string) (tokenPath, symbolPath string, err error) {
-	ix, paths, err := loadUnified(dir)
+	ix, paths, cs, err := loadUnified(dir)
 	if err != nil {
 		return "", "", err
+	}
+	// The sidecar builders read content to derive tokens/symbols but retain none of
+	// the content slices, so a deduped dir's shared store can be released as soon as
+	// both sidecars are built (it need not outlive this function).
+	if cs != nil {
+		defer cs.Close()
 	}
 	tokenPath = defaultTokenPath(dir)
 	symbolPath = defaultSymbolPath(dir)

@@ -169,7 +169,36 @@ func TestCASExportParityCorpus(t *testing.T) {
 		t.Fatalf("ExportShardDir: %v", err)
 	}
 
-	// --- open both shard dirs through the real serving spine. -----------------
+	// --- DEDUPED export (the served-shard-dedup format under test): content-less
+	// MOEDEX05 shards + ONE shared blobs.dat content store. It must return
+	// byte-identical (file,line) matches to the direct build AND ripgrep, while
+	// storing each unique blob's content exactly ONCE for the whole served corpus.
+	dedupShardDir := filepath.Join(work, "dedup-shards")
+	_, dedupStoredBytes, err := ExportDedupedShardDir(casDir, dedupShardDir, shardBytes())
+	if err != nil {
+		t.Fatalf("ExportDedupedShardDir: %v", err)
+	}
+	// Dedup footprint proof. The invariant that holds on ANY corpus: the deduped
+	// served content == the CAS StoredBytes (the unique-content size), and is <=
+	// the sum of per-shard inlined content of today's (cas-export MOEDEX03) shards.
+	// The footprint is STRICTLY less exactly when some blob is inlined into more
+	// than one shard (cross-shard duplication); on a tiny subset that all lands in
+	// one shard, or whose repos share no content across shards, the two are equal —
+	// which is correct, not a dedup failure. The strict-win case is proven on a
+	// forced multi-shard fixture in TestDedupedExportStoresSharedBlobOnce; here we
+	// assert the universal invariant and REPORT the realized ratio (which on the
+	// full corpus is well above 1.0x — that is the orchestrator's headline number).
+	legacyServed := servedContentBytes(t, casShardDir)
+	if got := casStoredBytes(t, casDir); dedupStoredBytes != got {
+		t.Errorf("deduped served content = %d, want CAS StoredBytes %d", dedupStoredBytes, got)
+	}
+	if dedupStoredBytes > legacyServed {
+		t.Errorf("deduped served content %d EXCEEDS legacy inlined %d (must never store more)", dedupStoredBytes, legacyServed)
+	}
+	t.Logf("DEDUP FOOTPRINT: deduped served content = %d bytes (== CAS StoredBytes), legacy cas-export inlined = %d bytes; ratio %.2fx (>1.0x => cross-shard dedup realized)",
+		dedupStoredBytes, legacyServed, ratio(legacyServed, dedupStoredBytes))
+
+	// --- open all shard dirs through the real serving spine. ------------------
 	direct, err := server.Open(directDir)
 	if err != nil {
 		t.Fatalf("server.Open direct shards: %v", err)
@@ -180,67 +209,131 @@ func TestCASExportParityCorpus(t *testing.T) {
 		t.Fatalf("server.Open cas-export shards: %v", err)
 	}
 	defer cas.Close()
+	dedup, err := server.Open(dedupShardDir)
+	if err != nil {
+		t.Fatalf("server.Open deduped shards: %v", err)
+	}
+	defer dedup.Close()
 
-	// --- per-query: cas-export == direct == ripgrep over F. -------------------
+	// --- per-query: cas-export AND deduped == direct == ripgrep over F. -------
 	rg := newRG(t, built.MirrorDir)
 	var (
-		mismatchCAS int // cas-export != direct build (the seam is broken)
-		underApprox int // cas-export missed a line ripgrep found (SACRED violation)
-		overApprox  int // cas-export returned a line ripgrep did not
-		checkedVsRG int // queries with a usable rg ground truth, actually compared
-		rgSkipped   int // queries rg ERRORED on (exit >= 2: un-foldable byte etc.)
+		mismatchCAS   int // cas-export != direct build (the MOEDEX03 seam is broken)
+		mismatchDedup int // deduped != direct build (the MOEDEX05 served-dedup seam is broken)
+		underApprox   int // cas-export missed a line ripgrep found (SACRED violation)
+		overApprox    int // cas-export returned a line ripgrep did not
+		underDedup    int // deduped missed a line ripgrep found (SACRED violation)
+		overDedup     int // deduped returned a line ripgrep did not
+		checkedVsRG   int // queries with a usable rg ground truth, actually compared
+		rgSkipped     int // queries rg ERRORED on (exit >= 2: un-foldable byte etc.)
 	)
 	for _, q := range bat.Queries {
 		directLocs := corpusQuery(t, direct, q)
 		casLocs := corpusQuery(t, cas, q)
+		dedupLocs := corpusQuery(t, dedup, q)
 
-		// (1) cas-export must be byte-identical to the direct build.
+		// (1a) cas-export must be byte-identical to the direct build.
 		if miss, extra := diffLocs(directLocs, casLocs); len(miss) > 0 || len(extra) > 0 {
 			mismatchCAS++
 			if mismatchCAS <= 8 {
 				t.Errorf("cas-export != direct for %s:\n  direct has, cas missing (%d): %s\n  cas has, direct missing (%d): %s",
 					q, len(miss), sampleLocs(miss), len(extra), sampleLocs(extra))
 			}
+		}
+
+		// (1b) deduped served must be byte-identical to the direct build.
+		dedupMatchesDirect := true
+		if miss, extra := diffLocs(directLocs, dedupLocs); len(miss) > 0 || len(extra) > 0 {
+			dedupMatchesDirect = false
+			mismatchDedup++
+			if mismatchDedup <= 8 {
+				t.Errorf("deduped != direct for %s:\n  direct has, dedup missing (%d): %s\n  dedup has, direct missing (%d): %s",
+					q, len(miss), sampleLocs(miss), len(extra), sampleLocs(extra))
+			}
+		}
+		// If either served format already diverged from direct, the rg comparison
+		// for that format would just re-report the same divergence; skip to the next
+		// query once the seam itself is shown broken.
+		if !dedupMatchesDirect {
 			continue
 		}
 
-		// (2) cas-export must match ripgrep over F (parity SACRED invariant).
+		// (2) both served formats must match ripgrep over F (parity SACRED invariant).
 		want, ok, rgErr := rg.run(t, q, built.FT)
 		if !ok {
 			if rgErr {
 				rgSkipped++ // rg errored (exit >= 2): no ground truth — quirk-skip, but visible
 			}
-			// In every skip case we already proved cas==direct above (the property
-			// this gate exists to prove); only the rg comparison is skipped.
+			// In every skip case we already proved cas==direct and dedup==direct above
+			// (the property this gate exists to prove); only the rg comparison is skipped.
 			continue
 		}
 		checkedVsRG++
-		miss, extra := diffLocs(want, casLocs)
-		if len(miss) > 0 {
-			underApprox++
-			if underApprox <= 8 {
-				t.Errorf("UNDER-APPROX cas-export vs rg for %s: missed %d (e.g. %s)", q, len(miss), sampleLocs(miss))
+		if miss, extra := diffLocs(want, casLocs); len(miss) > 0 || len(extra) > 0 {
+			if len(miss) > 0 {
+				underApprox++
+				if underApprox <= 8 {
+					t.Errorf("UNDER-APPROX cas-export vs rg for %s: missed %d (e.g. %s)", q, len(miss), sampleLocs(miss))
+				}
+			}
+			if len(extra) > 0 {
+				overApprox++
+				if overApprox <= 8 {
+					t.Errorf("OVER-APPROX cas-export vs rg for %s: extra %d (e.g. %s)", q, len(extra), sampleLocs(extra))
+				}
 			}
 		}
-		if len(extra) > 0 {
-			overApprox++
-			if overApprox <= 8 {
-				t.Errorf("OVER-APPROX cas-export vs rg for %s: extra %d (e.g. %s)", q, len(extra), sampleLocs(extra))
+		if miss, extra := diffLocs(want, dedupLocs); len(miss) > 0 || len(extra) > 0 {
+			if len(miss) > 0 {
+				underDedup++
+				if underDedup <= 8 {
+					t.Errorf("UNDER-APPROX deduped vs rg for %s: missed %d (e.g. %s)", q, len(miss), sampleLocs(miss))
+				}
+			}
+			if len(extra) > 0 {
+				overDedup++
+				if overDedup <= 8 {
+					t.Errorf("OVER-APPROX deduped vs rg for %s: extra %d (e.g. %s)", q, len(extra), sampleLocs(extra))
+				}
 			}
 		}
 	}
 
-	t.Logf("cas-export parity: %d queries; cas!=direct=%d; vs-rg checked=%d under=%d over=%d rg-skipped=%d",
-		len(bat.Queries), mismatchCAS, checkedVsRG, underApprox, overApprox, rgSkipped)
+	t.Logf("served parity: %d queries; cas!=direct=%d dedup!=direct=%d; vs-rg checked=%d under(cas=%d dedup=%d) over(cas=%d dedup=%d) rg-skipped=%d",
+		len(bat.Queries), mismatchCAS, mismatchDedup, checkedVsRG, underApprox, underDedup, overApprox, overDedup, rgSkipped)
 	if mismatchCAS > 0 {
 		t.Fatalf("FAIL: cas-export diverged from the direct build on %d queries (the seam is not parity-clean)", mismatchCAS)
 	}
-	if underApprox > 0 {
-		t.Fatalf("FAIL: cas-export UNDER-APPROXIMATED ripgrep on %d queries (SACRED parity violation)", underApprox)
+	if mismatchDedup > 0 {
+		t.Fatalf("FAIL: deduped served diverged from the direct build on %d queries (the served-shard-dedup seam is not parity-clean)", mismatchDedup)
 	}
-	if overApprox > 0 {
-		t.Fatalf("FAIL: cas-export OVER-APPROXIMATED ripgrep on %d queries", overApprox)
+	if underApprox > 0 || underDedup > 0 {
+		t.Fatalf("FAIL: served UNDER-APPROXIMATED ripgrep (cas=%d dedup=%d queries) — SACRED parity violation", underApprox, underDedup)
 	}
+	if overApprox > 0 || overDedup > 0 {
+		t.Fatalf("FAIL: served OVER-APPROXIMATED ripgrep (cas=%d dedup=%d queries)", overApprox, overDedup)
+	}
+}
+
+// casStoredBytes returns the CAS's unique-content footprint (Store.BytesStored) at
+// casDir — the deduped served content target.
+func casStoredBytes(t *testing.T, casDir string) int64 {
+	t.Helper()
+	s, err := Open(casDir)
+	if err != nil {
+		t.Fatalf("open CAS: %v", err)
+	}
+	defer s.Close()
+	return s.BytesStored()
+}
+
+// ratio is legacy/dedup as a float (1.0 if dedup is 0, to avoid a divide-by-zero in
+// the log line).
+func ratio(legacy, dedup int64) float64 {
+	if dedup == 0 {
+		return 1
+	}
+	return float64(legacy) / float64(dedup)
 }
 
 // corpusQuery drives a server.Corpus with a battery query mapped to Literal/Regex
