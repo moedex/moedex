@@ -8,3 +8,7 @@
 /moedex-serve
 /moedex-serve-dense
 /moedex-index
+/moedex-corpus
+
+# Claude Code worktrees (transient; never commit the gitlink)
+.claude/worktrees/
