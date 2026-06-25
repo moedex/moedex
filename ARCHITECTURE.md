@@ -39,6 +39,7 @@ All library code lives under `internal/`; executables under `cmd/`.
 | query | [`internal/query`](internal/query) | Regex → boolean trigram query (Cox reduction) | `Query` (`Eval`, `String`); `All`; `And`, `Or`; `FromRegexp(pattern) (Query, error)` |
 | search | [`internal/search`](internal/search) | Candidate retrieval + verify → line matches | `Match`; `Literal(ix, q) []Match`; `Regex(ix, pattern) ([]Match, error)` |
 | diskstore | [`internal/diskstore`](internal/diskstore) | Persist/reload the index; mmap postings | `Save(ix, path)`; `Load(path)`; `LoadMmap(path) (*index.Index, io.Closer, error)` |
+| blobstore | [`internal/blobstore`](internal/blobstore) | Global content-addressable store (CAS): each unique blob stored once corpus-wide (cross-shard dedup) + per-blob delta refresh | `Store`, `Open`, `(*Store) Has/Put/Get/Len/BytesStored/SHAs/Close`; `BlobManifest`, `RepoBlobs`, `Stats`, `WriteBlobManifest`, `LoadBlobManifest`; `BuildCAS`, `RefreshCAS`, `DeltaStats`, `ExportShardDir` |
 | tokenindex | [`internal/tokenindex`](internal/tokenindex) | Persistent inverted index of BM25 term stats | `TokenIndex`; `Build(ix)`; `Tokenize(text)`; `NumDocs/AvgDocLen/DocLen/DocFreq/TermFreq`; `Save`, `Load` |
 | embed | [`internal/embed`](internal/embed) | Dense arm: chunk → vector → cosine search | `Vector`, `Embedder`; `HTTPEmbedder`, `NewHTTPEmbedder`; `ONNXEmbedder`, `NewONNXEmbedder`, `NewONNXEmbedderFromFiles` (real only under `-tags onnx`; a no-op stub otherwise); `Chunk`, `ChunkBlob`; `Store`, `BuildStore`, `Hit`, `(*Store) Search/Save/Len/Dim`; `LoadStore` |
 | rank | [`internal/rank`](internal/rank) | Fuse lexical + dense + symbol + path arms via RRF | `RankedResult`, `LineSpan`; `Config`; `Ranker`, `New`, `(*Ranker) Rank/SetSymbols/SetDense/UseTokenCandidates` |
@@ -51,7 +52,7 @@ All library code lives under `internal/`; executables under `cmd/`.
 | moedex | [`cmd/moedex`](cmd/moedex) | CLI: index one repo, run a literal/regex query | — |
 | moedex-mcp | [`cmd/moedex-mcp`](cmd/moedex-mcp) | Single-repo MCP server binary | — |
 | moedex-serve | [`cmd/moedex-serve`](cmd/moedex-serve) | Warm retrieval daemon over a prebuilt shard dir: `-http` retrieval API, `-q` one-shot, `-mcp` ranked context | — |
-| moedex-index | [`cmd/moedex-index`](cmd/moedex-index) | Offline shard-dir builder/freshness tool: `build` / `check` / `refresh` | — |
+| moedex-index | [`cmd/moedex-index`](cmd/moedex-index) | Offline shard-dir builder/freshness tool: `build` / `check` / `refresh`, plus the CAS commands `cas-build` / `cas-refresh` / `cas-export` | — |
 | scale | [`cmd/scale`](cmd/scale) | Index many repos, report size/throughput/mmap memory | — |
 | moedex-parity | [`cmd/moedex-parity`](cmd/moedex-parity) | Full-corpus parity gate: build + battery + oracles + `PARITY-REPORT.md`, non-zero exit on failure | — |
 
@@ -216,11 +217,12 @@ block is always emitted even if it alone exceeds budget; any later skip sets
 
 ## On-disk formats
 
-All four binary sidecar/store formats are little-endian and round-trippable.
+All five binary sidecar/store formats are little-endian and round-trippable.
 
 | Format | Magic | Writer | Layout |
 |---|---|---|---|
 | Trigram index | `MOEDEX03` (v3) | [`diskstore`](internal/diskstore/diskstore.go) | 48-byte header (magic, version, reserved, numBlobs, numTrigrams, blobOff, postOff), then a **blob section** (per blob: SHA, content, file refs) and a **postings section** (per trigram: 3 bytes + uint64 encLen + varint-delta encoded list). Each list is an individually-addressable byte range so `LoadMmap` can hand out sub-slices. |
+| CAS blob store | `MOEBLOB1` (v1) | [`blobstore`](internal/blobstore/blobstore.go) | Two files. `blobs.pack`: append-only, one record per **unique** blob (`shaLen`+sha, `contentLen`+content) — each unique content stored once for the whole corpus. `blobs.idx`: 32-byte header (magic, version, reserved, numBlobs, packBytes) then per blob a directory entry (sha, packOff, packLen, contentLen), written atomically (temp+rename) only after the pack is fsynced, so a crash never indexes non-durable bytes. The SHA is an opaque variable-length key (SHA-1 today, SHA-256-ready). |
 | Token index | `TKI1` (v1) | [`tokenindex/codec.go`](internal/tokenindex/codec.go) | 4-byte magic + version, then the BM25 term statistics; `Save`/`Load` round-trip them. |
 | Embedding store | `MDXE` (v1) | [`embed/codec.go`](internal/embed/codec.go) | 4-byte magic, version, dim, count; then `count` chunk records (blob, startLine/endLine as uint32, startByte/endByte as uint64); then `count` contiguous float32 vectors. |
 | Symbol sidecar | `SYM1` | [`symbol/codec.go`](internal/symbol/codec.go) | 4-byte magic, uvarint blob count; per blob: blobID, symCount, then per symbol the name, kind, and four byte offsets (nameStart/nameEnd/bodyStart/bodyEnd) — all uvarint. Holds symbols from every language extractor (Go/C#/TS/SQL/CFML), not just Go. |
@@ -230,7 +232,10 @@ freshness `manifest.json` (`internal/parity/manifest.go` — repo→shard member
 each repo's git HEAD) and per-cache `.meta` validators next to the corpus token,
 symbol, and embedding sidecars (`internal/server/rankcorpus.go` — a shard-set
 fingerprint + blob count, plus the embedding model for the embedding store, so a
-stale cache is detected and rebuilt rather than silently reused).
+stale cache is detected and rebuilt rather than silently reused). The CAS adds a
+third JSON sidecar, `blobmanifest.json` (`internal/blobstore/manifest.go` —
+repo→{git HEAD, ordered file entries of `{sha, rel}`} plus global dedup stats),
+which records a repo's *blob set* so a per-repo refresh is a pure set-diff.
 
 ---
 
@@ -354,6 +359,13 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
 - **Shard-level freshness** (`internal/parity` manifest + `cmd/moedex-index`
   `build`/`check`/`refresh`): detect changed repos by git HEAD and rebuild only the
   affected shards.
+- **Content-addressable store with global dedup + per-blob delta** (`internal/blobstore`
+  + `cmd/moedex-index` `cas-build`/`cas-refresh`/`cas-export`): a corpus-wide CAS
+  keyed by git blob SHA stores each unique blob exactly once (idempotent `Put` is the
+  cross-shard dedup primitive), and `cas-refresh` re-ingests only a changed repo's
+  net-new blobs (its co-resident repos are untouched — the win over `parity.Rebuild`).
+  `cas-export` materializes a today-compatible servable shard dir from the CAS so the
+  daemon and parity harness consume it unchanged.
 - An IR-metrics evaluation harness (recall@k, precision@k, MRR, nDCG@k).
 - A full-corpus exact-match retrieval parity harness (`internal/parity`,
   `cmd/moedex-parity`): sharded whole-corpus build, seeded ≥1000-query battery,
@@ -363,9 +375,16 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
 **Deliberately deferred (design intentions, not yet built)** — tracked in the
 northstar and [`research/`](research):
 
-- **Incremental / delta indexing** — the data model is content-addressed to keep
-  this first-class. Freshness today is *shard-level* (`moedex-index refresh`
-  rebuilds whole affected shards); a finer per-blob delta path does not exist yet.
+- **Incremental / delta indexing** — a **per-blob delta path now exists at the
+  storage layer**: the content-addressable store (`internal/blobstore`) dedups blobs
+  globally across the corpus and `cas-refresh` adds only a changed repo's net-new
+  blobs. What remains deferred is making the **served** shard format reference CAS
+  blobs by SHA so the retrieval path also dedups — today `cas-export` still inlines a
+  blob's content into every shard that holds a repo carrying it (exactly as a direct
+  `build` does), and the legacy `moedex-index refresh` path is still shard-level
+  (rebuilds whole affected shards). CAS pack compaction/GC of blobs no longer
+  referenced by any repo is also deferred (the append-only pack grows monotonically;
+  the blob manifest's referenced-set is the liveness signal a future compactor needs).
 - **Distribution / sharding** — sharded on disk and served as a multi-shard corpus,
   but still **single-node**: there is no cross-node distribution or replication.
 - **Native SIMD intersection/verification kernel** — see
@@ -471,6 +490,26 @@ manifest's recorded git HEADs. `refresh` rebuilds only the affected shards and
 atomically swaps them in (the previous dir is dropped unless `-keep-backup`). For
 `check`/`refresh` the corpus root defaults to the `Root` recorded in the manifest.
 The result is directly servable by `moedex-serve -shard-dir DIR`.
+
+The content-addressable family operates the CAS (`internal/blobstore`):
+
+```sh
+moedex-index cas-build   -corpus ROOT -cas-dir DIR
+moedex-index cas-refresh -cas-dir DIR [-corpus ROOT]
+moedex-index cas-export  -cas-dir DIR -shard-dir OUT [-shard-bytes N] [-force]
+```
+
+`cas-build` ingests every repo into a global content-addressed blob store, storing
+each unique blob once for the whole corpus (cross-shard dedup) and writing the
+`blobmanifest.json` repo→blobset sidecar; it prints the dedup ratio (raw bytes /
+stored bytes). `cas-refresh` diffs each repo's current blob set against the manifest
+and physically appends only net-new blobs (per-blob delta — co-resident repos are not
+re-ingested), printing the blobs/bytes added and the dedup no-op Puts skipped; the
+corpus root defaults to the manifest's `Root`. `cas-export` materializes a
+today-compatible servable shard dir + `manifest.json` from the CAS (the
+parity-preserving bridge), so `moedex-serve` and the parity harness consume it
+unchanged. The exported shards still inline content per shard as a direct `build`
+does; switching the served format to reference CAS blobs by SHA is a later slice.
 
 ### `moedex-serve` — warm retrieval / context daemon
 

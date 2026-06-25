@@ -74,6 +74,12 @@ func strconvQuote(s string) string {
 	return fmt.Sprintf("%q", s)
 }
 
+// GoRegexSource returns the Go regexp source a non-literal (or case-insensitive
+// literal) query is compiled to — the exact pattern the moedex adapter routes to
+// search.Regex. Exported so external harnesses (e.g. the cas-export parity gate)
+// drive a server.Corpus with byte-identical semantics to the in-package oracles.
+func (q Query) GoRegexSource() string { return q.goRegexSource() }
+
 // goRegexSource returns the Go regexp source moedex and gold compile for a
 // query — exactly mirroring how the moedex adapter routes the query.
 func (q Query) goRegexSource() string {

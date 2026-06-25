@@ -11,6 +11,21 @@
 //		moedex-index check   -shard-dir DIR [-corpus ROOT]
 //		moedex-index refresh -shard-dir DIR [-corpus ROOT] [-keep-backup]
 //
+// A second family of subcommands operates the content-addressable blob store
+// (CAS) — the storage layer that stores each unique blob ONCE for the whole
+// corpus (global cross-shard dedup) and re-indexes a changed repo's net-new
+// blobs only (per-blob delta). See internal/blobstore.
+//
+//		moedex-index cas-build   -corpus ROOT -cas-dir DIR
+//		moedex-index cas-refresh -cas-dir DIR [-corpus ROOT]
+//		moedex-index cas-export  -cas-dir DIR -shard-dir OUT [-shard-bytes N] [-force]
+//
+//	  - cas-export materializes a today-compatible servable shard dir from the
+//	    CAS, so moedex-serve and the parity harness consume it unchanged (the
+//	    parity-preserving bridge). The served shards still inline content per
+//	    shard as today; making the served format reference CAS blobs by SHA is a
+//	    later slice.
+//
 //	  - build   indexes every git repo under -corpus into byte-sized shards and
 //	            writes the manifest. The result is directly servable
 //	            (moedex-serve -shard-dir DIR).
@@ -35,6 +50,7 @@ import (
 	"sort"
 	"time"
 
+	"moedex/internal/blobstore"
 	"moedex/internal/diskstore"
 	"moedex/internal/index"
 	"moedex/internal/ingest"
@@ -55,6 +71,12 @@ func main() {
 		err = runCheck(os.Args[2:])
 	case "refresh":
 		err = runRefresh(os.Args[2:])
+	case "cas-build":
+		err = runCASBuild(os.Args[2:])
+	case "cas-refresh":
+		err = runCASRefresh(os.Args[2:])
+	case "cas-export":
+		err = runCASExport(os.Args[2:])
 	case "-h", "--help", "help":
 		usage()
 		return
@@ -76,6 +98,22 @@ Usage:
   moedex-index build   -corpus ROOT -shard-dir DIR [-shard-bytes N] [-force] [-v]
   moedex-index check   -shard-dir DIR [-corpus ROOT]
   moedex-index refresh -shard-dir DIR [-corpus ROOT] [-keep-backup] [-v]
+
+Content-addressable store (global cross-shard dedup + per-blob delta):
+  moedex-index cas-build   -corpus ROOT -cas-dir DIR
+  moedex-index cas-refresh -cas-dir DIR [-corpus ROOT]
+  moedex-index cas-export  -cas-dir DIR -shard-dir OUT [-shard-bytes N] [-force]
+
+  - cas-build   ingests every git repo under -corpus into a global content-
+                addressed blob store at -cas-dir, storing each unique blob ONCE
+                across the whole corpus (cross-shard dedup), and writes a
+                repo->blobset manifest. Prints the dedup ratio.
+  - cas-refresh diffs each repo's current blob set against the manifest and adds
+                ONLY net-new blobs (per-blob delta); co-resident repos are not
+                re-ingested. Prints blobs/bytes added.
+  - cas-export  materializes a today-compatible servable shard dir + manifest
+                from the CAS, so moedex-serve and the parity harness consume it
+                unchanged.
 `)
 }
 
@@ -398,6 +436,117 @@ func rewriteManifestPaths(dir string) error {
 		m.Shards[i].Path = filepath.Join(dir, filepath.Base(m.Shards[i].Path))
 	}
 	return parity.WriteManifest(mp, m)
+}
+
+// ---------------------------------------------------------------------------
+// cas-build / cas-refresh / cas-export (content-addressable store)
+// ---------------------------------------------------------------------------
+
+func runCASBuild(args []string) error {
+	fs := newFlagSet("cas-build")
+	corpus := fs.String("corpus", os.Getenv("MOEDEX_CORPUS"), "corpus root (every git repo beneath it is ingested)")
+	casDir := fs.String("cas-dir", "", "output content-addressable store directory")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *corpus == "" || *casDir == "" {
+		return fmt.Errorf("cas-build requires -corpus and -cas-dir")
+	}
+	root, err := filepath.Abs(*corpus)
+	if err != nil {
+		return err
+	}
+	dir, err := filepath.Abs(*casDir)
+	if err != nil {
+		return err
+	}
+	m, err := blobstore.BuildCAS(root, dir)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("cas-build: %d repos, %d unique blobs, %d file refs\n", len(m.Repos), m.Stats.UniqueBlobs, m.Stats.FileRefs)
+	fmt.Printf("  stored %.1f MB (raw %.1f MB; dedup ratio %.2fx) at %s\n",
+		float64(m.Stats.StoredBytes)/1e6, float64(m.Stats.RawBytes)/1e6, m.Stats.DedupRatio(), dir)
+	return nil
+}
+
+func runCASRefresh(args []string) error {
+	fs := newFlagSet("cas-refresh")
+	casDir := fs.String("cas-dir", "", "content-addressable store directory to refresh")
+	corpus := fs.String("corpus", "", "corpus root (defaults to the Root recorded in the manifest)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *casDir == "" {
+		return fmt.Errorf("cas-refresh requires -cas-dir")
+	}
+	dir, err := filepath.Abs(*casDir)
+	if err != nil {
+		return err
+	}
+	old, err := blobstore.LoadBlobManifest(filepath.Join(dir, blobstore.BlobManifestName))
+	if err != nil {
+		return fmt.Errorf("load blob manifest (run `moedex-index cas-build` first?): %w", err)
+	}
+	root := ""
+	if *corpus != "" {
+		if root, err = filepath.Abs(*corpus); err != nil {
+			return err
+		}
+	}
+	m, ds, err := blobstore.RefreshCAS(old, root, dir)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("cas-refresh: changed=%d added=%d removed=%d failed=%d\n",
+		len(ds.ChangedRepos), len(ds.AddedRepos), len(ds.RemovedRepos), len(ds.FailedRepos))
+	fmt.Printf("  delta: +%d blobs, +%.1f MB (%d dedup no-op Puts skipped)\n",
+		ds.BlobsAdded, float64(ds.BytesAdded)/1e6, ds.PutsSkipped)
+	fmt.Printf("  store now: %d unique blobs, %.1f MB stored, dedup ratio %.2fx\n",
+		m.Stats.UniqueBlobs, float64(m.Stats.StoredBytes)/1e6, m.Stats.DedupRatio())
+	if len(ds.FailedRepos) > 0 {
+		// Carried forward unchanged (no data lost); surfaced so the operator knows
+		// to investigate / expect a retry next refresh.
+		fmt.Fprintf(os.Stderr, "moedex-index: WARNING: %d repo(s) failed to re-ingest and were carried forward unchanged (retry next refresh):\n", len(ds.FailedRepos))
+		for _, r := range ds.FailedRepos {
+			fmt.Fprintf(os.Stderr, "  - %s\n", r)
+		}
+	}
+	return nil
+}
+
+func runCASExport(args []string) error {
+	fs := newFlagSet("cas-export")
+	casDir := fs.String("cas-dir", "", "content-addressable store directory to export from")
+	shardDir := fs.String("shard-dir", "", "output servable shard directory")
+	shardBytes := fs.Int64("shard-bytes", parity.DefaultShardBytes, "target indexed-content bytes per exported shard")
+	force := fs.Bool("force", false, "clear a non-empty shard dir before exporting")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *casDir == "" || *shardDir == "" {
+		return fmt.Errorf("cas-export requires -cas-dir and -shard-dir")
+	}
+	dir, err := filepath.Abs(*casDir)
+	if err != nil {
+		return err
+	}
+	out, err := filepath.Abs(*shardDir)
+	if err != nil {
+		return err
+	}
+	if err := prepareDir(out, *force); err != nil {
+		return err
+	}
+	m, err := blobstore.ExportShardDir(dir, out, *shardBytes)
+	if err != nil {
+		return err
+	}
+	// Build the ranking sidecars so the exported dir is immediately servable warm,
+	// mirroring build. Best-effort.
+	sidecars := buildSidecars(out)
+	fmt.Printf("cas-export: %d shard(s) from %d repo(s) into %s%s\n", len(m.Shards), len(m.Heads), out, sidecars)
+	return nil
 }
 
 // ---------------------------------------------------------------------------
