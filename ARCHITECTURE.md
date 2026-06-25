@@ -370,6 +370,19 @@ northstar and [`research/`](research):
   but still **single-node**: there is no cross-node distribution or replication.
 - **Native SIMD intersection/verification kernel** — see
   [`research/simd-kernel.md`](research/simd-kernel.md); the engine is pure Go.
+  The clean kernel boundary now exists: `internal/setops` owns the sorted-uint64
+  set algebra (the trigram AND/OR fold), and `internal/query` calls it instead of
+  hand-rolling intersect/union. The pure-Go path is the always-built default on
+  every arch (galloping + caller-reusable buffers — measured ~26x faster and
+  zero-alloc vs the old per-fold-allocating merge on the rare-AND-common posting
+  shape). An optional native AVX2 kernel (`simd/archsimd`, no cgo, no go.mod dep)
+  lives behind `-tags moedex_simd` (amd64 + `GOEXPERIMENT=simd`); `make build-simd`
+  builds it. Honest measured result (Rosetta-translated x86-64, directional only):
+  **SIMD shows no consistent win at this corpus scale** — the pure-Go galloping
+  path beats the AVX2 broadcast-compare on the dominant skewed case — confirming
+  the research note's prediction that the latency tail is scan-bound, not
+  intersection-bound. Native-amd64 ns/op + the verification-side (Teddy-class)
+  SIMD prefilter remain deferred. The engine ships pure Go by default.
 - **FM-index compressed cold tier** — see
   [`research/fm-index-cold-tier.md`](research/fm-index-cold-tier.md).
 - **Learned reranker** — RRF over the four arms is the current fusion; see

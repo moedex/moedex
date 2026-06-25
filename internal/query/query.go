@@ -21,9 +21,11 @@ package query
 
 import (
 	"regexp/syntax"
+	"sort"
 	"strings"
 
 	"moedex/internal/index"
+	"moedex/internal/setops"
 	"moedex/internal/trigram"
 )
 
@@ -69,12 +71,38 @@ func (q triQ) Eval(ix *index.Index) []uint64 {
 func (q triQ) String() string { return "tri(" + q.t.String() + ")" }
 
 func (q andQ) Eval(ix *index.Index) []uint64 {
-	acc := q.subs[0].Eval(ix)
-	for _, s := range q.subs[1:] {
+	// Evaluate every sub once, then fold smallest-list-first: an AND can only
+	// shrink, so starting from the shortest posting list minimizes intersection
+	// work (research/simd-kernel.md Tier-0). AND is commutative + associative,
+	// so reordering does not change the result SET — only the cost. Parity is
+	// therefore unaffected (guarded by the existing query/search tests plus the
+	// setops differential test).
+	lists := make([][]uint64, len(q.subs))
+	for i, s := range q.subs {
+		lists[i] = s.Eval(ix)
+		if len(lists[i]) == 0 {
+			return nil // empty intersection short-circuit
+		}
+	}
+	sort.Slice(lists, func(i, j int) bool { return len(lists[i]) < len(lists[j]) })
+
+	acc := lists[0]
+	// Ping-pong two reusable buffers across the N-1 folds so each fold writes
+	// into the buffer NOT currently holding acc, instead of allocating a fresh
+	// slice every fold (the per-fold make/append the research note flags). dst
+	// is always the opposite buffer from acc, so it never aliases the input acc
+	// — honoring setops.Intersect's "dst must not alias a or b" contract. The
+	// first acc (lists[0]) is a query sub-Eval result, never aliased by the
+	// index internals, and setops.Intersect never returns a slice aliasing its
+	// inputs, so no fold can read-after-overwrite a live list.
+	var bufs [2][]uint64
+	for i, s := range lists[1:] {
 		if len(acc) == 0 {
 			return nil
 		}
-		acc = intersect(acc, s.Eval(ix))
+		dst := bufs[i&1]
+		acc = setops.Intersect(dst[:0], acc, s)
+		bufs[i&1] = acc
 	}
 	return acc
 }
@@ -82,8 +110,13 @@ func (q andQ) String() string { return "(" + join(q.subs, " AND ") + ")" }
 
 func (q orQ) Eval(ix *index.Index) []uint64 {
 	acc := q.subs[0].Eval(ix)
-	for _, s := range q.subs[1:] {
-		acc = union(acc, s.Eval(ix))
+	// Same two-buffer ping-pong as andQ.Eval: dst is always the buffer not
+	// holding acc, so setops.Union's no-alias contract holds.
+	var bufs [2][]uint64
+	for i, s := range q.subs[1:] {
+		dst := bufs[i&1]
+		acc = setops.Union(dst[:0], acc, s.Eval(ix))
+		bufs[i&1] = acc
 	}
 	return acc
 }
@@ -227,44 +260,8 @@ func literalQuery(s string) Query {
 	return And(qs...)
 }
 
-// intersect returns the sorted intersection of two sorted, distinct slices.
-func intersect(a, b []uint64) []uint64 {
-	var out []uint64
-	i, j := 0, 0
-	for i < len(a) && j < len(b) {
-		switch {
-		case a[i] == b[j]:
-			out = append(out, a[i])
-			i++
-			j++
-		case a[i] < b[j]:
-			i++
-		default:
-			j++
-		}
-	}
-	return out
-}
-
-// union returns the sorted union of two sorted, distinct slices.
-func union(a, b []uint64) []uint64 {
-	out := make([]uint64, 0, len(a)+len(b))
-	i, j := 0, 0
-	for i < len(a) && j < len(b) {
-		switch {
-		case a[i] == b[j]:
-			out = append(out, a[i])
-			i++
-			j++
-		case a[i] < b[j]:
-			out = append(out, a[i])
-			i++
-		default:
-			out = append(out, b[j])
-			j++
-		}
-	}
-	out = append(out, a[i:]...)
-	out = append(out, b[j:]...)
-	return out
-}
+// Set algebra over candidate blob-ID lists lives in internal/setops behind a
+// clean boundary so a native/SIMD intersection kernel can be swapped in (behind
+// the moedex_simd build tag) without query/search seeing assembly. andQ/orQ.Eval
+// call setops.Intersect/Union; the pure-Go implementation is the always-built
+// default.
