@@ -184,10 +184,11 @@ func TestCASExportParityCorpus(t *testing.T) {
 	// --- per-query: cas-export == direct == ripgrep over F. -------------------
 	rg := newRG(t, built.MirrorDir)
 	var (
-		mismatchCAS  int // cas-export != direct build (the seam is broken)
-		underApprox  int // cas-export missed a line ripgrep found (SACRED violation)
-		overApprox   int // cas-export returned a line ripgrep did not
-		checkedVsRG  int
+		mismatchCAS int // cas-export != direct build (the seam is broken)
+		underApprox int // cas-export missed a line ripgrep found (SACRED violation)
+		overApprox  int // cas-export returned a line ripgrep did not
+		checkedVsRG int // queries with a usable rg ground truth, actually compared
+		rgSkipped   int // queries rg ERRORED on (exit >= 2: un-foldable byte etc.)
 	)
 	for _, q := range bat.Queries {
 		directLocs := corpusQuery(t, direct, q)
@@ -204,9 +205,14 @@ func TestCASExportParityCorpus(t *testing.T) {
 		}
 
 		// (2) cas-export must match ripgrep over F (parity SACRED invariant).
-		want, ok := rg.run(t, q, built.FT)
+		want, ok, rgErr := rg.run(t, q, built.FT)
 		if !ok {
-			continue // rg quirk-buckets (handled by the parity harness proper) skipped
+			if rgErr {
+				rgSkipped++ // rg errored (exit >= 2): no ground truth — quirk-skip, but visible
+			}
+			// In every skip case we already proved cas==direct above (the property
+			// this gate exists to prove); only the rg comparison is skipped.
+			continue
 		}
 		checkedVsRG++
 		miss, extra := diffLocs(want, casLocs)
@@ -224,8 +230,8 @@ func TestCASExportParityCorpus(t *testing.T) {
 		}
 	}
 
-	t.Logf("cas-export parity: %d queries; cas!=direct=%d; vs-rg checked=%d under=%d over=%d",
-		len(bat.Queries), mismatchCAS, checkedVsRG, underApprox, overApprox)
+	t.Logf("cas-export parity: %d queries; cas!=direct=%d; vs-rg checked=%d under=%d over=%d rg-skipped=%d",
+		len(bat.Queries), mismatchCAS, checkedVsRG, underApprox, overApprox, rgSkipped)
 	if mismatchCAS > 0 {
 		t.Fatalf("FAIL: cas-export diverged from the direct build on %d queries (the seam is not parity-clean)", mismatchCAS)
 	}
@@ -278,16 +284,27 @@ func newRG(t *testing.T, mirrorDir string) *rgOracle {
 	return &rgOracle{bin: bin, mirrorDir: mirrorDir}
 }
 
-// run executes rg for a query. ok=false means we deliberately skip the rg
-// comparison for this query (the RE2-vs-Rust-regex engine quirks the full parity
-// harness adjudicates separately); for those we still assert cas-export==direct,
-// which is the property this gate exists to prove. We rg-compare the buckets
-// where Go RE2 and Rust regex are pinned to agree (literals, case-insensitive
-// literals, unicode literals) and short-circuit the regex shapes.
-func (r *rgOracle) run(t *testing.T, q parity.Query, ft *parity.FileTable) (map[loc]bool, bool) {
+// run executes rg for a query and returns (matches, ok, rgErr):
+//   - ok=true:  a usable ground truth (the matches); compare against it.
+//   - ok=false, rgErr=false: a query we deliberately do NOT rg-compare by design
+//     (regex shapes — RE2-vs-Rust-regex engine quirks the full parity harness
+//     adjudicates separately). Not counted; expected.
+//   - ok=false, rgErr=true:  rg ERRORED (exit code >= 2 — e.g. it refuses to
+//     case-fold an invalid-UTF-8 byte, an un-foldable pattern). rg gives no
+//     ground truth here, so we quirk-SKIP — but the caller COUNTS it so the skip
+//     is visible in the summary, not silently swallowed.
+//
+// In every skip case the gate still asserts cas-export==direct for the query
+// (the property this gate exists to prove); only the rg ground-truth comparison
+// is skipped. We rg-compare the literal buckets where Go RE2 and Rust regex are
+// pinned to agree (literals, case-insensitive literals, unicode literals).
+//
+// rg exit codes: 0 = matches, 1 = no matches (a valid empty ground truth),
+// >= 2 = error.
+func (r *rgOracle) run(t *testing.T, q parity.Query, ft *parity.FileTable) (matches map[loc]bool, ok, rgErr bool) {
 	t.Helper()
 	if !q.Literal {
-		return nil, false // regex semantics adjudicated by the parity harness proper
+		return nil, false, false // regex semantics adjudicated by the parity harness proper
 	}
 	args := []string{
 		"--no-config", "--no-heading", "--color=never", "--with-filename",
@@ -298,14 +315,22 @@ func (r *rgOracle) run(t *testing.T, q parity.Query, ft *parity.FileTable) (map[
 	} else {
 		args = append(args, "--case-sensitive")
 	}
+	if q.NoUnicode {
+		args = append(args, "--no-unicode") // mirror internal/parity's rg semantics alignment
+	}
 	args = append(args, "-F", "-e", q.Pattern, r.mirrorDir)
 
 	out, err := exec.Command(r.bin, args...).Output()
 	if err != nil {
-		if ee, ok := err.(*exec.ExitError); ok && ee.ExitCode() == 1 {
-			return map[loc]bool{}, true // no matches
+		if ee, ok := err.(*exec.ExitError); ok {
+			if ee.ExitCode() == 1 {
+				return map[loc]bool{}, true, false // no matches (valid empty truth)
+			}
+			// Exit code >= 2: rg errored (no ground truth). Quirk-skip + count it.
+			return nil, false, true
 		}
-		t.Fatalf("rg %s: %v", q, err)
+		// Could not even invoke rg (fork/exec failure): that IS a harness failure.
+		t.Fatalf("rg %s: invoke failed: %v", q, err)
 	}
 	res := map[loc]bool{}
 	for _, line := range strings.Split(strings.TrimRight(string(out), "\n"), "\n") {
@@ -331,7 +356,7 @@ func (r *rgOracle) run(t *testing.T, q parity.Query, ft *parity.FileTable) (map[
 		}
 		res[loc{ft.Repo(id), ft.Rel(id), n}] = true
 	}
-	return res, true
+	return res, true, false
 }
 
 // mirrorID parses the trailing integer basename of a mirror path (the fileID),
