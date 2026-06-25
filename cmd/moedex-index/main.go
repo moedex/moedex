@@ -396,6 +396,15 @@ func runRefresh(args []string) error {
 	// Atomic-ish swap: move the live dir aside, move the rebuilt dir into place,
 	// then rewrite the manifest's recorded paths to the live dir (Rebuild recorded
 	// them under the temp path).
+	//
+	// NOTE (known crash window, pre-existing; not fixed in this slice): this inlined-
+	// format (parity.Rebuild) refresh has the SAME two-rename window as the deduped
+	// delta path — a crash BETWEEN the renames leaves no live dir at `dir`, and a
+	// crash AFTER the swap but BEFORE rewriteManifestPaths leaves manifest shard paths
+	// pointing at the gone temp dir. The deduped delta path
+	// (blobstore.RefreshDedupedShardDir) closes both windows (manifest written with
+	// final paths pre-swap + RecoverInterruptedDedupedSwap on the next run); porting
+	// the same recovery here is a follow-up for the inlined freshness path.
 	bak := dir + ".bak-" + stamp
 	if err := os.Rename(dir, bak); err != nil {
 		_ = os.RemoveAll(tmp)
@@ -552,6 +561,15 @@ func runCASExport(args []string) error {
 	// runs `cas-refresh` then `cas-export -deduped` and the export auto-detects whether
 	// to go full or delta. The (file,line) match set is identical either way (proven by
 	// the parity gate); delta just does far less work when little changed.
+	//
+	// First heal any interrupted prior swap so the live dir is complete before we
+	// decide full-vs-delta — otherwise a crash that left the live path momentarily
+	// absent would mis-route to a full export. (No-op in the normal case.)
+	if *deduped {
+		if err := blobstore.RecoverInterruptedDedupedSwap(out); err != nil {
+			return fmt.Errorf("recover interrupted deduped swap: %w", err)
+		}
+	}
 	if *deduped && !*force && blobstore.IsDedupedDir(out) {
 		m, ds, err := blobstore.RefreshDedupedShardDir(dir, out, *shardBytes)
 		if err != nil {

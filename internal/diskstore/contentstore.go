@@ -294,6 +294,21 @@ func OpenContentStoreAppender(path string) (*ContentStoreAppender, error) {
 // idempotent: a present sha returns the existing ref and adds ZERO bytes — the
 // delta dedup primitive, identical in contract to ContentStoreWriter.PutContent
 // and blobstore.Store.Put. sha must be a content hash of the exact bytes.
+//
+// INTEGRITY (intentional, not a gap): the dedup-skip of an already-present sha
+// trusts that the prior store's bytes under that key are correct; it does NOT
+// re-hash them. This is deliberate — re-hashing the carried-forward store on every
+// append would be an O(corpus) pass that defeats the whole point of an incremental
+// delta. Correctness is instead guaranteed at SERVE time: the serving path opens the
+// shared content store with OpenContentStoreVerified(GitBlobSHA1) (default-on; see
+// server.openSharedContent / MOEDEX_VERIFY_CONTENT), which re-hashes every entry
+// against its key and FAILS THE BOOT on any present-key-but-wrong-bytes corruption.
+// So a bit-rotted prior store cannot be silently served — it is caught at the next
+// open, whether or not a delta append ran. The appended store is itself a valid
+// MOECONT1 file the same verify-at-open covers. (Moving the check earlier is a
+// one-line opt-in: open the prior store via OpenContentStoreVerified before
+// appending, gated by the same flag — NOT done here by default, to preserve the
+// incremental win.)
 func (a *ContentStoreAppender) PutContent(sha string, content []byte) ContentRef {
 	if ref, ok := a.dir[sha]; ok {
 		return ref
