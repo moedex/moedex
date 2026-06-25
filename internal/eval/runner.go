@@ -47,10 +47,11 @@ type Report struct {
 type Runner struct {
 	ix    *index.Index
 	ti    *tokenindex.TokenIndex
-	store *embed.Store   // dense arm; nil = lexical only
-	emb   embed.Embedder // dense arm; nil = lexical only
-	syms  *symbol.Index  // symbol-name arm; nil = off
-	cfg   rank.Config    // ranker config; zero value = all arms at defaults
+	store *embed.Store         // dense arm; nil = lexical only
+	emb   embed.Embedder       // dense arm; nil = lexical only
+	syms  *symbol.Index        // symbol-name arm; nil = off
+	rr    *rank.LinearReranker // learned reranker; nil = pure RRF even under FusionLinear
+	cfg   rank.Config          // ranker config; zero value = all arms at defaults
 	r     *rank.Ranker
 }
 
@@ -74,7 +75,40 @@ func (run *Runner) rebuild() {
 	if run.syms != nil {
 		run.r.SetSymbols(run.syms)
 	}
+	if run.rr != nil {
+		run.r.SetReranker(run.rr)
+	}
 }
+
+// SetFusion selects the fusion mode (RRF vs learned) and rebuilds. Mirrors the
+// other Set* knobs so the eval can A/B RRF vs learned on one Runner over the same
+// index. The default (rank.FusionRRF) leaves ranking exactly as the production gate
+// measures it.
+func (run *Runner) SetFusion(f rank.Fusion) {
+	run.cfg.Fusion = f
+	run.rebuild()
+}
+
+// SetReranker installs (or clears, when m is nil) the learned reranker used by
+// FusionLinear and rebuilds. With no model installed, FusionLinear falls back to RRF
+// per candidate, so a caller can set the mode before training and install the model
+// after.
+func (run *Runner) SetReranker(m *rank.LinearReranker) {
+	run.rr = m
+	run.rebuild()
+}
+
+// Features runs one query's four arms and returns the per-candidate features
+// (without applying any fusion mode), the entry point the learned-reranker trainer
+// uses to build labeled rows. Delegates to the underlying ranker so the features are
+// identical to what Rank scores.
+func (run *Runner) Features(ctx context.Context, query string) ([]rank.BlobFeatures, error) {
+	return run.r.Features(ctx, query)
+}
+
+// RRFk exposes the ranker's RRF constant so a caller flattening features
+// (FeatureVector.Slice) uses the same rank scale the ranker does.
+func (run *Runner) RRFk() float64 { return run.r.RRFk() }
 
 // DisablePathArm turns off the filename/path RRF arm (on by default) and rebuilds.
 // Used by the eval to measure ranking with vs. without the path signal; production
