@@ -28,11 +28,14 @@ type Project struct {
 // group the allowlist matches on (e.g. "Services.Payment" for
 // "Services.Payment/TC.BillingApi", "Libraries.Common" for a deeper
 // "Libraries.Common/sub/Repo").
-func (p Project) TopLevelGroup() string {
-	if i := strings.IndexByte(p.PathWithNamespace, '/'); i >= 0 {
-		return p.PathWithNamespace[:i]
+func (p Project) TopLevelGroup() string { return topLevelGroup(p.PathWithNamespace) }
+
+// topLevelGroup returns the first '/'-separated segment of a namespace path.
+func topLevelGroup(path string) string {
+	if i := strings.IndexByte(path, '/'); i >= 0 {
+		return path[:i]
 	}
-	return p.PathWithNamespace
+	return path
 }
 
 // ParseProjects decodes the output of `glab api --paginate`, which concatenates

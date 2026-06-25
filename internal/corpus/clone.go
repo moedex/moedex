@@ -48,13 +48,14 @@ func (r CloneReport) Failures() []CloneResult {
 	return out
 }
 
-// cloneEnv makes git non-interactive and cheap for bulk mirroring:
+// gitEnv makes git non-interactive and cheap for bulk mirroring (used by both
+// clone and sync's fetch):
 //   - GIT_LFS_SKIP_SMUDGE=1   — don't download LFS blobs (binary; the indexer skips them anyway)
 //   - GIT_TERMINAL_PROMPT=0   — never block on a credential prompt; fail fast instead
 //   - GIT_SSH_COMMAND=...     — BatchMode (no password prompt) + accept-new (auto-trust the
 //     host key on first contact with the internal GitLab, so a fresh machine doesn't hang
 //     on the interactive "authenticity of host" question)
-var cloneEnv = []string{
+var gitEnv = []string{
 	"GIT_LFS_SKIP_SMUDGE=1",
 	"GIT_TERMINAL_PROMPT=0",
 	"GIT_SSH_COMMAND=ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new",
@@ -102,19 +103,22 @@ func cloneOne(ctx context.Context, r Runner, cfg Config, p Project) CloneResult 
 	if alreadyCloned(dest) {
 		return CloneResult{Project: p, Outcome: Skipped}
 	}
-	res, err := r.RunEnv(ctx, cloneEnv, "git", args...)
+	res, err := r.RunEnv(ctx, gitEnv, "git", args...)
 	if err != nil {
 		return CloneResult{Project: p, Outcome: Failed, Err: err}
 	}
 	if !res.Ok() {
 		return CloneResult{
 			Project: p, Outcome: Failed,
-			Err:    fmt.Errorf("git clone exited %d", res.Code),
+			Err:    errGitExit(res.Code),
 			Detail: lastLine(res.Stderr),
 		}
 	}
 	return CloneResult{Project: p, Outcome: Cloned}
 }
+
+// errGitExit describes a git process that ran but exited non-zero.
+func errGitExit(code int) error { return fmt.Errorf("git exited %d", code) }
 
 // CloneProjects clones every project into cfg.Root with up to cfg.Concurrency
 // workers running at once — Moe reaching out with many tentacles. It is

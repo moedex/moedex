@@ -40,6 +40,8 @@ func main() {
 		err = runDoctor(os.Args[2:])
 	case "clone":
 		err = runClone(os.Args[2:])
+	case "sync":
+		err = runSync(os.Args[2:])
 	case "groups":
 		err = runGroups(os.Args[2:])
 	case "-h", "--help", "help":
@@ -68,6 +70,11 @@ Usage:
       Shallow-clone (--depth 1) every curated project into the corpus tree, many
       at once. Idempotent: existing repos are skipped (freshen them with sync).
       Without -groups, the built-in curated allowlist is used.
+
+  moedex-corpus sync [-corpus DIR] [-groups FILE] [-concurrency N] [-prune] [-dry-run] [-no-banner]
+      Bring the mirror level with the server: clone newly-created repos,
+      fast-forward existing ones, and report repos gone from the server. With
+      -prune, remove those local repos too (default: keep + report).
 
   moedex-corpus groups --from-disk [-corpus DIR]
       Print the group allowlist derived from the top-level dirs of an existing
@@ -276,6 +283,129 @@ func printCloneSummary(rep corpus.CloneReport) {
 
 // failDetail picks the most useful one-line reason for a failed clone.
 func failDetail(res corpus.CloneResult) string {
+	if res.Detail != "" {
+		return res.Detail
+	}
+	if res.Err != nil {
+		return res.Err.Error()
+	}
+	return "unknown error"
+}
+
+// ---------------------------------------------------------------------------
+// sync
+// ---------------------------------------------------------------------------
+
+func runSync(args []string) error {
+	fs := flag.NewFlagSet("sync", flag.ContinueOnError)
+	corpusDir := fs.String("corpus", "", "corpus root (default: $MOEDEX_CORPUS or ~/"+corpus.DefaultCorpusDirName+")")
+	groupsPath := fs.String("groups", "", "group allowlist file (default: built-in curated list)")
+	concurrency := fs.Int("concurrency", corpus.DefaultConcurrency(), "max parallel git operations (Moe's tentacles)")
+	prune := fs.Bool("prune", false, "remove local repos that are gone from the server (default: keep + report)")
+	dryRun := fs.Bool("dry-run", false, "show the plan (clone/update/missing) without running git")
+	noBanner := fs.Bool("no-banner", false, "suppress the Moe banner")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if !*noBanner {
+		fmt.Fprint(os.Stderr, moeBanner)
+	}
+
+	root, err := corpus.ResolveRoot(*corpusDir)
+	if err != nil {
+		return err
+	}
+	groups, err := resolveGroups(*groupsPath)
+	if err != nil {
+		return err
+	}
+	cfg := corpus.Config{Host: corpus.DefaultHost, Root: root, Groups: groups, Concurrency: *concurrency}
+
+	ctx := context.Background()
+	r := corpus.ExecRunner{}
+
+	if rep := corpus.Doctor(ctx, r, cfg); !rep.OK() {
+		printReport(rep)
+		return fmt.Errorf("setup not ready — fix the item(s) marked %s above, then re-run", markFail)
+	}
+
+	projects, err := corpus.Enumerate(ctx, r, cfg)
+	if err != nil {
+		return fmt.Errorf("enumerate projects: %w", err)
+	}
+
+	if *dryRun {
+		plan, err := corpus.PlanSync(cfg, projects)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Moe found %d curated project(s) for %s.\n", len(projects), root)
+		missingAction := "kept + reported"
+		if *prune {
+			missingAction = "PRUNED"
+		}
+		fmt.Printf("dry-run: would clone %d new, re-check %d existing, and %d missing would be %s (git not run).\n",
+			len(plan.ToClone), len(plan.ToUpdate), len(plan.Missing), missingAction)
+		return nil
+	}
+
+	total := len(projects)
+	fmt.Printf("Moe is syncing %d curated project(s) for %s...\n", total, root)
+
+	var mu sync.Mutex
+	var done int
+	progress := func(res corpus.SyncResult) {
+		mu.Lock()
+		defer mu.Unlock()
+		done++
+		switch res.Outcome {
+		case corpus.SyncCloned:
+			fmt.Printf("  🦑 cloned   %s\n", res.Path)
+		case corpus.SyncUpdated:
+			fmt.Printf("  ↑ updated  %s\n", res.Path)
+		case corpus.SyncPruned:
+			fmt.Printf("  🗑 pruned   %s\n", res.Path)
+		case corpus.SyncMissing:
+			fmt.Printf("  ? missing  %s (gone on server; kept — use -prune to remove)\n", res.Path)
+		case corpus.SyncFailed:
+			fmt.Printf("  %s FAILED   %s — %s\n", markFail, res.Path, syncDetail(res))
+		}
+		// SyncCurrent is intentionally quiet — no news is good news for a freshness loop.
+	}
+
+	report, err := corpus.SyncProjects(ctx, r, cfg, projects, *prune, progress)
+	if err != nil {
+		return err
+	}
+	printSyncSummary(report)
+	if report.Failed > 0 {
+		return fmt.Errorf("%d repo(s) failed to sync (see %s above) — re-run to retry", report.Failed, markFail)
+	}
+	return nil
+}
+
+// printSyncSummary prints the end-of-run tally and lists failures and (when kept)
+// missing repos for the operator to review.
+func printSyncSummary(rep corpus.SyncReport) {
+	fmt.Println()
+	fmt.Printf("Moe is done: %d cloned, %d updated, %d already current, %d pruned, %d missing, %d failed.\n",
+		rep.Cloned, rep.Updated, rep.Current, rep.Pruned, rep.Missing, rep.Failed)
+	if miss := rep.MissingRepos(); len(miss) > 0 {
+		fmt.Println("gone on server (kept — re-run with -prune to remove):")
+		for _, m := range miss {
+			fmt.Printf("  ? %s\n", m.Path)
+		}
+	}
+	if fails := rep.Failures(); len(fails) > 0 {
+		fmt.Println("failed repos (carried over for the next run):")
+		for _, f := range fails {
+			fmt.Printf("  %s %s — %s\n", markFail, f.Path, syncDetail(f))
+		}
+	}
+}
+
+// syncDetail picks the most useful one-line reason for a failed sync op.
+func syncDetail(res corpus.SyncResult) string {
 	if res.Detail != "" {
 		return res.Detail
 	}

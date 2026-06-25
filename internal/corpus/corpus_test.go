@@ -17,10 +17,11 @@ import (
 // args/env), and fail forces a non-zero exit for any command it matches (for
 // simulating clone failures).
 type fakeRunner struct {
-	paths map[string]string
-	runs  map[string]Result
-	calls *[]call
-	fail  func(cmd string) bool
+	paths   map[string]string
+	runs    map[string]Result
+	calls   *[]call
+	fail    func(cmd string) bool
+	respond func(cmd string) (Result, bool) // full control; checked before runs
 }
 
 type call struct {
@@ -46,6 +47,11 @@ func (f fakeRunner) RunEnv(_ context.Context, env []string, name string, args ..
 	}
 	if f.fail != nil && f.fail(cmd) {
 		return Result{Code: 1, Stderr: []byte("simulated clone failure")}, nil
+	}
+	if f.respond != nil {
+		if res, ok := f.respond(cmd); ok {
+			return res, nil
+		}
 	}
 	for prefix, res := range f.runs {
 		if strings.HasPrefix(cmd, prefix) {
@@ -330,4 +336,127 @@ func envHas(env []string, kv string) bool {
 		}
 	}
 	return false
+}
+
+// ---------------------------------------------------------------------------
+// sync: reconcile + orchestration
+// ---------------------------------------------------------------------------
+
+func TestReconcile(t *testing.T) {
+	allow := []string{"Services.Payment", "Libraries.Common"}
+	projects := []Project{
+		{PathWithNamespace: "Services.Payment/A"},   // present locally → update
+		{PathWithNamespace: "Services.Payment/NEW"}, // not local → clone
+		{PathWithNamespace: "Libraries.Common/B"},   // present locally → update
+	}
+	local := []string{
+		"Services.Payment/A",
+		"Libraries.Common/B",
+		"Services.Payment/GONE", // in scope, not enumerated → missing
+		"old-svn-repos/legacy",  // OUT of scope (group not allowed) → ignored, never pruned
+	}
+	plan := Reconcile(projects, local, allow)
+
+	if got := pathsOf(plan.ToClone); !eq(got, []string{"Services.Payment/NEW"}) {
+		t.Errorf("ToClone = %v", got)
+	}
+	if got := pathsOf(plan.ToUpdate); !eq(got, []string{"Libraries.Common/B", "Services.Payment/A"}) {
+		t.Errorf("ToUpdate = %v", got)
+	}
+	if !eq(plan.Missing, []string{"Services.Payment/GONE"}) {
+		t.Errorf("Missing = %v (out-of-scope repo must NOT be flagged)", plan.Missing)
+	}
+}
+
+func TestSyncProjects(t *testing.T) {
+	root := t.TempDir()
+	cfg := Config{Root: root, Groups: []string{"g"}, Concurrency: 4}
+
+	current := Project{PathWithNamespace: "g/current", SSHURL: "git@h:g/current.git", DefaultBranch: "main"}
+	changed := Project{PathWithNamespace: "g/changed", SSHURL: "git@h:g/changed.git", DefaultBranch: "main"}
+	fresh := Project{PathWithNamespace: "g/fresh", SSHURL: "git@h:g/fresh.git", DefaultBranch: "main"}
+
+	// current + changed exist locally; fresh does not. gone exists locally but is
+	// not enumerated → missing (and pruned, since we pass prune=true).
+	for _, rel := range []string{"g/current", "g/changed", "g/gone"} {
+		if err := os.MkdirAll(filepath.Join(root, filepath.FromSlash(rel), ".git"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	r := fakeRunner{
+		respond: func(cmd string) (Result, bool) {
+			switch {
+			// g/current: local HEAD == FETCH_HEAD → no change.
+			case strings.Contains(cmd, "g/current") && strings.Contains(cmd, "rev-parse HEAD"):
+				return Result{Stdout: []byte("aaaa\n")}, true
+			case strings.Contains(cmd, "g/current") && strings.Contains(cmd, "rev-parse FETCH_HEAD"):
+				return Result{Stdout: []byte("aaaa\n")}, true
+			// g/changed: local HEAD != FETCH_HEAD → reset → updated.
+			case strings.Contains(cmd, "g/changed") && strings.Contains(cmd, "rev-parse HEAD"):
+				return Result{Stdout: []byte("aaaa\n")}, true
+			case strings.Contains(cmd, "g/changed") && strings.Contains(cmd, "rev-parse FETCH_HEAD"):
+				return Result{Stdout: []byte("bbbb\n")}, true
+			}
+			return Result{}, false // everything else (fetch/reset/clone) succeeds
+		},
+	}
+
+	projects := []Project{current, changed, fresh}
+	rep, err := SyncProjects(context.Background(), r, cfg, projects, true /*prune*/, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Cloned != 1 || rep.Updated != 1 || rep.Current != 1 || rep.Pruned != 1 || rep.Failed != 0 {
+		t.Fatalf("counts: cloned=%d updated=%d current=%d pruned=%d missing=%d failed=%d",
+			rep.Cloned, rep.Updated, rep.Current, rep.Pruned, rep.Missing, rep.Failed)
+	}
+	// The pruned repo's directory must be gone.
+	if _, err := os.Stat(filepath.Join(root, "g", "gone")); !os.IsNotExist(err) {
+		t.Errorf("g/gone should have been pruned")
+	}
+	// Repos that should remain.
+	for _, rel := range []string{"g/current", "g/changed"} {
+		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(rel))); err != nil {
+			t.Errorf("%s should still exist: %v", rel, err)
+		}
+	}
+}
+
+func TestSyncProjects_MissingKeptWithoutPrune(t *testing.T) {
+	root := t.TempDir()
+	cfg := Config{Root: root, Groups: []string{"g"}, Concurrency: 2}
+	if err := os.MkdirAll(filepath.Join(root, "g", "gone", ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	rep, err := SyncProjects(context.Background(), fakeRunner{}, cfg, nil, false /*no prune*/, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Missing != 1 || rep.Pruned != 0 {
+		t.Fatalf("want 1 missing, 0 pruned; got missing=%d pruned=%d", rep.Missing, rep.Pruned)
+	}
+	if _, err := os.Stat(filepath.Join(root, "g", "gone")); err != nil {
+		t.Errorf("missing repo must be KEPT without -prune: %v", err)
+	}
+}
+
+func pathsOf(ps []Project) []string {
+	out := make([]string, len(ps))
+	for i, p := range ps {
+		out[i] = p.PathWithNamespace
+	}
+	return out
+}
+
+func eq(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
