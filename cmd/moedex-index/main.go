@@ -19,6 +19,17 @@
 //		moedex-index cas-build   -corpus ROOT -cas-dir DIR
 //		moedex-index cas-refresh -cas-dir DIR [-corpus ROOT]
 //		moedex-index cas-export  -cas-dir DIR -shard-dir OUT [-shard-bytes N] [-force]
+//		moedex-index cas-compact [-cas-dir DIR] [-shard-dir DIR]
+//
+//	  - cas-compact reclaims dead (unreferenced) content from the append-only content
+//	    stores, IN PLACE, by rewriting each store from its own LIVE entries (NOT a re-
+//	    ingest from git, NOT a full re-export). -cas-dir compacts the CAS pack
+//	    (blobs.pack/blobs.idx) keeping only blobs referenced by the live manifest;
+//	    -shard-dir compacts the deduped served store (blobs.dat) keeping only content
+//	    referenced by the live MOEDEX05 shards. Pass either or both. The swap is crash-
+//	    safe + recoverable. This is the CHEAP alternative to `cas-export -deduped
+//	    -force` (which rebuilds a dead-free store from the CAS); both yield a dead-free
+//	    store, but compaction re-exports nothing.
 //
 //	  - cas-export materializes a servable shard dir from the CAS. With -deduped it
 //	    writes the deduped served format (content-less MOEDEX05 shards + one shared
@@ -80,6 +91,8 @@ func main() {
 		err = runCASRefresh(os.Args[2:])
 	case "cas-export":
 		err = runCASExport(os.Args[2:])
+	case "cas-compact":
+		err = runCASCompact(os.Args[2:])
 	case "-h", "--help", "help":
 		usage()
 		return
@@ -106,6 +119,7 @@ Content-addressable store (global cross-shard dedup + per-blob delta):
   moedex-index cas-build   -corpus ROOT -cas-dir DIR
   moedex-index cas-refresh -cas-dir DIR [-corpus ROOT]
   moedex-index cas-export  -cas-dir DIR -shard-dir OUT [-shard-bytes N] [-force]
+  moedex-index cas-compact [-cas-dir DIR] [-shard-dir DIR]
 
   - cas-build   ingests every git repo under -corpus into a global content-
                 addressed blob store at -cas-dir, storing each unique blob ONCE
@@ -120,6 +134,12 @@ Content-addressable store (global cross-shard dedup + per-blob delta):
                 is DELTA-AWARE (appends only net-new content, rewrites only changed
                 shards). Without -deduped, the inlined parity-preserving bridge.
                 -force forces a full (re-)export.
+  - cas-compact reclaims dead (unreferenced) content IN PLACE by rewriting each
+                store from its own LIVE entries (never re-ingesting / re-exporting).
+                -cas-dir compacts the CAS pack (keeps only manifest-referenced
+                blobs); -shard-dir compacts the deduped served store blobs.dat
+                (keeps only content referenced by the live shards). Pass either or
+                both. Crash-safe + recoverable. Prints the bytes reclaimed.
 `)
 }
 
@@ -609,6 +629,56 @@ func runCASExport(args []string) error {
 	// mirroring build. Best-effort.
 	sidecars := buildSidecars(out)
 	fmt.Printf("cas-export: %d shard(s) from %d repo(s) into %s%s\n", len(m.Shards), len(m.Heads), out, sidecars)
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// cas-compact (compaction-GC: reclaim dead content from the append-only stores)
+// ---------------------------------------------------------------------------
+
+func runCASCompact(args []string) error {
+	fs := newFlagSet("cas-compact")
+	casDir := fs.String("cas-dir", "", "CAS dir to compact (rewrite blobs.pack/idx keeping only manifest-referenced blobs)")
+	shardDir := fs.String("shard-dir", "", "deduped served dir to compact (rewrite blobs.dat keeping only content referenced by the live shards)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *casDir == "" && *shardDir == "" {
+		return fmt.Errorf("cas-compact requires -cas-dir and/or -shard-dir")
+	}
+
+	if *casDir != "" {
+		dir, err := filepath.Abs(*casDir)
+		if err != nil {
+			return err
+		}
+		st, err := blobstore.CompactCAS(dir)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("cas-compact (CAS pack): kept %d live blob(s) / %.1f MB; reclaimed %d dead blob(s) / %.1f MB\n",
+			st.LiveBlobs, float64(st.LiveBytes)/1e6, st.DeadBlobs, float64(st.DeadBytes)/1e6)
+		fmt.Printf("  blobs.pack content: %.1f MB -> %.1f MB at %s\n",
+			float64(st.BeforeBytes)/1e6, float64(st.AfterBytes)/1e6, dir)
+	}
+
+	if *shardDir != "" {
+		dir, err := filepath.Abs(*shardDir)
+		if err != nil {
+			return err
+		}
+		st, err := blobstore.CompactDedupedShardDir(dir)
+		if err != nil {
+			return err
+		}
+		// The content store changed (dead content dropped), but the shards and their
+		// (file,line) match set did not; ranking sidecars stay valid. We do NOT rebuild
+		// them — the shards are carried forward byte-for-byte.
+		fmt.Printf("cas-compact (deduped served): kept %d live blob(s) / %.1f MB; reclaimed %d dead blob(s) / %.1f MB across %d shard(s)\n",
+			st.LiveBlobs, float64(st.LiveBytes)/1e6, st.DeadBlobs, float64(st.DeadBytes)/1e6, st.Shards)
+		fmt.Printf("  blobs.dat content: %.1f MB -> %.1f MB at %s\n",
+			float64(st.BeforeBytes)/1e6, float64(st.AfterBytes)/1e6, dir)
+	}
 	return nil
 }
 
