@@ -25,6 +25,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"os"
 	"os/exec"
 )
 
@@ -44,6 +45,12 @@ type Runner interface {
 	// completion (binary missing, context cancelled, I/O failure), not merely that
 	// it failed.
 	Run(ctx context.Context, name string, args ...string) (Result, error)
+
+	// RunEnv is Run with extra environment variables ("KEY=value") layered on top
+	// of the parent process environment. Used by the clone/sync paths to make git
+	// non-interactive and skip LFS smudging. Run is equivalent to RunEnv with a
+	// nil env.
+	RunEnv(ctx context.Context, env []string, name string, args ...string) (Result, error)
 }
 
 // Result is the outcome of a Runner.Run call.
@@ -62,11 +69,20 @@ type ExecRunner struct{}
 // LookPath implements Runner.
 func (ExecRunner) LookPath(name string) (string, error) { return exec.LookPath(name) }
 
-// Run implements Runner. It captures stdout and stderr separately and translates
-// a clean non-zero exit into Result.Code (nil error), reserving the error return
-// for failures that prevented the process from running to completion.
-func (ExecRunner) Run(ctx context.Context, name string, args ...string) (Result, error) {
+// Run implements Runner (no extra environment).
+func (e ExecRunner) Run(ctx context.Context, name string, args ...string) (Result, error) {
+	return e.RunEnv(ctx, nil, name, args...)
+}
+
+// RunEnv implements Runner. It captures stdout and stderr separately and
+// translates a clean non-zero exit into Result.Code (nil error), reserving the
+// error return for failures that prevented the process from running to
+// completion. Extra env entries are appended to os.Environ.
+func (ExecRunner) RunEnv(ctx context.Context, env []string, name string, args ...string) (Result, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
+	if len(env) > 0 {
+		cmd.Env = append(os.Environ(), env...)
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

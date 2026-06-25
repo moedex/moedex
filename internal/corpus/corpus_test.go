@@ -2,18 +2,30 @@ package corpus
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
 
 // fakeRunner is a programmable Runner for tests. paths maps an executable name to
 // the path LookPath returns (absent name → not found). runs maps a command-line
-// prefix to the Result Run returns; the first registered prefix that matches the
+// prefix to the Result returned; the first registered prefix that matches the
 // joined "name args..." wins, so callers can register "glab auth status" and
-// ignore trailing flags.
+// ignore trailing flags. Optional: calls records every invocation (for asserting
+// args/env), and fail forces a non-zero exit for any command it matches (for
+// simulating clone failures).
 type fakeRunner struct {
 	paths map[string]string
 	runs  map[string]Result
+	calls *[]call
+	fail  func(cmd string) bool
+}
+
+type call struct {
+	cmd string
+	env []string
 }
 
 func (f fakeRunner) LookPath(name string) (string, error) {
@@ -23,8 +35,18 @@ func (f fakeRunner) LookPath(name string) (string, error) {
 	return "", errNotFound
 }
 
-func (f fakeRunner) Run(_ context.Context, name string, args ...string) (Result, error) {
+func (f fakeRunner) Run(ctx context.Context, name string, args ...string) (Result, error) {
+	return f.RunEnv(ctx, nil, name, args...)
+}
+
+func (f fakeRunner) RunEnv(_ context.Context, env []string, name string, args ...string) (Result, error) {
 	cmd := strings.TrimSpace(name + " " + strings.Join(args, " "))
+	if f.calls != nil {
+		*f.calls = append(*f.calls, call{cmd: cmd, env: env})
+	}
+	if f.fail != nil && f.fail(cmd) {
+		return Result{Code: 1, Stderr: []byte("simulated clone failure")}, nil
+	}
 	for prefix, res := range f.runs {
 		if strings.HasPrefix(cmd, prefix) {
 			return res, nil
@@ -197,4 +219,115 @@ func TestDoctor_NotAuthed(t *testing.T) {
 	if !strings.Contains(auth.Fix, "glab auth login --hostname "+DefaultHost) {
 		t.Errorf("auth fix should guide host-scoped login: %q", auth.Fix)
 	}
+}
+
+// ---------------------------------------------------------------------------
+// clone
+// ---------------------------------------------------------------------------
+
+func TestCloneArgs(t *testing.T) {
+	cfg := Config{Root: "/corpus"}
+	p := Project{
+		PathWithNamespace: "Services.Payment/TC.BillingApi",
+		SSHURL:            "git@h:Services.Payment/TC.BillingApi.git",
+		DefaultBranch:     "main",
+	}
+	dest, args := CloneArgs(cfg, p)
+	wantDest := filepath.Join("/corpus", "Services.Payment", "TC.BillingApi")
+	if dest != wantDest {
+		t.Fatalf("dest = %q, want %q", dest, wantDest)
+	}
+	want := []string{"clone", "--depth", "1", "--single-branch", "--branch", "main", p.SSHURL, wantDest}
+	if !reflect.DeepEqual(args, want) {
+		t.Fatalf("args = %v, want %v", args, want)
+	}
+
+	// An empty repo advertises no default branch — the -b flag must be omitted
+	// (git clone -b "" would fail).
+	_, args2 := CloneArgs(cfg, Project{PathWithNamespace: "g/empty", SSHURL: "git@h:g/empty.git"})
+	for _, a := range args2 {
+		if a == "--branch" {
+			t.Fatalf("empty-branch repo should omit --branch: %v", args2)
+		}
+	}
+}
+
+func TestCloneProjects(t *testing.T) {
+	root := t.TempDir()
+
+	present := Project{PathWithNamespace: "g/present", SSHURL: "git@h:g/present.git", DefaultBranch: "main"}
+	good := Project{PathWithNamespace: "g/good", SSHURL: "git@h:g/good.git", DefaultBranch: "main"}
+	bad := Project{PathWithNamespace: "g/bad", SSHURL: "git@h:g/bad.git", DefaultBranch: "main"}
+
+	// Pre-create the "present" repo so it is Skipped, not re-cloned.
+	if err := os.MkdirAll(filepath.Join(root, "g", "present", ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	var calls []call
+	r := fakeRunner{
+		calls: &calls,
+		fail:  func(cmd string) bool { return strings.Contains(cmd, "g/bad.git") },
+	}
+	cfg := Config{Root: root, Concurrency: 4}
+
+	rep := CloneProjects(context.Background(), r, cfg, []Project{present, good, bad}, nil)
+
+	if rep.Cloned != 1 || rep.Skipped != 1 || rep.Failed != 1 {
+		t.Fatalf("counts: cloned=%d skipped=%d failed=%d", rep.Cloned, rep.Skipped, rep.Failed)
+	}
+	// Results preserve input order regardless of completion order.
+	if rep.Results[0].Outcome != Skipped || rep.Results[1].Outcome != Cloned || rep.Results[2].Outcome != Failed {
+		t.Fatalf("order not preserved: %+v", rep.Results)
+	}
+	// A skipped repo must never invoke git.
+	for _, c := range calls {
+		if strings.Contains(c.cmd, "g/present.git") {
+			t.Fatalf("skipped repo should not run git: %s", c.cmd)
+		}
+	}
+	// Clone invocations carry the LFS-skip env.
+	var sawGood bool
+	for _, c := range calls {
+		if strings.Contains(c.cmd, "g/good.git") {
+			sawGood = true
+			if !envHas(c.env, "GIT_LFS_SKIP_SMUDGE=1") {
+				t.Fatalf("clone env missing LFS skip: %v", c.env)
+			}
+		}
+	}
+	if !sawGood {
+		t.Fatal("good repo was never cloned")
+	}
+	// The failure is captured with a detail for the report.
+	fails := rep.Failures()
+	if len(fails) != 1 || fails[0].Project.PathWithNamespace != "g/bad" || fails[0].Detail == "" {
+		t.Fatalf("failure not captured with detail: %+v", fails)
+	}
+}
+
+func TestDefaultGroupsEmbedded(t *testing.T) {
+	g := DefaultGroups()
+	if len(g) < 50 {
+		t.Fatalf("built-in allowlist looks too small (%d) — embed broken?", len(g))
+	}
+	// Spot-check a couple of known TurnCommerce groups and sortedness.
+	set := map[string]bool{}
+	for _, x := range g {
+		set[x] = true
+	}
+	for _, want := range []string{"Services.Payment", "Libraries.Common", "Products.NameBright"} {
+		if !set[want] {
+			t.Errorf("built-in allowlist missing %q", want)
+		}
+	}
+}
+
+func envHas(env []string, kv string) bool {
+	for _, e := range env {
+		if e == kv {
+			return true
+		}
+	}
+	return false
 }
