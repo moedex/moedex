@@ -321,6 +321,8 @@ func runClone(args []string) error {
 			fmt.Printf("  [%d/%d] 🦑 cloned   %s\n", done, total, res.Project.PathWithNamespace)
 		case corpus.Skipped:
 			fmt.Printf("  [%d/%d]  · present  %s\n", done, total, res.Project.PathWithNamespace)
+		case corpus.Empty:
+			fmt.Printf("  [%d/%d]  · empty    %s (no commits — skipped)\n", done, total, res.Project.PathWithNamespace)
 		case corpus.Failed:
 			fmt.Printf("  [%d/%d] %s FAILED   %s — %s\n", done, total, markFail, res.Project.PathWithNamespace, failDetail(res))
 		}
@@ -340,7 +342,7 @@ func runClone(args []string) error {
 // printCloneSummary prints the end-of-run tally and lists any failures.
 func printCloneSummary(rep corpus.CloneReport) {
 	fmt.Println()
-	fmt.Printf("Moe is done: %d cloned, %d already present, %d failed.\n", rep.Cloned, rep.Skipped, rep.Failed)
+	fmt.Printf("Moe is done: %d cloned, %d already present, %d empty (skipped), %d failed.\n", rep.Cloned, rep.Skipped, rep.Empty, rep.Failed)
 	if fails := rep.Failures(); len(fails) > 0 {
 		fmt.Println("failed repos (carried over for the next run):")
 		for _, f := range fails {

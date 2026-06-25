@@ -224,6 +224,11 @@ func cloneAsSync(ctx context.Context, r Runner, cfg Config, p Project) SyncResul
 	case Skipped:
 		// Raced into existence between reconcile and now; treat as current.
 		return SyncResult{Path: p.PathWithNamespace, Outcome: SyncCurrent}
+	case Empty:
+		// No commits on the server: nothing to clone or index. Report as current
+		// (a no-op) so the freshness loop stays quiet and exits 0, rather than
+		// re-failing on every pass.
+		return SyncResult{Path: p.PathWithNamespace, Outcome: SyncCurrent}
 	default:
 		return SyncResult{Path: p.PathWithNamespace, Outcome: SyncFailed, Err: res.Err, Detail: res.Detail}
 	}

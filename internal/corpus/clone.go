@@ -1,6 +1,7 @@
 package corpus
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -19,6 +20,10 @@ const (
 	Skipped
 	// Failed means git clone could not complete; CloneResult.Err says why.
 	Failed
+	// Empty means the project has no commits (no real branch): nothing to clone
+	// and nothing to index. It is NOT a failure — empty repos are expected on the
+	// server and must not make a clone/sync pass exit non-zero.
+	Empty
 )
 
 // CloneResult is the outcome for a single project.
@@ -35,6 +40,7 @@ type CloneReport struct {
 	Cloned  int
 	Skipped int
 	Failed  int
+	Empty   int
 }
 
 // Failures returns just the failed results, for the end-of-run summary.
@@ -103,11 +109,24 @@ func cloneOne(ctx context.Context, r Runner, cfg Config, p Project) CloneResult 
 	if alreadyCloned(dest) {
 		return CloneResult{Project: p, Outcome: Skipped}
 	}
+	// A repo with no commits has no real branch to clone (despite GitLab still
+	// advertising a nominal DefaultBranch). Skip it up front — there is nothing to
+	// index, and attempting the clone would only fail.
+	if p.EmptyRepo {
+		return CloneResult{Project: p, Outcome: Empty}
+	}
 	res, err := r.RunEnv(ctx, gitEnv, "git", args...)
 	if err != nil {
 		return CloneResult{Project: p, Outcome: Failed, Err: err}
 	}
 	if !res.Ok() {
+		// Defense-in-depth: if the repo turned out to be empty after all (the
+		// empty_repo flag was stale, or it was emptied between enumerate and
+		// clone), git reports the missing branch. Treat that as Empty, not Failed,
+		// so it never trips the non-zero exit.
+		if isEmptyRepoGitErr(res.Stderr) {
+			return CloneResult{Project: p, Outcome: Empty}
+		}
 		return CloneResult{
 			Project: p, Outcome: Failed,
 			Err:    errGitExit(res.Code),
@@ -115,6 +134,14 @@ func cloneOne(ctx context.Context, r Runner, cfg Config, p Project) CloneResult 
 		}
 	}
 	return CloneResult{Project: p, Outcome: Cloned}
+}
+
+// isEmptyRepoGitErr reports whether a git clone failure is the "no commits yet"
+// signature: `git clone --branch <b>` of a repo with no real branch fails with
+// "Remote branch <b> not found in upstream origin".
+func isEmptyRepoGitErr(stderr []byte) bool {
+	return bytes.Contains(stderr, []byte("Remote branch")) &&
+		bytes.Contains(stderr, []byte("not found in upstream origin"))
 }
 
 // errGitExit describes a git process that ran but exited non-zero.
@@ -170,6 +197,8 @@ func CloneProjects(ctx context.Context, r Runner, cfg Config, projects []Project
 			rep.Skipped++
 		case Failed:
 			rep.Failed++
+		case Empty:
+			rep.Empty++
 		}
 	}
 	return rep
