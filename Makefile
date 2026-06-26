@@ -17,7 +17,12 @@ WORK       ?= $(CURDIR)/.parity-work
 
 GOBIN := $(shell go env GOPATH)/bin
 
-.PHONY: verify parity setup build vet test roundtrip health clean build-dense test-dense build-simd vet-simd bench-setops
+.PHONY: verify parity setup build vet test roundtrip health clean build-dense test-dense build-simd vet-simd bench-setops bench-real bench-latency
+
+# Real-index benchmark knobs.
+BENCHOUT  ?= $(CURDIR)/.bench
+BENCHTIME ?= 20x
+BENCHN    ?= 20
 
 ## verify: master gate — everything must pass for DoD.
 verify: health roundtrip parity
@@ -99,6 +104,27 @@ vet-simd:
 ## baseline the amd64 SIMD kernel is compared against).
 bench-setops:
 	go test ./internal/setops/ -run '^$$' -bench 'BenchmarkIntersect|BenchmarkUnion' -benchmem -count=2
+
+## bench-real: real-index macro benchmarks for the agent query path — end-to-end
+## search_context, per-arm decomposition (lexical/path/symbol), and context
+## assembly — against a prebuilt shard dir (default ~/.moedex-index/shards,
+## override MOEDEX_BENCH_SHARDS). Opt-in: skips with no shard dir, so CI never
+## needs the multi-GB index. The corpus loads ONCE per run (~cold-start cost).
+## Writes CPU+mem profiles to $(BENCHOUT) for `go tool pprof`.
+bench-real:
+	@mkdir -p "$(BENCHOUT)"
+	go test ./internal/server -run '^$$' \
+		-bench 'BenchmarkSearchContext_Real|BenchmarkRankArms|BenchmarkContextwin_Assemble' \
+		-benchmem -benchtime=$(BENCHTIME) -timeout 30m \
+		-cpuprofile "$(BENCHOUT)/cpu.prof" -memprofile "$(BENCHOUT)/mem.prof" \
+		| tee "$(BENCHOUT)/bench.txt"
+	@echo "profiles -> $(BENCHOUT)/cpu.prof  $(BENCHOUT)/mem.prof"
+	@echo "inspect  -> go tool pprof -top -nodecount=25 $(BENCHOUT)/cpu.prof"
+
+## bench-latency: end-to-end p50/p95/p99 latency against the RUNNING warm daemon
+## (HTTP round trip, the user-perceived number). N samples/query via BENCHN.
+bench-latency:
+	scripts/bench-latency.sh $(BENCHN)
 
 clean:
 	rm -f test.log moedex-serve-dense
