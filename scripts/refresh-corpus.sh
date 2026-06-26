@@ -32,6 +32,11 @@ set -euo pipefail
 log() { printf '[refresh %s] %s\n' "$(date '+%H:%M:%S')" "$*"; }
 die() { printf '[refresh] ERROR: %s\n' "$*" >&2; exit 1; }
 
+# Self-sufficient PATH: a launchd `zsh -lc` is a NON-interactive login shell and does
+# NOT source ~/.zshrc, where ~/go/bin and Homebrew are added — so moedex-corpus, glab,
+# and git would otherwise be missing under the timer. Prepend them explicitly.
+export PATH="$HOME/go/bin:/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+
 SHARD_DIR="${MOEDEX_SHARD_DIR:-$HOME/.moedex-index/shards}"
 ONNX_LIB="${ONNXRUNTIME_LIB_PATH:-/opt/homebrew/lib/libonnxruntime.dylib}"
 EMBED="${MOEDEX_EMBED:-onnx}"
@@ -62,18 +67,24 @@ else
   log "sync: skipped (set REFRESH_SYNC=1 to pull the corpus first)"
 fi
 
-# 2. shards + token/symbol sidecars (atomic rebuild-and-swap). CAS dir (blobs.dat) uses
-#    cas-refresh -cas-dir; a legacy dir uses refresh -shard-dir.
+# 2. shards + token/symbol sidecars (atomic rebuild-and-swap). The layout is keyed by
+#    its manifest: a CAS dir has blobmanifest.json (-> cas-refresh -cas-dir); a standard
+#    build dir has manifest.json (-> refresh -shard-dir), even though it may also carry a
+#    deduped blobs.dat content store.
 if [ "${REFRESH_SKIP_SHARDS:-0}" = "1" ]; then
   log "shards: skipped (REFRESH_SKIP_SHARDS=1) — re-embedding over the existing shards"
 elif [ -z "$INDEX_BIN" ]; then
   log "shards: moedex-index not found — skipping (set MOEDEX_INDEX_BIN); re-embedding over existing shards"
-elif [ -f "$SHARD_DIR/blobs.dat" ]; then
-  log "shards: $INDEX_BIN cas-refresh -cas-dir $SHARD_DIR"
+elif [ -f "$SHARD_DIR/blobmanifest.json" ]; then
+  log "shards: $INDEX_BIN cas-refresh -cas-dir $SHARD_DIR (CAS layout)"
   "$INDEX_BIN" cas-refresh -cas-dir "$SHARD_DIR" ${MOEDEX_CORPUS:+-corpus "$MOEDEX_CORPUS"}
 else
-  log "shards: $INDEX_BIN refresh -shard-dir $SHARD_DIR"
-  "$INDEX_BIN" refresh -shard-dir "$SHARD_DIR" ${MOEDEX_CORPUS:+-corpus "$MOEDEX_CORPUS"}
+  # -keep-backup is REQUIRED for safety: refresh does a destructive atomic dir-swap,
+  # and without a retained backup a bad refresh (e.g. a stale/mismatched moedex-index)
+  # is unrecoverable. The backup makes any failed refresh a one-command restore; stale
+  # backups are pruned at the end of a successful run.
+  log "shards: $INDEX_BIN refresh -shard-dir $SHARD_DIR -keep-backup (manifest.json layout)"
+  "$INDEX_BIN" refresh -shard-dir "$SHARD_DIR" -keep-backup ${MOEDEX_CORPUS:+-corpus "$MOEDEX_CORPUS"}
 fi
 
 # 3. dense embedding sidecar — built OUT OF BAND so the reload never re-embeds inline.
@@ -87,4 +98,12 @@ if launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1; then
 else
   log "reload: $LABEL not loaded — start it to pick up the refreshed corpus"
 fi
+
+# Prune stale refresh backups (refresh -keep-backup leaves $SHARD_DIR.bak-*, each of
+# which can carry a multi-GB stale embedding store). Keep only the most recent.
+parent="$(dirname "$SHARD_DIR")"; base="$(basename "$SHARD_DIR")"
+ls -dt "$parent/$base".bak-* 2>/dev/null | tail -n +2 | while read -r old; do
+  log "prune: removing stale backup $old"
+  rm -rf "$old"
+done
 log "done."
