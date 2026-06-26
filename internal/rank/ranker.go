@@ -269,7 +269,7 @@ func (r *Ranker) fuse(ctx context.Context, q string) ([]candidate, error) {
 
 	lex := r.lexicalArm(terms) // sorted desc by BM25
 	var dense []denseScore     // sorted desc by cosine (nil if no arm / gated out)
-	if r.denseAllowedFor(terms) {
+	if r.denseAllowedFor(q, terms) {
 		var err error
 		if dense, err = r.denseArm(ctx, q); err != nil {
 			return nil, err
@@ -533,9 +533,17 @@ type denseScore struct {
 // lexical/symbol/path arms' home turf, where dense only adds noise; the dense arm is
 // reserved for longer natural-language queries where a semantic match is the only
 // signal. A non-positive DenseMinQueryTerms disables the gate (dense always runs).
-func (r *Ranker) denseAllowedFor(terms []string) bool {
+func (r *Ranker) denseAllowedFor(q string, terms []string) bool {
 	if r.cfg.DenseMinQueryTerms <= 0 {
-		return true
+		return true // gate fully disabled (used by eval/measurement)
+	}
+	// Skip dense for a single-token identifier lookup (e.g. "DropCatchCheckout"): the
+	// camelCase tokenizer expands one identifier into many subtokens, which would
+	// otherwise trip the term-count gate below and pay for a full embedding scan that
+	// the lexical/symbol arms already serve precisely. Dense earns its cost on
+	// multi-word natural-language queries, which always have >= 2 whitespace words.
+	if len(strings.Fields(q)) < 2 {
+		return false
 	}
 	seen := make(map[string]bool, len(terms))
 	for _, t := range terms {
@@ -870,8 +878,20 @@ func (r *Ranker) pathArm(terms []string) []pathScore {
 // lexicalSpans finds lines containing any query term and groups consecutive
 // matching lines into spans (1-based inclusive). Matching is case-insensitive
 // substring against the canonical (already lowercased) terms.
+// maxLexicalSpanBytes bounds per-blob lexical span scanning (see lexicalSpans).
+// 4 MiB is far above any real source file; blobs larger than this are generated
+// data files (e.g. multi-million-line domain lists).
+const maxLexicalSpanBytes = 4 << 20
+
 func (r *Ranker) lexicalSpans(b *index.Blob, terms []string) []LineSpan {
 	if len(terms) == 0 || len(b.Content) == 0 {
+		return nil
+	}
+	// Skip span highlighting on pathologically large blobs: splitting + lowercasing
+	// megabytes of generated data costs ~seconds for negligible value. The blob still
+	// ranks and can contribute arm spans; the real fix is keeping such files out of
+	// the corpus (hygiene).
+	if len(b.Content) > maxLexicalSpanBytes {
 		return nil
 	}
 	lines := strings.Split(string(b.Content), "\n")

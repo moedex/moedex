@@ -30,14 +30,17 @@ package embed
 
 import (
 	"bytes"
+	"container/heap"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math"
 	"net/http"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 
 	"moedex/internal/index"
 )
@@ -351,30 +354,95 @@ func (s *Store) Search(ctx context.Context, e Embedder, query string, topK int) 
 		return nil, fmt.Errorf("embed: query dim %d != store dim %d", len(q), s.dim)
 	}
 
-	type scored struct {
-		idx   int
-		score float32
+	// Score every chunk by cosine (vectors are unit-normalized, so dot == cosine).
+	// The scan is O(chunks*dim) and dominates query latency at corpus scale, so the
+	// dot products run in parallel across GOMAXPROCS shards (disjoint index ranges,
+	// no synchronization needed — each goroutine writes its own slice region).
+	n := len(s.vectors)
+	scores := make([]float32, n)
+	workers := runtime.GOMAXPROCS(0)
+	if workers > n {
+		workers = n
 	}
-	all := make([]scored, len(s.chunks))
-	for i, v := range s.vectors {
-		all[i] = scored{idx: i, score: dot(q, v)}
+	if workers < 1 {
+		workers = 1
 	}
-	// Stable sort: higher score first; equal scores keep ascending index order.
-	sort.SliceStable(all, func(a, b int) bool {
-		if all[a].score != all[b].score {
-			return all[a].score > all[b].score
+	var wg sync.WaitGroup
+	step := (n + workers - 1) / workers
+	for w := 0; w < workers; w++ {
+		lo := w * step
+		if lo >= n {
+			break
 		}
-		return all[a].idx < all[b].idx
-	})
-
-	if topK > len(all) {
-		topK = len(all)
+		hi := lo + step
+		if hi > n {
+			hi = n
+		}
+		wg.Add(1)
+		go func(lo, hi int) {
+			defer wg.Done()
+			for i := lo; i < hi; i++ {
+				scores[i] = dot(q, s.vectors[i])
+			}
+		}(lo, hi)
 	}
-	hits := make([]Hit, topK)
-	for i := 0; i < topK; i++ {
-		hits[i] = Hit{Chunk: s.chunks[all[i].idx], Score: all[i].score}
+	wg.Wait()
+
+	if topK > n {
+		topK = n
+	}
+	// Bounded top-K selection: a min-heap of size topK whose root is the weakest kept
+	// element (lowest score; higher index breaks ties). A candidate that betterThan the
+	// root replaces it. This is O(n log topK) instead of sorting all n, and yields the
+	// exact same top-K (and order) as a stable score-desc/index-asc sort.
+	h := make(scoreHeap, 0, topK)
+	for i := 0; i < n; i++ {
+		sc := scored{idx: i, score: scores[i]}
+		if len(h) < topK {
+			heap.Push(&h, sc)
+		} else if betterThan(sc, h[0]) {
+			h[0] = sc
+			heap.Fix(&h, 0)
+		}
+	}
+	out := []scored(h)
+	sort.Slice(out, func(a, b int) bool { return betterThan(out[a], out[b]) })
+	hits := make([]Hit, len(out))
+	for i, sc := range out {
+		hits[i] = Hit{Chunk: s.chunks[sc.idx], Score: sc.score}
 	}
 	return hits, nil
+}
+
+// scored is one chunk's cosine score, kept with its index for tie-breaking.
+type scored struct {
+	idx   int
+	score float32
+}
+
+// betterThan reports whether a outranks b in the final result: higher score first,
+// ties broken by lower index (matching the prior stable sort).
+func betterThan(a, b scored) bool {
+	if a.score != b.score {
+		return a.score > b.score
+	}
+	return a.idx < b.idx
+}
+
+// scoreHeap is a min-heap ordered "weakest first" (the inverse of betterThan), so
+// its root is the most evictable kept element for bounded top-K selection.
+type scoreHeap []scored
+
+func (h scoreHeap) Len() int           { return len(h) }
+func (h scoreHeap) Less(i, j int) bool { return betterThan(h[j], h[i]) }
+func (h scoreHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+func (h *scoreHeap) Push(x any)        { *h = append(*h, x.(scored)) }
+func (h *scoreHeap) Pop() any {
+	old := *h
+	k := len(old)
+	x := old[k-1]
+	*h = old[:k-1]
+	return x
 }
 
 // toTokenizerSafeText coerces s to valid UTF-8, replacing each run of invalid
