@@ -8,14 +8,18 @@
 #   3. build/refresh the dense embedding sidecar    — moedex-serve -build-embeddings   ← the missing piece
 #   4. hot-swap the live daemon                      — SIGHUP → warm reload (no downtime)
 #
-# Why step 3 exists: token/symbol sidecars rebuild in seconds, but the dense store is
-# expensive (a full-corpus embed). If the daemon rebuilt it INLINE on reload it would
-# go offline for the whole embed. Building it here, BEFORE the reload, means step 4 just
+# Why step 3 exists: token/symbol sidecars rebuild in seconds, but embedding is the
+# expensive arm. If the daemon rebuilt the dense store INLINE on reload it would go
+# offline for the whole embed. Building it here, BEFORE the reload, means step 4 just
 # LOADS a fresh fingerprint-matching sidecar — a fast, zero-downtime hot-swap.
 #
-# Idempotent: with an unchanged corpus, step 2 is a no-op and step 3 loads the cached
-# store (the fingerprint matches), so the whole run is cheap. Only a real content change
-# triggers a re-embed.
+# Step 3 is INCREMENTAL: it reuses the vector of every unchanged chunk (keyed by a
+# content hash) and embeds only chunks whose text actually changed, so a refresh that
+# touched a few repos re-embeds in minutes instead of re-embedding the whole corpus.
+#
+# Idempotent: with an unchanged corpus, step 2 is a no-op and step 3 finds the store
+# already current (the fingerprint matches), so the whole run is cheap. Only changed
+# content is re-embedded.
 #
 # Env (all optional; defaults target this machine):
 #   MOEDEX_SHARD_DIR      shard/CAS dir            (default ~/.moedex-index/shards)

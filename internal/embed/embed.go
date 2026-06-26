@@ -32,6 +32,7 @@ import (
 	"bytes"
 	"container/heap"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -160,6 +161,27 @@ type Chunk struct {
 	EndByte   int
 }
 
+// ChunkKey is a content-stable identity for a chunk's text: the first 16 bytes of
+// sha256(text). Two chunks with identical text always share a key (and therefore an
+// embedding), regardless of which blob or position they occupy — so a refreshed
+// corpus can REUSE the vector of every unchanged chunk and embed only genuinely new
+// text. 128 bits makes a collision across a corpus of a few million chunks
+// effectively impossible. The blob-positional Chunk.Blob ID is NOT stable across
+// refreshes (it is reassigned by shard concatenation order); this key is.
+type ChunkKey [16]byte
+
+// chunkKey returns the content key for a chunk's raw text bytes. It hashes the raw
+// bytes (not the tokenizer-safe coercion) so the key is a pure function of the
+// stored content: identical content -> identical key -> identical embedding; any
+// byte difference -> a fresh embed. Hashing the whole corpus is memory-bandwidth
+// bound (~seconds), negligible beside even a 1% re-embed.
+func chunkKey(text []byte) ChunkKey {
+	sum := sha256.Sum256(text)
+	var k ChunkKey
+	copy(k[:], sum[:])
+	return k
+}
+
 // Text returns the chunk's slice of the blob's content.
 func (c Chunk) Text(b *index.Blob) string {
 	return string(b.Content[c.StartByte:c.EndByte])
@@ -272,7 +294,8 @@ func wholeBlobChunk(b *index.Blob, numLines int) Chunk {
 type Store struct {
 	dim     int
 	chunks  []Chunk
-	vectors []Vector // parallel to chunks; each is unit-normalized
+	vectors []Vector   // parallel to chunks; each is unit-normalized
+	keys    []ChunkKey // parallel to chunks; content keys for incremental reuse (nil for a legacy v1 store)
 }
 
 // Dim returns the stored embedding dimension.
@@ -281,53 +304,165 @@ func (s *Store) Dim() int { return s.dim }
 // Len returns the number of stored chunks.
 func (s *Store) Len() int { return len(s.chunks) }
 
+// HasKeys reports whether the store carries a content key per chunk (format v2).
+// A legacy v1 store loaded from disk has none, so it cannot seed incremental reuse
+// and cannot be re-saved until its keys are filled (see FillKeys).
+func (s *Store) HasKeys() bool { return len(s.keys) == len(s.chunks) && len(s.chunks) > 0 }
+
+// KeyVectors returns a content-key -> unit-vector map for seeding an incremental
+// rebuild's reuse set. Returns nil if the store carries no keys (legacy v1). When a
+// key repeats (identical text in several places) the first vector wins; they are by
+// construction equal, so the choice is immaterial. The returned vectors ALIAS the
+// store's slices (read-only by Search), so reuse costs no extra vector memory.
+func (s *Store) KeyVectors() map[ChunkKey]Vector {
+	if !s.HasKeys() {
+		return nil
+	}
+	m := make(map[ChunkKey]Vector, len(s.keys))
+	for i, k := range s.keys {
+		if _, ok := m[k]; !ok {
+			m[k] = s.vectors[i]
+		}
+	}
+	return m
+}
+
+// FillKeys recomputes the content key for every chunk from ix and attaches them,
+// upgrading a legacy keyless store to v2 WITHOUT re-embedding. It is valid only
+// when the store's chunks index into ix — i.e. ix is the SAME corpus the store was
+// built over (the caller proves this via a matching corpus fingerprint). Any
+// out-of-range chunk means the store does not match ix and is reported as an error
+// rather than silently producing wrong keys.
+func (s *Store) FillKeys(ix *index.Index) error {
+	n := uint64(ix.NumBlobs())
+	keys := make([]ChunkKey, len(s.chunks))
+	for i, c := range s.chunks {
+		if c.Blob >= n {
+			return fmt.Errorf("embed: fill keys: chunk %d references blob %d out of range (%d blobs)", i, c.Blob, n)
+		}
+		b := ix.Blob(c.Blob)
+		if c.StartByte < 0 || c.EndByte > len(b.Content) || c.StartByte > c.EndByte {
+			return fmt.Errorf("embed: fill keys: chunk %d span [%d,%d) out of range for blob %d (len %d)", i, c.StartByte, c.EndByte, c.Blob, len(b.Content))
+		}
+		keys[i] = chunkKey(b.Content[c.StartByte:c.EndByte])
+	}
+	s.keys = keys
+	return nil
+}
+
 const buildBatchSize = 64
 
+// BuildStats reports how an (incremental) build sourced its chunk vectors.
+type BuildStats struct {
+	Total    int // chunks in the resulting store
+	Reused   int // chunks whose vector was reused from the prior store (no embed)
+	Embedded int // DISTINCT new texts actually sent to the embedder
+}
+
 // BuildStore chunks every blob in ix, embeds the chunks via e, and returns a
-// populated Store. It batches calls to e.Embed.
+// populated Store. It batches calls to e.Embed. (Contract-frozen signature; it is
+// exactly BuildStoreIncremental with no reuse — a full embed.)
 func BuildStore(ctx context.Context, ix *index.Index, e Embedder, linesPerChunk, overlap int) (*Store, error) {
-	var chunks []Chunk
-	var texts []string
+	s, _, err := BuildStoreIncremental(ctx, ix, e, linesPerChunk, overlap, nil)
+	return s, err
+}
+
+// BuildStoreIncremental builds a Store over ix, REUSING vectors from `reuse` (a
+// content-key -> unit-vector map, e.g. from a prior Store.KeyVectors()) for every
+// chunk whose text is unchanged, and embedding only the rest. Within a single build
+// it also de-duplicates identical new texts so each distinct new text is embedded
+// once. The result is byte-identical to a full BuildStore for every reused chunk —
+// the embedder is deterministic for identical text — so ranking is unchanged; a
+// nil/empty reuse map degrades cleanly to a full embed.
+//
+// The returned store always carries content keys (format v2), so it can in turn
+// seed the NEXT incremental build.
+func BuildStoreIncremental(ctx context.Context, ix *index.Index, e Embedder, linesPerChunk, overlap int, reuse map[ChunkKey]Vector) (*Store, BuildStats, error) {
+	var (
+		chunks  []Chunk
+		keys    []ChunkKey
+		vectors []Vector
+		stats   BuildStats
+
+		// Distinct new texts to embed, and the slot each maps to. keySlot lets a
+		// repeated new text resolve to one embed; it is also how reused-vs-new is
+		// scattered back after embedding.
+		embedTexts []string
+		keySlot    = map[ChunkKey]int{}
+	)
+
 	n := ix.NumBlobs()
 	for id := 0; id < n; id++ {
 		b := ix.Blob(uint64(id))
 		for _, c := range ChunkBlob(b, linesPerChunk, overlap) {
+			k := chunkKey(b.Content[c.StartByte:c.EndByte])
 			chunks = append(chunks, c)
-			texts = append(texts, c.Text(b))
+			keys = append(keys, k)
+			vectors = append(vectors, nil)
+			if _, ok := reuse[k]; ok {
+				continue // reused — vector filled in the scatter pass
+			}
+			if _, ok := keySlot[k]; !ok {
+				keySlot[k] = len(embedTexts)
+				embedTexts = append(embedTexts, string(b.Content[c.StartByte:c.EndByte]))
+			}
 		}
 	}
 
 	s := &Store{}
+	stats.Total = len(chunks)
 	if len(chunks) == 0 {
 		s.dim = e.Dim()
-		return s, nil
+		return s, stats, nil
 	}
 
-	s.chunks = chunks
-	s.vectors = make([]Vector, len(chunks))
-
-	for start := 0; start < len(texts); start += buildBatchSize {
+	// Embed the distinct misses in batches.
+	embedVecs := make([]Vector, len(embedTexts))
+	for start := 0; start < len(embedTexts); start += buildBatchSize {
 		end := start + buildBatchSize
-		if end > len(texts) {
-			end = len(texts)
+		if end > len(embedTexts) {
+			end = len(embedTexts)
 		}
-		vecs, err := e.Embed(ctx, texts[start:end])
+		vecs, err := e.Embed(ctx, embedTexts[start:end])
 		if err != nil {
-			return nil, err
+			return nil, stats, err
 		}
 		if len(vecs) != end-start {
-			return nil, fmt.Errorf("embed: batch returned %d vectors for %d texts", len(vecs), end-start)
+			return nil, stats, fmt.Errorf("embed: batch returned %d vectors for %d texts", len(vecs), end-start)
 		}
 		for i, v := range vecs {
 			if s.dim == 0 {
 				s.dim = len(v)
 			} else if len(v) != s.dim {
-				return nil, fmt.Errorf("embed: inconsistent vector dim %d (want %d)", len(v), s.dim)
+				return nil, stats, fmt.Errorf("embed: inconsistent vector dim %d (want %d)", len(v), s.dim)
 			}
-			s.vectors[start+i] = normalize(v)
+			embedVecs[start+i] = normalize(v)
 		}
 	}
-	return s, nil
+	// A reuse-only build (every chunk reused) embeds nothing; take the dim from the
+	// reused vectors so the store still reports a correct dimension.
+	if s.dim == 0 {
+		for _, v := range reuse {
+			s.dim = len(v)
+			break
+		}
+	}
+
+	// Scatter: each chunk's vector is either reused or its distinct embedded text.
+	for i, k := range keys {
+		if v, ok := reuse[k]; ok {
+			vectors[i] = v
+			stats.Reused++
+			continue
+		}
+		vectors[i] = embedVecs[keySlot[k]]
+	}
+	stats.Embedded = len(embedTexts)
+
+	s.chunks = chunks
+	s.vectors = vectors
+	s.keys = keys
+	return s, stats, nil
 }
 
 // Hit is a similarity result: a chunk and its cosine score against the query.

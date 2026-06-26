@@ -7,12 +7,13 @@ import (
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 )
 
 // On-disk format (little-endian, encoding/binary):
 //
 //	magic    [4]byte = "MDXE"
-//	version  uint32  = 1
+//	version  uint32  = 2
 //	dim      uint32
 //	count    uint32             // number of chunks
 //	repeat count times:
@@ -21,23 +22,54 @@ import (
 //	  endLine   uint32
 //	  startByte uint64
 //	  endByte   uint64
+//	(v2 only) repeat count times:
+//	  key       [16]byte         // content key = sha256(chunk text)[:16]
 //	repeat count times:
 //	  dim float32 values        // the normalized vector for chunk i
 //
 // Vectors are stored as a contiguous block after the chunk metadata so a future
 // loader can mmap/stream them; here we just read sequentially. Round-trippable.
+//
+// Version history:
+//   - v1: chunk metadata + vectors (no keys). Still loadable; such a store cannot
+//     seed incremental reuse until its keys are filled (see Store.FillKeys).
+//   - v2: adds a content key per chunk, between the chunk metadata and the vectors,
+//     enabling incremental rebuilds that re-embed only changed chunks.
 
 var storeMagic = [4]byte{'M', 'D', 'X', 'E'}
 
-const storeVersion uint32 = 1
+const storeVersion uint32 = 2
 
-// Save writes the store (chunks + vectors) to path.
+// Save writes the store (chunks + content keys + vectors) to path in format v2.
+// A non-empty store MUST carry a content key per chunk (HasKeys); Save refuses an
+// inconsistent store rather than persisting one that cannot seed incremental reuse.
 func (s *Store) Save(path string) error {
-	f, err := os.Create(path)
+	if len(s.chunks) > 0 && !s.HasKeys() {
+		return fmt.Errorf("embed: refusing to save store without content keys (%d chunks, %d keys); call FillKeys first", len(s.chunks), len(s.keys))
+	}
+	// Write to a temp sibling and atomically rename over path: a crash or torn
+	// write must never leave a truncated multi-GB store where a valid one was — the
+	// daemon would load that corrupt sidecar on its next reload and silently drop to
+	// lexical. Rename is atomic within a filesystem; the temp sits in the same dir so
+	// it shares path's filesystem. The original is untouched until the rename.
+	dir := filepath.Dir(path)
+	f, err := os.CreateTemp(dir, filepath.Base(path)+".tmp-*")
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	tmp := f.Name()
+	committed := false
+	defer func() {
+		if !committed {
+			f.Close()
+			os.Remove(tmp)
+		}
+	}()
+	// os.CreateTemp makes the file 0600; match os.Create's umask-respecting 0644 so a
+	// refresh doesn't silently tighten the sidecar's permissions.
+	if err := f.Chmod(0o644); err != nil {
+		return err
+	}
 
 	w := bufio.NewWriter(f)
 	le := binary.LittleEndian
@@ -83,6 +115,13 @@ func (s *Store) Save(path string) error {
 		}
 	}
 
+	// v2 key block: one content key per chunk, in chunk order.
+	for _, k := range s.keys {
+		if _, err := w.Write(k[:]); err != nil {
+			return err
+		}
+	}
+
 	for _, v := range s.vectors {
 		if len(v) != s.dim {
 			return fmt.Errorf("embed: vector dim %d != store dim %d", len(v), s.dim)
@@ -94,7 +133,20 @@ func (s *Store) Save(path string) error {
 			}
 		}
 	}
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return err
+	}
+	committed = true
+	return nil
 }
 
 // LoadStore reads a Store previously written by Save.
@@ -120,8 +172,9 @@ func LoadStore(path string) (*Store, error) {
 	if _, err := io.ReadFull(r, u32[:]); err != nil {
 		return nil, err
 	}
-	if v := le.Uint32(u32[:]); v != storeVersion {
-		return nil, fmt.Errorf("embed: unsupported version %d", v)
+	version := le.Uint32(u32[:])
+	if version != 1 && version != storeVersion {
+		return nil, fmt.Errorf("embed: unsupported version %d", version)
 	}
 	if _, err := io.ReadFull(r, u32[:]); err != nil {
 		return nil, err
@@ -167,6 +220,18 @@ func LoadStore(path string) (*Store, error) {
 			EndLine:   endLine,
 			StartByte: startByte,
 			EndByte:   endByte,
+		}
+	}
+
+	// v2 key block: one content key per chunk. A v1 store has none, so it loads with
+	// keys=nil — it can still be served and searched, but must be re-keyed (FillKeys)
+	// before it can seed or be re-saved by an incremental rebuild.
+	if version >= 2 {
+		s.keys = make([]ChunkKey, count)
+		for i := 0; i < count; i++ {
+			if _, err := io.ReadFull(r, s.keys[i][:]); err != nil {
+				return nil, err
+			}
 		}
 	}
 

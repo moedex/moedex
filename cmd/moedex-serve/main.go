@@ -223,16 +223,32 @@ func denseSource(rc *server.RankCorpus) string {
 func runBuildEmbeddings(shardDir string, topK int, embedKind, onnxRuntime string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	rc, _, err := openRankCorpus(ctx, shardDir, topK, embedKind, onnxRuntime)
+
+	cfg := server.RankConfig{TopK: topK}
+	dense, err := configureDenseArm(&cfg, shardDir, embedKind, onnxRuntime)
+	if err != nil {
+		return fmt.Errorf("dense arm setup failed: %w", err)
+	}
+	if !dense || cfg.Emb == nil {
+		return fmt.Errorf("no embeddings built: dense arm is off — set -embed onnx with -onnx-runtime <lib> (requires -tags onnx build), or -embed http with MOEDEX_EMBED_URL")
+	}
+
+	t0 := time.Now()
+	stats, err := server.RefreshEmbeddings(ctx, shardDir, cfg)
 	if err != nil {
 		return err
 	}
-	defer rc.Close()
-	if rc.DenseChunks() == 0 {
-		return fmt.Errorf("no embeddings built: dense arm is off — set -embed onnx with -onnx-runtime <lib> (requires -tags onnx build), or -embed http with MOEDEX_EMBED_URL")
+	switch {
+	case stats.UpToDate:
+		fmt.Fprintf(os.Stderr, "moedex-serve: embedding sidecar already current — %d dense chunks, nothing to embed (%s)\n",
+			stats.TotalChunks, time.Since(t0).Round(time.Millisecond))
+	case stats.Migrated:
+		fmt.Fprintf(os.Stderr, "moedex-serve: embedding sidecar re-keyed for incremental refresh — %d dense chunks, no re-embed (%s)\n",
+			stats.TotalChunks, time.Since(t0).Round(time.Millisecond))
+	default:
+		fmt.Fprintf(os.Stderr, "moedex-serve: embedding sidecar rebuilt — %d dense chunks: %d reused, %d new (%d distinct texts embedded) in %s; SIGHUP the daemon to hot-swap\n",
+			stats.TotalChunks, stats.Reused, stats.TotalChunks-stats.Reused, stats.Embedded, time.Since(t0).Round(time.Millisecond))
 	}
-	fmt.Fprintf(os.Stderr, "moedex-serve: embedding sidecar ready — %d dense chunks (%s); SIGHUP the daemon to hot-swap\n",
-		rc.DenseChunks(), denseSource(rc))
 	return nil
 }
 

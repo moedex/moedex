@@ -311,6 +311,112 @@ func loadPersistedStore(storePath string, shardPaths []string, numBlobs int, mod
 	return st, true
 }
 
+// readStoreMeta reads the validating .meta sidecar next to a persisted embedding
+// store, if present. ok=false on any missing/corrupt meta.
+func readStoreMeta(storePath string) (storeMeta, bool) {
+	raw, err := os.ReadFile(storePath + ".meta")
+	if err != nil {
+		return storeMeta{}, false
+	}
+	var m storeMeta
+	if err := json.Unmarshal(raw, &m); err != nil {
+		return storeMeta{}, false
+	}
+	return m, true
+}
+
+// EmbeddingRefreshStats summarizes a RefreshEmbeddings run for logging.
+type EmbeddingRefreshStats struct {
+	TotalChunks int  // chunks in the resulting store
+	Reused      int  // chunks whose vector was carried over unchanged (no embed)
+	Embedded    int  // DISTINCT new texts sent to the embedder
+	UpToDate    bool // fingerprint already matched a key-bearing store; nothing rebuilt
+	Migrated    bool // a legacy (keyless) but current store was re-keyed in place, no re-embed
+}
+
+// RefreshEmbeddings builds or INCREMENTALLY refreshes the persisted dense embedding
+// sidecar for the shard set under dir, reusing the vectors of every unchanged chunk
+// so a corpus that touched a few files re-embeds in minutes instead of re-embedding
+// the whole corpus. It is the out-of-band builder the refresh pipeline calls before
+// SIGHUP'ing the warm daemon; the daemon's OpenRank then just LOADS the fresh,
+// fingerprint-matching sidecar.
+//
+// Decision (cfg.Emb required; cfg.StorePath defaults under dir):
+//   - no usable prior store (missing, unreadable, or a DIFFERENT embedding model):
+//     full embed.
+//   - prior store matches the current corpus AND already carries content keys:
+//     up to date — nothing to do.
+//   - prior store matches the current corpus but is a legacy keyless (v1) store:
+//     re-key it in place (no embedding) so the NEXT refresh can be incremental.
+//   - prior store is from this model but the corpus changed: incremental rebuild,
+//     reusing every unchanged chunk's vector and embedding only new text.
+//
+// The result is byte-identical to a full rebuild for every reused chunk, so ranking
+// does not move. Reuse is gated on the embedding model (and vector dim): vectors
+// from a different model are never carried over.
+func RefreshEmbeddings(ctx context.Context, dir string, cfg RankConfig) (EmbeddingRefreshStats, error) {
+	if cfg.Emb == nil {
+		return EmbeddingRefreshStats{}, fmt.Errorf("server: refresh embeddings: no embedder configured")
+	}
+	storePath := cfg.StorePath
+	if storePath == "" {
+		storePath = filepath.Join(dir, "corpus-embeddings.store")
+	}
+
+	ix, paths, cs, err := loadUnified(dir)
+	if err != nil {
+		return EmbeddingRefreshStats{}, err
+	}
+	if cs != nil {
+		defer cs.Close()
+	}
+	numBlobs := ix.NumBlobs()
+	fp := corpusFingerprint(paths)
+
+	// Load the prior store for reuse, but ONLY if it was built with this same model
+	// and dimension — never carry vectors across models. A model/dim mismatch (or no
+	// store) leaves prev nil, forcing a clean full embed.
+	var prev *embed.Store
+	meta, haveMeta := readStoreMeta(storePath)
+	modelMatches := haveMeta && meta.Model == cfg.EmbedModel
+	if modelMatches {
+		if st, err := embed.LoadStore(storePath); err == nil && (st.Dim() == 0 || st.Dim() == cfg.Emb.Dim()) {
+			prev = st
+		}
+	}
+
+	// Corpus unchanged (same shard fingerprint, model, blob count) and we have the
+	// matching store: either it is already up to date, or it is a legacy keyless
+	// store we can re-key for free.
+	if prev != nil && meta.Fingerprint == fp && meta.NumBlobs == numBlobs {
+		if prev.HasKeys() {
+			return EmbeddingRefreshStats{TotalChunks: prev.Len(), Reused: prev.Len(), UpToDate: true}, nil
+		}
+		if err := prev.FillKeys(ix); err != nil {
+			return EmbeddingRefreshStats{}, fmt.Errorf("server: re-key embedding store: %w", err)
+		}
+		if err := savePersistedStore(prev, storePath, paths, numBlobs, cfg.EmbedModel); err != nil {
+			return EmbeddingRefreshStats{}, fmt.Errorf("server: persist re-keyed store: %w", err)
+		}
+		return EmbeddingRefreshStats{TotalChunks: prev.Len(), Reused: prev.Len(), Migrated: true}, nil
+	}
+
+	// Changed (or missing/foreign) store: incremental build, reusing whatever the
+	// prior store can offer (nil/keyless -> a clean full embed).
+	var reuse map[embed.ChunkKey]embed.Vector
+	if prev != nil {
+		reuse = prev.KeyVectors()
+	}
+	store, st, err := embed.BuildStoreIncremental(ctx, ix, cfg.Emb, chunkLines(cfg), chunkOverlap(cfg), reuse)
+	if err != nil {
+		return EmbeddingRefreshStats{}, fmt.Errorf("server: build embeddings: %w", err)
+	}
+	if err := savePersistedStore(store, storePath, paths, numBlobs, cfg.EmbedModel); err != nil {
+		return EmbeddingRefreshStats{}, fmt.Errorf("server: persist embeddings: %w", err)
+	}
+	return EmbeddingRefreshStats{TotalChunks: st.Total, Reused: st.Reused, Embedded: st.Embedded}, nil
+}
+
 // savePersistedStore writes the store and its validating meta sidecar.
 func savePersistedStore(st *embed.Store, storePath string, shardPaths []string, numBlobs int, model string) error {
 	if err := st.Save(storePath); err != nil {
