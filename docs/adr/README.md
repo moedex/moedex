@@ -18,6 +18,7 @@ These ADRs capture the architectural decisions behind moedex, a clean-room, sing
 | [0012](./0012-search-latency-positional-verify.md) | Search latency — fold-aware candidate prefilter + positional-postings verification | Accepted |
 | [0013](./0013-pure-go-defer-simd.md) | Pure-Go execution; native SIMD kernel deferred (tried, no consistent win at scale) | Accepted |
 | [0014](./0014-eval-harness-gold-gate.md) | Evaluation harness + hard gold gate — NDCG floor and a distraction-aware (UDCG) metric | Accepted |
+| [0015](./0015-structured-context-result.md) | Structured `search_context` result — lossless blocks + per-arm provenance for machine consumers (Moe) | Accepted |
 
 **Companion docs** (repo root): [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) (what the code is today), [`../../zoekt-2026-redesign.md`](../../zoekt-2026-redesign.md) (the northstar / design lineage), [`../../PRODUCTION-ROADMAP.md`](../../PRODUCTION-ROADMAP.md) (remaining work to an operable service), [`../../research/`](../../research) (the deep-research notes these decisions rest on), and `../../PARITY-REPORT.md` (the generated correctness-gate artifact, see [0003](./0003-cox-reduction-ripgrep-parity.md)).
 

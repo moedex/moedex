@@ -132,6 +132,74 @@ func TestToolsCallPassesArgsAndReturnsText(t *testing.T) {
 	}
 }
 
+func TestToolsCallStructuredFormat(t *testing.T) {
+	fs := &fakeSearcher{win: contextwin.ContextWindow{
+		Blocks: []contextwin.ContextBlock{
+			{Blob: 42, Repo: "r", RelPath: "a.go", AbsPath: "/abs/a.go", StartLine: 3, EndLine: 5,
+				Text: "func A() {}\n", Score: 1.5, Lexical: 7.4, Dense: 0.8},
+		},
+		TokenEstimate: 4,
+		Truncated:     true,
+	}}
+	s := NewServer(fs)
+	resps := drive(t, s, map[string]interface{}{
+		"jsonrpc": "2.0", "id": 3, "method": "tools/call",
+		"params": map[string]interface{}{
+			"name": "search_context",
+			"arguments": map[string]interface{}{
+				"query": "needle", "format": "structured",
+			},
+		},
+	})
+	res := resps[0].Result.(map[string]interface{})
+	if res["isError"] != false {
+		t.Errorf("isError = %v, want false", res["isError"])
+	}
+	// Text fallback (content) must still be present for clients that ignore structuredContent.
+	content := res["content"].([]interface{})
+	if _, ok := content[0].(map[string]interface{})["text"].(string); !ok {
+		t.Error("structured result missing text fallback in content")
+	}
+	sc, ok := res["structuredContent"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("missing structuredContent, got %T", res["structuredContent"])
+	}
+	summary := sc["summary"].(map[string]interface{})
+	if summary["blocks"].(float64) != 1 || summary["truncated"].(bool) != true {
+		t.Errorf("summary = %+v, want blocks=1 truncated=true", summary)
+	}
+	blocks := sc["blocks"].([]interface{})
+	if len(blocks) != 1 {
+		t.Fatalf("want 1 structured block, got %d", len(blocks))
+	}
+	blk := blocks[0].(map[string]interface{})
+	// Provenance the text format drops must survive here.
+	if blk["blob"].(float64) != 42 {
+		t.Errorf("blob = %v, want 42", blk["blob"])
+	}
+	if blk["score"].(float64) != 1.5 || blk["lexical"].(float64) != 7.4 || blk["dense"].(float64) != 0.8 {
+		t.Errorf("provenance = (score %v, lexical %v, dense %v), want (1.5, 7.4, 0.8)", blk["score"], blk["lexical"], blk["dense"])
+	}
+	if blk["rel_path"].(string) != "a.go" || blk["start_line"].(float64) != 3 || blk["end_line"].(float64) != 5 {
+		t.Errorf("block location = %+v, want a.go:3-5", blk)
+	}
+}
+
+func TestUnknownFormatIsToolError(t *testing.T) {
+	s := NewServer(&fakeSearcher{})
+	resps := drive(t, s, map[string]interface{}{
+		"jsonrpc": "2.0", "id": 6, "method": "tools/call",
+		"params": map[string]interface{}{
+			"name":      "search_context",
+			"arguments": map[string]interface{}{"query": "x", "format": "yaml"},
+		},
+	})
+	res := resps[0].Result.(map[string]interface{})
+	if res["isError"] != true {
+		t.Errorf("unknown format should set isError=true, got %v", res["isError"])
+	}
+}
+
 func TestEmptyQueryIsToolError(t *testing.T) {
 	s := NewServer(&fakeSearcher{})
 	resps := drive(t, s, map[string]interface{}{

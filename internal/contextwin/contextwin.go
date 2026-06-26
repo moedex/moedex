@@ -14,7 +14,7 @@
 //
 // CONTRACT FREEZE (Lane C implements behind these signatures):
 //
-//	type ContextBlock struct { Repo, RelPath, AbsPath string; StartLine, EndLine int; Text string; Score float64 }
+//	type ContextBlock struct { Blob uint64; Repo, RelPath, AbsPath string; StartLine, EndLine int; Text string; Score, Lexical, Dense float64 }
 //	type ContextWindow struct { Blocks []ContextBlock; TokenEstimate int; Truncated bool }
 //	type Options struct { TokenBudget, ContextLines int }
 //	func Assemble(ix *index.Index, results []rank.RankedResult, opts Options) ContextWindow
@@ -41,13 +41,16 @@ const (
 // ContextBlock is one contiguous, deduplicated slice of a file selected for the
 // agent. Lines are 1-based inclusive.
 type ContextBlock struct {
+	Blob      uint64 // content identity of the contributing blob (cross-call/source dedup key)
 	Repo      string
 	RelPath   string
 	AbsPath   string
 	StartLine int
 	EndLine   int
 	Text      string
-	Score     float64 // inherited from the result that contributed this block
+	Score     float64 // fused score, inherited from the result that contributed this block
+	Lexical   float64 // BM25 component of that result (raw, pre-fusion)
+	Dense     float64 // dense cosine component of that result (0 when no dense arm ran)
 }
 
 // ContextWindow is the assembled, token-budgeted answer.
@@ -85,8 +88,9 @@ type candidate struct {
 	startLine, endLine     int    // 1-based inclusive
 	content                []byte // blob content this block is sliced from
 	score                  float64
-	order                  int    // index of the originating result (lower = earlier)
-	blob                   uint64 // originating blob ID (for symbol scoping)
+	lexical, dense         float64 // per-arm scores of the contributing result (track score)
+	order                  int     // index of the originating result (lower = earlier)
+	blob                   uint64  // originating blob ID (for symbol scoping)
 }
 
 // Assemble turns ranked results into a token-budgeted, deduplicated,
@@ -176,6 +180,8 @@ func Assemble(ix *index.Index, results []rank.RankedResult, opts Options) Contex
 				endLine:   end,
 				content:   blob.Content,
 				score:     res.Score,
+				lexical:   res.Lexical,
+				dense:     res.Dense,
 				order:     order,
 				blob:      res.Blob,
 			}
@@ -216,6 +222,7 @@ func Assemble(ix *index.Index, results []rank.RankedResult, opts Options) Contex
 			continue
 		}
 		win.Blocks = append(win.Blocks, ContextBlock{
+			Blob:      c.blob,
 			Repo:      c.repo,
 			RelPath:   c.relPath,
 			AbsPath:   c.absPath,
@@ -223,6 +230,8 @@ func Assemble(ix *index.Index, results []rank.RankedResult, opts Options) Contex
 			EndLine:   c.endLine,
 			Text:      text,
 			Score:     c.score,
+			Lexical:   c.lexical,
+			Dense:     c.dense,
 		})
 		win.TokenEstimate += cost
 	}
@@ -504,6 +513,8 @@ func mergeFile(cands []candidate) []candidate {
 			}
 			if c.score > last.score {
 				last.score = c.score
+				last.lexical = c.lexical
+				last.dense = c.dense
 			}
 			if c.order < last.order {
 				last.order = c.order

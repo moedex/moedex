@@ -30,6 +30,56 @@ func ref(repo, rel, abs string) index.FileRef {
 	return index.FileRef{Repo: repo, RelPath: rel, AbsPath: abs}
 }
 
+// ---- Provenance propagation (ADR 0015) ----
+
+// A block must inherit the contributing result's Blob and per-arm scores
+// (Lexical/Dense), not just the fused Score.
+func TestAssembleCarriesProvenance(t *testing.T) {
+	src := "package main\n\nfunc Connect() {\n\tdatabase.Open()\n}\n"
+	ix, id := indexOne(t, "r", "db.go", "/abs/db.go", src)
+	res := []rank.RankedResult{{
+		Blob:      id,
+		Files:     []index.FileRef{ref("r", "db.go", "/abs/db.go")},
+		Score:     0.031,
+		Lexical:   7.41,
+		Dense:     0.83,
+		LineSpans: []rank.LineSpan{span(4, 4)},
+	}}
+	win := Assemble(ix, res, Options{TokenBudget: 100000})
+	if len(win.Blocks) != 1 {
+		t.Fatalf("want 1 block, got %d", len(win.Blocks))
+	}
+	b := win.Blocks[0]
+	if b.Blob != id {
+		t.Errorf("Blob = %d, want %d", b.Blob, id)
+	}
+	if b.Score != 0.031 || b.Lexical != 7.41 || b.Dense != 0.83 {
+		t.Errorf("provenance = (score %v, lexical %v, dense %v), want (0.031, 7.41, 0.83)", b.Score, b.Lexical, b.Dense)
+	}
+}
+
+// When two spans of the same file merge, the merged block keeps the per-arm
+// scores of the higher-scoring contributor (consistent with the kept Score).
+func TestAssembleMergeKeepsWinningProvenance(t *testing.T) {
+	// Two results on the same blob with adjacent spans so they merge; the second
+	// has the higher fused Score and must win the provenance.
+	src := "package main\n\nfunc A() {\n\tx := 1\n\ty := 2\n\tz := 3\n}\n"
+	ix, id := indexOne(t, "r", "a.go", "/abs/a.go", src)
+	files := []index.FileRef{ref("r", "a.go", "/abs/a.go")}
+	res := []rank.RankedResult{
+		{Blob: id, Files: files, Score: 0.10, Lexical: 1.0, Dense: 0.10, LineSpans: []rank.LineSpan{span(4, 4)}},
+		{Blob: id, Files: files, Score: 0.90, Lexical: 9.0, Dense: 0.90, LineSpans: []rank.LineSpan{span(5, 5)}},
+	}
+	win := Assemble(ix, res, Options{TokenBudget: 100000, ContextLines: 0})
+	if len(win.Blocks) != 1 {
+		t.Fatalf("want 1 merged block, got %d", len(win.Blocks))
+	}
+	b := win.Blocks[0]
+	if b.Score != 0.90 || b.Lexical != 9.0 || b.Dense != 0.90 {
+		t.Errorf("merged provenance = (score %v, lexical %v, dense %v), want the higher-scoring contributor (0.90, 9.0, 0.90)", b.Score, b.Lexical, b.Dense)
+	}
+}
+
 // ---- Block expansion: brace-delimited function ----
 
 func TestExpandBraceFunction(t *testing.T) {

@@ -375,6 +375,7 @@ func toolDescriptor() map[string]interface{} {
 				"query":        map[string]interface{}{"type": "string", "description": "The search query (keywords or identifiers)."},
 				"token_budget": map[string]interface{}{"type": "integer", "description": "Maximum tokens for the returned context (optional)."},
 				"top_k":        map[string]interface{}{"type": "integer", "description": "Maximum number of ranked results to draw blocks from (optional)."},
+				"format":       map[string]interface{}{"type": "string", "enum": []string{"text", "structured"}, "description": "Output format (optional): \"text\" (default) renders agent-readable blocks; \"structured\" returns a typed JSON payload in structuredContent with per-block provenance (blob id, fused score, BM25 and dense components) for machine consumers."},
 			},
 			"required": []string{"query"},
 		},
@@ -387,6 +388,7 @@ type callParams struct {
 		Query       string `json:"query"`
 		TokenBudget int    `json:"token_budget"`
 		TopK        int    `json:"top_k"`
+		Format      string `json:"format"`
 	} `json:"arguments"`
 }
 
@@ -406,10 +408,19 @@ func (s *Server) callTool(ctx context.Context, raw json.RawMessage) (map[string]
 	if len(p.Arguments.Query) > s.maxQueryBytes {
 		return textResult(fmt.Sprintf("query too large: %d bytes (max %d)", len(p.Arguments.Query), s.maxQueryBytes), true), nil
 	}
+	switch p.Arguments.Format {
+	case "", "text", "structured":
+		// supported
+	default:
+		return textResult(fmt.Sprintf("unknown format: %q (want \"text\" or \"structured\")", p.Arguments.Format), true), nil
+	}
 
 	win, err := s.searcher.SearchContext(ctx, p.Arguments.Query, p.Arguments.TokenBudget, p.Arguments.TopK)
 	if err != nil {
 		return nil, err
+	}
+	if p.Arguments.Format == "structured" {
+		return structuredResult(win), nil
 	}
 	return textResult(formatWindow(win), false), nil
 }
@@ -440,6 +451,78 @@ func formatWindow(win contextwin.ContextWindow) string {
 		b.WriteString(blk.Text)
 	}
 	return b.String()
+}
+
+// structuredWindow is the machine-readable form of a ContextWindow, returned when
+// the caller passes format="structured" (ADR 0015). It carries the provenance the
+// text rendering drops: content identity (Blob) for cross-call/source dedup and
+// the raw per-arm scores (Lexical/Dense) behind the fused Score.
+type structuredWindow struct {
+	Summary structuredSummary `json:"summary"`
+	Blocks  []structuredBlock `json:"blocks"`
+}
+
+type structuredSummary struct {
+	Blocks        int  `json:"blocks"`
+	TokenEstimate int  `json:"token_estimate"`
+	Truncated     bool `json:"truncated"`
+}
+
+type structuredBlock struct {
+	Blob      uint64  `json:"blob"`
+	Repo      string  `json:"repo"`
+	RelPath   string  `json:"rel_path"`
+	AbsPath   string  `json:"abs_path"`
+	StartLine int     `json:"start_line"`
+	EndLine   int     `json:"end_line"`
+	Score     float64 `json:"score"`
+	Lexical   float64 `json:"lexical"`
+	Dense     float64 `json:"dense"` // 0 when the dense arm did not fire (treat as "arm absent")
+	Text      string  `json:"text"`
+}
+
+func newStructuredWindow(win contextwin.ContextWindow) structuredWindow {
+	sw := structuredWindow{
+		Summary: structuredSummary{
+			Blocks:        len(win.Blocks),
+			TokenEstimate: win.TokenEstimate,
+			Truncated:     win.Truncated,
+		},
+		Blocks: make([]structuredBlock, 0, len(win.Blocks)),
+	}
+	for _, blk := range win.Blocks {
+		sw.Blocks = append(sw.Blocks, structuredBlock{
+			Blob:      blk.Blob,
+			Repo:      blk.Repo,
+			RelPath:   blk.RelPath,
+			AbsPath:   blk.AbsPath,
+			StartLine: blk.StartLine,
+			EndLine:   blk.EndLine,
+			Score:     blk.Score,
+			Lexical:   blk.Lexical,
+			Dense:     blk.Dense,
+			Text:      blk.Text,
+		})
+	}
+	return sw
+}
+
+// structuredResult renders a ContextWindow as an MCP tool result carrying both a
+// short text fallback (content) and the typed payload (structuredContent), per
+// ADR 0015. structuredContent is the machine channel; the text content keeps MCP
+// clients that ignore structuredContent functional.
+func structuredResult(win contextwin.ContextWindow) map[string]interface{} {
+	summary := fmt.Sprintf("%d context block(s), ~%d tokens", len(win.Blocks), win.TokenEstimate)
+	if win.Truncated {
+		summary += " (truncated to fit budget)"
+	}
+	return map[string]interface{}{
+		"content": []interface{}{
+			map[string]interface{}{"type": "text", "text": summary},
+		},
+		"structuredContent": newStructuredWindow(win),
+		"isError":           false,
+	}
 }
 
 // IndexSearcher adapts a Ranker + index into a ContextSearcher by assembling the
