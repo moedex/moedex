@@ -162,6 +162,15 @@ type Ranker struct {
 	// query — the scalable analog of the trigram candidate set for the lexical arm.
 	pathPostings map[string][]uint64
 
+	// symInfo / symPostings power the symbol-name arm without an every-query
+	// full-corpus scan (the same technique as pathPostings). Built once in
+	// SetSymbols: symPostings maps a symbol-name subtoken to the blobs defining a
+	// symbol whose name carries it (candidate gathering), and symInfo holds, per
+	// such blob, each named symbol's DISTINCT name subtokens (tokenized once here,
+	// never per query) plus its name line. Both nil when no symbol index is set.
+	symInfo     map[uint64][]symEntry
+	symPostings map[string][]uint64
+
 	// tokenCandidates makes the lexical arm generate candidates from the token
 	// index (ti.Docs) instead of the trigram index. The corpus ranker sets this:
 	// its content-only index carries no positional postings, so the trigram path
@@ -212,8 +221,12 @@ func (r *Ranker) buildPathIndex() {
 
 // SetSymbols installs (or clears, when s is nil) the optional symbol-name index
 // that powers the symbol-name ranking arm. nil leaves ranking exactly as it was
-// before this arm existed (lexical + optional dense only).
-func (r *Ranker) SetSymbols(s *symbol.Index) { r.syms = s }
+// before this arm existed (lexical + optional dense only). It (re)builds the arm's
+// inverted lookup so symbolArm never scans the whole corpus per query.
+func (r *Ranker) SetSymbols(s *symbol.Index) {
+	r.syms = s
+	r.buildSymbolIndex()
+}
 
 // SetDense installs (or clears, when either is nil) the dense arm's embedding
 // store and embedder. Symmetric with SetSymbols; lets a caller light up the
@@ -353,15 +366,15 @@ func (r *Ranker) Rank(ctx context.Context, q string, topK int) ([]RankedResult, 
 	results := make([]RankedResult, 0, len(cands))
 	for _, c := range cands {
 		b := r.ix.Blob(c.blob)
-		spans := r.lexicalSpans(b, terms)
-		spans = append(spans, c.spans...)
 		results = append(results, RankedResult{
-			Blob:      c.blob,
-			Files:     b.Files,
-			Score:     r.score(c.feat),
-			Lexical:   c.feat.BM25,
-			Dense:     c.feat.DenseCosine,
-			LineSpans: mergeSpans(spans, r.cfg.MaxSpans),
+			Blob:    c.blob,
+			Files:   b.Files,
+			Score:   r.score(c.feat),
+			Lexical: c.feat.BM25,
+			Dense:   c.feat.DenseCosine,
+			// Arm-contributed spans (symbol name line, dense chunk) only; the
+			// expensive lexical spans are added below, AFTER truncation.
+			LineSpans: c.spans,
 		})
 	}
 	sort.SliceStable(results, func(i, j int) bool {
@@ -372,6 +385,18 @@ func (r *Ranker) Rank(ctx context.Context, q string, topK int) ([]RankedResult, 
 	})
 	if topK > 0 && len(results) > topK {
 		results = results[:topK]
+	}
+	// Lexical spans scan a blob's FULL content (lowercase + substring match), so
+	// computing them per candidate is O(candidates) whole-blob scans — the dominant
+	// cost of a query, and wasted for every blob the topK cut drops. Defer it to the
+	// survivors here: identical output (the sort keys are Score/Blob, never spans),
+	// O(topK) scans instead of O(candidates). With topK unset (<=0) the loop still
+	// covers every result, matching the prior behavior exactly.
+	for i := range results {
+		b := r.ix.Blob(results[i].Blob)
+		spans := r.lexicalSpans(b, terms)
+		spans = append(spans, results[i].LineSpans...)
+		results[i].LineSpans = mergeSpans(spans, r.cfg.MaxSpans)
 	}
 	return results, nil
 }
@@ -565,6 +590,92 @@ type symScore struct {
 	span  LineSpan
 }
 
+// symEntry is a precomputed per-symbol record for the symbol-name arm: the
+// symbol name's DISTINCT subtokens (tokenized once at index build, never per
+// query) and the 1-based line of the name (for the contributed span).
+type symEntry struct {
+	subtoks []string
+	line    int
+}
+
+// buildSymbolIndex precomputes the symbol-name arm's lookup from the installed
+// symbol index. It runs ONE corpus pass (in SetSymbols, at load/reload), the same
+// work the old per-query scan did every query: tokenize each symbol name, record
+// its distinct subtokens + name line in symInfo, and union the subtoken -> blobs
+// postings in symPostings. With nil syms it clears both (arm disabled).
+func (r *Ranker) buildSymbolIndex() {
+	if r.syms == nil {
+		r.symInfo, r.symPostings = nil, nil
+		return
+	}
+	info := map[uint64][]symEntry{}
+	postSets := map[string]map[uint64]struct{}{}
+	n := r.ix.NumBlobs()
+	for blob := uint64(0); blob < uint64(n); blob++ {
+		syms := r.syms.Symbols(blob)
+		if len(syms) == 0 {
+			continue
+		}
+		b := r.ix.Blob(blob)
+		if b == nil {
+			continue
+		}
+		var entries []symEntry
+		for _, s := range syms {
+			if s.Name == "" {
+				continue // unnamed (func literals) cannot match a name
+			}
+			uniq := distinctTokens(tokenindex.Tokenize([]byte(s.Name)))
+			if len(uniq) == 0 {
+				continue
+			}
+			entries = append(entries, symEntry{subtoks: uniq, line: b.LineOf(s.NameStart)})
+			for _, t := range uniq {
+				set := postSets[t]
+				if set == nil {
+					set = map[uint64]struct{}{}
+					postSets[t] = set
+				}
+				set[blob] = struct{}{}
+			}
+		}
+		if len(entries) > 0 {
+			info[blob] = entries
+		}
+	}
+	posts := make(map[string][]uint64, len(postSets))
+	for t, set := range postSets {
+		ids := make([]uint64, 0, len(set))
+		for id := range set {
+			ids = append(ids, id)
+		}
+		sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+		posts[t] = ids
+	}
+	r.symInfo = info
+	r.symPostings = posts
+}
+
+// distinctTokens returns toks de-duplicated, preserving first-seen order, in a
+// fresh slice (never aliases the input). Symbol-name subtoken sets are tiny, so
+// the linear-probe dedup is cheaper than a map for the common short cases.
+func distinctTokens(toks []string) []string {
+	out := make([]string, 0, len(toks))
+	for _, t := range toks {
+		dup := false
+		for _, o := range out {
+			if o == t {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
 // symbolArm ranks blobs by how strongly their defined symbol NAMES match the
 // query. It is disabled (returns nil) when no symbol index is installed.
 //
@@ -583,11 +694,17 @@ type symScore struct {
 // whose name covers the query intent ("refund" -> func Refund, coverage 1/1)
 // still fires. See Config.SymbolMinCoverage.
 //
-// The contributed LineSpan is the name line of the best-matching symbol (its
-// NameStart mapped to a 1-based line via Blob.LineOf), so the definition line
-// feeds context assembly.
+// The contributed LineSpan is the name line of the best-matching symbol, so the
+// definition line feeds context assembly.
+//
+// Candidates come from symPostings (the blobs that define a symbol whose name
+// carries at least one query term), so a query scores only those blobs instead of
+// scanning the whole corpus — and the per-symbol subtokens are read from symInfo
+// (precomputed in buildSymbolIndex), so no symbol name is re-tokenized per query.
+// Because every qualifying symbol matches >= minHits >= 1 query terms, its blob is
+// always in the candidate set, so the result is identical to a full scan.
 func (r *Ranker) symbolArm(terms []string) []symScore {
-	if r.syms == nil || len(terms) == 0 {
+	if r.syms == nil || r.symPostings == nil || len(terms) == 0 {
 		return nil
 	}
 	want := make(map[string]bool, len(terms))
@@ -609,25 +726,28 @@ func (r *Ranker) symbolArm(terms []string) []symScore {
 		minHits = 1
 	}
 
-	out := make([]symScore, 0)
-	for blob := uint64(0); blob < uint64(r.ix.NumBlobs()); blob++ {
-		syms := r.syms.Symbols(blob)
-		if len(syms) == 0 {
-			continue
+	// Candidate blobs: any blob defining a symbol whose name carries a query term.
+	cand := map[uint64]struct{}{}
+	for t := range want {
+		for _, b := range r.symPostings[t] {
+			cand[b] = struct{}{}
 		}
+	}
+	if len(cand) == 0 {
+		return nil
+	}
+
+	out := make([]symScore, 0, len(cand))
+	for blob := range cand {
 		var total float64
 		bestHits := -1
-		var bestSym symbol.Symbol
-		for _, s := range syms {
-			if s.Name == "" {
-				continue // unnamed (func literals) cannot match a name
-			}
-			subtoks := tokenindex.Tokenize([]byte(s.Name))
-			seen := map[string]bool{}
+		bestLine := 0
+		for _, e := range r.symInfo[blob] {
+			// subtoks are distinct (deduped at build), so each match is a distinct
+			// query term — no per-symbol seen-set needed.
 			hits := 0
-			for _, st := range subtoks {
-				if want[st] && !seen[st] {
-					seen[st] = true
+			for _, st := range e.subtoks {
+				if want[st] {
 					hits++
 				}
 			}
@@ -637,18 +757,16 @@ func (r *Ranker) symbolArm(terms []string) []symScore {
 			total += float64(hits)
 			if hits > bestHits {
 				bestHits = hits
-				bestSym = s
+				bestLine = e.line
 			}
 		}
 		if total == 0 {
 			continue
 		}
-		b := r.ix.Blob(blob)
-		line := b.LineOf(bestSym.NameStart)
 		out = append(out, symScore{
 			blob:  blob,
 			score: total,
-			span:  LineSpan{StartLine: line, EndLine: line},
+			span:  LineSpan{StartLine: bestLine, EndLine: bestLine},
 		})
 	}
 
