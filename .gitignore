@@ -17,3 +17,4 @@
 
 # go test -c / -cpuprofile leftovers
 *.test
+test.log
