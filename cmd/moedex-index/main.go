@@ -70,6 +70,7 @@ import (
 	"moedex/internal/ingest"
 	"moedex/internal/parity"
 	"moedex/internal/server"
+	"moedex/internal/version"
 )
 
 func main() {
@@ -93,6 +94,11 @@ func main() {
 		err = runCASExport(os.Args[2:])
 	case "cas-compact":
 		err = runCASCompact(os.Args[2:])
+	case "doctor":
+		err = runDoctor(os.Args[2:])
+	case "version", "-version", "--version":
+		fmt.Println(version.Line("moedex-index", false))
+		return
 	case "-h", "--help", "help":
 		usage()
 		return
@@ -114,6 +120,10 @@ Usage:
   moedex-index build   -corpus ROOT -shard-dir DIR [-shard-bytes N] [-force] [-v]
   moedex-index check   -shard-dir DIR [-corpus ROOT]
   moedex-index refresh -shard-dir DIR [-corpus ROOT] [-keep-backup] [-v]
+  moedex-index doctor  [-shard-dir DIR] [-addr HOST:PORT] [-strict]
+      Read-only preflight: binary skew/shadows, shard-dir layout + correct refresh
+      command, dense sidecar freshness, daemon + launchd health. Non-zero on a
+      critical problem (so a refresh can abort before the destructive swap).
 
 Content-addressable store (global cross-shard dedup + per-blob delta):
   moedex-index cas-build   -corpus ROOT -cas-dir DIR

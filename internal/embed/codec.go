@@ -149,6 +149,38 @@ func (s *Store) Save(path string) error {
 	return nil
 }
 
+// StoreHeader is the cheap, vectors-free identity of a persisted store: enough for
+// `doctor` to report format version and chunk count without loading gigabytes.
+type StoreHeader struct {
+	Version uint32
+	Dim     int
+	Count   int
+}
+
+// PeekStore reads only a store's header (magic/version/dim/count) — O(1), no
+// vectors — so a checker can report what's on disk without mmapping the whole file.
+func PeekStore(path string) (StoreHeader, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return StoreHeader{}, err
+	}
+	defer f.Close()
+
+	var hdr [16]byte
+	if _, err := io.ReadFull(f, hdr[:]); err != nil {
+		return StoreHeader{}, err
+	}
+	if [4]byte{hdr[0], hdr[1], hdr[2], hdr[3]} != storeMagic {
+		return StoreHeader{}, fmt.Errorf("embed: bad magic %q", hdr[0:4])
+	}
+	le := binary.LittleEndian
+	return StoreHeader{
+		Version: le.Uint32(hdr[4:8]),
+		Dim:     int(le.Uint32(hdr[8:12])),
+		Count:   int(le.Uint32(hdr[12:16])),
+	}, nil
+}
+
 // LoadStore reads a Store previously written by Save.
 func LoadStore(path string) (*Store, error) {
 	f, err := os.Open(path)

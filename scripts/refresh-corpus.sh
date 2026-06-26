@@ -37,9 +37,11 @@ log() { printf '[refresh %s] %s\n' "$(date '+%H:%M:%S')" "$*"; }
 die() { printf '[refresh] ERROR: %s\n' "$*" >&2; exit 1; }
 
 # Self-sufficient PATH: a launchd `zsh -lc` is a NON-interactive login shell and does
-# NOT source ~/.zshrc, where ~/go/bin and Homebrew are added — so moedex-corpus, glab,
-# and git would otherwise be missing under the timer. Prepend them explicitly.
-export PATH="$HOME/go/bin:/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+# NOT source ~/.zshrc, where the bin dirs and Homebrew are added — so moedex-corpus,
+# glab, and git would otherwise be missing under the timer. Prepend them explicitly,
+# with ~/.local/bin (the `make install` canonical dir) FIRST so a stale ~/go/bin copy
+# can never win (the binary skew that caused the index-loss incident).
+export PATH="$HOME/.local/bin:$HOME/go/bin:/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 
 SHARD_DIR="${MOEDEX_SHARD_DIR:-$HOME/.moedex-index/shards}"
 ONNX_LIB="${ONNXRUNTIME_LIB_PATH:-/opt/homebrew/lib/libonnxruntime.dylib}"
@@ -49,7 +51,9 @@ LABEL="${MOEDEX_LAUNCHD_LABEL:-com.moedex.serve}"
 
 INDEX_BIN="${MOEDEX_INDEX_BIN:-}"
 if [ -z "$INDEX_BIN" ]; then
-  for c in "$HOME/go/bin/moedex-index" "$HOME/.local/bin/moedex-index" "$(command -v moedex-index 2>/dev/null || true)"; do
+  # Prefer the canonical ~/.local/bin (make install) over ~/go/bin so a stale
+  # go-install shadow never gets picked for the destructive refresh step.
+  for c in "$HOME/.local/bin/moedex-index" "$HOME/go/bin/moedex-index" "$(command -v moedex-index 2>/dev/null || true)"; do
     if [ -n "$c" ] && [ -x "$c" ]; then INDEX_BIN="$c"; break; fi
   done
 fi
@@ -69,6 +73,18 @@ if [ "${REFRESH_SYNC:-0}" = "1" ]; then
   fi
 else
   log "sync: skipped (set REFRESH_SYNC=1 to pull the corpus first)"
+fi
+
+# 1b. PREFLIGHT: abort BEFORE the destructive shard swap if the install is unsafe.
+#     doctor exits non-zero only on CRITICAL problems (binary skew/shadows, an
+#     ambiguous shard-dir layout, no shards) — exactly the conditions that turned a
+#     refresh into the index-loss incident. Stale embeddings etc. are WARN, not
+#     CRIT, so a normal refresh still proceeds and fixes them.
+if [ -n "$INDEX_BIN" ]; then
+  log "preflight: $INDEX_BIN doctor -shard-dir $SHARD_DIR"
+  if ! "$INDEX_BIN" doctor -shard-dir "$SHARD_DIR"; then
+    die "doctor found critical problems — aborting before the destructive refresh"
+  fi
 fi
 
 # 2. shards + token/symbol sidecars (atomic rebuild-and-swap). The layout is keyed by

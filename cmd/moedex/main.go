@@ -15,12 +15,18 @@ import (
 	"moedex/internal/index"
 	"moedex/internal/ingest"
 	"moedex/internal/search"
+	"moedex/internal/version"
 )
 
 func main() {
 	repo := flag.String("repo", ".", "path to a git repo to index")
 	isRegex := flag.Bool("regex", false, "treat PATTERN as a regular expression")
+	showVersion := flag.Bool("version", false, "print build identity and exit")
 	flag.Parse()
+	if *showVersion {
+		fmt.Println(version.Line("moedex", false))
+		return
+	}
 	if flag.NArg() != 1 {
 		fmt.Fprintln(os.Stderr, "usage: moedex -repo DIR [-regex] PATTERN")
 		os.Exit(2)

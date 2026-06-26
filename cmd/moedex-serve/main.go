@@ -44,6 +44,7 @@ import (
 	"moedex/internal/mcp"
 	"moedex/internal/search"
 	"moedex/internal/server"
+	"moedex/internal/version"
 )
 
 func main() {
@@ -75,7 +76,13 @@ func main() {
 	tlsCert := flag.String("tls-cert", os.Getenv("MOEDEX_TLS_CERT"), "TLS certificate file; serve -http over HTTPS (requires -tls-key)")
 	tlsKey := flag.String("tls-key", os.Getenv("MOEDEX_TLS_KEY"), "TLS private key file; serve -http over HTTPS (requires -tls-cert)")
 	requestTimeout := flag.Duration("request-timeout", 30*time.Second, "per-request HTTP timeout on -http (503 on expiry; the underlying scan observes cancellation and aborts promptly)")
+	showVersion := flag.Bool("version", false, "print build identity (name, commit, dense capability) and exit")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Println(version.Line("moedex-serve", embed.ONNXCompiled))
+		return
+	}
 
 	// Auth precedence: MOEDEX_AUTH_TOKEN is the base, -auth-token overrides it.
 	authTok := os.Getenv("MOEDEX_AUTH_TOKEN")

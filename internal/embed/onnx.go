@@ -42,6 +42,10 @@ import (
 	ort "github.com/yalue/onnxruntime_go"
 )
 
+// ONNXCompiled reports whether the in-process ONNX embedder was compiled into this
+// binary. True here (the -tags onnx build); see onnx_disabled.go for the default.
+const ONNXCompiled = true
+
 //go:embed onnxmodel/model.onnx
 var onnxModelData []byte
 

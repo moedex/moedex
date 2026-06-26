@@ -1,5 +1,18 @@
 # Deploying moedex
 
+> **macOS quick start.** On a Mac, the whole install is one idempotent command:
+> ```sh
+> ./scripts/install-macos.sh            # build+install binaries, token, launchd agents
+> ./scripts/install-macos.sh --dry-run  # preview, change nothing
+> ```
+> It builds and installs every binary to `~/.local/bin` (removing stale `~/go/bin`
+> shadows), writes a 0600 auth token, adds the env block to `~/.zshrc`, and renders
+> + bootstraps the `com.moedex.serve` (warm daemon) and `com.moedex.refresh` (daily
+> 03:30) launchd agents from the `deploy/*.plist` templates. It does **not** clone
+> the corpus or build the index (heavy, need VPN/glab) — it prints those commands.
+> Verify anytime with `moedex-index doctor`. The rest of this file is the manual /
+> Linux (Docker + systemd) path.
+
 Operational guide for running the moedex retrieval daemon (`moedex-serve`) and
 the offline shard tool (`moedex-index`). Two deployment shapes are covered:
 

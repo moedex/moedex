@@ -25,13 +25,19 @@ import (
 	"moedex/internal/rank"
 	"moedex/internal/symbol"
 	"moedex/internal/tokenindex"
+	"moedex/internal/version"
 )
 
 func main() {
 	repo := flag.String("repo", ".", "path to a git repo to index")
 	linesPerChunk := flag.Int("chunk-lines", 40, "lines per embedding chunk (dense arm)")
 	overlap := flag.Int("chunk-overlap", 10, "overlapping lines between chunks (dense arm)")
+	showVersion := flag.Bool("version", false, "print build identity and exit")
 	flag.Parse()
+	if *showVersion {
+		fmt.Println(version.Line("moedex-mcp", embed.ONNXCompiled))
+		return
+	}
 
 	files, err := ingest.Repo(*repo, *repo)
 	if err != nil {

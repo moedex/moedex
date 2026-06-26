@@ -17,7 +17,16 @@ WORK       ?= $(CURDIR)/.parity-work
 
 GOBIN := $(shell go env GOPATH)/bin
 
-.PHONY: verify parity setup build vet test roundtrip health clean build-dense test-dense build-simd vet-simd bench-setops bench-real bench-latency
+# Canonical install location for the moedex binaries. ONE directory holds them all
+# so PATH can never resolve a stale shadow (the skew that caused the index-loss
+# incident). Override with `make install BINDIR=/somewhere/bin`.
+BINDIR       ?= $(HOME)/.local/bin
+# The operational binary set installed by `make install` (moedex-serve is built
+# separately because it has a pure-Go vs -tags onnx variant). moedex-parity (CI)
+# and scale (dev, generic name) are intentionally excluded.
+INSTALL_CMDS := moedex moedex-index moedex-corpus moedex-mcp
+
+.PHONY: verify parity setup build vet test roundtrip health clean build-dense test-dense build-simd vet-simd bench-setops bench-real bench-latency install install-dense install-bins install-finish
 
 # Real-index benchmark knobs.
 BENCHOUT  ?= $(CURDIR)/.bench
@@ -65,6 +74,43 @@ setup:
 	go install github.com/sourcegraph/zoekt/cmd/zoekt-index@latest
 	go install github.com/sourcegraph/zoekt/cmd/zoekt@latest
 	@echo "installed into $(GOBIN)"
+
+## install: build every operational binary and install it to BINDIR (default
+## ~/.local/bin), with the PURE-GO moedex-serve, then remove any stale moedex-*
+## shadow from GOPATH/bin so PATH can't resolve an old build. For the warm daemon
+## use `install-dense` (the dense serve). Binaries are VCS-stamped by `go build`
+## (see `<bin> -version`).
+install: install-bins
+	@echo "=== moedex-serve (pure-Go) -> $(BINDIR) ==="
+	@go build -o "$(BINDIR)/moedex-serve" ./cmd/moedex-serve
+	@$(MAKE) --no-print-directory install-finish
+
+## install-dense: like install, but moedex-serve is the in-process ONNX build
+## (-tags onnx) the warm daemon needs. Pulls the onnx module (already in go.mod);
+## running it needs the ONNX Runtime dylib at ONNXRUNTIME_LIB_PATH.
+install-dense: install-bins
+	@echo "=== moedex-serve (-tags onnx) -> $(BINDIR) ==="
+	@go build -tags onnx -o "$(BINDIR)/moedex-serve" ./cmd/moedex-serve
+	@$(MAKE) --no-print-directory install-finish
+
+# install-bins / install-finish are internal helpers for install / install-dense.
+install-bins:
+	@mkdir -p "$(BINDIR)"
+	@for c in $(INSTALL_CMDS); do \
+		echo "=== $$c -> $(BINDIR) ==="; \
+		go build -o "$(BINDIR)/$$c" ./cmd/$$c || exit 1; \
+	done
+
+install-finish:
+	@if [ "$(GOBIN)" != "$(BINDIR)" ]; then \
+		for c in $(INSTALL_CMDS) moedex-serve; do \
+			if [ -e "$(GOBIN)/$$c" ]; then \
+				echo "removing stale shadow $(GOBIN)/$$c"; \
+				rm -f "$(GOBIN)/$$c"; \
+			fi; \
+		done; \
+	fi
+	@echo "installed moedex binaries into $(BINDIR) -- verify with: moedex-index doctor"
 
 ## build-dense: build moedex-serve with the in-process ONNX embedder (-tags onnx).
 ## Embeds the st-codesearch-distilroberta code model (int8, ~78MB) into the binary.

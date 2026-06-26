@@ -28,6 +28,7 @@ import (
 	"sync"
 
 	"moedex/internal/corpus"
+	"moedex/internal/version"
 )
 
 func main() {
@@ -45,6 +46,9 @@ func main() {
 		err = runSync(os.Args[2:])
 	case "groups":
 		err = runGroups(os.Args[2:])
+	case "version", "-version", "--version":
+		fmt.Println(version.Line("moedex-corpus", false))
+		return
 	case "-h", "--help", "help":
 		usage()
 		return

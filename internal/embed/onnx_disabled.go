@@ -12,6 +12,11 @@ import (
 	"errors"
 )
 
+// ONNXCompiled reports whether the in-process ONNX embedder was compiled into
+// this binary (i.e. built with -tags onnx). False in the default pure-Go build;
+// doctor uses it to flag a daemon serve binary that cannot embed.
+const ONNXCompiled = false
+
 // errNoONNX is returned by every method when the binary was built without the
 // onnx tag.
 var errNoONNX = errors.New("embed: in-process embedder unavailable; rebuild with -tags onnx")

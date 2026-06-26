@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TEMPLATE — do NOT `cp` this directly. The @PLACEHOLDER@ tokens are filled in by
+  scripts/install-macos.sh (or substitute @HOME@/@ONNX_LIB@ yourself). Installing
+  the raw template would leave literal @HOME@ paths and fail.
+
+  Warm shared MCP daemon for coding agents. A wrapper shell reads the auth token
+  from the 0600 token file (so the secret never lives in this plist), exports it
+  for the daemon (MOEDEX_AUTH_TOKEN) AND publishes it to the GUI session
+  (launchctl setenv MOEDEX_TOKEN) so other apps can read it, then execs the dense
+  daemon. RunAtLoad starts it at login; KeepAlive restarts it if it dies.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.moedex.serve</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>-c</string>
+    <string>TOKEN=$(cat "$HOME/.moedex-index/auth-token"); launchctl setenv MOEDEX_TOKEN "$TOKEN"; export MOEDEX_AUTH_TOKEN="$TOKEN"; exec "$HOME/.local/bin/moedex-serve" -shard-dir "$HOME/.moedex-index/shards" -mcp-http 127.0.0.1:8081 -embed onnx -onnx-runtime @ONNX_LIB@</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>@HOME@/.moedex-index/moedex-serve.log</string>
+  <key>StandardErrorPath</key>
+  <string>@HOME@/.moedex-index/moedex-serve.log</string>
+</dict>
+</plist>
