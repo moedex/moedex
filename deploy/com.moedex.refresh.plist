@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.moedex.refresh</string>
+
+  <!--
+    Periodic corpus refresh (macOS analog of deploy/moedex-refresh.timer). Runs
+    scripts/refresh-corpus.sh daily: sync corpus -> rebuild shards + token/symbol
+    sidecars -> build the dense embedding sidecar OUT OF BAND -> SIGHUP the warm
+    daemon for a zero-downtime hot-swap. Building embeddings before the reload is
+    the whole point: the daemon never re-embeds the corpus inline (which would take
+    it offline for the length of the embed).
+
+    A login shell (zsh -l) sources ~/.zshrc so the job inherits PATH (~/go/bin,
+    Homebrew), MOEDEX_CORPUS, and any glab auth — same environment as an interactive
+    refresh. REFRESH_SYNC=1 attempts a corpus pull first; a failed pull is non-fatal
+    (the script refreshes over the on-disk corpus). Adjust the username/paths below
+    for a different install.
+
+    Install:
+      cp deploy/com.moedex.refresh.plist ~/Library/LaunchAgents/
+      launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.moedex.refresh.plist
+    Run once on demand:
+      launchctl kickstart -p gui/$(id -u)/com.moedex.refresh
+    Disable:
+      launchctl bootout gui/$(id -u)/com.moedex.refresh
+  -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>-lc</string>
+    <string>exec "$HOME/Code/moedex/scripts/refresh-corpus.sh"</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>REFRESH_SYNC</key>
+    <string>1</string>
+  </dict>
+
+  <!-- Daily at 03:30. RunAtLoad is false so installing it never kicks a heavy
+       rebuild immediately; use `launchctl kickstart -p` to run on demand. -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>3</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/ZKeown/.moedex-index/refresh.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/ZKeown/.moedex-index/refresh.log</string>
+</dict>
+</plist>

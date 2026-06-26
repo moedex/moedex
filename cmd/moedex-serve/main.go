@@ -12,6 +12,7 @@
 //	moedex-serve -shard-dir DIR -q PATTERN [-regex]  # one-shot retrieval query
 //	moedex-serve -shard-dir DIR -mcp                 # ranked agent context (MCP/stdio)
 //	moedex-serve -shard-dir DIR -mcp-http :8081      # ranked agent context (MCP/HTTP, warm shared daemon)
+//	moedex-serve -shard-dir DIR -build-embeddings    # build/refresh dense sidecar, then exit (out-of-band refresh)
 //
 // -mcp spawns per agent session (each pays the cold load); -mcp-http loads once
 // and serves many sessions over the network — the warm shared surface for coding
@@ -19,7 +20,9 @@
 //
 // Dense arm (optional, -mcp/-mcp-http only): set MOEDEX_EMBED_URL and
 // MOEDEX_EMBED_MODEL to light up embedding-based retrieval. Without them the ranker
-// is pure-lexical + symbol arm with zero external dependencies.
+// is pure-lexical + symbol arm with zero external dependencies. -build-embeddings
+// builds the dense sidecar out of band so a corpus refresh never makes the warm
+// daemon re-embed inline on reload (see scripts/refresh-corpus.sh).
 package main
 
 import (
@@ -67,6 +70,7 @@ func main() {
 	topK := flag.Int("top-k", 20, "default ranked results per MCP query")
 	embedKind := flag.String("embed", envOr("MOEDEX_EMBED", "auto"), "dense embedder for -mcp: auto|onnx|http|none (auto = onnx if -onnx-runtime/ONNXRUNTIME_LIB_PATH set, else http if MOEDEX_EMBED_URL set, else none)")
 	onnxRuntime := flag.String("onnx-runtime", os.Getenv("ONNXRUNTIME_LIB_PATH"), "path to the ONNX Runtime shared library (in-process embedder; requires -tags onnx build)")
+	buildEmbeddings := flag.Bool("build-embeddings", false, "build/refresh the corpus embedding sidecar for -shard-dir, then exit (out-of-band dense refresh; requires -embed onnx|http). Run this before reloading the warm daemon so it never re-embeds the corpus inline.")
 	authToken := flag.String("auth-token", "", "if set (or MOEDEX_AUTH_TOKEN), require `Authorization: Bearer <token>` on -http (except /healthz, /metrics)")
 	tlsCert := flag.String("tls-cert", os.Getenv("MOEDEX_TLS_CERT"), "TLS certificate file; serve -http over HTTPS (requires -tls-key)")
 	tlsKey := flag.String("tls-key", os.Getenv("MOEDEX_TLS_KEY"), "TLS private key file; serve -http over HTTPS (requires -tls-cert)")
@@ -83,9 +87,17 @@ func main() {
 		fmt.Fprintln(os.Stderr, "moedex-serve: -shard-dir is required (or set MOEDEX_SHARD_DIR)")
 		os.Exit(2)
 	}
-	if !*mcpMode && *mcpHTTPAddr == "" && *httpAddr == "" && *q == "" {
-		fmt.Fprintln(os.Stderr, "moedex-serve: provide -mcp / -mcp-http ADDR (agent context), -http ADDR (retrieval daemon), or -q PATTERN (one-shot)")
+	if !*mcpMode && *mcpHTTPAddr == "" && *httpAddr == "" && *q == "" && !*buildEmbeddings {
+		fmt.Fprintln(os.Stderr, "moedex-serve: provide -mcp / -mcp-http ADDR (agent context), -http ADDR (retrieval daemon), -q PATTERN (one-shot), or -build-embeddings (dense sidecar refresh)")
 		os.Exit(2)
+	}
+
+	if *buildEmbeddings {
+		if err := runBuildEmbeddings(*shardDir, *topK, *embedKind, *onnxRuntime); err != nil {
+			fmt.Fprintf(os.Stderr, "moedex-serve: %v\n", err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	if *mcpMode {
@@ -195,6 +207,35 @@ func denseSource(rc *server.RankCorpus) string {
 // runMCP serves ranked, token-budgeted context over MCP stdio — the per-session
 // agent surface. Each invocation loads the corpus; for the warm SHARED surface
 // that loads once and answers many sessions, see runMCPHTTP / -mcp-http.
+// runBuildEmbeddings builds/refreshes the corpus embedding sidecar for shardDir
+// out of band, then exits. This is the missing step in the refresh pipeline: the
+// token/symbol sidecars rebuild cheaply (moedex-index refresh), but the dense store
+// is expensive, and if the warm daemon rebuilt it inline on reload it would stall
+// (no serving until the whole corpus re-embeds). Building it here first means the
+// daemon's next SIGHUP just LOADS the fresh, fingerprint-matching sidecar — a fast,
+// zero-downtime hot-swap.
+//
+// It reuses the exact dense-arm wiring as serving (configureDenseArm + openRankCorpus
+// + the persisted-store fingerprint), so it is idempotent: an up-to-date corpus loads
+// the cached store (a quick no-op); a changed shard set invalidates the fingerprint
+// and triggers the re-embed. Requires a configured embedder — -embed none has nothing
+// to build and is reported as an error.
+func runBuildEmbeddings(shardDir string, topK int, embedKind, onnxRuntime string) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	rc, _, err := openRankCorpus(ctx, shardDir, topK, embedKind, onnxRuntime)
+	if err != nil {
+		return err
+	}
+	defer rc.Close()
+	if rc.DenseChunks() == 0 {
+		return fmt.Errorf("no embeddings built: dense arm is off — set -embed onnx with -onnx-runtime <lib> (requires -tags onnx build), or -embed http with MOEDEX_EMBED_URL")
+	}
+	fmt.Fprintf(os.Stderr, "moedex-serve: embedding sidecar ready — %d dense chunks (%s); SIGHUP the daemon to hot-swap\n",
+		rc.DenseChunks(), denseSource(rc))
+	return nil
+}
+
 func runMCP(shardDir string, topK int, embedKind, onnxRuntime string) error {
 	ctx := context.Background()
 	rc, cfg, err := openRankCorpus(ctx, shardDir, topK, embedKind, onnxRuntime)
