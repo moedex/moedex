@@ -8,13 +8,18 @@
 //
 // Usage:
 //
-//	moedex-serve -shard-dir DIR -http :8080         # retrieval daemon (HTTP)
+//	moedex-serve -shard-dir DIR -http :8080          # retrieval daemon (HTTP)
 //	moedex-serve -shard-dir DIR -q PATTERN [-regex]  # one-shot retrieval query
 //	moedex-serve -shard-dir DIR -mcp                 # ranked agent context (MCP/stdio)
+//	moedex-serve -shard-dir DIR -mcp-http :8081      # ranked agent context (MCP/HTTP, warm shared daemon)
 //
-// Dense arm (optional, -mcp only): set MOEDEX_EMBED_URL and MOEDEX_EMBED_MODEL to
-// light up embedding-based retrieval. Without them the ranker is pure-lexical +
-// symbol arm with zero external dependencies.
+// -mcp spawns per agent session (each pays the cold load); -mcp-http loads once
+// and serves many sessions over the network — the warm shared surface for coding
+// agents (register with `claude mcp add --transport http ... /mcp`).
+//
+// Dense arm (optional, -mcp/-mcp-http only): set MOEDEX_EMBED_URL and
+// MOEDEX_EMBED_MODEL to light up embedding-based retrieval. Without them the ranker
+// is pure-lexical + symbol arm with zero external dependencies.
 package main
 
 import (
@@ -54,7 +59,8 @@ func main() {
 
 	shardDir := flag.String("shard-dir", os.Getenv("MOEDEX_SHARD_DIR"), "directory of prebuilt *.idx shards")
 	httpAddr := flag.String("http", os.Getenv("MOEDEX_HTTP_ADDR"), "if set (or MOEDEX_HTTP_ADDR), serve the retrieval HTTP API on this address (e.g. 127.0.0.1:8080)")
-	mcpMode := flag.Bool("mcp", false, "serve ranked agent context over MCP (stdio)")
+	mcpMode := flag.Bool("mcp", false, "serve ranked agent context over MCP (stdio); per-session, loads on each launch")
+	mcpHTTPAddr := flag.String("mcp-http", os.Getenv("MOEDEX_MCP_HTTP_ADDR"), "if set (or MOEDEX_MCP_HTTP_ADDR), serve the ranked agent-context MCP tool over HTTP (Streamable HTTP) at /mcp on this address (e.g. 127.0.0.1:8081) — the warm shared daemon for coding agents")
 	q := flag.String("q", "", "one-shot retrieval query")
 	isRegex := flag.Bool("regex", false, "treat -q as a regular expression (default: literal)")
 	limit := flag.Int("limit", 0, "cap matches printed/returned (0 = no cap)")
@@ -77,13 +83,32 @@ func main() {
 		fmt.Fprintln(os.Stderr, "moedex-serve: -shard-dir is required (or set MOEDEX_SHARD_DIR)")
 		os.Exit(2)
 	}
-	if !*mcpMode && *httpAddr == "" && *q == "" {
-		fmt.Fprintln(os.Stderr, "moedex-serve: provide -mcp (agent context), -http ADDR (retrieval daemon), or -q PATTERN (one-shot)")
+	if !*mcpMode && *mcpHTTPAddr == "" && *httpAddr == "" && *q == "" {
+		fmt.Fprintln(os.Stderr, "moedex-serve: provide -mcp / -mcp-http ADDR (agent context), -http ADDR (retrieval daemon), or -q PATTERN (one-shot)")
 		os.Exit(2)
 	}
 
 	if *mcpMode {
 		if err := runMCP(*shardDir, *topK, *embedKind, *onnxRuntime); err != nil {
+			fmt.Fprintf(os.Stderr, "moedex-serve: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	if *mcpHTTPAddr != "" {
+		cfg := mcpHTTPConfig{
+			addr:           *mcpHTTPAddr,
+			shardDir:       *shardDir,
+			token:          authTok,
+			tlsCert:        *tlsCert,
+			tlsKey:         *tlsKey,
+			requestTimeout: *requestTimeout,
+			topK:           *topK,
+			embedKind:      *embedKind,
+			onnxRuntime:    *onnxRuntime,
+		}
+		if err := runMCPHTTP(cfg); err != nil {
 			fmt.Fprintf(os.Stderr, "moedex-serve: %v\n", err)
 			os.Exit(1)
 		}
@@ -121,17 +146,17 @@ func main() {
 	}
 }
 
-// runMCP builds the corpus ranker and serves ranked, token-budgeted context over
-// MCP stdio — the agent-facing surface. The dense arm lights up only when
-// MOEDEX_EMBED_URL is configured; building it embeds the whole corpus at boot.
-func runMCP(shardDir string, topK int, embedKind, onnxRuntime string) error {
-	ctx := context.Background()
+// openRankCorpus builds the ranked corpus shared by the agent-facing surfaces
+// (-mcp stdio and -mcp-http): it configures the dense arm, opens the ranker
+// (falling back cleanly to lexical+symbol if the dense build fails), logs the
+// ready line, and returns the corpus plus the RESOLVED config so the SIGHUP
+// reload path can rebuild with the same settings. The dense arm lights up only
+// when an embedder is configured; embeddings are persisted next to the shards so
+// subsequent boots load instead of re-embedding the whole corpus.
+func openRankCorpus(ctx context.Context, shardDir string, topK int, embedKind, onnxRuntime string) (*server.RankCorpus, server.RankConfig, error) {
 	start := time.Now()
 	cfg := server.RankConfig{TopK: topK}
 
-	// Choose the dense embedder. On any build/connect failure we fall back cleanly
-	// to lexical+symbol. Embeddings are persisted next to the shards so subsequent
-	// boots load instead of re-embedding the whole corpus.
 	dense, err := configureDenseArm(&cfg, shardDir, embedKind, onnxRuntime)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "moedex-serve: dense arm setup failed (%v); ranking lexical+symbol\n", err)
@@ -149,18 +174,33 @@ func runMCP(shardDir string, topK int, embedKind, onnxRuntime string) error {
 		rc, err = server.OpenRank(ctx, shardDir, cfg)
 	}
 	if err != nil {
-		return err
-	}
-	denseSrc := "none"
-	if rc.DenseChunks() > 0 {
-		if rc.DenseFromCache() {
-			denseSrc = "cached"
-		} else {
-			denseSrc = "built"
-		}
+		return nil, cfg, err
 	}
 	fmt.Fprintf(os.Stderr, "moedex-serve: corpus ranker ready — %d blobs, %d docs, %d symbol blobs, %d dense chunks (%s) in %s\n",
-		rc.NumBlobs(), rc.NumDocs(), rc.NumSymbolBlobs(), rc.DenseChunks(), denseSrc, time.Since(start).Round(time.Millisecond))
+		rc.NumBlobs(), rc.NumDocs(), rc.NumSymbolBlobs(), rc.DenseChunks(), denseSource(rc), time.Since(start).Round(time.Millisecond))
+	return rc, cfg, nil
+}
+
+// denseSource reports where the dense vectors came from, for the boot/reload log.
+func denseSource(rc *server.RankCorpus) string {
+	if rc.DenseChunks() == 0 {
+		return "none"
+	}
+	if rc.DenseFromCache() {
+		return "cached"
+	}
+	return "built"
+}
+
+// runMCP serves ranked, token-budgeted context over MCP stdio — the per-session
+// agent surface. Each invocation loads the corpus; for the warm SHARED surface
+// that loads once and answers many sessions, see runMCPHTTP / -mcp-http.
+func runMCP(shardDir string, topK int, embedKind, onnxRuntime string) error {
+	ctx := context.Background()
+	rc, cfg, err := openRankCorpus(ctx, shardDir, topK, embedKind, onnxRuntime)
+	if err != nil {
+		return err
+	}
 
 	// Serve through a hot-swappable holder so a SIGHUP can rebuild the ranked
 	// corpus (reusing the embedder; the persisted embedding sidecar makes warm
@@ -180,22 +220,128 @@ func runMCP(shardDir string, topK int, embedKind, onnxRuntime string) error {
 			}
 			old := holder.swap(nrc)
 			go old.retire()
-			src := "none"
-			if nrc.DenseChunks() > 0 {
-				if nrc.DenseFromCache() {
-					src = "cached"
-				} else {
-					src = "built"
-				}
-			}
 			fmt.Fprintf(os.Stderr, "moedex-serve: reloaded ranker — %d blobs, %d symbol blobs, %d dense chunks (%s) in %s\n",
-				nrc.NumBlobs(), nrc.NumSymbolBlobs(), nrc.DenseChunks(), src, time.Since(t0).Round(time.Millisecond))
+				nrc.NumBlobs(), nrc.NumSymbolBlobs(), nrc.DenseChunks(), denseSource(nrc), time.Since(t0).Round(time.Millisecond))
 		}
 	}()
 
 	srv := mcp.NewServer(holder)
 	fmt.Fprintln(os.Stderr, "moedex-serve: MCP ready on stdio (SIGHUP to reload)")
 	return srv.Serve(ctx, os.Stdin, os.Stdout)
+}
+
+// mcpHTTPConfig carries the resolved -mcp-http settings into runMCPHTTP.
+type mcpHTTPConfig struct {
+	addr           string
+	shardDir       string
+	token          string
+	tlsCert        string
+	tlsKey         string
+	requestTimeout time.Duration
+	topK           int
+	embedKind      string
+	onnxRuntime    string
+}
+
+// runMCPHTTP is the warm SHARED agent daemon: it builds the ranked corpus once and
+// serves the MCP search_context tool over the Streamable HTTP transport at /mcp,
+// so every agent session connects in milliseconds instead of spawning its own
+// stdio process and re-paying the ~40s cold load (the daemon pays it once per
+// process lifetime). The same refcounted hot-swap as the retrieval daemon keeps
+// it serving the old generation while a SIGHUP rebuilds the new one, and the same
+// hardening chain (recover/log/timeout/auth — see middleware.go) wraps the mux.
+// /mcp requires the bearer token when one is configured; /healthz and /metrics
+// stay open.
+func runMCPHTTP(cfg mcpHTTPConfig) error {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, nil)))
+
+	// TLS is all-or-nothing, mirroring runHTTP and the flag-validation in main().
+	tls := cfg.tlsCert != "" && cfg.tlsKey != ""
+	if (cfg.tlsCert != "") != (cfg.tlsKey != "") {
+		fmt.Fprintln(os.Stderr, "moedex-serve: -tls-cert and -tls-key must be set together")
+		os.Exit(2)
+	}
+
+	ctx := context.Background()
+	rc, rankCfg, err := openRankCorpus(ctx, cfg.shardDir, cfg.topK, cfg.embedKind, cfg.onnxRuntime)
+	if err != nil {
+		return err
+	}
+	holder := newRankHolder(rc)
+	m := newMetrics()
+
+	effAddr := resolveAddr(cfg.addr, cfg.token)
+	slog.Info("boot", "mode", "mcp-http", "blobs", rc.NumBlobs(), "symbol_blobs", rc.NumSymbolBlobs(),
+		"dense_chunks", rc.DenseChunks(), "requested_addr", cfg.addr, "effective_addr", effAddr, "tls", tls)
+	if cfg.token == "" {
+		if isLoopback(effAddr) {
+			slog.Warn("no auth token configured; /mcp is open (loopback bind)")
+		} else {
+			slog.Warn("no auth token AND non-loopback bind; /mcp is open to the network", "effective_addr", effAddr)
+		}
+	}
+
+	mcpSrv := mcp.NewServer(holder)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok\n"))
+	})
+	mux.Handle("/metrics", rankMetricsHandler(holder, m))
+	mux.Handle("/mcp", mcpSrv.HTTPHandler())
+
+	srv := &http.Server{
+		Addr:              effAddr,
+		Handler:           chain(mux, cfg.token, cfg.requestTimeout, m),
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      cfg.requestTimeout + 5*time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+	errCh := make(chan error, 1)
+	go func() {
+		if tls {
+			errCh <- srv.ListenAndServeTLS(cfg.tlsCert, cfg.tlsKey)
+		} else {
+			errCh <- srv.ListenAndServe()
+		}
+	}()
+	slog.Info("listening", "addr", effAddr, "endpoint", "/mcp", "tls", tls, "auth", cfg.token != "")
+
+	// SIGHUP -> rebuild the ranked corpus and hot-swap it under live traffic; the
+	// daemon keeps answering on the old generation during the ~40s rebuild, then
+	// swaps atomically (see reload.go). A failed reload keeps the current ranker.
+	hup := make(chan os.Signal, 1)
+	signal.Notify(hup, syscall.SIGHUP)
+	go func() {
+		for range hup {
+			start := time.Now()
+			slog.Info("reload requested (SIGHUP)")
+			nrc, err := server.OpenRank(ctx, cfg.shardDir, rankCfg)
+			if err != nil {
+				m.incReload("fail")
+				slog.Error("reload failed; keeping current ranker", "err", err.Error())
+				continue
+			}
+			old := holder.swap(nrc)
+			go old.retire()
+			m.incReload("ok")
+			slog.Info("reloaded", "blobs", nrc.NumBlobs(), "symbol_blobs", nrc.NumSymbolBlobs(),
+				"dense_chunks", nrc.DenseChunks(), "elapsed_ms", time.Since(start).Milliseconds())
+		}
+	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	select {
+	case err := <-errCh:
+		return err
+	case <-stop:
+		shutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		slog.Info("shutting down")
+		return srv.Shutdown(shutCtx)
+	}
 }
 
 // configureDenseArm picks the dense embedder per `kind` and wires it (plus the

@@ -5,8 +5,9 @@
 // Given ranked results (which carry salient LineSpans) and the index that holds
 // blob content, Assemble:
 //
-//  1. expands each salient span to its enclosing code block using a brace/indent
-//     heuristic (honestly approximate — there is no symbol layer yet),
+//  1. expands each salient span to its enclosing code block — using real symbol
+//     boundaries when Options.EnclosingBytes is wired (cmd/mcp supplies the
+//     symbol layer), falling back to a brace/indent heuristic otherwise,
 //  2. merges overlapping/adjacent blocks within the same file,
 //  3. walks results best-first, emitting blocks until the token budget is spent,
 //  4. estimates tokens so the whole window fits an agent's budget.
@@ -92,8 +93,11 @@ type candidate struct {
 // block-scoped context window. Results are consumed best-first; ix supplies the
 // blob content the blocks are sliced from.
 //
-// Block-expansion heuristic (approximate; no symbol layer yet). For each span,
-// after padding by ContextLines and clamping to file bounds:
+// Block expansion. When Options.EnclosingBytes is wired, each span is scoped to
+// its innermost enclosing symbol's real boundaries (see expandSpanScoped). When
+// it is nil or reports no enclosing symbol, expansion falls back to the
+// approximate brace/indent heuristic below. For each span, after padding by
+// ContextLines and clamping to file bounds:
 //
 //  1. Brace balance. Scan the padded region's lines. If they contain a net
 //     positive '{' surplus (more opens than closes), walk the end downward until

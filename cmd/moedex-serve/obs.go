@@ -155,6 +155,57 @@ func metricsHandler(holder *corpusHolder, m *metrics) http.HandlerFunc {
 	}
 }
 
+// rankMetricsHandler renders the metrics exposition for the warm MCP-over-HTTP
+// daemon: the same request/panic/reload families as the retrieval daemon, plus
+// ranked-corpus gauges (blobs, BM25 docs, symbol blobs, dense chunks) read live
+// through the rankHolder so they reflect the current generation across a hot swap.
+func rankMetricsHandler(holder *rankHolder, m *metrics) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		snap := holder.acquire()
+		blobs := snap.rc.NumBlobs()
+		docs := snap.rc.NumDocs()
+		symBlobs := snap.rc.NumSymbolBlobs()
+		dense := snap.rc.DenseChunks()
+		snap.release()
+
+		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+
+		writeCounterMap(w, "moedex_http_requests_total",
+			"Total HTTP requests by status-code class.", "code", m.requests)
+
+		fmt.Fprintf(w, "# HELP moedex_http_panics_total Total handler panics recovered.\n")
+		fmt.Fprintf(w, "# TYPE moedex_http_panics_total counter\n")
+		fmt.Fprintf(w, "moedex_http_panics_total %d\n", m.panics.Value())
+
+		writeCounterMap(w, "moedex_reloads_total",
+			"Total ranker reloads by result.", "result", m.reloads)
+
+		buckets, count, sum := m.dur.snapshot()
+		fmt.Fprintf(w, "# HELP moedex_http_request_duration_seconds HTTP request latency.\n")
+		fmt.Fprintf(w, "# TYPE moedex_http_request_duration_seconds histogram\n")
+		for i, b := range m.dur.bounds {
+			fmt.Fprintf(w, "moedex_http_request_duration_seconds_bucket{le=\"%s\"} %d\n",
+				formatBound(b), buckets[i])
+		}
+		fmt.Fprintf(w, "moedex_http_request_duration_seconds_bucket{le=\"+Inf\"} %d\n", count)
+		fmt.Fprintf(w, "moedex_http_request_duration_seconds_sum %s\n", strconv.FormatFloat(sum, 'g', -1, 64))
+		fmt.Fprintf(w, "moedex_http_request_duration_seconds_count %d\n", count)
+
+		writeGauge(w, "moedex_corpus_blobs", "Blobs in the live ranked corpus.", blobs)
+		writeGauge(w, "moedex_corpus_docs", "BM25 documents in the live ranked corpus.", docs)
+		writeGauge(w, "moedex_corpus_symbol_blobs", "Symbol-indexed blobs in the live ranked corpus.", symBlobs)
+		writeGauge(w, "moedex_corpus_dense_chunks", "Dense embedding chunks in the live ranked corpus.", dense)
+	}
+}
+
+// writeGauge emits one unlabeled gauge family.
+func writeGauge(w http.ResponseWriter, name, help string, v int) {
+	fmt.Fprintf(w, "# HELP %s %s\n", name, help)
+	fmt.Fprintf(w, "# TYPE %s gauge\n", name)
+	fmt.Fprintf(w, "%s %d\n", name, v)
+}
+
 // writeCounterMap emits one labeled counter family from an expvar.Map, sorting
 // keys so the exposition is deterministic.
 func writeCounterMap(w http.ResponseWriter, name, help, label string, mp *expvar.Map) {
