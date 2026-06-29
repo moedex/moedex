@@ -19,6 +19,8 @@ These ADRs capture the architectural decisions behind moedex, a clean-room, sing
 | [0013](./0013-pure-go-defer-simd.md) | Pure-Go execution; native SIMD kernel deferred (tried, no consistent win at scale) | Accepted |
 | [0014](./0014-eval-harness-gold-gate.md) | Evaluation harness + hard gold gate — NDCG floor and a distraction-aware (UDCG) metric | Accepted |
 | [0015](./0015-structured-context-result.md) | Structured `search_context` result — lossless blocks + per-arm provenance for machine consumers (Moe) | Accepted |
+| [0016](./0016-incremental-embedding-refresh.md) | Incremental embedding refresh — reuse unchanged chunk vectors across a rebuild | Accepted |
+| [0017](./0017-lsp-navigation-and-the-serena-boundary.md) | LSP-precise navigation — the three conditions to subsume Serena (real LSP semantics · concurrency-safe under parallel lanes · live working-tree freshness) | Proposed (all 3 conditions met & productionized in-process: `internal/navigate`, `-tags lsp` — multi-language, pooled, incremental sync) |
 
 **Companion docs** (repo root): [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) (what the code is today), [`../../zoekt-2026-redesign.md`](../../zoekt-2026-redesign.md) (the northstar / design lineage), [`../../PRODUCTION-ROADMAP.md`](../../PRODUCTION-ROADMAP.md) (remaining work to an operable service), [`../../research/`](../../research) (the deep-research notes these decisions rest on), and `../../PARITY-REPORT.md` (the generated correctness-gate artifact, see [0003](./0003-cox-reduction-ripgrep-parity.md)).
 

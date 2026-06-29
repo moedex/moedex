@@ -26,7 +26,7 @@ BINDIR       ?= $(HOME)/.local/bin
 # and scale (dev, generic name) are intentionally excluded.
 INSTALL_CMDS := moedex moedex-index moedex-corpus moedex-mcp
 
-.PHONY: verify parity setup build vet test roundtrip health clean build-dense test-dense build-simd vet-simd bench-setops bench-real bench-latency install install-dense install-bins install-finish
+.PHONY: verify parity setup build vet test roundtrip health clean build-dense test-dense build-simd vet-simd build-lsp test-lsp vet-lsp bench-setops bench-real bench-latency install install-dense install-bins install-finish
 
 # Real-index benchmark knobs.
 BENCHOUT  ?= $(CURDIR)/.bench
@@ -146,6 +146,31 @@ vet-simd:
 	GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 go test -tags moedex_simd -c -o /dev/null ./internal/setops/
 	@echo "SIMD kernel + differential test compile OK (amd64)."
 
+## build-lsp: build the experimental LSP-precise navigation arm (-tags lsp) and
+## its demo CLI moedex-nav. This is the ADR 0017 Condition-1 spike: type-resolved
+## go-to-def / find-references / find-implementations driven by a real language
+## server (gopls) out of process. It pulls NO new go.mod deps (the JSON-RPC client
+## is pure stdlib); gopls is an external binary supplied on PATH. The default
+## `make build` stays pure-Go and does not compile this arm.
+build-lsp:
+	@echo "=== go build -tags lsp ./cmd/moedex-nav ==="
+	go build -tags lsp -o moedex-nav ./cmd/moedex-nav
+	@echo "built ./moedex-nav (needs gopls on PATH; try: ./moedex-nav -verb refs FILE:LINE:COL)"
+
+## test-lsp: run the lsp-tagged navigation tests under the race detector. They
+## drive a real gopls against self-contained throwaway Go modules (no corpus, no
+## network) and skip if gopls is not on PATH. -race is load-bearing here: the
+## Pool concurrency tests (ADR 0017 Condition 2) prove parallel-lane safety.
+test-lsp:
+	@echo "=== go test -tags lsp -race ./internal/navigate/ ==="
+	go test -tags lsp -race ./internal/navigate/ -count=1
+
+## vet-lsp: type-check the lsp-tagged navigation arm + cmd without running gopls.
+vet-lsp:
+	@echo "=== go vet -tags lsp ./internal/navigate/ ./cmd/moedex-nav/ ==="
+	go vet -tags lsp ./internal/navigate/ ./cmd/moedex-nav/
+	@echo "LSP navigation arm + moedex-nav compile OK."
+
 ## bench-setops: pure-Go set-ops benchmarks on the host arch (the always-built
 ## baseline the amd64 SIMD kernel is compared against).
 bench-setops:
@@ -173,5 +198,5 @@ bench-latency:
 	scripts/bench-latency.sh $(BENCHN)
 
 clean:
-	rm -f test.log moedex-serve-dense
+	rm -f test.log moedex-serve-dense moedex-nav
 	rm -rf "$(WORK)" "$${TMPDIR:-/tmp}/moedex-parity"

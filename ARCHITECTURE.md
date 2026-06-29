@@ -51,6 +51,7 @@ All library code lives under `internal/`; executables under `cmd/`.
 | server | [`internal/server`](internal/server) | Warm multi-shard serving spine: mmap'd retrieval + ranked agent context | `Corpus`, `Open`, `(*Corpus) Regex/Literal/NumShards/NumBlobs/Close`; `RankCorpus`, `RankConfig`, `OpenRank`, `(*RankCorpus) SearchContext`; `BuildSidecars` |
 | mcp | [`internal/mcp`](internal/mcp) | Serve `search_context` over MCP (JSON-RPC/stdio) | `ContextSearcher`; `Server`, `NewServer`, `Serve`; `IndexSearcher`, `NewIndexSearcher`, `SetEnclosingBytes`, `SearchContext` |
 | corpus | [`internal/corpus`](internal/corpus) | Corpus acquisition + freshness over glab/git (the only package that shells out to them; **not imported by the engine**) | `Runner`, `ExecRunner`; `Config`, `DefaultGroups`; `Project`, `Enumerate`; `Doctor`, `Report`; `CloneArgs`, `CloneProjects`; `Reconcile`, `PlanSync`, `SyncProjects`; `Reindex` |
+| navigate | [`internal/navigate`](internal/navigate) | Experimental LSP-precise navigation arm (ADR 0017, `-tags lsp`): type-resolved go-to-def / find-refs / find-impls via an out-of-process language server over a hand-written stdlib JSON-RPC client; multi-language registry sized to the real corpus (csharp ~60% via `csharp-ls`; typescript/js; css/scss via vscode-css-language-server; cfml via `cflsp`; html; sql; go; python; ready-but-unused rust/cpp) — partial-capability servers degrade gracefully (a `-32601` unimplemented method → empty, not error), C#'s `DOTNET_ROOT` is resolved per-launch via `LangSpec.ResolveEnv`, and a shared per-(root,language) server pool with idle-TTL eviction + restart backoff, incremental `didChange` sync, and live-buffer overlays; no new go.mod dep (mirrors the dense arm's build-tag boundary) | `Pos`, `Location`, `Navigator`; `Config`; `LSP`, `NewLSP`, `(*LSP) Definition/References/Implementations/SetOverlay/DropOverlay/NotifyChanged/Alive/Close`; `Pool`, `NewPool`, `(*Pool) Navigator/NavigatorFor/Definition/References/Implementations/SetOverlay/DropOverlay/NotifyChanged/Stats/Sweep/Close`; `Stats`; `LangSpec`, `LanguageForPath`, `SpecForLanguage`, `SpecForPath`; `ErrServerDead`; `const LSPCompiled` |
 | moedex | [`cmd/moedex`](cmd/moedex) | CLI: index one repo, run a literal/regex query | — |
 | moedex-mcp | [`cmd/moedex-mcp`](cmd/moedex-mcp) | Single-repo MCP server binary | — |
 | moedex-serve | [`cmd/moedex-serve`](cmd/moedex-serve) | Warm retrieval daemon over a prebuilt shard dir: `-http` retrieval API, `-q` one-shot, `-mcp` ranked context | — |
@@ -58,6 +59,7 @@ All library code lives under `internal/`; executables under `cmd/`.
 | scale | [`cmd/scale`](cmd/scale) | Index many repos, report size/throughput/mmap memory | — |
 | moedex-parity | [`cmd/moedex-parity`](cmd/moedex-parity) | Full-corpus parity gate: build + battery + oracles + `PARITY-REPORT.md`, non-zero exit on failure | — |
 | moedex-corpus | [`cmd/moedex-corpus`](cmd/moedex-corpus) | Corpus setup + freshness CLI: `doctor` / `clone` / `sync` (`-reindex`) / `groups`, scoped to gitlab.tcdevops.com | — |
+| moedex-nav | [`cmd/moedex-nav`](cmd/moedex-nav) | CLI for the experimental LSP-precise navigation arm (built only with `-tags lsp`): `-verb def\|refs\|impl` over `FILE:LINE:COL`, `-lang`/`-server` selection, `-overlay` (unsaved-buffer nav), `-notify` (disk-edit invalidation), `-json` output, `-stats` (Pool counters). External language server on PATH; not in the default build. | — |
 
 ---
 
@@ -410,6 +412,30 @@ tool's voice (the parallel clones are his tentacles).
   ripgrep ground truth + independent gold adjudicator + Zoekt differential,
   gated by `make verify` and reported in `PARITY-REPORT.md`.
 
+**LSP-precise navigation arm (`internal/navigate` + `cmd/moedex-nav`, `-tags lsp`)** —
+the ADR 0017 spike for whether a future moedex could subsume Serena's navigation
+role. It proves the three conditions ADR 0017 sets as the gate: real LSP
+semantics (type-resolved go-to-def / find-refs / find-impls from an out-of-process
+language server, not the syntactic symbol sidecar), Pool concurrency-safety (one
+server per module root shared across parallel lanes, no thundering-herd spawn,
+transparent restart of a dead server), and live working-tree/overlay freshness
+(`didChange` re-sync, `SetOverlay` over an unsaved in-memory buffer, `NotifyChanged`
+for disk edits). The JSON-RPC client is hand-written against the standard library
+(`os/exec` + `encoding/json` over a Content-Length-framed stdio pipe), so the arm
+adds **no new `go.mod` dependency** — the same build-tag boundary the dense
+([0007](docs/adr/0007-optional-dense-arm.md)) and SIMD
+([0013](docs/adr/0013-pure-go-defer-simd.md)) arms use. The language server is an
+external binary on PATH, never linked. C# (`csharp-ls`), Go (`gopls`), SCSS/CSS
+(`vscode-css-language-server`), and CFML (`cflsp`, built from softwareCobbler/cfc;
+go-to-definition only) are proven live in tests; TypeScript/Python are too. SQL
+(`sql-language-server`) is completion-only (no navigation in any SQL LSP) and HTML
+(`vscode-html-language-server`) is shallow; both route and degrade gracefully.
+Servers absent on a machine skip gracefully in tests. CFML requires a one-time
+local build (`~/.moedex-tools/cfc`, wrapped as `cflsp` on PATH).
+`navigate.Pool.Stats()` exposes lifetime spawn/restart/eviction/query counters
+(surfaced by `moedex-nav -stats`). This is a spike behind `-tags lsp`; the pure-Go
+default build is untouched and gains none of it. See ADR 0017 for the full gate.
+
 **Deliberately deferred (design intentions, not yet built)** — tracked in the
 northstar and [`research/`](research):
 
@@ -455,8 +481,11 @@ northstar and [`research/`](research):
   syntactic and best-effort (the non-Go ones are regex/byte scanners, not full
   parsers; see [`research/symbol-layer.md`](research/symbol-layer.md)). Tree-sitter
   or SCIP-grade parsing, and additional languages, remain future work.
-- **Find-refs / go-to-def and an ANN vector index** are still future work. (The
-  symbol-name ranking arm and the path/filename arm are now built — see the ranker.)
+- **Find-refs / go-to-def and an ANN vector index** are still future work *in the
+  default build*. (The symbol-name ranking arm and the path/filename arm are now
+  built — see the ranker.) A `-tags lsp` spike now exists for type-resolved
+  navigation — see "LSP-precise navigation arm" below and ADR 0017 — but the
+  pure-Go default binary is unchanged and gains neither.
 
 ---
 
