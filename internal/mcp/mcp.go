@@ -65,7 +65,47 @@ type Server struct {
 	maxConcurrency  int
 	maxRequestBytes int
 	maxQueryBytes   int
+
+	// extraTools are additional tools registered alongside the built-in
+	// search_context (e.g. the LSP navigation tools the warm daemon exposes under
+	// -tags lsp). order preserves tools/list ordering; byName dispatches calls.
+	extraOrder []ToolHandler
+	byName     map[string]ToolHandler
 }
+
+// ToolHandler is an additional MCP tool plugged into the server. It owns its
+// tools/list descriptor and its tools/call handling. Call receives the raw
+// `arguments` object of the tools/call request and returns an MCP result map
+// (use TextResult for the common case). Implementations must be safe for
+// concurrent calls — the server dispatches requests on bounded worker goroutines.
+type ToolHandler interface {
+	Name() string
+	Descriptor() map[string]interface{}
+	Call(ctx context.Context, arguments json.RawMessage) (map[string]interface{}, error)
+}
+
+// WithTools registers extra tools alongside search_context. Names must be unique
+// and must not be "search_context"; duplicates and that reserved name are
+// ignored. Used by the warm daemon to add LSP navigation tools under -tags lsp.
+func WithTools(tools ...ToolHandler) Option {
+	return func(s *Server) {
+		for _, t := range tools {
+			if t == nil || t.Name() == "" || t.Name() == "search_context" {
+				continue
+			}
+			if _, dup := s.byName[t.Name()]; dup {
+				continue
+			}
+			s.byName[t.Name()] = t
+			s.extraOrder = append(s.extraOrder, t)
+		}
+	}
+}
+
+// TextResult builds a plain-text MCP tools/call result. isError reports a
+// tool-level failure (not a transport error). Exported so ToolHandler
+// implementations in other packages can produce results in the standard shape.
+func TextResult(text string, isError bool) map[string]interface{} { return textResult(text, isError) }
 
 // Option configures a Server. All options are safe to omit; NewServer applies
 // sane defaults so existing callers keep working unchanged.
@@ -124,6 +164,7 @@ func NewServer(searcher ContextSearcher, opts ...Option) *Server {
 		maxConcurrency:  defaultMaxConcurrency,
 		maxRequestBytes: defaultMaxRequestBytes,
 		maxQueryBytes:   defaultMaxQueryBytes,
+		byName:          make(map[string]ToolHandler),
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -340,7 +381,11 @@ func (s *Server) handle(ctx context.Context, req *request) (response, bool) {
 		return base, false // pure notification
 
 	case "tools/list":
-		base.Result = map[string]interface{}{"tools": []interface{}{toolDescriptor()}}
+		tools := []interface{}{toolDescriptor()}
+		for _, t := range s.extraOrder {
+			tools = append(tools, t.Descriptor())
+		}
+		base.Result = map[string]interface{}{"tools": tools}
 		return base, !isNotification
 
 	case "tools/call":
@@ -400,6 +445,15 @@ func (s *Server) callTool(ctx context.Context, raw json.RawMessage) (map[string]
 		return nil, fmt.Errorf("invalid tools/call params: %w", err)
 	}
 	if p.Name != "search_context" {
+		// Dispatch to a registered extra tool (e.g. LSP navigation) by name,
+		// handing it the raw arguments object.
+		if h := s.byName[p.Name]; h != nil {
+			var head struct {
+				Arguments json.RawMessage `json:"arguments"`
+			}
+			_ = json.Unmarshal(raw, &head)
+			return h.Call(ctx, head.Arguments)
+		}
 		return nil, fmt.Errorf("unknown tool: %s", p.Name)
 	}
 	if strings.TrimSpace(p.Arguments.Query) == "" {

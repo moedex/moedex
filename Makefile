@@ -85,12 +85,14 @@ install: install-bins
 	@go build -o "$(BINDIR)/moedex-serve" ./cmd/moedex-serve
 	@$(MAKE) --no-print-directory install-finish
 
-## install-dense: like install, but moedex-serve is the in-process ONNX build
-## (-tags onnx) the warm daemon needs. Pulls the onnx module (already in go.mod);
-## running it needs the ONNX Runtime dylib at ONNXRUNTIME_LIB_PATH.
+## install-dense: like install, but moedex-serve is the warm-daemon build with the
+## in-process ONNX embedder AND the LSP navigation arm (-tags "onnx lsp"): it
+## serves search_context PLUS find_definition/find_references/find_implementations
+## (ADR 0017). Running it needs the ONNX Runtime dylib at ONNXRUNTIME_LIB_PATH and
+## the language servers on PATH (gopls, csharp-ls, …) — see deploy/com.moedex.serve.plist.
 install-dense: install-bins
-	@echo "=== moedex-serve (-tags onnx) -> $(BINDIR) ==="
-	@go build -tags onnx -o "$(BINDIR)/moedex-serve" ./cmd/moedex-serve
+	@echo '=== moedex-serve (-tags "onnx lsp") -> $(BINDIR) ==='
+	@go build -tags "onnx lsp" -o "$(BINDIR)/moedex-serve" ./cmd/moedex-serve
 	@$(MAKE) --no-print-directory install-finish
 
 # install-bins / install-finish are internal helpers for install / install-dense.

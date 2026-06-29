@@ -20,7 +20,13 @@
   <array>
     <string>/bin/sh</string>
     <string>-c</string>
-    <string>TOKEN=$(cat "$HOME/.moedex-index/auth-token"); launchctl setenv MOEDEX_TOKEN "$TOKEN"; export MOEDEX_AUTH_TOKEN="$TOKEN"; exec "$HOME/.local/bin/moedex-serve" -shard-dir "$HOME/.moedex-index/shards" -mcp-http 127.0.0.1:8081 -embed onnx -onnx-runtime @ONNX_LIB@</string>
+    <!--
+      PATH is set so the LSP navigation arm (the -tags "onnx lsp" daemon, ADR 0017)
+      can find its external language servers, which launchd's minimal default PATH
+      would miss: $HOME/go/bin (gopls), /opt/homebrew/bin (csharp-ls, cflsp, node,
+      dotnet, the vscode-* and ts/pyright servers), $HOME/.dotnet/tools.
+    -->
+    <string>TOKEN=$(cat "$HOME/.moedex-index/auth-token"); launchctl setenv MOEDEX_TOKEN "$TOKEN"; export MOEDEX_AUTH_TOKEN="$TOKEN"; export PATH="$HOME/go/bin:/opt/homebrew/bin:$HOME/.dotnet/tools:$PATH"; exec "$HOME/.local/bin/moedex-serve" -shard-dir "$HOME/.moedex-index/shards" -mcp-http 127.0.0.1:8081 -embed onnx -onnx-runtime @ONNX_LIB@</string>
   </array>
 
   <key>RunAtLoad</key>
