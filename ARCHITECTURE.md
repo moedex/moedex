@@ -432,6 +432,10 @@ go-to-definition only) are proven live in tests; TypeScript/Python are too. SQL
 (`vscode-html-language-server`) is shallow; both route and degrade gracefully.
 Servers absent on a machine skip gracefully in tests. CFML requires a one-time
 local build (`~/.moedex-tools/cfc`, wrapped as `cflsp` on PATH).
+**Setup:** `make setup-lsp` (or `scripts/install-lsp-servers.sh`, `--with-cfml`
+for the external CFML build) installs the servers; `moedex-index doctor` reports
+which are present and their capability notes — both enumerate the engine's own
+registry (`navigate.Servers()`) so they never drift from what the daemon routes.
 `navigate.Pool.Stats()` exposes lifetime spawn/restart/eviction/query counters
 (surfaced by `moedex-nav -stats`). This is a spike behind `-tags lsp`; the pure-Go
 default build is untouched and gains none of it. See ADR 0017 for the full gate.

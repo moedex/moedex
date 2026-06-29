@@ -7,10 +7,13 @@
   eviction + jittered restart backoff + an optional `MaxServers` LRU bound, editor-grade
   *incremental* (range-based) `didChange` sync, and a full CLI. It remains a **single-host,
   in-process** arm behind `-tags lsp`: cross-process / multi-host server sharing is the one piece of
-  the original "remaining work" still unaddressed, and only gopls (Go) is proven live in CI — the
-  other servers are resolvable and unit-tested but skip when their binary is absent. This is still a
-  `Proposed` decision: the engineering proof exists, but the strategic move (retiring the Serena seam
-  in Protostar) is not taken here.
+  the original "remaining work" still unaddressed. Go (gopls), C# (csharp-ls), TypeScript, Python,
+  SCSS/CSS, and CFML (cflsp) have all been exercised **live** end-to-end — both through `make test-lsp`
+  with the servers installed and through the warm daemon's MCP `find_definition` — and the daemon
+  serves the navigation tools alongside `search_context`. CI currently has only gopls installed, so
+  the non-Go live tests skip there (env-gated); `registry_test.go` pins the launch recipes
+  server-free and always runs. This is still a `Proposed` decision: the engineering proof exists, but
+  the strategic move (retiring the Serena seam in Protostar) is not taken here.
 - **Date:** 2026-06-29
 - **Context owner:** moedex (TurnCommerce)
 
@@ -196,9 +199,10 @@ sync rather than only full-text.
   re-sync, overlays, `NotifyChanged`). The in-process arm is now productionized — multi-language,
   pooled, incrementally-synced, with a `cmd/moedex-nav` CLI (`-verb`, `-lang`/`-server`, `-overlay`,
   `-notify`, `-json`, `-stats`). What remains before retiring the Serena seam is **strategic, not a
-  proof gap**: cross-process / multi-host server sharing, live coverage for the non-Go servers
-  (only gopls runs in CI), and the Protostar-side decision to actually route navigation through Moe
-  (the tripwire below).
+  proof gap**: cross-process / multi-host server sharing, CI breadth (the non-Go servers run live
+  locally — C#, TypeScript, Python, SCSS/CSS, CFML have all been driven end-to-end — but CI installs
+  only gopls, so their live tests skip there), and the Protostar-side decision to actually route
+  navigation through Moe (the tripwire below).
 
 **Architectural tripwire (loops back to Protostar ADR 0002)**
 - The "layered" context seam keeps navigation on a **direct** Serena seam, deliberately *not*

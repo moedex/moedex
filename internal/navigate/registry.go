@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -47,6 +48,11 @@ type LangSpec struct {
 	// installed off the default path (e.g. Homebrew). Returns nil to add nothing.
 	// Resolved dynamically (not stored data) so the registry stays machine-portable.
 	ResolveEnv func() []string `json:"-"`
+	// Note is a short human caveat about this server's navigation capability,
+	// setup, or corpus relevance — surfaced by `moedex-index doctor` and the
+	// setup script so the honest matrix lives with the data. Empty means full
+	// def+refs with no special setup.
+	Note string
 }
 
 // defaultRegistry is the exact set of language servers moedex ships, keyed by
@@ -87,12 +93,14 @@ var defaultRegistry = map[string]LangSpec{
 		Command:     "rust-analyzer",
 		Args:        nil,
 		RootMarkers: []string{"Cargo.toml"},
+		Note:        "not present in the corpus today; full resolution also needs cargo on PATH",
 	},
 	"cpp": {
 		Language:    "cpp",
 		Command:     "clangd",
 		Args:        nil,
 		RootMarkers: []string{"compile_commands.json", "compile_flags.txt", ".clangd"},
+		Note:        "not present in the corpus today",
 	},
 	// C# is the dominant language in the TurnCommerce corpus (~60% of files), so
 	// it is wired even though its server (csharp-ls, a dotnet global tool) needs a
@@ -104,6 +112,7 @@ var defaultRegistry = map[string]LangSpec{
 		Args:        nil,
 		RootMarkers: []string{"*.sln", "global.json", "Directory.Build.props", "*.csproj"},
 		ResolveEnv:  dotnetRootEnv,
+		Note:        "needs the .NET SDK (csharp-ls is a dotnet global tool); DOTNET_ROOT auto-resolved",
 	},
 	// SQL and ColdFusion are real parts of the TurnCommerce corpus (SQL ~2.9k
 	// files, CFML ~2.2k), so they are wired despite thin LSP ecosystems — both
@@ -120,6 +129,7 @@ var defaultRegistry = map[string]LangSpec{
 		Command:     "sql-language-server",
 		Args:        []string{"up", "--method", "stdio"},
 		RootMarkers: []string{".sqllsrc.json", ".git"},
+		Note:        "completion-only — no SQL LSP implements definition/references; routes but nav is empty",
 	},
 	"cfml": {
 		Language: "cfml",
@@ -130,6 +140,7 @@ var defaultRegistry = map[string]LangSpec{
 		// — the server fills defaults (engineVersion "lucee.5", etc.).
 		InitOptions: map[string]any{"config": map[string]any{}},
 		RootMarkers: []string{"Application.cfc", "Application.cfm", "box.json", "server.json", ".git"},
+		Note:        "definition only (no references/impl); built from source (softwareCobbler/cfc) — see scripts/install-lsp-servers.sh",
 	},
 	// The Angular front-ends pull in SCSS and HTML. The official VSCode servers
 	// (vscode-langservers-extracted, one npm package, no build) cover them:
@@ -150,7 +161,23 @@ var defaultRegistry = map[string]LangSpec{
 		Command:     "vscode-html-language-server",
 		Args:        []string{"--stdio"},
 		RootMarkers: []string{"package.json", "angular.json", ".git"},
+		Note:        "shallow nav (intra-document); no Angular template↔component binding (needs the Angular Language Service)",
 	},
+}
+
+// Servers returns the registered language-server specs in a stable order (by
+// language). It is the single source of truth for tooling — `moedex-index
+// doctor` and scripts/install-lsp-servers.sh enumerate this so the set of
+// servers, their commands, and their capability notes never drift from the
+// engine's actual routing. Compiles in both build arms (this file has no build
+// tag), so the default-build doctor can report nav-server readiness.
+func Servers() []LangSpec {
+	out := make([]LangSpec, 0, len(defaultRegistry))
+	for _, s := range defaultRegistry {
+		out = append(out, s)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Language < out[j].Language })
+	return out
 }
 
 // extToLang maps a file extension (lowercased, with leading dot) to a canonical

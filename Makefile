@@ -26,7 +26,7 @@ BINDIR       ?= $(HOME)/.local/bin
 # and scale (dev, generic name) are intentionally excluded.
 INSTALL_CMDS := moedex moedex-index moedex-corpus moedex-mcp
 
-.PHONY: verify parity setup build vet test roundtrip health clean build-dense test-dense build-simd vet-simd build-lsp test-lsp vet-lsp bench-setops bench-real bench-latency install install-dense install-bins install-finish
+.PHONY: verify parity setup setup-lsp build vet test roundtrip health clean build-dense test-dense build-simd vet-simd build-lsp test-lsp vet-lsp bench-setops bench-real bench-latency install install-dense install-bins install-finish
 
 # Real-index benchmark knobs.
 BENCHOUT  ?= $(CURDIR)/.bench
@@ -74,6 +74,14 @@ setup:
 	go install github.com/sourcegraph/zoekt/cmd/zoekt-index@latest
 	go install github.com/sourcegraph/zoekt/cmd/zoekt@latest
 	@echo "installed into $(GOBIN)"
+
+## setup-lsp: install the language servers the navigation arm (ADR 0017, the
+## -tags lsp daemon) drives — gopls, csharp-ls (+ .NET SDK), the TS/Python/CSS/HTML
+## servers, sql-language-server, rust-analyzer. Idempotent. CFML is opt-in (it
+## builds external source): `scripts/install-lsp-servers.sh --with-cfml`. Verify
+## afterward with `moedex-index doctor` (the "lsp navigation servers" section).
+setup-lsp:
+	scripts/install-lsp-servers.sh
 
 ## install: build every operational binary and install it to BINDIR (default
 ## ~/.local/bin), with the PURE-GO moedex-serve, then remove any stale moedex-*

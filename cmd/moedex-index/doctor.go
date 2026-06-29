@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"moedex/internal/navigate"
 	"moedex/internal/server"
 	"moedex/internal/version"
 )
@@ -39,6 +40,7 @@ func runDoctor(args []string) error {
 	checkShardDir(d, *shardDir)
 	checkDaemon(d, *addr)
 	checkLaunchd(d)
+	checkNavServers(d)
 	d.print()
 
 	if d.crit > 0 {
@@ -371,4 +373,25 @@ func envOrDefault(key, def string) string {
 		return v
 	}
 	return def
+}
+
+// checkNavServers reports which LSP navigation servers (ADR 0017) are on PATH.
+// The set, commands, and capability notes come from navigate.Servers() — the
+// engine's own registry — so this never drifts from what the daemon actually
+// routes. All findings are warnings, never critical: navigation is an optional
+// arm behind the -tags lsp daemon and degrades gracefully when a server is
+// absent. The fix-it pointer is scripts/install-lsp-servers.sh.
+func checkNavServers(d *doctorReport) {
+	const sec = "lsp navigation servers (optional; -tags lsp daemon — see scripts/install-lsp-servers.sh)"
+	for _, s := range navigate.Servers() {
+		note := ""
+		if s.Note != "" {
+			note = " — " + s.Note
+		}
+		if p, err := exec.LookPath(s.Command); err == nil {
+			d.ok(sec, "%-11s %s (%s)%s", s.Language, s.Command, p, note)
+		} else {
+			d.warnf(sec, "%-11s %s not on PATH%s", s.Language, s.Command, note)
+		}
+	}
 }
