@@ -369,6 +369,12 @@ func (c *LSP) References(ctx context.Context, at Pos, includeDecl bool) ([]Locat
 	return c.locationQuery(ctx, "textDocument/references", at, extra)
 }
 
+// shutdownTimeout bounds the graceful "shutdown" handshake in Close. A wedged
+// server that accepts the request but never replies must not hang teardown —
+// the kill (procCancel) + reap (cmd.Wait) below is the real teardown; the
+// graceful shutdown is strictly best-effort.
+const shutdownTimeout = 3 * time.Second
+
 func (c *LSP) Close() error {
 	c.mu.Lock()
 	if c.closed {
@@ -381,8 +387,9 @@ func (c *LSP) Close() error {
 
 	// Best-effort graceful shutdown; then drop stdin, cancel the process context
 	// (kills it if it lingers), and reap.
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	_, _ = c.call(ctx, "shutdown", nil)
+	cancel()
 	_ = c.notify("exit", nil)
 	_ = c.stdin.Close()
 	c.procCancel()
@@ -914,6 +921,17 @@ func (c *LSP) writeFrame(v any) error {
 // waiting caller, server→client requests to a minimal auto-responder, and
 // notifications to the floor.
 func (c *LSP) readLoop(stdout io.Reader) {
+	// A reader-side panic (e.g. an unforeseen malformed frame) must end this
+	// server, not crash the whole host process — every other pooled server and
+	// caller runs in the same binary.
+	defer func() {
+		if p := recover(); p != nil {
+			c.dead.Store(true)
+			err := fmt.Errorf("navigate: lsp readLoop panic: %v", p)
+			c.log.Debug("lsp readLoop died", "err", err.Error())
+			c.failAllPending(err)
+		}
+	}()
 	r := bufio.NewReader(stdout)
 	for {
 		body, err := readFrame(r)
@@ -984,11 +1002,44 @@ func (c *LSP) failAllPending(err error) {
 	}
 }
 
+// maxFrameBytes caps a single Content-Length framed message body. A buggy or
+// hostile language server (binaries are on PATH, semi-trusted) can otherwise
+// declare an arbitrarily large but in-range length and drive the make([]byte,
+// contentLen) below into a panic ("makeslice: len out of range") or an OOM;
+// real LSP messages never approach this size.
+const maxFrameBytes = 256 << 20 // 256 MiB
+
+// maxHeaderLineBytes caps a single header line while readFrame hunts for its
+// terminating '\n'. Real Content-Length/header lines are a handful of bytes;
+// without this cap a buggy or hostile server that never sends a newline would
+// make r.ReadString('\n') buffer the connection's bytes without bound.
+const maxHeaderLineBytes = 8 << 10 // 8 KiB
+
+// readHeaderLine reads one '\n'-terminated line, erroring once the
+// accumulated, still-unterminated line exceeds maxHeaderLineBytes instead of
+// buffering forever.
+func readHeaderLine(r *bufio.Reader) (string, error) {
+	var line []byte
+	for {
+		frag, err := r.ReadSlice('\n')
+		line = append(line, frag...)
+		if len(line) > maxHeaderLineBytes {
+			return "", fmt.Errorf("navigate: header line exceeds %d byte cap", maxHeaderLineBytes)
+		}
+		if err == nil {
+			return string(line), nil
+		}
+		if err != bufio.ErrBufferFull {
+			return "", err
+		}
+	}
+}
+
 // readFrame reads one Content-Length framed JSON-RPC message body.
 func readFrame(r *bufio.Reader) ([]byte, error) {
 	var contentLen int
 	for {
-		line, err := r.ReadString('\n')
+		line, err := readHeaderLine(r)
 		if err != nil {
 			return nil, err
 		}
@@ -1009,6 +1060,9 @@ func readFrame(r *bufio.Reader) ([]byte, error) {
 	if contentLen <= 0 {
 		return nil, fmt.Errorf("navigate: missing Content-Length")
 	}
+	if contentLen > maxFrameBytes {
+		return nil, fmt.Errorf("navigate: Content-Length %d exceeds %d byte cap", contentLen, maxFrameBytes)
+	}
 	body := make([]byte, contentLen)
 	if _, err := io.ReadFull(r, body); err != nil {
 		return nil, err
@@ -1020,8 +1074,19 @@ func readFrame(r *bufio.Reader) ([]byte, error) {
 
 // posToLSP converts a 1-based byte (line,col) cursor to a 0-based LSP position.
 // With utf-8 encoding negotiated, character is a byte offset within the line.
+// Pos is documented as 1-based, but exported Pool/LSP methods accept any Pos
+// from a direct library caller; Line/Col below 1 clamp to LSP's zero floor
+// rather than going negative (a negative LSP position is invalid per spec and
+// server behavior on receiving one is undefined).
 func posToLSP(p Pos) lspPosition {
-	return lspPosition{Line: p.Line - 1, Character: p.Col - 1}
+	line, col := p.Line, p.Col
+	if line < 1 {
+		line = 1
+	}
+	if col < 1 {
+		col = 1
+	}
+	return lspPosition{Line: line - 1, Character: col - 1}
 }
 
 func lspToPos(file string, p lspPosition) Pos {

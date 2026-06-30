@@ -182,7 +182,7 @@ func Build(cfg Config) (*Built, error) {
 	// sidecar manifest can be written after the build (see manifest.go).
 	mb := newManifestBuilder(cfg.Root, shardDir)
 	var (
-		sb         = newShardBuilder(cfg.Selector)
+		sb         = index.NewBuildTarget(cfg.Selector)
 		shardBytes int64
 		shardIdx   int
 		anyInShard bool
@@ -192,13 +192,13 @@ func Build(cfg Config) (*Built, error) {
 		if !anyInShard {
 			return nil
 		}
-		// finalize() materializes the per-shard *Index: the eager path returns the
+		// Finalize materializes the per-shard *Index: the eager path returns the
 		// index it has been writing into; the selective path runs the second pass
 		// (apply selector, emit kept-gram postings). diskstore.Save then writes a
 		// MOEDEX04 shard whenever the index is selective (SelectedGrams != nil) and
 		// a plain MOEDEX03 shard otherwise — LoadMmap reconstructs IndexedGram from
 		// the persisted keep-set, so the scan phase is selective-aware end to end.
-		ix := sb.finalize()
+		ix := sb.Finalize()
 		path := filepath.Join(shardDir, fmt.Sprintf("shard-%04d.idx", shardIdx))
 		if err := diskstore.Save(ix, path); err != nil {
 			return fmt.Errorf("save shard %d: %w", shardIdx, err)
@@ -207,7 +207,7 @@ func Build(cfg Config) (*Built, error) {
 		mb.flushed()
 		cfg.logf("  flushed shard %d: %d blobs, %.1f MB content", shardIdx, ix.NumBlobs(), float64(shardBytes)/1e6)
 		shardIdx++
-		sb = newShardBuilder(cfg.Selector)
+		sb = index.NewBuildTarget(cfg.Selector)
 		shardBytes = 0
 		anyInShard = false
 		runtime.GC() // release the builder's posting map before the next shard
@@ -264,66 +264,14 @@ func Build(cfg Config) (*Built, error) {
 	return b, nil
 }
 
-// shardBuilder unifies the all-trigram (*index.Index) and selective
-// (*index.Builder) build paths behind the AddFile / NumBlobs / finalize trio the
-// packing loop needs. When sel is nil it uses the eager index.New()+AddFile path
-// (each AddFile materializes every trigram immediately, exactly as before); when
-// sel is non-nil it uses the two-pass index.Builder (count document frequency,
-// then prune at Finalize). The retrieval and adjudication paths are identical for
-// both: a deselected gram only ever widens the candidate set (force-scan via
-// IndexedGram), so the gold oracle still proves moedex ⊆ gold either way. This
-// mirrors cmd/moedex-index's shardBuilder so the parity harness exercises the
-// same selective build the production indexer ships.
-type shardBuilder struct {
-	eag *index.Index   // all-trigram path (sel == nil)
-	bld *index.Builder // selective path (sel != nil)
-}
-
-func newShardBuilder(sel index.GramSelector) *shardBuilder {
-	sb := &shardBuilder{}
-	if sel == nil {
-		sb.eag = index.New()
-	} else {
-		sb.bld = index.NewSelective(sel)
-	}
-	return sb
-}
-
-func (sb *shardBuilder) AddFile(repo, rel, abs, sha string, content []byte) {
-	if sb.eag != nil {
-		sb.eag.AddFile(repo, rel, abs, sha, content)
-		return
-	}
-	sb.bld.AddFile(repo, rel, abs, sha, content)
-}
-
-func (sb *shardBuilder) NumBlobs() int {
-	if sb.eag != nil {
-		return sb.eag.NumBlobs()
-	}
-	return sb.bld.NumBlobs()
-}
-
-// finalize returns the per-shard *Index. The eager path returns the index it has
-// been writing into; the selective path runs Builder.Finalize (apply selector,
-// emit kept-gram postings, record the keep-set so IndexedGram is exact).
-func (sb *shardBuilder) finalize() *index.Index {
-	if sb.eag != nil {
-		return sb.eag
-	}
-	return sb.bld.Finalize()
-}
-
 // writeMirror materializes one file's indexed content under mirrorDir as a flat,
 // integer-named file (bucketed 1000-per-dir to keep directories reasonable). The
 // content is exactly what moedex indexed (BOM already stripped by ingest), so
 // ripgrep scanning the mirror searches byte-identical bytes over exactly F.
 func writeMirror(mirrorDir string, id int, content []byte) error {
 	bucket := filepath.Join(mirrorDir, fmt.Sprintf("%03d", id/1000))
-	if id%1000 == 0 {
-		if err := os.MkdirAll(bucket, 0o755); err != nil {
-			return err
-		}
+	if err := os.MkdirAll(bucket, 0o755); err != nil {
+		return err
 	}
 	return os.WriteFile(filepath.Join(bucket, fmt.Sprintf("%d", id)), content, 0o644)
 }
@@ -371,6 +319,12 @@ type TermPool struct {
 	phrases   []string
 	metas     []string
 	unicodes  []string
+
+	// phrasesSeen/metasSeen/unicodesSeen are the running counts of candidates
+	// offered to the corresponding reservoir, needed by reservoirAdd's
+	// Algorithm R (the count is unrecoverable from the slice once it's capped
+	// at its max size).
+	phrasesSeen, metasSeen, unicodesSeen int
 }
 
 const (
@@ -462,7 +416,8 @@ func (p *TermPool) observePhrase(line []byte) {
 	}
 	phrase := string(line[w1:i])
 	if len(phrase) >= 6 && len(phrase) <= 50 {
-		p.phrases = reservoirAdd(p.rng, p.phrases, phrase, reservoirPhrases)
+		p.phrases = reservoirAdd(p.rng, p.phrases, p.phrasesSeen, phrase, reservoirPhrases)
+		p.phrasesSeen++
 	}
 }
 
@@ -494,7 +449,8 @@ func (p *TermPool) observeMeta(line []byte) {
 		}
 		w := line[lo:hi]
 		if len(w) >= 3 && len(w) <= 24 {
-			p.metas = reservoirAdd(p.rng, p.metas, string(w), reservoirMetas)
+			p.metas = reservoirAdd(p.rng, p.metas, p.metasSeen, string(w), reservoirMetas)
+			p.metasSeen++
 		}
 		i = hi
 	}
@@ -511,7 +467,7 @@ func (p *TermPool) observeUnicode(line []byte) {
 			continue
 		}
 		lo := i
-		for lo > 0 && line[lo-1] >= 0x80 || (lo > 0 && isWordByte(line[lo-1])) {
+		for lo > 0 && (line[lo-1] >= 0x80 || isWordByte(line[lo-1])) {
 			lo--
 		}
 		hi := i
@@ -520,7 +476,8 @@ func (p *TermPool) observeUnicode(line []byte) {
 		}
 		w := line[lo:hi]
 		if n := len(w); n >= 2 && n <= 30 && hasMultibyte(w) {
-			p.unicodes = reservoirAdd(p.rng, p.unicodes, string(w), reservoirUnicode)
+			p.unicodes = reservoirAdd(p.rng, p.unicodes, p.unicodesSeen, string(w), reservoirUnicode)
+			p.unicodesSeen++
 		}
 		if hi > i {
 			i = hi
@@ -537,18 +494,17 @@ func hasMultibyte(b []byte) bool {
 	return false
 }
 
-// reservoirAdd implements reservoir sampling: the slice keeps at most max items,
-// each input having equal probability of being retained, deterministically given
-// the rng. Items already present are still counted (cheap dup tolerance).
-func reservoirAdd(rng *rand.Rand, res []string, item string, max int) []string {
-	if len(res) < max {
+// reservoirAdd implements Algorithm R uniform reservoir sampling: res keeps at
+// most max items, and seen is the number of items already observed for this
+// reservoir before this call (0 for the first item). After n calls, every
+// observed item has had an equal max/n probability of surviving in the final
+// reservoir, deterministically given the rng.
+func reservoirAdd(rng *rand.Rand, res []string, seen int, item string, max int) []string {
+	if seen < max {
 		return append(res, item)
 	}
-	// Replace a random slot with decreasing probability. We approximate the
-	// classic algorithm using a growing virtual count encoded by capacity churn;
-	// for our purposes a simple 1/max replacement gives good spread.
-	if rng.Intn(max) == 0 {
-		res[rng.Intn(max)] = item
+	if j := rng.Intn(seen + 1); j < max {
+		res[j] = item
 	}
 	return res
 }

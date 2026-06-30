@@ -16,7 +16,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -27,36 +26,55 @@ import (
 	"moedex/internal/index"
 	"moedex/internal/ingest"
 	"moedex/internal/search"
+	"moedex/internal/version"
 )
+
+// versionRequested reports whether the first scale argument asks to print the
+// build identity instead of running a scale pass against a corpus root.
+func versionRequested(args []string) bool {
+	return len(args) > 0 && (args[0] == "-version" || args[0] == "--version")
+}
 
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "usage: scale ROOT [sampleRegex]")
 		os.Exit(2)
 	}
+	if versionRequested(os.Args[1:]) {
+		fmt.Println(version.Line("scale", false))
+		return
+	}
 	root := os.Args[1]
 	sample := ""
 	if len(os.Args) > 2 {
 		sample = os.Args[2]
 	}
+	if err := run(root, sample); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
 
+func run(root, sample string) error {
 	// Optional selective build (MOEDEX_SELECTIVE=<frac>). nil selector => default
 	// all-trigram path, so existing scale runs are unchanged.
 	var sel index.GramSelector
 	if v := os.Getenv("MOEDEX_SELECTIVE"); v != "" {
 		frac, err := strconv.ParseFloat(v, 64)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "bad MOEDEX_SELECTIVE=%q: %v\n", v, err)
-			os.Exit(2)
+			return fmt.Errorf("bad MOEDEX_SELECTIVE=%q: %w", v, err)
 		}
 		sel = index.FrequencyThresholdSelector{MaxDocFraction: frac}
 		fmt.Printf("selective build: %s\n", sel.Describe())
 	}
 
-	repos := findRepos(root)
+	repos, err := ingest.DiscoverRepos(root)
+	if err != nil {
+		return fmt.Errorf("discover repos under %s: %w", root, err)
+	}
 	fmt.Printf("found %d git repos under %s\n", len(repos), root)
 
-	sb := newScaleBuilder(sel)
+	sb := index.NewBuildTarget(sel)
 	var totalFiles int
 	var totalBytes int64
 	start := time.Now()
@@ -72,7 +90,7 @@ func main() {
 			totalBytes += int64(len(f.Content))
 		}
 	}
-	ix := sb.finalize()
+	ix := sb.Finalize()
 	buildDur := time.Since(start)
 
 	var postings int64
@@ -101,8 +119,7 @@ func main() {
 		qStart := time.Now()
 		m, err := search.Regex(context.Background(), ix, sample)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "query error:", err)
-			return
+			return fmt.Errorf("query error: %w", err)
 		}
 		fmt.Printf("%d matching lines in %s\n", len(m), time.Since(qStart).Round(time.Microsecond))
 	}
@@ -113,14 +130,14 @@ func main() {
 		tmp, err := os.CreateTemp("", "moedex-*.idx")
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "tempfile:", err)
-			return
+			return nil
 		}
 		tmp.Close()
 		defer os.Remove(tmp.Name())
 
 		if err := diskstore.Save(ix, tmp.Name()); err != nil {
 			fmt.Fprintln(os.Stderr, "save:", err)
-			return
+			return nil
 		}
 		fi, _ := os.Stat(tmp.Name())
 		ix = nil // let the in-RAM index be collected before we measure
@@ -129,7 +146,7 @@ func main() {
 		loaded, closer, err := diskstore.LoadMmap(tmp.Name())
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "mmap load:", err)
-			return
+			return nil
 		}
 		defer closer.Close()
 
@@ -152,51 +169,7 @@ func main() {
 			}
 		}
 	}
-}
-
-// scaleBuilder unifies the all-trigram (*index.Index) and selective
-// (*index.Builder) build paths for the scale harness. A nil selector keeps the
-// default eager path so an ordinary scale run is unchanged.
-type scaleBuilder struct {
-	eag *index.Index
-	bld *index.Builder
-}
-
-func newScaleBuilder(sel index.GramSelector) *scaleBuilder {
-	if sel == nil {
-		return &scaleBuilder{eag: index.New()}
-	}
-	return &scaleBuilder{bld: index.NewSelective(sel)}
-}
-
-func (sb *scaleBuilder) AddFile(repo, rel, abs, sha string, content []byte) {
-	if sb.eag != nil {
-		sb.eag.AddFile(repo, rel, abs, sha, content)
-		return
-	}
-	sb.bld.AddFile(repo, rel, abs, sha, content)
-}
-
-func (sb *scaleBuilder) finalize() *index.Index {
-	if sb.eag != nil {
-		return sb.eag
-	}
-	return sb.bld.Finalize()
-}
-
-func findRepos(root string) []string {
-	var repos []string
-	filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
-		if err != nil || !d.IsDir() {
-			return nil
-		}
-		if _, err := os.Stat(filepath.Join(p, ".git")); err == nil {
-			repos = append(repos, p)
-			return filepath.SkipDir // don't descend into a repo
-		}
-		return nil
-	})
-	return repos
+	return nil
 }
 
 func max(a, b int) int {

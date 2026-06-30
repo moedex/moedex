@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -113,4 +114,18 @@ func envOr(key, def string) string {
 		return v
 	}
 	return def
+}
+
+// envOrInt returns the env var value for key parsed as an int, or def when
+// it is unset, empty, or not a valid integer.
+func envOrInt(key string, def int) int {
+	v := os.Getenv(key)
+	if v == "" {
+		return def
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return def
+	}
+	return n
 }

@@ -103,6 +103,9 @@ func gallopIntersect(out, a, b []uint64) []uint64 {
 	j := 0 // current floor in b
 	for _, target := range a {
 		// Exponential search for the smallest index >= j whose value >= target.
+		// hi is reused below as the binary-search upper bound once the window is
+		// bracketed — same variable, second job — so the clamp right after this
+		// loop also doubles as the binary search's initial bound.
 		lo := j
 		hi := j + 1
 		for hi < len(b) && b[hi-1] < target {

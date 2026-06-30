@@ -14,9 +14,9 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"unicode"
 	"unicode/utf8"
 
+	"moedex/internal/fold"
 	"moedex/internal/index"
 	"moedex/internal/query"
 	"moedex/internal/trigram"
@@ -44,6 +44,7 @@ type Stats struct {
 }
 
 func (s *Stats) add(o Stats) {
+	s.CandidateBlobs += o.CandidateBlobs
 	s.CandidateBytes += o.CandidateBytes
 	s.CandidateLines += o.CandidateLines
 	s.LinesAfterFilter += o.LinesAfterFilter
@@ -151,7 +152,11 @@ func LiteralWithStats(ctx context.Context, ix *index.Index, q string) ([]Match, 
 	begins := ix.Postings(begin)
 	ends := ix.Postings(end)
 	j := 0
-	seenCandidate := map[uint64]bool{}
+	// begins is sorted by (Blob, Offset) (see index.AddFile), so every begin
+	// posting for a given blob arrives in one contiguous run: a scalar cursor
+	// on the last-charged blob is enough to dedup stats, no map needed.
+	var lastBlob uint64
+	haveLastBlob := false
 	for i, p := range begins {
 		if i%cancelCheckStride == 0 && canceled(ctx) {
 			return dedupe(matches), stats, ctx.Err()
@@ -164,8 +169,9 @@ func LiteralWithStats(ctx context.Context, ix *index.Index, q string) ([]Match, 
 		}
 		if j < len(ends) && ends[j].Blob == p.Blob && ends[j].Offset == want {
 			b := ix.Blob(p.Blob)
-			if !seenCandidate[p.Blob] {
-				seenCandidate[p.Blob] = true
+			if !haveLastBlob || lastBlob != p.Blob {
+				lastBlob = p.Blob
+				haveLastBlob = true
 				stats.CandidateBlobs++
 				stats.CandidateBytes += int64(len(b.Content))
 				stats.CandidateLines += countLines(b.Content)
@@ -947,7 +953,7 @@ func foldedLiteralPrefilter(runes []rune) lineFilter {
 	variants := make([][]byte, len(runes))
 	clean := make([]bool, len(runes))
 	for i, r := range runes {
-		variants[i], clean[i] = asciiFoldVariants(r)
+		variants[i], clean[i] = fold.ASCIIVariants(r)
 	}
 
 	if len(runes) >= trigram.N {
@@ -1031,25 +1037,6 @@ func foldedVariantSet(variants [][]byte) litSet {
 		set = next
 	}
 	return set
-}
-
-// asciiFoldVariants returns the distinct ASCII bytes an ASCII rune can take under
-// Go's (?i) folding, plus whether its ENTIRE fold orbit stays ASCII (false for
-// k/s, whose orbits include U+212A / U+017F).
-func asciiFoldVariants(r rune) (bytes []byte, allASCII bool) {
-	allASCII = true
-	for c := r; ; {
-		if c < 0x80 {
-			bytes = append(bytes, byte(c))
-		} else {
-			allASCII = false
-		}
-		c = unicode.SimpleFold(c)
-		if c == r {
-			break
-		}
-	}
-	return bytes, allASCII
 }
 
 func appendRefs(matches []Match, b *index.Blob, line int) []Match {

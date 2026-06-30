@@ -125,6 +125,34 @@ func TestCSharpExtractor_NoBodyMethod(t *testing.T) {
 	}
 }
 
+func TestCSharpExtractor_TypeRe_IgnoresCommentsAndStrings(t *testing.T) {
+	src := []byte(`// helper for class Fake bookkeeping
+public class Real
+{
+    /* TODO: refactor
+    class Hidden
+    should not be a type
+    */
+    string s = "class StringLiteral { }";
+    public void Foo() { }
+}
+`)
+	syms, err := CSharpExtractor{}.Extract(src)
+	if err != nil {
+		t.Fatalf("Extract returned error: %v", err)
+	}
+	by := symNames(syms)
+
+	if _, ok := by["Real"]; !ok {
+		t.Errorf("missing legitimate type symbol %q; got %v", "Real", names(syms))
+	}
+	for _, n := range []string{"Fake", "Hidden", "StringLiteral"} {
+		if s, ok := by[n]; ok {
+			t.Errorf("spurious type symbol %q emitted from comment/string: %+v", n, s)
+		}
+	}
+}
+
 func TestCSharpExtractor_NeverPanicsOnGarbage(t *testing.T) {
 	inputs := [][]byte{
 		nil,

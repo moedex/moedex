@@ -1,6 +1,7 @@
 package embed
 
 import (
+	"bytes"
 	"context"
 	"hash/fnv"
 	"net/http"
@@ -8,7 +9,9 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"moedex/internal/index"
 )
@@ -230,6 +233,28 @@ func TestSearch_TopKZeroAndEmpty(t *testing.T) {
 	}
 }
 
+// TestSearch_MixedDimStore_ReturnsError guards against a corrupt/mixed-dim
+// store (e.g. an incremental rebuild that reused a vector from a store built
+// with a different embedder) silently scoring every chunk 0 via dot's
+// length-mismatch guard. Search must surface a clear error instead.
+func TestSearch_MixedDimStore_ReturnsError(t *testing.T) {
+	ctx := context.Background()
+	fe := newFakeEmbedder(3)
+	store := &Store{
+		dim:    3,
+		chunks: []Chunk{{Blob: 0}, {Blob: 1}},
+		vectors: []Vector{
+			{1, 0, 0},
+			{1, 0}, // wrong dim
+		},
+		keys: []ChunkKey{{}, {}},
+	}
+	hits, err := store.Search(ctx, fe, "cat", 2)
+	if err == nil {
+		t.Fatalf("Search on mixed-dim store: want error, got hits %v", hits)
+	}
+}
+
 func TestSaveLoad_RoundTrip(t *testing.T) {
 	ctx := context.Background()
 	fe := newFakeEmbedder(48)
@@ -301,6 +326,36 @@ func TestHTTPEmbedder_ParsesInOrder(t *testing.T) {
 	}
 }
 
+// TestHTTPEmbedder_DimRaceSafe is the regression for F-083: HTTPEmbedder.dim is
+// written at the end of every Embed call and read by both Dim() and Embed's own
+// maxResponseBytes. Concurrent Embed/Dim calls on a shared embedder (e.g. a
+// future caller that parallelizes embedding) must not race. Run with -race.
+func TestHTTPEmbedder_DimRaceSafe(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"data":[{"embedding":[1.0,2.0,3.0]}]}`))
+	}))
+	defer srv.Close()
+
+	e := NewHTTPEmbedder(srv.URL, "test-model")
+
+	var wg sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			if _, err := e.Embed(context.Background(), []string{"text"}); err != nil {
+				t.Errorf("Embed: %v", err)
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			_ = e.Dim()
+		}()
+	}
+	wg.Wait()
+}
+
 func TestHTTPEmbedder_Non200IsError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "model not found", http.StatusNotFound)
@@ -314,5 +369,56 @@ func TestHTTPEmbedder_Non200IsError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "404") {
 		t.Errorf("error should mention status: %v", err)
+	}
+}
+
+func TestNewHTTPEmbedder_SetsDefaultTimeout(t *testing.T) {
+	e := NewHTTPEmbedder("http://127.0.0.1:0", "model")
+	if e.client.Timeout <= 0 {
+		t.Fatalf("client.Timeout = %v, want a positive default so a hung embedding server can't stall a build forever", e.client.Timeout)
+	}
+}
+
+func TestHTTPEmbedder_Embed_BoundedByClientTimeout(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(400 * time.Millisecond)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"data":[{"embedding":[1,0,0]}]}`))
+	}))
+	defer srv.Close()
+
+	e := NewHTTPEmbedder(srv.URL, "test-model")
+	e.client.Timeout = 80 * time.Millisecond // far below the server's 400ms response
+
+	start := time.Now()
+	_, err := e.Embed(context.Background(), []string{"x"})
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected a timeout error from a server slower than the client timeout, got nil")
+	}
+	if elapsed > 300*time.Millisecond {
+		t.Fatalf("Embed took %v to return an error, want bounded by the 80ms client timeout (server takes 400ms)", elapsed)
+	}
+}
+
+func TestHTTPEmbedder_Embed_BoundsResponseSize(t *testing.T) {
+	const oversized = 10 << 20 // 10 MiB: far above any sane single-text embedding response
+	filler := bytes.Repeat([]byte("x"), oversized)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(filler)
+	}))
+	defer srv.Close()
+
+	e := NewHTTPEmbedder(srv.URL, "test-model")
+
+	_, err := e.Embed(context.Background(), []string{"x"})
+	if err == nil {
+		t.Fatal("expected an error for an oversized response, got nil")
+	}
+	if !strings.Contains(err.Error(), "too large") && !strings.Contains(err.Error(), "exceeds") {
+		t.Errorf("error should explain the response was rejected for size, got: %v", err)
 	}
 }

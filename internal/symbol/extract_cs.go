@@ -20,11 +20,15 @@ import "regexp"
 // declaration line's byte range so BodyStart<=NameStart<BodyEnd still holds.
 type CSharpExtractor struct{}
 
-// csTypeRe matches a C# type declaration and captures the type name. It allows
-// leading modifiers (public, abstract, sealed, partial, etc.) loosely by
-// anchoring on the type keyword preceded by start-of-line whitespace. `record`
-// may be `record class`/`record struct`; the optional group absorbs that.
-var csTypeRe = regexp.MustCompile(`\b(class|interface|struct|enum|record)(?:\s+(?:class|struct))?\s+([A-Za-z_][A-Za-z0-9_]*)`)
+// csTypeRe matches a C# type declaration and captures the type name. It is
+// anchored at line start (after optional whitespace) and consumes leading
+// modifiers (public, abstract, sealed, partial, etc.) loosely, like
+// csMethodRe, so a `where T : class` constraint or `class`/`record`/...
+// tokens appearing mid-line (e.g. in prose) never match. `record` may be
+// `record class`/`record struct`; the optional group absorbs that. Matches
+// starting inside a comment or string literal are additionally dropped via
+// literalMask in Extract.
+var csTypeRe = regexp.MustCompile(`(?m)^[ \t]*(?:(?:public|private|protected|internal|static|sealed|abstract|partial|unsafe|new|readonly)\s+)*(class|interface|struct|enum|record)(?:\s+(?:class|struct))?\s+([A-Za-z_][A-Za-z0-9_]*)`)
 
 // csMethodRe matches a C# method declaration and captures the method name. It
 // requires a return type token then Name( and is anchored at line start after
@@ -53,6 +57,8 @@ func (CSharpExtractor) Extract(content []byte) ([]Symbol, error) {
 	// (e.g. `public record CertId(...)` reads like a method to csMethodRe).
 	typeNameStart := map[int]bool{}
 
+	mask := literalMask(content)
+
 	// Types: class/interface/struct/enum/record -> Type.
 	for _, m := range csTypeRe.FindAllSubmatchIndex(content, -1) {
 		// m: [full0 full1 kw0 kw1 name0 name1]
@@ -60,14 +66,17 @@ func (CSharpExtractor) Extract(content []byte) ([]Symbol, error) {
 		if ns < 0 || ne < 0 {
 			continue
 		}
-		bs, be := bodyRange(content, m[1])
+		if mask[ns] {
+			continue // inside a string/char literal or a comment
+		}
+		be := bodyRange(content, m[1])
 		typeNameStart[ns] = true
 		syms = append(syms, Symbol{
 			Name:      string(content[ns:ne]),
 			Kind:      Type,
 			NameStart: ns,
 			NameEnd:   ne,
-			BodyStart: minInt(m[0], bs),
+			BodyStart: m[0],
 			BodyEnd:   be,
 		})
 	}
@@ -84,13 +93,13 @@ func (CSharpExtractor) Extract(content []byte) ([]Symbol, error) {
 		if csControlKeywords[name] || typeNameStart[ns] {
 			continue
 		}
-		bs, be := bodyRange(content, m[1])
+		be := bodyRange(content, m[1])
 		syms = append(syms, Symbol{
 			Name:      name,
 			Kind:      Method,
 			NameStart: ns,
 			NameEnd:   ne,
-			BodyStart: minInt(m[0], bs),
+			BodyStart: m[0],
 			BodyEnd:   be,
 		})
 	}
@@ -118,9 +127,26 @@ var csCallRe = regexp.MustCompile(`\b(?:(new)\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*(?:
 //
 // Always returns a nil error.
 func (e CSharpExtractor) ExtractRefs(content []byte) ([]Occurrence, error) {
-	// Definition name offsets to exclude (method decl sites, type decl sites).
-	defSites := map[int]bool{}
 	defs, _ := e.Extract(content)
+	return csReferencesFromDefs(content, defs), nil
+}
+
+// ExtractDefsRefs implements DefsRefsExtractor: it scans content for
+// definitions ONCE (via Extract) and derives references from that same defs
+// slice, instead of the two independent csTypeRe/csMethodRe scans that calling
+// Extract then ExtractRefs separately would perform (ExtractRefs re-running
+// Extract internally to get defSites).
+func (e CSharpExtractor) ExtractDefsRefs(content []byte) ([]Symbol, []Occurrence, error) {
+	defs, _ := e.Extract(content)
+	return defs, csReferencesFromDefs(content, defs), nil
+}
+
+// csReferencesFromDefs scans content for reference occurrences, excluding any
+// offset that coincides with a NameStart in defs (the declaration sites).
+// Shared by ExtractRefs and ExtractDefsRefs so both derive references from a
+// single set of already-computed definitions rather than recomputing them.
+func csReferencesFromDefs(content []byte, defs []Symbol) []Occurrence {
+	defSites := map[int]bool{}
 	for _, s := range defs {
 		defSites[s.NameStart] = true
 	}
@@ -156,15 +182,14 @@ func (e CSharpExtractor) ExtractRefs(content []byte) ([]Occurrence, error) {
 			End:   ne,
 		})
 	}
-	return occs, nil
+	return occs
 }
 
-// bodyRange computes a [start, end) block for a declaration whose match ended at
-// declEnd. It searches forward for the next '{' (or ';') before any newline-run
-// that would clearly end the statement, brace-matches a '{' if found, and
-// otherwise returns the declaration line as the range. start is declEnd's line
-// start is not recomputed here; callers widen BodyStart to the match start.
-func bodyRange(content []byte, declEnd int) (int, int) {
+// bodyRange computes the end offset for a declaration whose match ended at
+// declEnd. It searches forward for the next '{' (or ';'), brace-matches a '{'
+// if found, and otherwise returns the declaration line end. Callers set
+// BodyStart to their regex match start.
+func bodyRange(content []byte, declEnd int) int {
 	n := len(content)
 	if declEnd < 0 {
 		declEnd = 0
@@ -177,24 +202,17 @@ func bodyRange(content []byte, declEnd int) (int, int) {
 		c := content[i]
 		if c == '{' {
 			if end := matchBlock(content, i); end > i {
-				return declEnd, end
+				return end
 			}
 			break
 		}
 		if c == ';' {
 			// Body-less member (interface/abstract method, field-like). Range is
 			// the declaration line up to and including the ';'.
-			return declEnd, i + 1
+			return i + 1
 		}
 		i++
 	}
 	// No block and no terminator found: fall back to the declaration line.
-	return declEnd, lineEnd(content, declEnd)
-}
-
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
+	return lineEnd(content, declEnd)
 }

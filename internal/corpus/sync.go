@@ -86,7 +86,10 @@ type SyncPlan struct {
 // (rel paths under the corpus root, slash-separated). It is pure and the heart of
 // sync's safety: a repo is flagged Missing only when its top-level group is in
 // allow — so narrowing the allowlist leaves out-of-scope local repos untouched
-// rather than marking them for prune. Result slices are sorted for determinism.
+// rather than marking them for prune. An empty allow means nothing is in scope,
+// so nothing is ever flagged Missing — callers must opt in to a group before
+// Reconcile will let SyncProjects prune anything in it. Result slices are
+// sorted for determinism.
 func Reconcile(projects []Project, localRels, allow []string) SyncPlan {
 	enum := make(map[string]Project, len(projects))
 	for _, p := range projects {
@@ -113,8 +116,8 @@ func Reconcile(projects []Project, localRels, allow []string) SyncPlan {
 		if _, ok := enum[l]; ok {
 			continue // present on the server → handled as an update
 		}
-		if len(allowSet) > 0 && !allowSet[topLevelGroup(l)] {
-			continue // out of curated scope → leave it alone, never prune
+		if !allowSet[topLevelGroup(l)] {
+			continue // out of curated scope (or allow is empty) → leave it alone, never prune
 		}
 		plan.Missing = append(plan.Missing, l)
 	}
@@ -183,11 +186,7 @@ func SyncProjects(ctx context.Context, r Runner, cfg Config, projects []Project,
 	for _, rel := range plan.Missing {
 		res := SyncResult{Path: rel, Outcome: SyncMissing}
 		if prune {
-			if err := os.RemoveAll(filepath.Join(cfg.Root, filepath.FromSlash(rel))); err != nil {
-				res.Outcome, res.Err = SyncFailed, err
-			} else {
-				res.Outcome = SyncPruned
-			}
+			res = pruneOne(cfg, rel)
 		}
 		results = append(results, res)
 		if progress != nil {
@@ -215,6 +214,22 @@ func SyncProjects(ctx context.Context, r Runner, cfg Config, projects []Project,
 	return rep, nil
 }
 
+// pruneOne removes the local repo at rel (relative to cfg.Root). rel is sourced
+// from LocalRepos, a real on-disk directory walk, so it cannot itself carry a
+// ".." segment today — but the destructive RemoveAll gets the same containment
+// gate as a clone/fetch destination on principle: nothing reaches a recursive
+// delete without first proving it stays under cfg.Root.
+func pruneOne(cfg Config, rel string) SyncResult {
+	dest := filepath.Join(cfg.Root, filepath.FromSlash(rel))
+	if !withinRoot(cfg.Root, dest) {
+		return SyncResult{Path: rel, Outcome: SyncFailed, Err: errUnsafeDest, Detail: dest}
+	}
+	if err := os.RemoveAll(dest); err != nil {
+		return SyncResult{Path: rel, Outcome: SyncFailed, Err: err}
+	}
+	return SyncResult{Path: rel, Outcome: SyncPruned}
+}
+
 // cloneAsSync clones a new repo and maps the result into the sync vocabulary.
 func cloneAsSync(ctx context.Context, r Runner, cfg Config, p Project) SyncResult {
 	res := cloneOne(ctx, r, cfg, p)
@@ -240,11 +255,19 @@ func cloneAsSync(ctx context.Context, r Runner, cfg Config, p Project) SyncResul
 // survives force-pushes). An unchanged repo is reported SyncCurrent without a reset.
 func updateOne(ctx context.Context, r Runner, cfg Config, p Project) SyncResult {
 	dest := cfg.Dest(p)
+	if !withinRoot(cfg.Root, dest) {
+		return SyncResult{Path: p.PathWithNamespace, Outcome: SyncFailed, Err: errUnsafeDest, Detail: dest}
+	}
 	ref := p.DefaultBranch
 	if ref == "" {
 		ref = "HEAD"
 	}
-	res, err := r.RunEnv(ctx, gitEnv, "git", "-C", dest, "fetch", "--depth", "1", "origin", ref)
+	if err := validRef(ref); err != nil {
+		return SyncResult{Path: p.PathWithNamespace, Outcome: SyncFailed, Err: err}
+	}
+	// "--" separates the positional ref from option parsing — ref is otherwise a
+	// bare positional with no preceding flag name forcing git to read it as data.
+	res, err := r.RunEnv(ctx, gitEnv, "git", "-C", dest, "fetch", "--depth", "1", "origin", "--", ref)
 	if err != nil {
 		return SyncResult{Path: p.PathWithNamespace, Outcome: SyncFailed, Err: err}
 	}

@@ -68,7 +68,16 @@ func setupZoekt(mirrorDir, idxDir string, fileLimit int, logf func(string, ...an
 }
 
 // query builds a Zoekt content query for a battery query: literals are quoted
-// (substring), regex is passed through (Zoekt parses it as RE2), case forced.
+// (substring), regex is wrapped in Zoekt's explicit content-regex syntax
+// (content:/.../), case forced.
+//
+// The corpus-derived regex must never be spliced bare into Zoekt's query
+// language: an unwrapped pattern is split into atoms on whitespace, a leading
+// '-' negates, '(' ')' group, and a substring like "file:" or "case:" is
+// reinterpreted as a field operator rather than literal regex text. Delimiting
+// with content:/.../ makes the whole pattern a single opaque regex atom; '\'
+// and '/' are escaped first since '/' closes the atom and an unescaped
+// trailing '\' would otherwise swallow the closing delimiter.
 func zoektQueryString(q Query) string {
 	caseTok := "case:yes"
 	if q.IgnoreCase {
@@ -79,7 +88,9 @@ func zoektQueryString(q Query) string {
 		esc = strings.ReplaceAll(esc, `"`, `\"`)
 		return caseTok + ` "` + esc + `"`
 	}
-	return caseTok + " " + q.Pattern
+	esc := strings.ReplaceAll(q.Pattern, `\`, `\\`)
+	esc = strings.ReplaceAll(esc, `/`, `\/`)
+	return caseTok + " content:/" + esc + "/"
 }
 
 // fileSet returns the set of fileIDs Zoekt reports as matching, or ok=false if

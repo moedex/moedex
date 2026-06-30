@@ -19,12 +19,9 @@ package blobstore
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
-	"time"
 
 	"moedex/internal/diskstore"
-	"moedex/internal/index"
 	"moedex/internal/parity"
 )
 
@@ -52,81 +49,5 @@ func ExportShardDir(casDir, outShardDir string, shardBytes int64) (*parity.Manif
 	}
 	defer store.Close()
 
-	if shardBytes <= 0 {
-		shardBytes = parity.DefaultShardBytes
-	}
-	if err := os.MkdirAll(outShardDir, 0o755); err != nil {
-		return nil, err
-	}
-
-	var (
-		shards   []parity.ShardManifest
-		heads    []parity.RepoHead
-		ix       = index.New()
-		curBytes int64
-		curRepos []string
-		curSeen  = map[string]bool{}
-		shardIdx int
-	)
-	flush := func() error {
-		if ix.NumBlobs() == 0 {
-			return nil
-		}
-		path := filepath.Join(outShardDir, fmt.Sprintf("shard-%04d.idx", shardIdx))
-		if err := diskstore.Save(ix, path); err != nil {
-			return fmt.Errorf("blobstore: save exported shard %d: %w", shardIdx, err)
-		}
-		shards = append(shards, parity.ShardManifest{Path: path, Repos: curRepos, ContentBytes: curBytes})
-		shardIdx++
-		ix = index.New()
-		curBytes = 0
-		curRepos = nil
-		curSeen = map[string]bool{}
-		return nil
-	}
-
-	for _, r := range m.Repos {
-		heads = append(heads, parity.RepoHead{Dir: r.Dir, Label: r.Label, Head: r.Head})
-		contributed := false
-		seen := map[string]bool{}
-		for _, f := range r.Files {
-			abs := filepath.Join(r.Dir, f.RelPath)
-			if seen[abs] {
-				continue // same abspath already in this repo's batch (matches build)
-			}
-			seen[abs] = true
-			content, err := store.Get(f.SHA)
-			if err != nil {
-				return nil, fmt.Errorf("blobstore: export repo %s file %s: %w", r.Label, f.RelPath, err)
-			}
-			ix.AddFile(r.Label, f.RelPath, abs, f.SHA, content)
-			curBytes += int64(len(content))
-			contributed = true
-		}
-		if contributed && !curSeen[r.Dir] {
-			curSeen[r.Dir] = true
-			curRepos = append(curRepos, r.Dir)
-		}
-		if curBytes >= shardBytes {
-			if err := flush(); err != nil {
-				return nil, err
-			}
-		}
-	}
-	if err := flush(); err != nil {
-		return nil, err
-	}
-
-	out := &parity.Manifest{
-		Version:  parity.ManifestVersion,
-		Root:     m.Root,
-		BuiltAt:  time.Now(),
-		ShardDir: outShardDir,
-		Heads:    heads,
-		Shards:   shards,
-	}
-	if err := parity.WriteManifest(filepath.Join(outShardDir, parity.ManifestName), out); err != nil {
-		return nil, fmt.Errorf("blobstore: write exported manifest: %w", err)
-	}
-	return out, nil
+	return exportShards(m, store, outShardDir, shardBytes, diskstore.Save)
 }

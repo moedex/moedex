@@ -14,7 +14,6 @@ func unpack(v uint64) (fileID, line int) {
 type accum struct{ vals []uint64 }
 
 func (a *accum) add(fileID, line int) { a.vals = append(a.vals, pack(fileID, line)) }
-func (a *accum) addPacked(v uint64)   { a.vals = append(a.vals, v) }
 
 func (a *accum) finalize() MatchSet {
 	if len(a.vals) == 0 {
@@ -111,10 +110,6 @@ type QueryResult struct {
 	RGMinusMoe   []uint64 // ripgrep \ moedex
 	MoeMinusRG   []uint64 // moedex \ ripgrep
 
-	// RG divergences split by gold adjudication.
-	RGMissReal  int // (ripgrep ∩ gold) \ moedex  — real misses
-	RGMissQuirk int // ripgrep \ gold \ moedex     — rg over-matches vs Go (quirk)
-
 	Verdict Verdict
 	RGAvail bool
 }
@@ -137,35 +132,20 @@ func adjudicate(q Query, moe, rg, gold MatchSet, rgAvail bool) QueryResult {
 		if rgAvail {
 			r.RGMinusMoe = minus(rg, moe)
 			r.MoeMinusRG = minus(moe, rg)
-			rgMissInGold := intersectLen(r.RGMinusMoe, gold)
-			r.RGMissReal = rgMissInGold
-			r.RGMissQuirk = len(r.RGMinusMoe) - rgMissInGold
 			if len(r.RGMinusMoe) == 0 && len(r.MoeMinusRG) == 0 {
 				r.Verdict = VOK
 			} else {
 				r.Verdict = VEngineQuirk
 			}
 		} else {
-			r.Verdict = VOK // no rg to compare; moedex==gold is the best truth
+			// rg unavailable: moedex==gold is the best truth available for this
+			// query alone, with no ripgrep comparison. That's only safe because
+			// Result.HardPass (run.go) requires RGAvailable==true run-wide, so a
+			// run where this branch fires already fails the hard gate regardless
+			// of this VOK. If rg availability ever became per-query, this verdict
+			// would need its own gate rather than relying on the run-wide guard.
+			r.Verdict = VOK
 		}
 	}
 	return r
-}
-
-// intersectLen returns |a ∩ set| where a is a sorted slice and set a MatchSet.
-func intersectLen(a []uint64, set MatchSet) int {
-	n, i, j := 0, 0, 0
-	for i < len(a) && j < len(set) {
-		switch {
-		case a[i] == set[j]:
-			n++
-			i++
-			j++
-		case a[i] < set[j]:
-			i++
-		default:
-			j++
-		}
-	}
-	return n
 }

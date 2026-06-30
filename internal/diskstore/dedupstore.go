@@ -118,17 +118,8 @@ func saveDeduped(ix *index.Index, path string, cw contentRegistrar) error {
 		return err
 	}
 
-	scratch := make([]byte, 3+8) // 3 trigram bytes + uint64 encLen
-	for _, t := range trigrams {
-		enc := index.EncodePostings(ix.Postings(t))
-		scratch[0], scratch[1], scratch[2] = t[0], t[1], t[2]
-		binary.LittleEndian.PutUint64(scratch[3:11], uint64(len(enc)))
-		if _, err := w.Write(scratch); err != nil {
-			return err
-		}
-		if _, err := w.Write(enc); err != nil {
-			return err
-		}
+	if err := writePostings(w, ix, trigrams); err != nil {
+		return err
 	}
 	return w.Flush()
 }
@@ -209,6 +200,9 @@ func loadDedupedBlobs(sec []byte, n int, cs *ContentStore) ([]index.BlobData, er
 		}
 		numFiles, err := r.u32()
 		if err != nil {
+			return nil, fmt.Errorf("diskstore: deduped blob %d numFiles: %w", i, err)
+		}
+		if err := r.checkCount(numFiles, minFileRefSize); err != nil {
 			return nil, fmt.Errorf("diskstore: deduped blob %d numFiles: %w", i, err)
 		}
 		files := make([]index.FileRef, numFiles)

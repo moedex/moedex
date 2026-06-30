@@ -208,14 +208,28 @@ func addReindexFlags(fs *flag.FlagSet) reindexFlags {
 	}
 }
 
-// maybeReindex runs the per-blob-delta reindex chain when -reindex was given.
-// Shared by clone (first run → cas-build) and sync (steady state → cas-refresh).
-func maybeReindex(ctx context.Context, r corpus.Runner, cfg corpus.Config, rf reindexFlags) error {
+// validateReindexFlags checks the -reindex flag triple is well-formed. Call it
+// immediately after fs.Parse in runClone/runSync so a misconfigured -reindex
+// fails fast, before a (potentially long) clone/sync run, rather than only
+// being caught by maybeReindex afterward.
+func validateReindexFlags(rf reindexFlags) error {
 	if !*rf.enabled {
 		return nil
 	}
 	if *rf.casDir == "" || *rf.shardDir == "" {
 		return fmt.Errorf("-reindex requires -cas-dir and -shard-dir")
+	}
+	return nil
+}
+
+// maybeReindex runs the per-blob-delta reindex chain when -reindex was given.
+// Shared by clone (first run → cas-build) and sync (steady state → cas-refresh).
+func maybeReindex(ctx context.Context, r corpus.Runner, cfg corpus.Config, rf reindexFlags) error {
+	if err := validateReindexFlags(rf); err != nil {
+		return err
+	}
+	if !*rf.enabled {
+		return nil
 	}
 	opts := corpus.ReindexOptions{
 		Root:       cfg.Root,
@@ -265,6 +279,9 @@ func runClone(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
+	if err := validateReindexFlags(rf); err != nil {
+		return err
+	}
 	if !*noBanner {
 		fmt.Fprint(os.Stderr, moeBanner)
 	}
@@ -308,10 +325,7 @@ func runClone(args []string) error {
 	}
 
 	total := len(projects)
-	tentacles := cfg.Concurrency
-	if tentacles > total {
-		tentacles = total
-	}
+	tentacles := displayTentacles(cfg.Concurrency, total)
 	fmt.Printf("Moe reaches out with %d tentacle(s)...\n", tentacles)
 
 	var mu sync.Mutex
@@ -320,16 +334,7 @@ func runClone(args []string) error {
 		mu.Lock()
 		defer mu.Unlock()
 		done++
-		switch res.Outcome {
-		case corpus.Cloned:
-			fmt.Printf("  [%d/%d] 🦑 cloned   %s\n", done, total, res.Project.PathWithNamespace)
-		case corpus.Skipped:
-			fmt.Printf("  [%d/%d]  · present  %s\n", done, total, res.Project.PathWithNamespace)
-		case corpus.Empty:
-			fmt.Printf("  [%d/%d]  · empty    %s (no commits — skipped)\n", done, total, res.Project.PathWithNamespace)
-		case corpus.Failed:
-			fmt.Printf("  [%d/%d] %s FAILED   %s — %s\n", done, total, markFail, res.Project.PathWithNamespace, failDetail(res))
-		}
+		fmt.Print(progressLine(done, total, res))
 	}
 
 	report := corpus.CloneProjects(ctx, r, cfg, projects, progress)
@@ -341,6 +346,39 @@ func runClone(args []string) error {
 		return fmt.Errorf("%d repo(s) failed to clone (see %s above) — re-run to retry; already-cloned repos are skipped", report.Failed, markFail)
 	}
 	return nil
+}
+
+// displayTentacles mirrors the worker-count clamp CloneProjects applies
+// internally (corpus.Config.Concurrency, floored at 1 and capped at total), so
+// the printed "N tentacle(s)" line always matches the actual parallelism used
+// — including for a -concurrency of 0 or negative, which CloneProjects clamps
+// to 1 worker but this line previously printed verbatim.
+func displayTentacles(concurrency, total int) int {
+	if concurrency < 1 {
+		concurrency = 1
+	}
+	if concurrency > total && total > 0 {
+		concurrency = total
+	}
+	return concurrency
+}
+
+// progressLine formats one live-progress line for a finished clone result. The
+// default case exists so a future CloneOutcome this switch wasn't updated for
+// still produces a visible line instead of silently vanishing from live output.
+func progressLine(done, total int, res corpus.CloneResult) string {
+	switch res.Outcome {
+	case corpus.Cloned:
+		return fmt.Sprintf("  [%d/%d] 🦑 cloned   %s\n", done, total, res.Project.PathWithNamespace)
+	case corpus.Skipped:
+		return fmt.Sprintf("  [%d/%d]  · present  %s\n", done, total, res.Project.PathWithNamespace)
+	case corpus.Empty:
+		return fmt.Sprintf("  [%d/%d]  · empty    %s (no commits — skipped)\n", done, total, res.Project.PathWithNamespace)
+	case corpus.Failed:
+		return fmt.Sprintf("  [%d/%d] %s FAILED   %s — %s\n", done, total, markFail, res.Project.PathWithNamespace, failDetail(res))
+	default:
+		return fmt.Sprintf("  [%d/%d] %s UNKNOWN  %s (outcome=%d)\n", done, total, markFail, res.Project.PathWithNamespace, res.Outcome)
+	}
 }
 
 // printCloneSummary prints the end-of-run tally and lists any failures.
@@ -380,6 +418,9 @@ func runSync(args []string) error {
 	noBanner := fs.Bool("no-banner", false, "suppress the Moe banner")
 	rf := addReindexFlags(fs)
 	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if err := validateReindexFlags(rf); err != nil {
 		return err
 	}
 	if !*noBanner {

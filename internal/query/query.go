@@ -13,15 +13,16 @@
 // exact/prefix/suffix string sets plus a match query, with boundary-trigram
 // synthesis across concatenation and size-capped sets that fold into trigram
 // constraints. This filters patterns the slice-1 "required literal substring"
-// reduction could not (e.g. [ab]cd -> acd|bcd). The slice-1 reduction is kept
-// as buildRequiredLiterals so the selectivity gain can be measured; both are
-// sound necessary conditions, so the richer one only changes speed, not
-// correctness.
+// reduction could not (e.g. [ab]cd -> acd|bcd). The slice-1 reduction is kept,
+// test-only, as fromRegexpRequiredLiterals/buildRequiredLiterals in
+// required_literals_test.go so the Cox reduction's selectivity gain can be
+// measured against it; both are sound necessary conditions, so the richer one
+// only changes speed, not correctness.
 package query
 
 import (
 	"regexp/syntax"
-	"sort"
+	"slices"
 	"strings"
 
 	"moedex/internal/index"
@@ -98,7 +99,7 @@ func (q andQ) Eval(ix *index.Index) []uint64 {
 			return nil // empty intersection short-circuit
 		}
 	}
-	sort.Slice(lists, func(i, j int) bool { return len(lists[i]) < len(lists[j]) })
+	slices.SortFunc(lists, func(a, b []uint64) int { return len(a) - len(b) })
 
 	acc := lists[0]
 	// Ping-pong two reusable buffers across the N-1 folds so each fold writes
@@ -205,59 +206,6 @@ func FromRegexp(pattern string) (Query, error) {
 		return nil, err
 	}
 	return buildCox(re.Simplify()), nil
-}
-
-// fromRegexpRequiredLiterals is the slice-1 reduction (required literal
-// substrings only). It is retained, unexported, so the Cox reduction's
-// selectivity gain can be measured against it. Like FromRegexp it is a sound
-// necessary condition.
-func fromRegexpRequiredLiterals(pattern string) (Query, error) {
-	re, err := syntax.Parse(pattern, syntax.Perl)
-	if err != nil {
-		return nil, err
-	}
-	return buildRequiredLiterals(re.Simplify()), nil
-}
-
-func buildRequiredLiterals(re *syntax.Regexp) Query {
-	switch re.Op {
-	case syntax.OpLiteral:
-		// A case-folded literal could match many concrete strings; rather than
-		// enumerate, stay conservative.
-		if re.Flags&syntax.FoldCase != 0 {
-			return allQ{}
-		}
-		return literalQuery(string(re.Rune))
-	case syntax.OpConcat:
-		qs := make([]Query, len(re.Sub))
-		for i, s := range re.Sub {
-			qs[i] = buildRequiredLiterals(s)
-		}
-		return And(qs...)
-	case syntax.OpAlternate:
-		qs := make([]Query, len(re.Sub))
-		for i, s := range re.Sub {
-			qs[i] = buildRequiredLiterals(s)
-		}
-		return Or(qs...)
-	case syntax.OpCapture:
-		return buildRequiredLiterals(re.Sub[0])
-	case syntax.OpPlus:
-		// x+ requires at least one x.
-		return buildRequiredLiterals(re.Sub[0])
-	case syntax.OpRepeat:
-		if re.Min >= 1 {
-			return buildRequiredLiterals(re.Sub[0])
-		}
-		return allQ{}
-	case syntax.OpStar, syntax.OpQuest:
-		// Zero occurrences allowed -> the subexpression is not required.
-		return allQ{}
-	default:
-		// OpCharClass, OpAnyChar(NotNL), anchors, empty-width, etc.: no usable
-		// required trigram.
-		return allQ{}
-	}
 }
 
 // literalQuery requires every byte-trigram of a literal run to be present.

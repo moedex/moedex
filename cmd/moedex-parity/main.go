@@ -27,6 +27,7 @@ import (
 
 	"moedex/internal/index"
 	"moedex/internal/parity"
+	"moedex/internal/version"
 )
 
 func main() {
@@ -53,7 +54,13 @@ func main() {
 	keep := flag.Bool("keep", false, "keep scratch work dir after the run")
 	selective := flag.Bool("selective", false, "build the opt-in FREE-style selective trigram index (drop near-universal grams; parity-safe via IndexedGram force-scan). Proves AC-D3 holds on the selective build too.")
 	gramMaxDF := flag.Float64("gram-max-df", 0.9, "with -selective: keep a trigram only if it occurs in at most this fraction of blobs (0..1)")
+	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Println(version.Line("moedex-parity", false))
+		return
+	}
 
 	if *corpus == "" {
 		fmt.Fprintln(os.Stderr, "no corpus root: set -corpus or MOEDEX_CORPUS")
@@ -140,6 +147,14 @@ func main() {
 		}
 		fmt.Printf("  rg err q#%d: %s\n", e.QueryID, e.Err)
 	}
+	fmt.Printf("moedex errors     : %d\n", len(res.MoeErrors))
+	for i, e := range res.MoeErrors {
+		if i >= 5 {
+			fmt.Printf("  ... (+%d more moedex errors)\n", len(res.MoeErrors)-5)
+			break
+		}
+		fmt.Printf("  moedex err q#%d: %s\n", e.QueryID, e.Err)
+	}
 	if res.Zoekt != nil {
 		fmt.Printf("zoekt             : avail=%v, zoekt-missed=%d, moedex-beaten=%d\n",
 			res.Zoekt.Available, len(res.Zoekt.ZoektMissed), len(res.Zoekt.MoedexBeaten))
@@ -151,18 +166,36 @@ func main() {
 		res.RGWall.Round(time.Millisecond), time.Since(start).Round(time.Millisecond))
 	fmt.Printf("report            : %s\n", *report)
 
-	if !*keep && res.HardPass() {
+	if res.SkipRG {
+		if !*keep {
+			_ = os.RemoveAll(*work)
+		}
+	} else if !*keep && res.HardPass() {
 		_ = os.RemoveAll(*work)
 	} else if !res.HardPass() {
 		fmt.Fprintf(os.Stderr, "scratch kept for debugging: %s\n", *work)
 	}
 
-	if res.HardPass() {
-		fmt.Println("RESULT: PASS")
-		return
+	line, code := resultOutcome(res)
+	fmt.Println(line)
+	if code != 0 {
+		os.Exit(code)
 	}
-	fmt.Println("RESULT: FAIL (see PARITY-REPORT.md)")
-	os.Exit(1)
+}
+
+// resultOutcome decides the final RESULT line and process exit code. HardPass
+// requires RGAvailable, which is also false for a deliberate -no-rg run
+// (latency-profiling only; see RunConfig.SkipRG) — so SkipRG must be checked
+// first, or a -no-rg run would always read as a parity-gate FAIL with a
+// non-zero exit code even though it never ran ripgrep on purpose.
+func resultOutcome(res *parity.Result) (line string, exitCode int) {
+	if res.SkipRG {
+		return "RESULT: SKIPPED (latency-only, -no-rg: not a parity gate)", 0
+	}
+	if res.HardPass() {
+		return "RESULT: PASS", 0
+	}
+	return "RESULT: FAIL (see PARITY-REPORT.md)", 1
 }
 
 // writeLatencyCSV dumps per-query moedex search latency and attribution, sorted

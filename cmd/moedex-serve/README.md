@@ -1,16 +1,20 @@
 # moedex-serve
 
 The warm retrieval daemon. It memory-maps a directory of prebuilt shards **once**
-and answers queries with zero cold-start, in one of three modes:
+and answers queries with zero cold-start, in one of five modes:
 
 | Mode | Flag | Surface | What it serves |
 |------|------|---------|----------------|
 | Retrieval daemon | `-http :8080` | HTTP JSON (`/search`, `/stats`, `/healthz`, `/metrics`) | line-granular literal/regex matches, parity-proven against ripgrep |
 | One-shot query | `-q PATTERN` | stdout (`repo/relpath:line`) | a single retrieval query, for validation/scripting |
-| Ranked agent context | `-mcp` | MCP over stdio (`search_context` tool) | ranked, deduplicated, token-budgeted context blocks |
+| Ranked agent context (stdio) | `-mcp` | MCP over stdio (`search_context` tool) | ranked, deduplicated, token-budgeted context blocks; spawns per agent session |
+| Ranked agent context (HTTP) | `-mcp-http :8081` | MCP over Streamable HTTP at `/mcp` | the same `search_context` tool, loaded once and shared across sessions over the network |
+| Dense sidecar refresh | `-build-embeddings` | stdout/stderr, then exit | builds/refreshes the corpus embedding sidecar for `-shard-dir` out of band, so a warm daemon reload never re-embeds inline |
 
-`-shard-dir` is always required (or `MOEDEX_SHARD_DIR`), and you must pick exactly
-one mode. With none of `-mcp`/`-http`/`-q`, the process exits with usage on stderr.
+`-shard-dir` is always required (or `MOEDEX_SHARD_DIR`) for every mode above. With
+none of `-mcp`/`-mcp-http`/`-http`/`-q`/`-build-embeddings`, the process exits with
+usage on stderr. `-version` prints build identity (name, commit, dense capability)
+and exits before any of the above.
 
 ## Quick start
 
@@ -23,6 +27,12 @@ moedex-serve -shard-dir /path/to/shards -q "func main" -regex
 
 # Ranked agent context over MCP (lexical + symbol arm, no extra deps)
 moedex-serve -shard-dir /path/to/shards -mcp
+
+# Ranked agent context over MCP/HTTP — warm shared daemon for coding agents
+moedex-serve -shard-dir /path/to/shards -mcp-http :8081
+
+# Build/refresh the dense embedding sidecar out of band, then exit
+moedex-serve -shard-dir /path/to/shards -build-embeddings -embed onnx
 ```
 
 On the two warm modes the daemon prints a boot line to stderr, e.g.
@@ -43,10 +53,13 @@ of content-sized shards (`shard-0000.idx`, `shard-0001.idx`, … — flushed at
 alongside. The result is directly servable as `-shard-dir`. See
 [../moedex-index](../moedex-index) for `check`/`refresh`.
 
-`server.Open(dir)` globs `*.idx` in sorted filename order and `mmap`s each via
-`diskstore.LoadMmap`, holding the mappings for the process lifetime — so postings
-never enter the Go heap and queries pay only decode-on-touch. After a `Close` the
-corpus must not be queried (the memory is unmapped); `Close` is idempotent.
+`server.Open(dir)` globs `*.idx` in sorted filename order and `mmap`s each shard,
+holding the mappings for the process lifetime — so postings never enter the Go
+heap and queries pay only decode-on-touch. Each shard is mapped via
+`diskstore.LoadMmapDeduped` (sharing a corpus-wide content-store mapping) for a
+deduped (MOEDEX05) shard dir, or `diskstore.LoadMmap` for a legacy
+inlined-content shard. After a `Close` the corpus must not be queried (the
+memory is unmapped); `Close` is idempotent.
 
 ## Flags
 
@@ -56,7 +69,10 @@ corpus must not be queried (the memory is unmapped); `Close` is idempotent.
 | `-shard-dir` | `$MOEDEX_SHARD_DIR` | directory of prebuilt `*.idx` shards (**required**) |
 | `-http` | `$MOEDEX_HTTP_ADDR` | serve the retrieval HTTP API on this address (e.g. `127.0.0.1:8080`) |
 | `-mcp` | `false` | serve ranked agent context over MCP (stdio) |
+| `-mcp-http` | `$MOEDEX_MCP_HTTP_ADDR` | serve the ranked agent-context MCP tool over Streamable HTTP at `/mcp` on this address (e.g. `127.0.0.1:8081`) — the warm shared daemon for coding agents |
 | `-q` | _(off)_ | one-shot retrieval query |
+| `-build-embeddings` | `false` | build/refresh the corpus embedding sidecar for `-shard-dir`, then exit (requires `-embed onnx\|http`) |
+| `-version` | `false` | print build identity (name, commit, dense capability) and exit |
 | `-regex` | `false` | treat `-q` / the `/search` query as a regular expression (default: literal) |
 | `-limit` | `0` | cap matches printed/returned (`0` = no cap) |
 | `-top-k` | `20` | default ranked results per MCP query |
@@ -66,6 +82,7 @@ corpus must not be queried (the memory is unmapped); `Close` is idempotent.
 | `-tls-cert` | `$MOEDEX_TLS_CERT` | TLS certificate file; serve `-http` over HTTPS (requires `-tls-key`) |
 | `-tls-key` | `$MOEDEX_TLS_KEY` | TLS private key file; serve `-http` over HTTPS (requires `-tls-cert`) |
 | `-request-timeout` | `30s` | per-request HTTP timeout on `-http` (`503` on expiry) |
+| `-search-max-concurrency` | `$MOEDEX_SEARCH_MAX_CONCURRENCY` (`8`) | cap concurrent in-flight `/search` requests on `-http` (`503` when full); `0` disables the cap |
 
 ### Configuration file (`-config`)
 
@@ -204,19 +221,35 @@ path when a proxy is already in front of it.
 client gets `503`. Server-side `Read`/`Write`/`Idle` timeouts also guard against
 slow clients.
 
-**Caveat:** this is an **HTTP-layer bound only.** `Corpus.Regex`/`Corpus.Literal`
-take no `context.Context`, so a slow scan keeps running to completion after the
-client receives the `503`. Deep cancellation (threading `ctx` through
-`internal/server` + `internal/search`) is a tracked follow-up.
+On expiry, `withTimeout` cancels `r.Context()`, which `Corpus.Regex`/`Corpus.Literal`
+thread into the search path: the scan's hot loops check cancellation on a stride,
+so an expired request stops burning CPU promptly rather than running to
+completion. The abort is observed within one cancellation-check stride, not
+instantly — bounded, not immediate.
+
+### Search concurrency cap
+
+`-search-max-concurrency` (default `8`, override via `$MOEDEX_SEARCH_MAX_CONCURRENCY`
+or the flag) bounds how many `/search` requests run at once. Each one scans the
+full corpus and can pin a core for up to `-request-timeout`; without a cap, N
+concurrent broad queries saturate every core and starve every other request,
+including `/healthz` and `/metrics`. Once the cap is reached, the next request
+is rejected immediately with `503` (no queuing) rather than waiting its turn —
+mirroring the MCP server's own request-concurrency guard. `0` disables the cap.
+Rejections are counted in `moedex_http_search_rejected_total` (see `/metrics`
+below). `/stats`, `/healthz`, and `/metrics` are cheap and not subject to this
+cap.
 
 ### `GET /metrics`
 
-Prometheus text exposition (`Content-Type: text/plain; version=0.0.4`),
+Prometheus text exposition (`Content-Type: text/plain; version=0.0.4; charset=utf-8`),
 **unauthenticated** like `/healthz`. Stdlib-only — no `client_golang`. Exposes:
 
 - `moedex_http_requests_total{code="2xx|4xx|5xx"}` — counter
 - `moedex_http_panics_total` — counter (handler panics recovered)
 - `moedex_reloads_total{result="ok|fail"}` — counter (SIGHUP reloads)
+- `moedex_http_search_rejected_total` — counter (`/search` requests rejected by
+  [the concurrency cap](#search-concurrency-cap))
 - `moedex_http_request_duration_seconds` — histogram (fixed buckets + `_sum`/`_count`)
 - `moedex_corpus_shards`, `moedex_corpus_blobs` — gauges, read from the live
   corpus at scrape time (so they track hot swaps)

@@ -33,6 +33,18 @@ type RefExtractor interface {
 	ExtractRefs(content []byte) ([]Occurrence, error)
 }
 
+// DefsRefsExtractor is an OPTIONAL capability superseding RefExtractor: an
+// extractor that computes definitions AND references together in a single
+// parse/scan pass over content. Build and BuildMulti (via extractDefsRefs)
+// prefer this over calling Extract then ExtractRefs separately, which would
+// otherwise parse/scan the same content twice per blob (go/parser.ParseFile
+// twice for Go; the C# regex scan twice, once inside Extract and once again
+// inside ExtractRefs).
+type DefsRefsExtractor interface {
+	Extractor
+	ExtractDefsRefs(content []byte) ([]Symbol, []Occurrence, error)
+}
+
 // GoExtractor extracts Go function/method/type/const/var definitions using the
 // standard library go/parser. Byte offsets come from token.FileSet.Position,
 // which counts bytes (not runes), so multi-byte unicode in the source maps
@@ -56,15 +68,24 @@ func (GoExtractor) Extract(content []byte) ([]Symbol, error) {
 	if err != nil {
 		return nil, err
 	}
+	return goSymbolsFromFile(file, goOffsetFunc(fset)), nil
+}
 
-	// off maps a token.Pos to a byte offset into content. token.NoPos -> -1.
-	off := func(p token.Pos) int {
+// goOffsetFunc returns a closure mapping a token.Pos to a byte offset into the
+// content fset was built from. token.NoPos -> -1.
+func goOffsetFunc(fset *token.FileSet) func(token.Pos) int {
+	return func(p token.Pos) int {
 		if !p.IsValid() {
 			return -1
 		}
 		return fset.Position(p).Offset
 	}
+}
 
+// goSymbolsFromFile walks file's top-level decls and nested function literals
+// to produce the same Symbols as Extract. Shared by Extract and
+// ExtractDefsRefs so both build symbols from a single parsed *ast.File.
+func goSymbolsFromFile(file *ast.File, off func(token.Pos) int) []Symbol {
 	var syms []Symbol
 	emit := func(name string, kind Kind, namePos token.Pos, nameLen int, bodyStart, bodyEnd token.Pos) {
 		ns := off(namePos)
@@ -153,7 +174,7 @@ func (GoExtractor) Extract(content []byte) ([]Symbol, error) {
 		return true
 	})
 
-	return syms, nil
+	return syms
 }
 
 func genKind(tok token.Token) Kind {
@@ -189,16 +210,31 @@ func (GoExtractor) ExtractRefs(content []byte) ([]Occurrence, error) {
 	if err != nil {
 		return nil, err
 	}
-	off := func(p token.Pos) int {
-		if !p.IsValid() {
-			return -1
-		}
-		return fset.Position(p).Offset
-	}
+	off := goOffsetFunc(fset)
+	return goReferencesFromFile(file, off, goDeclSites(file, off)), nil
+}
 
-	// Pass 1: collect the byte offsets of every DECLARING ident so the reference
-	// pass can exclude them. ast.Ident.Pos() is stable per node, so a set of
-	// declaring NameStart offsets is sufficient to filter def sites.
+// ExtractDefsRefs implements DefsRefsExtractor: it parses content ONCE and
+// derives both the definitions (Extract's result) and the references
+// (ExtractRefs's result) from that single *ast.File, instead of the two
+// independent parser.ParseFile calls that calling Extract then ExtractRefs
+// separately would perform.
+func (GoExtractor) ExtractDefsRefs(content []byte) ([]Symbol, []Occurrence, error) {
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "", content, parser.ParseComments|parser.SkipObjectResolution)
+	if err != nil {
+		return nil, nil, err
+	}
+	off := goOffsetFunc(fset)
+	syms := goSymbolsFromFile(file, off)
+	occs := goReferencesFromFile(file, off, goDeclSites(file, off))
+	return syms, occs, nil
+}
+
+// goDeclSites collects the byte offsets of every DECLARING ident in file so
+// goReferencesFromFile can exclude them. ast.Ident.Pos() is stable per node,
+// so a set of declaring offsets is sufficient to filter def sites.
+func goDeclSites(file *ast.File, off func(token.Pos) int) map[int]bool {
 	declSites := map[int]bool{}
 	markDecl := func(id *ast.Ident) {
 		if id == nil {
@@ -238,9 +274,15 @@ func (GoExtractor) ExtractRefs(content []byte) ([]Occurrence, error) {
 		}
 		return true
 	})
+	return declSites
+}
 
-	// Pass 2: collect references. Each emitted occurrence is keyed by NameStart
-	// offset so we de-duplicate and never emit a declaring site.
+// goReferencesFromFile collects the Reference-role occurrences in file,
+// excluding any offset present in declSites. Shared by ExtractRefs and
+// ExtractDefsRefs so both derive references from a single parsed *ast.File.
+func goReferencesFromFile(file *ast.File, off func(token.Pos) int, declSites map[int]bool) []Occurrence {
+	// Each emitted occurrence is keyed by NameStart offset so we de-duplicate
+	// and never emit a declaring site.
 	emitted := map[int]bool{}
 	var occs []Occurrence
 	emit := func(id *ast.Ident, kind Kind) {
@@ -292,7 +334,7 @@ func (GoExtractor) ExtractRefs(content []byte) ([]Occurrence, error) {
 		return true
 	})
 
-	return occs, nil
+	return occs
 }
 
 // Build runs ext over every blob in ix and returns a symbol Index. Blobs whose
@@ -303,22 +345,43 @@ func Build(ix *index.Index, ext Extractor) *Index {
 	if ix == nil || ext == nil {
 		return out
 	}
-	refExt, hasRefs := ext.(RefExtractor)
 	for id := uint64(0); id < uint64(ix.NumBlobs()); id++ {
 		blob := ix.Blob(id)
 		if blob == nil {
 			continue
 		}
-		syms, err := ext.Extract(blob.Content)
+		syms, occs, err := extractDefsRefs(ext, blob.Content)
 		if err != nil || len(syms) == 0 {
 			continue
 		}
 		out.Set(id, syms)
-		if hasRefs {
-			if occs, rerr := refExt.ExtractRefs(blob.Content); rerr == nil && len(occs) > 0 {
-				out.SetRefs(id, occs)
-			}
+		if len(occs) > 0 {
+			out.SetRefs(id, occs)
 		}
 	}
 	return out
+}
+
+// extractDefsRefs runs ext over content and returns both definitions and
+// references, preferring a single combined parse/scan pass (DefsRefsExtractor)
+// when ext implements it, and falling back to the separate Extract +
+// ExtractRefs calls otherwise (an extractor that only implements RefExtractor,
+// or one that implements neither and so has no references at all). Build and
+// BuildMulti share this so the "one combined call where possible" behavior —
+// and any future per-language upgrade to DefsRefsExtractor — lives in one
+// place.
+func extractDefsRefs(ext Extractor, content []byte) ([]Symbol, []Occurrence, error) {
+	if combined, ok := ext.(DefsRefsExtractor); ok {
+		return combined.ExtractDefsRefs(content)
+	}
+	syms, err := ext.Extract(content)
+	if err != nil {
+		return nil, nil, err
+	}
+	if refExt, ok := ext.(RefExtractor); ok {
+		if occs, rerr := refExt.ExtractRefs(content); rerr == nil {
+			return syms, occs, nil
+		}
+	}
+	return syms, nil, nil
 }

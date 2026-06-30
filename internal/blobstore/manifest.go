@@ -79,8 +79,9 @@ type Stats struct {
 	FileRefs int `json:"file_refs"`
 }
 
-// DedupRatio is RawBytes/StoredBytes (1.0 == no duplication). >1 quantifies the
-// cross-shard dedup win. Returns 0 for an empty store.
+// DedupRatio is RawBytes/StoredBytes (1.0 == no duplication; higher means more
+// duplication eliminated). >1 quantifies the cross-shard dedup win. Returns 0
+// for an empty store.
 func (s Stats) DedupRatio() float64 {
 	if s.StoredBytes == 0 {
 		return 0
@@ -107,18 +108,16 @@ func (m *BlobManifest) RepoOf(dir string) (RepoBlobs, bool) {
 	return RepoBlobs{}, false
 }
 
-// WriteBlobManifest serializes m to path atomically (temp+rename), mirroring
-// parity.WriteManifest so a crash mid-write never leaves a half-manifest.
+// WriteBlobManifest serializes m to path atomically (temp+rename), fsyncing
+// before the rename, mirroring parity.WriteManifest so a crash mid-write never
+// leaves a half-manifest AND never leaves the directory entry pointing at bytes
+// that aren't yet durable.
 func WriteBlobManifest(path string, m *BlobManifest) error {
 	data, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
 		return err
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
+	return writeFileDurable(path, data, 0o644)
 }
 
 // LoadBlobManifest reads and parses a manifest written by WriteBlobManifest.

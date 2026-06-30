@@ -95,6 +95,33 @@ func TestLexicalOrderingByBM25(t *testing.T) {
 	}
 }
 
+// TestLexicalArmDedupsRepeatedTerms checks that a query repeating the same term
+// (e.g. "refund refund") does not inflate the BM25 score versus the single-term
+// query "refund" for the same blob. lexicalArm must score over the DISTINCT term
+// set, exactly like symbolArm/pathArm already do, not the raw (possibly
+// duplicated) terms slice from Tokenize.
+func TestLexicalArmDedupsRepeatedTerms(t *testing.T) {
+	ix := buildIndex("refund processing logic here")
+	ti := tokenindex.Build(ix)
+	r := New(ix, ti, nil, nil, Config{})
+
+	single, err := r.Rank(context.Background(), "refund", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repeated, err := r.Rank(context.Background(), "refund refund", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(single) != 1 || len(repeated) != 1 {
+		t.Fatalf("expected 1 result each, got single=%d repeated=%d", len(single), len(repeated))
+	}
+	if single[0].Lexical != repeated[0].Lexical {
+		t.Errorf("repeated query term inflated BM25 score: single=%v repeated=%v (expected equal)",
+			single[0].Lexical, repeated[0].Lexical)
+	}
+}
+
 // TestLineSpansLocateTerm checks the salient spans point at the lines that
 // actually contain the query term.
 func TestLineSpansLocateTerm(t *testing.T) {
@@ -140,6 +167,31 @@ func TestShortTokenFallback(t *testing.T) {
 	// blob 0 contains both 'a' and 'b'; it must be present.
 	if res[0].Blob != 0 {
 		t.Errorf("expected blob 0 (contains a and b) first, got %d", res[0].Blob)
+	}
+}
+
+// TestCandidateBlobsShortTokenFallbackBounded pins F-039's fix: when every query
+// term is too short for a trigram, candidateBlobs must NOT fall back to every
+// blob in the corpus (an O(NumBlobs) scan reachable from a single crafted query
+// on the trigram path, e.g. moedex-mcp). It must instead fall back to the exact
+// token-index candidate set (the union of ti.Docs(t) over the terms), which is
+// sound for BM25 (a blob with no term present scores 0 anyway) but bounded by
+// the number of blobs that actually contain a term, not the corpus size.
+func TestCandidateBlobsShortTokenFallbackBounded(t *testing.T) {
+	contents := []string{"a b c here"} // blob 0: contains the short terms
+	for i := range 50 {
+		contents = append(contents, "no match line filler "+strings.Repeat("x", i))
+	}
+	ix := buildIndex(contents...)
+	ti := tokenindex.Build(ix)
+	r := New(ix, ti, nil, nil, Config{})
+
+	cand := r.candidateBlobs([]string{"a", "b"})
+	if len(cand) >= ix.NumBlobs() {
+		t.Fatalf("all-short-token query fell back to the whole corpus (%d blobs); want the bounded token-index set", ix.NumBlobs())
+	}
+	if len(cand) != 1 || cand[0] != 0 {
+		t.Errorf("expected only blob 0 (the only blob containing 'a'/'b') as candidate, got %+v", cand)
 	}
 }
 
@@ -264,6 +316,30 @@ func TestSymbolArmRaisesDefiner(t *testing.T) {
 	}
 	if !hit {
 		t.Errorf("expected a LineSpan covering the def line %d, got %+v", defLine, definer.LineSpans)
+	}
+}
+
+// TestSymbolArmSumsMultipleQualifyingSymbols pins the symbol arm's aggregation
+// policy ahead of the F-041 coverageArm refactor: a blob defining TWO symbols
+// that each independently qualify (full coverage of a 1-term query) scores the
+// SUM of their hit counts, not just one entry's hit count. This is the policy
+// the path arm does NOT share — it takes the single best-matching entry, never
+// summing across entries (see TestPathArmMultiPathBlobBestMatch) — so a shared
+// helper must keep the two aggregation policies distinct.
+func TestSymbolArmSumsMultipleQualifyingSymbols(t *testing.T) {
+	src := "package billing\n\nfunc Refund() error { return nil }\nfunc RefundLine() error { return nil }\n"
+	ix := buildIndex(src)
+	ti := tokenindex.Build(ix)
+	syms := symbol.Build(ix, symbol.GoExtractor{})
+
+	r := New(ix, ti, nil, nil, Config{})
+	r.SetSymbols(syms)
+	scores := r.symbolArm([]string{"refund"})
+	if len(scores) != 1 {
+		t.Fatalf("expected 1 candidate blob, got %d: %+v", len(scores), scores)
+	}
+	if scores[0].score != 2 {
+		t.Errorf("expected summed score 2 (two qualifying symbols: Refund + RefundLine), got %v", scores[0].score)
 	}
 }
 
@@ -440,6 +516,32 @@ func TestPathArmDisabledUnchanged(t *testing.T) {
 		if onRes[i].Blob != offRes[i].Blob || onRes[i].Score != offRes[i].Score {
 			t.Errorf("path arm perturbed a no-path-match query at %d: %+v vs %+v", i, onRes[i], offRes[i])
 		}
+	}
+}
+
+// TestPathArmMultiPathBlobBestMatch verifies the path arm scores each FileRef of
+// a SHA-deduped blob (one blob, several paths) INDEPENDENTLY, taking the best
+// single path's coverage — never merging tokens across paths. Each path here
+// carries only one of the two query terms, so a correct arm sees best
+// single-path coverage 1/2, below the default 0.6 gate's minHits=2, and the
+// blob is gated out entirely (no other arm matches either). A per-blob path
+// cache that collapsed both paths' tokens into one shared set would instead see
+// "order" and "service" both present (on different paths) and wrongly score the
+// blob 2/2, passing the gate.
+func TestPathArmMultiPathBlobBestMatch(t *testing.T) {
+	ix := index.New()
+	const sha = "shared-sha-order-service"
+	ix.AddFile("repoA", "app/order_only.go", "/abs/app/order_only.go", sha, []byte("zzz yyy www"))
+	ix.AddFile("repoB", "vendor/service_only.go", "/abs/vendor/service_only.go", sha, []byte("zzz yyy www"))
+	ti := tokenindex.Build(ix)
+
+	r := New(ix, ti, nil, nil, Config{})
+	feats, err := r.Features(context.Background(), "order service")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(feats) != 0 {
+		t.Errorf("expected the blob to be gated out (no single path covers both terms), got %+v", feats)
 	}
 }
 

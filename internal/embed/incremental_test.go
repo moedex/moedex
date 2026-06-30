@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"sort"
 	"testing"
+	"unsafe"
 
 	"moedex/internal/index"
 )
@@ -257,6 +258,36 @@ func TestFillKeys_RejectsMismatchedIndex(t *testing.T) {
 	}
 }
 
+func TestBuildStoreIncremental_SkipsNilBlobSlots(t *testing.T) {
+	e := newFakeEmbedder(16)
+	ix := buildFileIndex(t, map[string]string{
+		"a.go": "package a\nfunc A() {}\n",
+		"b.go": "package b\nfunc B() {}\n",
+	})
+	clearIndexBlobForTest(t, ix, 0)
+
+	s, st := mustIncremental(t, ix, e, nil)
+	if st.Total != 1 || st.Embedded != 1 || st.Reused != 0 {
+		t.Fatalf("stats=%+v want Total1 Embedded1 Reused0", st)
+	}
+	if s.Len() != 1 {
+		t.Fatalf("Len=%d want 1", s.Len())
+	}
+	if got := s.chunks[0].Blob; got != 1 {
+		t.Fatalf("chunk blob=%d want surviving blob 1", got)
+	}
+}
+
+func TestFillKeys_RejectsNilBlobSlots(t *testing.T) {
+	ix := buildFileIndex(t, map[string]string{"a.go": "package a\n"})
+	clearIndexBlobForTest(t, ix, 0)
+
+	s := &Store{chunks: []Chunk{{Blob: 0, StartByte: 0, EndByte: 1}}}
+	if err := s.FillKeys(ix); err == nil {
+		t.Fatal("FillKeys should reject an in-range nil blob")
+	}
+}
+
 // --- test helpers ---
 
 func mustEmbedOne(t *testing.T, e Embedder, text string) Vector {
@@ -266,6 +297,16 @@ func mustEmbedOne(t *testing.T, e Embedder, text string) Vector {
 		t.Fatalf("embed one: %v (n=%d)", err, len(vs))
 	}
 	return vs[0]
+}
+
+func clearIndexBlobForTest(t *testing.T, ix *index.Index, id int) {
+	t.Helper()
+	v := reflect.ValueOf(ix).Elem().FieldByName("blobs")
+	if id < 0 || id >= v.Len() {
+		t.Fatalf("blob id %d out of range", id)
+	}
+	blobs := reflect.NewAt(v.Type(), unsafe.Pointer(v.UnsafeAddr())).Elem()
+	blobs.Index(id).Set(reflect.Zero(blobs.Type().Elem()))
 }
 
 // panicEmbedder fails if asked to embed anything — proving a path embeds nothing.

@@ -53,7 +53,7 @@ func (r *ripgrep) args(q Query) []string {
 	if q.NoUnicode {
 		a = append(a, "--no-unicode")
 	}
-	a = append(a, "-e", q.Pattern, r.mirrorDir)
+	a = append(a, "-e", q.Pattern, "--", r.mirrorDir)
 	return a
 }
 

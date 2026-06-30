@@ -98,7 +98,7 @@ func emitTS(syms *[]Symbol, content []byte, ns, ne, matchStart, matchEnd int, ki
 	if ns < 0 || ne < 0 || ns >= ne || ne > len(content) {
 		return
 	}
-	bs, be := bodyRange(content, matchEnd)
+	be := bodyRange(content, matchEnd)
 	if be <= ns {
 		return
 	}
@@ -107,7 +107,7 @@ func emitTS(syms *[]Symbol, content []byte, ns, ne, matchStart, matchEnd int, ki
 		Kind:      kind,
 		NameStart: ns,
 		NameEnd:   ne,
-		BodyStart: minInt(matchStart, bs),
+		BodyStart: matchStart,
 		BodyEnd:   be,
 	})
 }

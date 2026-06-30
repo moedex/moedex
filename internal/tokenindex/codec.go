@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 )
 
 // Binary format (all multi-byte integers little-endian via binary.Uvarint /
@@ -65,24 +66,40 @@ func writeIndex(w io.Writer, ti *TokenIndex) error {
 		return err
 	}
 
-	// docLen section
+	// docLen section. Keys are written in ascending order (rather than ranged
+	// over directly) so the TKI1 bytes are reproducible across runs: Go map
+	// iteration order is intentionally randomized, but nothing downstream
+	// depends on insertion order here.
 	if err := putU(uint64(len(ti.docLen))); err != nil {
 		return err
 	}
-	for id, l := range ti.docLen {
+	docIDs := make([]uint64, 0, len(ti.docLen))
+	for id := range ti.docLen {
+		docIDs = append(docIDs, id)
+	}
+	slices.Sort(docIDs)
+	for _, id := range docIDs {
 		if err := putU(id); err != nil {
 			return err
 		}
-		if err := putU(uint64(l)); err != nil {
+		if err := putU(uint64(ti.docLen[id])); err != nil {
 			return err
 		}
 	}
 
-	// postings section
+	// postings section. Terms are written in ascending lexicographic order,
+	// and each term's blob postings in ascending blobID order, for the same
+	// reproducibility reason as docLen above.
 	if err := putU(uint64(len(ti.postings))); err != nil {
 		return err
 	}
-	for term, post := range ti.postings {
+	terms := make([]string, 0, len(ti.postings))
+	for term := range ti.postings {
+		terms = append(terms, term)
+	}
+	slices.Sort(terms)
+	for _, term := range terms {
+		post := ti.postings[term]
 		if err := putU(uint64(len(term))); err != nil {
 			return err
 		}
@@ -92,11 +109,16 @@ func writeIndex(w io.Writer, ti *TokenIndex) error {
 		if err := putU(uint64(len(post))); err != nil {
 			return err
 		}
-		for id, tf := range post {
+		blobIDs := make([]uint64, 0, len(post))
+		for id := range post {
+			blobIDs = append(blobIDs, id)
+		}
+		slices.Sort(blobIDs)
+		for _, id := range blobIDs {
 			if err := putU(id); err != nil {
 				return err
 			}
-			if err := putU(uint64(tf)); err != nil {
+			if err := putU(uint64(post[id])); err != nil {
 				return err
 			}
 		}

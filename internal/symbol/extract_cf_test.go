@@ -1,6 +1,11 @@
 package symbol
 
-import "testing"
+import (
+	"bytes"
+	"strconv"
+	"testing"
+	"time"
+)
 
 // A realistic CFML include mixing tag UDFs, a cfscript UDF, page JavaScript (a
 // trap the extractor must NOT pick up), and a component. Modeled on the
@@ -112,6 +117,59 @@ func TestCFExtractor_SingleQuotesAndCase(t *testing.T) {
 	syms, _ := CFExtractor{}.Extract(src)
 	if _, ok := symNames(syms)["getOwner"]; !ok {
 		t.Errorf("uppercase/single-quote <CFFUNCTION NAME='getOwner'> not extracted; got %v", names(syms))
+	}
+}
+
+// Many unclosed (or never-closed-in-time) <cfscript> opens must not cause
+// quadratic blowup: each open scanning to EOF for a matching close, and then
+// rescanning that same near-EOF-length segment for function declarations, is
+// O(n^2) in the number of opens. A real linear-pass implementation handles
+// thousands of opens over a sizeable blob in well under a second.
+func TestCFExtractor_NoQuadraticBlowupOnUnclosedCfscript(t *testing.T) {
+	const opens = 5000
+	var b bytes.Buffer
+	for i := range opens {
+		b.WriteString("<cfscript>\nfunction f")
+		b.WriteString(strconv.Itoa(i))
+		b.WriteString("() { return 1; }\n")
+	}
+	content := b.Bytes()
+
+	done := make(chan struct{})
+	go func() {
+		CFExtractor{}.Extract(content)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatalf("Extract did not complete within 2s for %d unclosed <cfscript> opens (%d bytes); likely O(n^2) blowup", opens, len(content))
+	}
+}
+
+// Many unclosed <cffunction> opens must not cause quadratic blowup: each open
+// independently scanning to EOF for a matching </cffunction> is O(n^2) in the
+// number of opens (cfTagBodyEnd). A real linear-pass implementation handles
+// tens of thousands of opens over a sizeable blob in well under a second.
+func TestCFExtractor_NoQuadraticBlowupOnUnclosedCffunction(t *testing.T) {
+	const opens = 30000
+	var b bytes.Buffer
+	for i := range opens {
+		b.WriteString(`<cffunction name="f`)
+		b.WriteString(strconv.Itoa(i))
+		b.WriteString("\">\n")
+	}
+	content := b.Bytes()
+
+	done := make(chan struct{})
+	go func() {
+		CFExtractor{}.Extract(content)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatalf("Extract did not complete within 2s for %d unclosed <cffunction> opens (%d bytes); likely O(n^2) blowup in cfTagBodyEnd", opens, len(content))
 	}
 }
 

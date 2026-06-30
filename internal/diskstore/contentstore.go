@@ -73,11 +73,22 @@ const (
 // writes the shared content store. It is the export-side builder: PutContent is
 // idempotent on the content hash, so a blob referenced by several repos/shards is
 // physically written ONCE. NOT safe for concurrent use.
+//
+// PutContent streams each newly-seen blob's bytes straight to a backing scratch
+// file rather than accumulating them in a Go-heap buffer: a full corpus export can
+// hold many GB of unique content, and the off-heap goal this package's doc states
+// applies to writing just as much as to serving. Only the (sha -> offset/len)
+// directory — proportional to blob COUNT, not bytes — stays in memory. Write later
+// streams the scratch file's bytes into the final store; Close removes the scratch
+// file (call it once done, whether or not Write was reached).
 type ContentStoreWriter struct {
-	dir     map[string]ContentRef // sha -> ref (offset/len), the dedup directory
-	order   []string              // SHAs in insertion order (deterministic)
-	content [][]byte              // content slices, parallel to order
-	pos     int64                 // running content offset (next write position)
+	dir         map[string]ContentRef // sha -> ref (offset/len), the dedup directory
+	order       []string              // SHAs in insertion order (deterministic)
+	pos         int64                 // running content offset (next write position)
+	scratch     *os.File              // backing file content is streamed to as PutContent is called
+	scratchBuf  *bufio.Writer         // buffered writer over scratch
+	scratchPath string                // scratch's path, removed by Close
+	putErr      error                 // first scratch-write error; surfaced by Write
 }
 
 // ContentRef locates a blob's content within the shared store: its byte offset
@@ -87,9 +98,20 @@ type ContentRef struct {
 	Len    int64
 }
 
-// NewContentStoreWriter returns an empty writer.
-func NewContentStoreWriter() *ContentStoreWriter {
-	return &ContentStoreWriter{dir: map[string]ContentRef{}}
+// NewContentStoreWriter returns an empty writer backed by a fresh scratch file.
+// Callers must Close the writer when done (whether or not Write succeeds) to
+// remove the scratch file.
+func NewContentStoreWriter() (*ContentStoreWriter, error) {
+	f, err := os.CreateTemp("", "moedex-contentstore-*.tmp")
+	if err != nil {
+		return nil, fmt.Errorf("diskstore: create content store scratch file: %w", err)
+	}
+	return &ContentStoreWriter{
+		dir:         map[string]ContentRef{},
+		scratch:     f,
+		scratchBuf:  bufio.NewWriter(f),
+		scratchPath: f.Name(),
+	}, nil
 }
 
 // PutContent records content under sha if not already present and returns its
@@ -97,6 +119,10 @@ func NewContentStoreWriter() *ContentStoreWriter {
 // re-storing (the cross-shard dedup primitive, mirroring blobstore.Store.Put).
 // The CORRECTNESS CONTRACT matches blobstore: sha must be a content hash of the
 // exact bytes, so an existing sha provably means identical bytes.
+//
+// A write error to the scratch file is recorded rather than returned here (the
+// contentRegistrar interface this satisfies has no error return); it surfaces the
+// next time Write is called, which never silently produces a truncated store.
 func (w *ContentStoreWriter) PutContent(sha string, content []byte) ContentRef {
 	if ref, ok := w.dir[sha]; ok {
 		return ref
@@ -104,10 +130,27 @@ func (w *ContentStoreWriter) PutContent(sha string, content []byte) ContentRef {
 	ref := ContentRef{Offset: w.pos, Len: int64(len(content))}
 	w.dir[sha] = ref
 	w.order = append(w.order, sha)
-	// Copy so the writer owns the bytes independent of the caller's buffer.
-	w.content = append(w.content, append([]byte(nil), content...))
+	if w.putErr == nil {
+		if _, err := w.scratchBuf.Write(content); err != nil {
+			w.putErr = fmt.Errorf("diskstore: write content store scratch: %w", err)
+		}
+	}
 	w.pos += int64(len(content))
 	return ref
+}
+
+// Close releases the writer's backing scratch file (handle and temp file). Safe to
+// call after Write (the scratch file is no longer needed) or instead of Write to
+// discard an abandoned writer without leaking a temp file. Safe to call more than
+// once.
+func (w *ContentStoreWriter) Close() error {
+	if w.scratch == nil {
+		return nil
+	}
+	err := w.scratch.Close()
+	os.Remove(w.scratchPath)
+	w.scratch = nil
+	return err
 }
 
 // Ref returns the stored reference for sha and whether it is present.
@@ -125,8 +168,20 @@ func (w *ContentStoreWriter) Len() int { return len(w.order) }
 func (w *ContentStoreWriter) BytesStored() int64 { return w.pos }
 
 // Write serializes the shared content store to path atomically (temp+rename) so a
-// crash mid-write never leaves a half-store the shards reference.
+// crash mid-write never leaves a half-store the shards reference. The CONTENT
+// section is streamed from the backing scratch file (where PutContent already
+// wrote it), never reassembled in memory.
 func (w *ContentStoreWriter) Write(path string) error {
+	if w.putErr != nil {
+		return w.putErr
+	}
+	if err := w.scratchBuf.Flush(); err != nil {
+		return fmt.Errorf("diskstore: flush content store scratch: %w", err)
+	}
+	if _, err := w.scratch.Seek(0, io.SeekStart); err != nil {
+		return fmt.Errorf("diskstore: seek content store scratch: %w", err)
+	}
+
 	tmp := path + ".tmp"
 	f, err := os.Create(tmp)
 	if err != nil {
@@ -148,12 +203,10 @@ func (w *ContentStoreWriter) Write(path string) error {
 		return err
 	}
 
-	// CONTENT section.
-	for _, c := range w.content {
-		if _, err := bw.Write(c); err != nil {
-			f.Close()
-			return err
-		}
+	// CONTENT section, streamed from the scratch file (never held whole in RAM).
+	if _, err := io.CopyN(bw, w.scratch, w.pos); err != nil {
+		f.Close()
+		return fmt.Errorf("diskstore: copy content store scratch: %w", err)
 	}
 
 	// DIRECTORY section. Offsets are absolute file offsets (content section base is
@@ -463,7 +516,11 @@ func CompactContentStore(srcPath, outPath string, live map[string]bool) (keptBlo
 	// the carried-forward content keeps a stable layout. We read each kept blob's
 	// bytes from the mmap and re-Put them into a fresh writer (which assigns new,
 	// gap-free offsets — that is the space reclaim).
-	w := NewContentStoreWriter()
+	w, err := NewContentStoreWriter()
+	if err != nil {
+		return 0, 0, err
+	}
+	defer w.Close()
 	// Iterate in directory insertion order. The mmap directory map is unordered, so
 	// re-derive order by walking the on-disk directory section.
 	order, err := dedupedStoreOrder(srcPath)
@@ -513,7 +570,15 @@ func dedupedStoreOrder(path string) ([]string, error) {
 	if dirOff > uint64(len(data)) {
 		return nil, fmt.Errorf("diskstore: corrupt content store directory offset")
 	}
-	out := make([]string, 0, numBlobs)
+	// Cap the capacity hint to what the remaining bytes could possibly hold (each
+	// directory record is at least shaLen+contentOff+contentLen = 20 bytes), so a
+	// corrupt/hostile numBlobs (e.g. near math.MaxUint64) can't drive make() into
+	// an enormous allocation. The read loop below is already bounds-checked and
+	// will reject the file cleanly once it runs out of directory bytes; this only
+	// protects the eager allocation ahead of that loop.
+	const minDirRecordSize = 4 + 8 + 8
+	capHint := min(numBlobs, (uint64(len(data))-dirOff)/minDirRecordSize)
+	out := make([]string, 0, capHint)
 	r := &reader{b: data[dirOff:]}
 	for i := uint64(0); i < numBlobs; i++ {
 		sha, err := r.lenBytes()
@@ -632,7 +697,13 @@ func OpenContentStore(path string) (*ContentStore, error) {
 			region.Close()
 			return nil, fmt.Errorf("diskstore: content dir entry %d len: %w", i, err)
 		}
-		if off+clen > uint64(len(data)) {
+		// off and clen are both untrusted uint64 values read straight from the
+		// file; off+clen can overflow and wrap back below len(data), so compare
+		// each bound separately rather than summing first. Once off is known to
+		// be <= len(data) (an actual Go slice length, so it fits in an int),
+		// n-off cannot underflow either.
+		n := uint64(len(data))
+		if off > n || clen > n-off {
 			region.Close()
 			return nil, fmt.Errorf("diskstore: content dir entry %d out of bounds", i)
 		}
@@ -670,12 +741,24 @@ func ContentStoreDirDigest(path string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// Content returns the zero-copy content sub-slice for sha, or ok=false if absent.
-// The returned slice aliases the mmap and is valid only until Close; callers that
-// need to retain it past Close must copy.
+// Content returns the zero-copy content sub-slice for sha, or ok=false if absent
+// or if the stored ref is out of bounds. The returned slice aliases the mmap and
+// is valid only until Close; callers that need to retain it past Close must copy.
+//
+// OpenContentStore already validates every ref's offset/length before it lands
+// in bySHA, but this re-checks them here too: without it, ALL of the content
+// store's slice safety would live in that one open-time check, and any future
+// regression there (or a ContentStore assembled some other way) would slice
+// straight into a panic or an out-of-bounds mmap read instead of failing
+// cleanly. ref.Offset/ref.Len are compared separately (never summed first) so
+// an adversarial pair can't overflow back into range.
 func (cs *ContentStore) Content(sha string) (content []byte, ok bool) {
 	ref, ok := cs.bySHA[sha]
 	if !ok {
+		return nil, false
+	}
+	n := int64(len(cs.region.data))
+	if ref.Offset < 0 || ref.Len < 0 || ref.Offset > n || ref.Len > n-ref.Offset {
 		return nil, false
 	}
 	return cs.region.data[ref.Offset : ref.Offset+ref.Len], true

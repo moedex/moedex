@@ -21,7 +21,7 @@ func TestContentStoreAppenderCarriesForwardAndAppendsOnlyNetNew(t *testing.T) {
 	// Baseline store with two blobs.
 	a := []byte("alpha content one")
 	b := []byte("bravo content two, a bit longer")
-	cw := NewContentStoreWriter()
+	cw := newTestContentStoreWriter(t)
 	refA := cw.PutContent("sha-a", a)
 	refB := cw.PutContent("sha-b", b)
 	if err := cw.Write(path); err != nil {

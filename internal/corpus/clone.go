@@ -3,6 +3,7 @@ package corpus
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -69,23 +70,101 @@ var gitEnv = []string{
 
 // Dest returns the local path a project clones to: the corpus root joined with
 // the project's full namespace path, so the mirror layout matches GitLab exactly
-// (and the engine's per-repo discovery sees the same structure).
+// (and the engine's per-repo discovery sees the same structure). PathWithNamespace
+// is server-supplied data — filepath.Join silently resolves any ".." it contains,
+// so callers that act on the result (clone, fetch/reset, prune) MUST gate it
+// through withinRoot before touching the filesystem; Dest itself stays a pure join
+// so its output remains simple to unit test.
 func (cfg Config) Dest(p Project) string {
 	return filepath.Join(cfg.Root, filepath.FromSlash(p.PathWithNamespace))
+}
+
+// errUnsafeDest is returned when a computed destination would land outside
+// cfg.Root — e.g. a path_with_namespace containing ".." segments, or an empty
+// one that collapses onto cfg.Root itself.
+var errUnsafeDest = errors.New("destination escapes corpus root")
+
+// withinRoot reports whether dest is strictly contained under root once both are
+// cleaned (dest itself equaling root is rejected too — Dest/prune destinations
+// are always a sub-path, never the root). This is the actual containment gate:
+// GitLab's naming rules forbid ".." in a namespace path today, but nothing in
+// this package enforces that independently, so the join must never be trusted.
+func withinRoot(root, dest string) bool {
+	root = filepath.Clean(root)
+	dest = filepath.Clean(dest)
+	return dest != root && strings.HasPrefix(dest, root+string(filepath.Separator))
+}
+
+// errUntrustedProject is returned when a project's server-supplied fields fail
+// validateProject — an ssh_url_to_repo that doesn't point at the pinned host, or
+// a value shaped like a command-line flag rather than data.
+var errUntrustedProject = errors.New("untrusted project")
+
+// validateProject rejects a Project whose server-supplied fields could be
+// mistaken for git options rather than the data they're meant to be — defense
+// in depth alongside the "--" separator in CloneArgs and updateOne's fetch, and
+// on top of the fact that GitLab (not an attacker) normally generates these
+// fields server-side:
+//   - SSHURL must not look like a flag (a real ssh_url_to_repo never starts
+//     with "-") and must name the pinned host, so a clone can never be
+//     redirected to an arbitrary remote.
+//   - DefaultBranch, used as a positional ref in updateOne's `git fetch`, must
+//     not look like a flag either.
+func validateProject(cfg Config, p Project) error {
+	if strings.HasPrefix(p.SSHURL, "-") {
+		return fmt.Errorf("%w: ssh url %q looks like a flag", errUntrustedProject, p.SSHURL)
+	}
+	if cfg.Host != "" {
+		if host := sshURLHost(p.SSHURL); host != cfg.Host {
+			return fmt.Errorf("%w: ssh url %q does not point at the pinned host %q", errUntrustedProject, p.SSHURL, cfg.Host)
+		}
+	}
+	return validRef(p.DefaultBranch)
+}
+
+// validRef rejects a branch/ref that looks like a flag rather than a name — it
+// guards updateOne's `git fetch origin <ref>`, where ref is a bare positional
+// argument with no preceding flag name to force it to be read as data.
+func validRef(ref string) error {
+	if strings.HasPrefix(ref, "-") {
+		return fmt.Errorf("%w: ref %q looks like a flag", errUntrustedProject, ref)
+	}
+	return nil
+}
+
+// sshURLHost extracts the host from an SSH git URL, accepting both SCP-like
+// syntax ("git@host:path") and full ssh:// syntax ("ssh://git@host[:port]/path").
+// It returns "" if no "user@host" form is found.
+func sshURLHost(sshURL string) string {
+	sshURL = strings.TrimPrefix(sshURL, "ssh://")
+	_, rest, ok := strings.Cut(sshURL, "@")
+	if !ok {
+		return ""
+	}
+	if end := strings.IndexAny(rest, ":/"); end >= 0 {
+		return rest[:end]
+	}
+	return rest
 }
 
 // CloneArgs builds the git argument vector for a shallow, single-branch clone of
 // p into its destination under cfg.Root. The branch flag is included only when
 // the project advertises a default branch (an empty repo has none, and `-b ""`
-// would fail). It is pure, so the exact command is unit-tested.
-func CloneArgs(cfg Config, p Project) (dest string, args []string) {
+// would fail). The clone URL and destination are separated from option parsing
+// by "--", and p is validated first (see validateProject) — so the returned argv
+// can never have an attacker-controlled positional operand mistaken for a flag.
+// It is otherwise pure, so the exact command is unit-tested.
+func CloneArgs(cfg Config, p Project) (dest string, args []string, err error) {
 	dest = cfg.Dest(p)
+	if err := validateProject(cfg, p); err != nil {
+		return dest, nil, err
+	}
 	args = []string{"clone", "--depth", "1", "--single-branch"}
 	if p.DefaultBranch != "" {
 		args = append(args, "--branch", p.DefaultBranch)
 	}
-	args = append(args, p.SSHURL, dest)
-	return dest, args
+	args = append(args, "--", p.SSHURL, dest)
+	return dest, args, nil
 }
 
 // alreadyCloned reports whether dest looks like a git working tree already (a
@@ -105,7 +184,13 @@ func (cfg Config) HasClone(p Project) bool {
 // cloneOne clones a single project, returning its result. It never returns an
 // error itself — failures are captured in the result so the fan-out continues.
 func cloneOne(ctx context.Context, r Runner, cfg Config, p Project) CloneResult {
-	dest, args := CloneArgs(cfg, p)
+	dest, args, err := CloneArgs(cfg, p)
+	if err != nil {
+		return CloneResult{Project: p, Outcome: Failed, Err: err}
+	}
+	if !withinRoot(cfg.Root, dest) {
+		return CloneResult{Project: p, Outcome: Failed, Err: errUnsafeDest, Detail: dest}
+	}
 	if alreadyCloned(dest) {
 		return CloneResult{Project: p, Outcome: Skipped}
 	}
@@ -188,6 +273,16 @@ func CloneProjects(ctx context.Context, r Runner, cfg Config, projects []Project
 	close(jobs)
 	wg.Wait()
 
+	return tallyCloneReport(results)
+}
+
+// tallyCloneReport builds a CloneReport's per-outcome counts from results.
+// Every result lands in exactly one bucket: an outcome this switch doesn't
+// recognize (e.g. a future CloneOutcome this function wasn't updated for) is
+// conservatively counted as Failed rather than silently contributing to none
+// of the counts, so the tally always sums to len(results) and a forgotten case
+// surfaces as a visible failure instead of an inexplicable under-count.
+func tallyCloneReport(results []CloneResult) CloneReport {
 	rep := CloneReport{Results: results}
 	for _, res := range results {
 		switch res.Outcome {
@@ -199,6 +294,8 @@ func CloneProjects(ctx context.Context, r Runner, cfg Config, projects []Project
 			rep.Failed++
 		case Empty:
 			rep.Empty++
+		default:
+			rep.Failed++
 		}
 	}
 	return rep
@@ -206,12 +303,4 @@ func CloneProjects(ctx context.Context, r Runner, cfg Config, projects []Project
 
 // lastLine returns the last non-empty line of b, trimmed — the most useful part
 // of a git failure for a one-line report.
-func lastLine(b []byte) string {
-	lines := strings.Split(string(b), "\n")
-	for i := len(lines) - 1; i >= 0; i-- {
-		if s := strings.TrimSpace(lines[i]); s != "" {
-			return s
-		}
-	}
-	return ""
-}
+func lastLine(b []byte) string { return nonEmptyLine(b, false) }

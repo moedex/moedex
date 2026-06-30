@@ -42,6 +42,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"moedex/internal/index"
 )
@@ -74,8 +75,16 @@ type HTTPEmbedder struct {
 	baseURL string
 	model   string
 	client  *http.Client
-	dim     int
+
+	dimMu sync.Mutex
+	dim   int // guards concurrent Embed/Dim calls on a shared embedder
 }
+
+// defaultEmbedTimeout bounds a single embeddings HTTP request (covers both the
+// build path, which has no per-call context deadline, and as a backstop on the
+// context-bounded query path) so a hung or slow embedding server can't stall
+// indefinitely.
+const defaultEmbedTimeout = 60 * time.Second
 
 // NewHTTPEmbedder returns an Embedder backed by the embeddings endpoint at
 // baseURL using the named model.
@@ -83,7 +92,7 @@ func NewHTTPEmbedder(baseURL, model string) *HTTPEmbedder {
 	return &HTTPEmbedder{
 		baseURL: strings.TrimRight(baseURL, "/"),
 		model:   model,
-		client:  &http.Client{},
+		client:  &http.Client{Timeout: defaultEmbedTimeout},
 	}
 }
 
@@ -121,9 +130,13 @@ func (h *HTTPEmbedder) Embed(ctx context.Context, texts []string) ([]Vector, err
 	}
 	defer resp.Body.Close()
 
-	raw, err := io.ReadAll(resp.Body)
+	limit := h.maxResponseBytes(len(texts))
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, limit+1))
 	if err != nil {
 		return nil, fmt.Errorf("embed: read response: %w", err)
+	}
+	if int64(len(raw)) > limit {
+		return nil, fmt.Errorf("embed: response exceeds %d byte limit for %d text(s)", limit, len(texts))
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("embed: server returned %s: %s", resp.Status, strings.TrimSpace(string(raw)))
@@ -142,14 +155,51 @@ func (h *HTTPEmbedder) Embed(ctx context.Context, texts []string) ([]Vector, err
 		out[i] = Vector(d.Embedding)
 	}
 	if len(out[0]) > 0 {
+		h.dimMu.Lock()
 		h.dim = len(out[0])
+		h.dimMu.Unlock()
 	}
 	return out, nil
 }
 
 // Dim implements Embedder. It returns the cached embedding dimension discovered
 // from the first successful Embed call, or 0 if not yet known.
-func (h *HTTPEmbedder) Dim() int { return h.dim }
+func (h *HTTPEmbedder) Dim() int {
+	h.dimMu.Lock()
+	defer h.dimMu.Unlock()
+	return h.dim
+}
+
+const (
+	// assumedMaxDim bounds the per-vector size estimate before the real
+	// embedding dimension is known (Dim() is 0 until the first successful
+	// Embed call).
+	assumedMaxDim = 4096
+	// bytesPerFloatJSON generously bounds how many bytes one JSON-encoded
+	// float32 array element occupies (sign, digits, decimal point, comma).
+	bytesPerFloatJSON = 24
+	// responseSafetyFactor leaves headroom over the raw vector payload for
+	// JSON structure (keys, brackets, any extra metadata field).
+	responseSafetyFactor = 4
+	// minResponseBytes floors the cap so small batches aren't pinned to an
+	// unreasonably tight limit by JSON overhead.
+	minResponseBytes = 1 << 20 // 1 MiB
+)
+
+// maxResponseBytes bounds how many bytes Embed will read for a response
+// covering n texts, so a hung, misbehaving, or compromised embedding server
+// can't stream unbounded data into memory.
+func (h *HTTPEmbedder) maxResponseBytes(n int) int64 {
+	dim := h.Dim()
+	if dim == 0 {
+		dim = assumedMaxDim
+	}
+	limit := int64(n) * int64(dim) * bytesPerFloatJSON * responseSafetyFactor
+	if limit < minResponseBytes {
+		return minResponseBytes
+	}
+	return limit
+}
 
 // Chunk is a fixed-size line-window of a blob that gets one vector. Lines are
 // 1-based inclusive; byte offsets bound the same span in Blob.Content.
@@ -341,6 +391,9 @@ func (s *Store) FillKeys(ix *index.Index) error {
 			return fmt.Errorf("embed: fill keys: chunk %d references blob %d out of range (%d blobs)", i, c.Blob, n)
 		}
 		b := ix.Blob(c.Blob)
+		if b == nil {
+			return fmt.Errorf("embed: fill keys: chunk %d references nil blob %d", i, c.Blob)
+		}
 		if c.StartByte < 0 || c.EndByte > len(b.Content) || c.StartByte > c.EndByte {
 			return fmt.Errorf("embed: fill keys: chunk %d span [%d,%d) out of range for blob %d (len %d)", i, c.StartByte, c.EndByte, c.Blob, len(b.Content))
 		}
@@ -394,6 +447,9 @@ func BuildStoreIncremental(ctx context.Context, ix *index.Index, e Embedder, lin
 	n := ix.NumBlobs()
 	for id := 0; id < n; id++ {
 		b := ix.Blob(uint64(id))
+		if b == nil {
+			continue
+		}
 		for _, c := range ChunkBlob(b, linesPerChunk, overlap) {
 			k := chunkKey(b.Content[c.StartByte:c.EndByte])
 			chunks = append(chunks, c)
@@ -487,6 +543,14 @@ func (s *Store) Search(ctx context.Context, e Embedder, query string, topK int) 
 	q := normalize(vecs[0])
 	if s.dim != 0 && len(q) != s.dim {
 		return nil, fmt.Errorf("embed: query dim %d != store dim %d", len(q), s.dim)
+	}
+	// A corrupt/mixed-dim store (e.g. an incremental rebuild that reused a vector
+	// from a store built with a different embedder) would otherwise score the
+	// offending chunks 0 via dot's length-mismatch guard instead of erroring.
+	for i, v := range s.vectors {
+		if len(v) != s.dim {
+			return nil, fmt.Errorf("embed: chunk %d vector dim %d != store dim %d", i, len(v), s.dim)
+		}
 	}
 
 	// Score every chunk by cosine (vectors are unit-normalized, so dot == cosine).

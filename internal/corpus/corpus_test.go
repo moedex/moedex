@@ -240,18 +240,21 @@ func TestDoctor_NotAuthed(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestCloneArgs(t *testing.T) {
-	cfg := Config{Root: "/corpus"}
+	cfg := Config{Host: DefaultHost, Root: "/corpus"}
 	p := Project{
 		PathWithNamespace: "Services.Payment/TC.BillingApi",
-		SSHURL:            "git@h:Services.Payment/TC.BillingApi.git",
+		SSHURL:            "git@" + DefaultHost + ":Services.Payment/TC.BillingApi.git",
 		DefaultBranch:     "main",
 	}
-	dest, args := CloneArgs(cfg, p)
+	dest, args, err := CloneArgs(cfg, p)
+	if err != nil {
+		t.Fatalf("CloneArgs: %v", err)
+	}
 	wantDest := filepath.Join("/corpus", "Services.Payment", "TC.BillingApi")
 	if dest != wantDest {
 		t.Fatalf("dest = %q, want %q", dest, wantDest)
 	}
-	want := []string{"clone", "--depth", "1", "--single-branch", "--branch", "main", p.SSHURL, wantDest}
+	want := []string{"clone", "--depth", "1", "--single-branch", "--branch", "main", "--", p.SSHURL, wantDest}
 	if !reflect.DeepEqual(args, want) {
 		t.Fatalf("args = %v, want %v", args, want)
 	}
@@ -259,12 +262,80 @@ func TestCloneArgs(t *testing.T) {
 	// A project with no default branch — the -b flag must be omitted (git clone
 	// -b "" would fail). (Note: empty repos are skipped earlier via EmptyRepo; this
 	// guards the blank-DefaultBranch edge regardless.)
-	_, args2 := CloneArgs(cfg, Project{PathWithNamespace: "g/empty", SSHURL: "git@h:g/empty.git"})
+	_, args2, err := CloneArgs(cfg, Project{PathWithNamespace: "g/empty", SSHURL: "git@" + DefaultHost + ":g/empty.git"})
+	if err != nil {
+		t.Fatalf("CloneArgs: %v", err)
+	}
 	for _, a := range args2 {
 		if a == "--branch" {
 			t.Fatalf("empty-branch repo should omit --branch: %v", args2)
 		}
 	}
+}
+
+// TestCloneArgs_PositionalsGuarded covers the argument-injection finding: the
+// clone URL and destination are always separated from option-parsing by "--",
+// and a project whose ssh_url_to_repo does not point at the pinned host is
+// rejected before any args are built, so the host check can never be bypassed
+// by an injected option that also smuggles in a matching "@host:" substring.
+func TestCloneArgs_PositionalsGuarded(t *testing.T) {
+	cfg := Config{Host: DefaultHost, Root: "/corpus"}
+
+	t.Run("dash-prefixed url is rejected outright", func(t *testing.T) {
+		p := Project{PathWithNamespace: "g/evil", SSHURL: "--upload-pack=touch /tmp/pwned;@" + DefaultHost + ":x"}
+		_, _, err := CloneArgs(cfg, p)
+		if err == nil {
+			t.Fatal("want error for flag-shaped ssh url, got nil")
+		}
+	})
+
+	t.Run("url pointing at an unpinned host is rejected", func(t *testing.T) {
+		p := Project{PathWithNamespace: "g/other", SSHURL: "git@evil.example.com:g/other.git", DefaultBranch: "main"}
+		_, _, err := CloneArgs(cfg, p)
+		if err == nil {
+			t.Fatal("want error for ssh url on an unpinned host, got nil")
+		}
+	})
+
+	t.Run("legitimate url still produces a -- separated argv", func(t *testing.T) {
+		p := Project{PathWithNamespace: "g/ok", SSHURL: "git@" + DefaultHost + ":g/ok.git", DefaultBranch: "main"}
+		_, args, err := CloneArgs(cfg, p)
+		if err != nil {
+			t.Fatalf("CloneArgs: %v", err)
+		}
+		idx := indexOf(args, "--")
+		if idx < 0 || idx != len(args)-3 {
+			t.Fatalf("want \"--\" immediately before the two positional operands, got %v", args)
+		}
+	})
+}
+
+// TestCloneOne_RejectsUntrustedProject ensures an invalid project never reaches
+// git at all — cloneOne must fail fast rather than exec'ing a crafted argv.
+func TestCloneOne_RejectsUntrustedProject(t *testing.T) {
+	root := t.TempDir()
+	cfg := Config{Host: DefaultHost, Root: root, Concurrency: 1}
+	evil := Project{PathWithNamespace: "g/evil", SSHURL: "git@evil.example.com:g/evil.git", DefaultBranch: "main"}
+
+	var calls []call
+	r := fakeRunner{calls: &calls, callsMu: &sync.Mutex{}}
+
+	rep := CloneProjects(context.Background(), r, cfg, []Project{evil}, nil)
+	if rep.Failed != 1 || rep.Cloned != 0 {
+		t.Fatalf("counts: cloned=%d failed=%d, want 0/1", rep.Cloned, rep.Failed)
+	}
+	if len(calls) != 0 {
+		t.Fatalf("git must never be invoked for an untrusted project, got calls: %v", calls)
+	}
+}
+
+func indexOf(ss []string, s string) int {
+	for i, v := range ss {
+		if v == s {
+			return i
+		}
+	}
+	return -1
 }
 
 func TestCloneProjects(t *testing.T) {
@@ -322,6 +393,43 @@ func TestCloneProjects(t *testing.T) {
 	}
 }
 
+// TestTallyCloneReport_CountsSumToResults guards the basic invariant a report
+// consumer relies on: every result lands in exactly one bucket, so the four
+// counts always sum to len(Results).
+func TestTallyCloneReport_CountsSumToResults(t *testing.T) {
+	results := []CloneResult{
+		{Outcome: Cloned},
+		{Outcome: Skipped},
+		{Outcome: Failed},
+		{Outcome: Empty},
+		{Outcome: Empty},
+	}
+	rep := tallyCloneReport(results)
+	sum := rep.Cloned + rep.Skipped + rep.Failed + rep.Empty
+	if sum != len(results) {
+		t.Fatalf("counts sum to %d, want %d: %+v", sum, len(results), rep)
+	}
+}
+
+// TestTallyCloneReport_UnknownOutcomeNeverDropped is the regression for F-046:
+// the per-outcome switch in tallyCloneReport had no default case, so a
+// CloneOutcome value none of the cases recognize (e.g. a future addition to the
+// enum that this switch wasn't updated for) silently contributed to none of the
+// counts — the tally would then under-count len(Results) with no indication why.
+// An unrecognized outcome must still be accounted for somewhere in the tally.
+func TestTallyCloneReport_UnknownOutcomeNeverDropped(t *testing.T) {
+	const unknownOutcome = CloneOutcome(99)
+	results := []CloneResult{
+		{Project: Project{PathWithNamespace: "g/a"}, Outcome: Cloned},
+		{Project: Project{PathWithNamespace: "g/b"}, Outcome: unknownOutcome},
+	}
+	rep := tallyCloneReport(results)
+	sum := rep.Cloned + rep.Skipped + rep.Failed + rep.Empty
+	if sum != len(results) {
+		t.Fatalf("counts sum to %d, want %d (unknown outcome was silently dropped): %+v", sum, len(results), rep)
+	}
+}
+
 // TestCloneProjects_EmptyReposSkipped covers both ways an empty (no-commit) repo
 // is recognized: the GitLab empty_repo flag (skip before git), and — defensively —
 // the git "Remote branch … not found" failure when the flag was absent/stale. Both
@@ -361,6 +469,177 @@ func TestCloneProjects_EmptyReposSkipped(t *testing.T) {
 		if strings.Contains(c.cmd, "g/empty-flag.git") {
 			t.Fatalf("flagged empty repo should not run git: %s", c.cmd)
 		}
+	}
+}
+
+// TestWithinRoot pins the containment primitive that gates every destructive
+// filesystem op (clone destination, prune RemoveAll) against a path that
+// escapes cfg.Root — e.g. via a server-supplied path_with_namespace containing
+// ".." segments.
+func TestWithinRoot(t *testing.T) {
+	cases := []struct {
+		name, root, dest string
+		want             bool
+	}{
+		{"direct child", "/corpus", "/corpus/g/repo", true},
+		{"deep nested", "/corpus", "/corpus/g/sub/repo", true},
+		{"root itself", "/corpus", "/corpus", false},
+		{"root with trailing slash", "/corpus/", "/corpus/g/repo", true},
+		{"sibling prefix collision", "/corpus", "/corpus-evil/repo", false},
+		{"traversal escapes", "/corpus", "/corpus/../etc/cron.d/evil", false},
+		{"traversal lands outside entirely", "/corpus", "/etc/cron.d/evil", false},
+		{"unclean dest still contained", "/corpus", "/corpus/g/../g/repo", true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := withinRoot(c.root, c.dest); got != c.want {
+				t.Errorf("withinRoot(%q, %q) = %v, want %v", c.root, c.dest, got, c.want)
+			}
+		})
+	}
+}
+
+// TestCloneOne_RejectsPathTraversal covers F-clone: a malicious
+// path_with_namespace containing ".." must never reach `git clone` — the
+// computed destination escapes cfg.Root, so it must be reported Failed up
+// front instead.
+func TestCloneOne_RejectsPathTraversal(t *testing.T) {
+	root := t.TempDir()
+	evil := Project{
+		PathWithNamespace: "../../../../tmp/moedex-evil-clone",
+		SSHURL:            "git@h:evil.git",
+		DefaultBranch:     "main",
+	}
+	var calls []call
+	r := fakeRunner{calls: &calls}
+	cfg := Config{Root: root, Concurrency: 1}
+
+	rep := CloneProjects(context.Background(), r, cfg, []Project{evil}, nil)
+
+	if rep.Failed != 1 || rep.Cloned != 0 {
+		t.Fatalf("counts: cloned=%d failed=%d (want 0/1)", rep.Cloned, rep.Failed)
+	}
+	if rep.Results[0].Outcome != Failed {
+		t.Fatalf("outcome = %v, want Failed", rep.Results[0].Outcome)
+	}
+	for _, c := range calls {
+		if strings.Contains(c.cmd, "clone") {
+			t.Fatalf("git clone must never run for a path-traversal namespace: %s", c.cmd)
+		}
+	}
+}
+
+// TestUpdateOne_RejectsPathTraversal covers the fetch/reset side of the same
+// gate: a project whose computed destination escapes cfg.Root must fail before
+// any git command runs against it.
+func TestUpdateOne_RejectsPathTraversal(t *testing.T) {
+	root := t.TempDir()
+	evil := Project{
+		PathWithNamespace: "../../../../tmp/moedex-evil-update",
+		SSHURL:            "git@h:evil.git",
+		DefaultBranch:     "main",
+	}
+	var calls []call
+	r := fakeRunner{calls: &calls}
+	cfg := Config{Root: root}
+
+	res := updateOne(context.Background(), r, cfg, evil)
+
+	if res.Outcome != SyncFailed {
+		t.Fatalf("outcome = %v, want SyncFailed", res.Outcome)
+	}
+	for _, c := range calls {
+		if strings.Contains(c.cmd, "git") {
+			t.Fatalf("git must never run for a path-traversal namespace: %s", c.cmd)
+		}
+	}
+}
+
+// TestUpdateOne_RejectsFlagShapedRef covers the other half of the argv-injection
+// finding: DefaultBranch is fetched as a bare positional ref
+// (`git fetch origin <ref>`) with no preceding flag name, so a server record
+// whose default_branch begins with "-" must never reach git at all.
+func TestUpdateOne_RejectsFlagShapedRef(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "g", "evil")
+	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := Config{Root: filepath.Dir(filepath.Dir(root))}
+	evil := Project{
+		PathWithNamespace: "g/evil",
+		SSHURL:            "git@" + DefaultHost + ":g/evil.git",
+		DefaultBranch:     "--upload-pack=touch /tmp/pwned",
+	}
+	var calls []call
+	r := fakeRunner{calls: &calls}
+
+	res := updateOne(context.Background(), r, cfg, evil)
+
+	if res.Outcome != SyncFailed {
+		t.Fatalf("outcome = %v, want SyncFailed", res.Outcome)
+	}
+	if len(calls) != 0 {
+		t.Fatalf("git must never run for a flag-shaped ref, got calls: %v", calls)
+	}
+}
+
+// TestUpdateOne_FetchUsesPositionalGuard pins the exact fetch argv: "--" must
+// separate the positional ref from option parsing.
+func TestUpdateOne_FetchUsesPositionalGuard(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "g", "ok")
+	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := Config{Root: filepath.Dir(filepath.Dir(root))}
+	p := Project{
+		PathWithNamespace: "g/ok",
+		SSHURL:            "git@" + DefaultHost + ":g/ok.git",
+		DefaultBranch:     "main",
+	}
+	var calls []call
+	r := fakeRunner{calls: &calls}
+
+	updateOne(context.Background(), r, cfg, p)
+
+	var sawFetch bool
+	for _, c := range calls {
+		if strings.Contains(c.cmd, "fetch") {
+			sawFetch = true
+			if !strings.Contains(c.cmd, "origin -- main") {
+				t.Fatalf("fetch must guard the positional ref with --, got: %s", c.cmd)
+			}
+		}
+	}
+	if !sawFetch {
+		t.Fatal("fetch was never invoked")
+	}
+}
+
+// TestPruneOne_RejectsPathTraversal covers the destructive prune path: even
+// though LocalRepos cannot itself produce a ".."-bearing rel today, the
+// RemoveAll must refuse to act if the computed destination would land outside
+// cfg.Root, rather than trusting the join. Proven by escaping to a real
+// directory outside root and asserting it survives.
+func TestPruneOne_RejectsPathTraversal(t *testing.T) {
+	root := t.TempDir()
+	victim := t.TempDir()
+	sentinel := filepath.Join(victim, "must-survive")
+	if err := os.WriteFile(sentinel, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rel, err := filepath.Rel(root, victim)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rel = filepath.ToSlash(rel)
+
+	res := pruneOne(Config{Root: root}, rel)
+
+	if res.Outcome != SyncFailed {
+		t.Fatalf("outcome = %v, want SyncFailed", res.Outcome)
+	}
+	if _, err := os.Stat(sentinel); err != nil {
+		t.Fatalf("path traversal prune deleted outside root: %v", err)
 	}
 }
 
@@ -417,6 +696,38 @@ func TestReconcile(t *testing.T) {
 	}
 	if !eq(plan.Missing, []string{"Services.Payment/GONE"}) {
 		t.Errorf("Missing = %v (out-of-scope repo must NOT be flagged)", plan.Missing)
+	}
+}
+
+func TestReconcile_EmptyAllowlistNeverPrunes(t *testing.T) {
+	// No groups enumerated (allow is empty): every local repo is out of scope by
+	// definition, so none of them may be flagged Missing — empty allow must mean
+	// "nothing is in scope," not "everything is in scope."
+	local := []string{
+		"Services.Payment/A",
+		"old-svn-repos/legacy",
+	}
+	plan := Reconcile(nil, local, nil)
+	if len(plan.Missing) != 0 {
+		t.Fatalf("Missing = %v, want none (empty allowlist must prune nothing)", plan.Missing)
+	}
+}
+
+func TestSyncProjects_EmptyGroupsNeverPrunes(t *testing.T) {
+	root := t.TempDir()
+	cfg := Config{Root: root, Groups: nil, Concurrency: 2}
+	if err := os.MkdirAll(filepath.Join(root, "g", "gone", ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	rep, err := SyncProjects(context.Background(), fakeRunner{}, cfg, nil, true /*prune*/, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Pruned != 0 {
+		t.Fatalf("want 0 pruned with empty Groups even when prune=true; got pruned=%d missing=%d", rep.Pruned, rep.Missing)
+	}
+	if _, err := os.Stat(filepath.Join(root, "g", "gone")); err != nil {
+		t.Errorf("repo must survive when Groups is empty, regardless of prune: %v", err)
 	}
 }
 

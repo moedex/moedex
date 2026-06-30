@@ -7,9 +7,9 @@
 // manifest.json freshness sidecar (repo->shard membership + each repo's git HEAD
 // at ingest). Three subcommands:
 //
-//		moedex-index build   -corpus ROOT -shard-dir DIR [-shard-bytes N] [-force]
-//		moedex-index check   -shard-dir DIR [-corpus ROOT]
-//		moedex-index refresh -shard-dir DIR [-corpus ROOT] [-keep-backup]
+//	moedex-index build   -corpus ROOT -shard-dir DIR [-shard-bytes N] [-force]
+//	moedex-index check   -shard-dir DIR [-corpus ROOT]
+//	moedex-index refresh -shard-dir DIR [-corpus ROOT] [-keep-backup]
 //
 // A second family of subcommands operates the content-addressable blob store
 // (CAS) — the storage layer that stores each unique blob ONCE for the whole
@@ -47,8 +47,9 @@
 //	            current `git rev-parse HEAD`) and prints changed/added/removed
 //	            repos. Read-only; never mutates the shard dir.
 //	  - refresh runs check, then if anything changed rebuilds only the affected
-//	            shards into a fresh dir and atomically swaps it into place (the old
-//	            dir is kept as DIR.bak-* unless -keep-backup is omitted).
+//	            shards into a fresh dir and atomically swaps it into place. The old
+//	            dir is removed after a successful swap unless -keep-backup is
+//	            given, in which case it is kept as DIR.bak-*.
 //
 // The corpus root for check/refresh defaults to the Root recorded in the
 // manifest, so an operator (or cron) only needs the shard dir; -corpus overrides
@@ -56,8 +57,10 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -236,7 +239,7 @@ func buildShards(root, shardDir string, shardBytes int64, sel index.GramSelector
 	var (
 		shards   []parity.ShardManifest
 		heads    []parity.RepoHead
-		sb       = newShardBuilder(sel)
+		sb       = index.NewBuildTarget(sel)
 		curBytes int64
 		curRepos []string
 		curSeen  = map[string]bool{}
@@ -248,14 +251,14 @@ func buildShards(root, shardDir string, shardBytes int64, sel index.GramSelector
 			return nil
 		}
 		path := filepath.Join(shardDir, fmt.Sprintf("shard-%04d.idx", shardIdx))
-		ix := sb.finalize()
+		ix := sb.Finalize()
 		if err := diskstore.Save(ix, path); err != nil {
 			return fmt.Errorf("save shard %d: %w", shardIdx, err)
 		}
 		shards = append(shards, parity.ShardManifest{Path: path, Repos: curRepos, ContentBytes: curBytes})
 		logf("  flushed shard %d: %d blobs, %.1f MB", shardIdx, ix.NumBlobs(), float64(curBytes)/1e6)
 		shardIdx++
-		sb = newShardBuilder(sel)
+		sb = index.NewBuildTarget(sel)
 		curBytes = 0
 		curRepos = nil
 		curSeen = map[string]bool{}
@@ -307,50 +310,6 @@ func buildShards(root, shardDir string, shardBytes int64, sel index.GramSelector
 		Shards:   shards,
 	}
 	return m, shardIdx, nFiles, nil
-}
-
-// shardBuilder unifies the all-trigram (*index.Index) and selective
-// (*index.Builder) build paths behind the AddFile / NumBlobs / finalize trio the
-// packing loop needs. When sel is nil it uses the eager index.New()+AddFile
-// path (each AddFile materializes every trigram immediately, exactly as before);
-// when sel is non-nil it uses the two-pass index.Builder (count then prune at
-// finalize), so the default path is byte-identical to the prior code.
-type shardBuilder struct {
-	sel index.GramSelector
-	eag *index.Index   // all-trigram path (sel == nil)
-	bld *index.Builder // selective path (sel != nil)
-}
-
-func newShardBuilder(sel index.GramSelector) *shardBuilder {
-	sb := &shardBuilder{sel: sel}
-	if sel == nil {
-		sb.eag = index.New()
-	} else {
-		sb.bld = index.NewSelective(sel)
-	}
-	return sb
-}
-
-func (sb *shardBuilder) AddFile(repo, rel, abs, sha string, content []byte) {
-	if sb.eag != nil {
-		sb.eag.AddFile(repo, rel, abs, sha, content)
-		return
-	}
-	sb.bld.AddFile(repo, rel, abs, sha, content)
-}
-
-func (sb *shardBuilder) NumBlobs() int {
-	if sb.eag != nil {
-		return sb.eag.NumBlobs()
-	}
-	return sb.bld.NumBlobs()
-}
-
-func (sb *shardBuilder) finalize() *index.Index {
-	if sb.eag != nil {
-		return sb.eag
-	}
-	return sb.bld.Finalize()
 }
 
 // ---------------------------------------------------------------------------
@@ -743,13 +702,20 @@ func printChanges(root string, ch parity.Changes) {
 
 func prepareDir(dir string, force bool) error {
 	entries, err := os.ReadDir(dir)
-	if err == nil && len(entries) > 0 {
-		if !force {
-			return fmt.Errorf("shard dir %s is not empty (use -force to overwrite)", dir)
+	switch {
+	case err == nil:
+		if len(entries) > 0 {
+			if !force {
+				return fmt.Errorf("shard dir %s is not empty (use -force to overwrite)", dir)
+			}
+			if err := os.RemoveAll(dir); err != nil {
+				return err
+			}
 		}
-		if err := os.RemoveAll(dir); err != nil {
-			return err
-		}
+	case errors.Is(err, fs.ErrNotExist):
+		// Nothing there yet; MkdirAll below creates it.
+	default:
+		return fmt.Errorf("shard dir %s: %w", dir, err)
 	}
 	return os.MkdirAll(dir, 0o755)
 }

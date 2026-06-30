@@ -148,6 +148,7 @@ func WriteReport(res *Result, meta ReportMeta, path string) error {
 	w("- **AC-D4** exact equality (no spurious matches vs Go truth): %s — %d real over-approximations.\n",
 		passStr(d4Pass), len(res.OverApprox))
 	w("- ripgrep available: %v; rg invocation errors: %d.\n", res.RGAvailable, len(res.RGErrors))
+	w("- moedex search errors: %d.\n", len(res.MoeErrors))
 	w("- Justified RE2-vs-Rust engine quirks (moedex==gold, differs from rg): %d.\n\n", len(res.EngineQuirks))
 
 	if len(res.RGErrors) > 0 {
@@ -158,6 +159,21 @@ func WriteReport(res *Result, meta ReportMeta, path string) error {
 		for i, e := range res.RGErrors {
 			if i >= 20 {
 				w("- … (+%d more)\n", len(res.RGErrors)-20)
+				break
+			}
+			w("- query #%d: `%s`\n", e.QueryID, oneLine(e.Err))
+		}
+		w("\n")
+	}
+
+	if len(res.MoeErrors) > 0 {
+		w("### moedex search errors (gate-failing)\n\n")
+		w("These queries could not be adjudicated because moedex's own search call ")
+		w("errored — an empty result here is not evidence of \"no matches,\" so the ")
+		w("gate fails.\n\n")
+		for i, e := range res.MoeErrors {
+			if i >= 20 {
+				w("- … (+%d more)\n", len(res.MoeErrors)-20)
 				break
 			}
 			w("- query #%d: `%s`\n", e.QueryID, oneLine(e.Err))

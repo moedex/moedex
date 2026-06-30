@@ -50,6 +50,7 @@ func (CFExtractor) Extract(content []byte) ([]Symbol, error) {
 	var syms []Symbol
 
 	// Tag UDFs: <cffunction name="x"> ... </cffunction>.
+	funcCloses := newCfCloseScanner(content, cfFuncCloseRe)
 	for _, m := range cfTagFuncRe.FindAllSubmatchIndex(content, -1) {
 		ns, ne := m[2], m[3]
 		if ns < 0 || ne < 0 {
@@ -61,11 +62,12 @@ func (CFExtractor) Extract(content []byte) ([]Symbol, error) {
 			NameStart: ns,
 			NameEnd:   ne,
 			BodyStart: m[0],
-			BodyEnd:   cfTagBodyEnd(content, m[1], cfFuncCloseRe),
+			BodyEnd:   funcCloses.bodyEnd(content, m[1]),
 		})
 	}
 
 	// Components: <cfcomponent name|displayname="x"> ... </cfcomponent>.
+	compCloses := newCfCloseScanner(content, cfCompCloseRe)
 	for _, m := range cfTagComponentRe.FindAllSubmatchIndex(content, -1) {
 		ns, ne := m[2], m[3]
 		if ns < 0 || ne < 0 {
@@ -77,7 +79,7 @@ func (CFExtractor) Extract(content []byte) ([]Symbol, error) {
 			NameStart: ns,
 			NameEnd:   ne,
 			BodyStart: m[0],
-			BodyEnd:   cfTagBodyEnd(content, m[1], cfCompCloseRe),
+			BodyEnd:   compCloses.bodyEnd(content, m[1]),
 		})
 	}
 
@@ -87,7 +89,7 @@ func (CFExtractor) Extract(content []byte) ([]Symbol, error) {
 		seg := content[r[0]:r[1]]
 		for _, m := range cfScriptFuncRe.FindAllSubmatchIndex(seg, -1) {
 			ns, ne := r[0]+m[2], r[0]+m[3]
-			bs, be := bodyRange(content, r[0]+m[1])
+			be := bodyRange(content, r[0]+m[1])
 			if be <= ns {
 				continue
 			}
@@ -96,7 +98,7 @@ func (CFExtractor) Extract(content []byte) ([]Symbol, error) {
 				Kind:      Func,
 				NameStart: ns,
 				NameEnd:   ne,
-				BodyStart: minInt(r[0]+m[0], bs),
+				BodyStart: r[0] + m[0],
 				BodyEnd:   be,
 			})
 		}
@@ -105,28 +107,62 @@ func (CFExtractor) Extract(content []byte) ([]Symbol, error) {
 	return syms, nil
 }
 
-// cfTagBodyEnd returns the byte offset just past the next case-insensitive close
+// cfCloseScanner pairs each open tag's position with the next matching close
+// tag via a single forward pass over a precomputed, ascending list of close
+// offsets, rather than every open independently rescanning to EOF.
+//
+// Correctness relies on callers feeding `from` values in non-decreasing
+// order (true here: both FindAllSubmatchIndex callers return matches in
+// left-to-right order). Since `from` only increases, the close index only
+// ever advances forward across calls, giving O(opens + closes) total instead
+// of O(opens * content length).
+type cfCloseScanner struct {
+	closes [][]int
+	idx    int
+}
+
+func newCfCloseScanner(content []byte, closeRe *regexp.Regexp) *cfCloseScanner {
+	return &cfCloseScanner{closes: closeRe.FindAllIndex(content, -1)}
+}
+
+// bodyEnd returns the byte offset just past the next case-insensitive close
 // tag at/after from, or the end of from's line when the block is unterminated
 // (so BodyStart < BodyEnd always holds).
-func cfTagBodyEnd(content []byte, from int, closeRe *regexp.Regexp) int {
+func (s *cfCloseScanner) bodyEnd(content []byte, from int) int {
 	if from < 0 {
 		from = 0
 	}
-	if loc := closeRe.FindIndex(content[from:]); loc != nil {
-		return from + loc[1]
+	for s.idx < len(s.closes) && s.closes[s.idx][0] < from {
+		s.idx++
+	}
+	if s.idx < len(s.closes) {
+		return s.closes[s.idx][1]
 	}
 	return lineEnd(content, from)
 }
 
 // cfScriptRegions returns [start,end) byte ranges of each <cfscript> block's
 // interior (after the open tag, up to the matching close or end of content).
+//
+// This is a single forward-advancing pass, not independent searches per open:
+// each open is found starting from where the previous region left off, so an
+// unclosed (or merely numerous) <cfscript> can consume the rest of the
+// content only once instead of being rescanned from every subsequent open.
+// That keeps total work O(n) instead of O(n^2) on pathological input.
 func cfScriptRegions(content []byte) [][2]int {
 	var out [][2]int
-	for _, loc := range cfScriptOpenRe.FindAllIndex(content, -1) {
-		start := loc[1]
+	pos := 0
+	for pos < len(content) {
+		loc := cfScriptOpenRe.FindIndex(content[pos:])
+		if loc == nil {
+			break
+		}
+		start := pos + loc[1]
 		end := len(content)
+		pos = len(content)
 		if c := cfScriptCloseRe.FindIndex(content[start:]); c != nil {
 			end = start + c[0]
+			pos = start + c[1]
 		}
 		out = append(out, [2]int{start, end})
 	}

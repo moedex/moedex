@@ -2,9 +2,15 @@
 #
 # Two stages:
 #   gate   — `make health` (build + vet + test) on every push and MR. Fast.
-#   parity — `make parity` (full-corpus ripgrep parity) ONLY on schedules/tags.
-#            Requires a SELF-HOSTED runner that has the real corpus on disk at
-#            $MOEDEX_CORPUS and ripgrep (`rg`) installed; tagged accordingly.
+#            The image installs ripgrep so internal/search's rg-backed parity
+#            unit tests (parity_test.go) actually run here instead of
+#            skipping via requireRipgrep.
+#   parity — `make parity` (full-corpus ripgrep parity). Runs on schedules
+#            and tags, AND on any MR that touches internal/query,
+#            internal/search, or internal/parity (CLAUDE.md: those packages
+#            "must keep make verify green"). Requires a SELF-HOSTED runner
+#            that has the real corpus on disk at $MOEDEX_CORPUS and ripgrep
+#            (`rg`) installed; tagged accordingly.
 #
 # Plus an optional MANUAL job to build + push the default and dense images.
 
@@ -38,12 +44,18 @@ health:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_PIPELINE_SOURCE == "web"'
+  before_script:
+    # ripgrep so internal/search's rg-backed parity unit tests run on every
+    # MR/push instead of skipping (the full-corpus `make parity` gate below
+    # still needs the self-hosted runner's corpus and is separate).
+    - apt-get update -qq && apt-get install -y -qq ripgrep
   script:
     - make health
 
 # --- parity: full-corpus ripgrep parity (expensive; gated) ----------------
-# Runs ONLY on scheduled pipelines or tags. Needs a self-hosted runner tagged
-# `moedex-corpus` with:
+# Runs on scheduled pipelines, tags, and any MR touching internal/query,
+# internal/search, or internal/parity (CLAUDE.md: those packages "must keep
+# make verify green"). Needs a self-hosted runner tagged `moedex-corpus` with:
 #   * the corpus checked out at $MOEDEX_CORPUS (default ~/TCGitlab if unset),
 #   * ripgrep (`rg`) on PATH,
 #   * enough disk for the .parity-work scratch dir.
@@ -54,6 +66,11 @@ parity:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - if: '$CI_COMMIT_TAG'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - internal/query/**/*
+        - internal/search/**/*
+        - internal/parity/**/*
   script:
     - rg --version
     - make parity

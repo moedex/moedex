@@ -1,6 +1,9 @@
 package index
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"math"
+)
 
 // Posting lists are the memory wall: stored naively they cost 16 bytes each
 // (uint64 blob + int offset) and there is roughly one per rune of corpus. This
@@ -80,6 +83,14 @@ func DecodePostings(b []byte) []Posting {
 			}
 			pos += n
 			prevOff += od
+			// prevOff comes from untrusted mmap'd varint deltas; int(prevOff)
+			// silently wraps if it exceeds the platform's int range (e.g. a
+			// crafted offset >= 2^31 on a 32-bit build), which would later
+			// drive an out-of-bounds slice in Blob.LineAt. Treat this as
+			// malformed, like the other early-return cases above.
+			if prevOff > uint64(math.MaxInt) {
+				return out
+			}
 			out = append(out, Posting{Blob: blob, Offset: int(prevOff)})
 		}
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/subtle"
 	"log/slog"
 	"net"
 	"net/http"
@@ -55,6 +56,11 @@ func (r *respRecorder) Write(b []byte) (int, error) {
 // already committed (the bytes are simply truncated). Mirrors mcp.handleSafe.
 func withRecover(next http.Handler, m *metrics) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// withRecover is outermost in chain (below), so w here is always the raw
+		// net/http ResponseWriter and this branch always wraps it; the ok branch
+		// is dead under the current order. Kept so withRecover stays correct on
+		// its own if a future caller wraps something that's already a
+		// respRecorder (e.g. reused outside chain, or the order changes).
 		rec, ok := w.(*respRecorder)
 		if !ok {
 			rec = &respRecorder{ResponseWriter: w, status: http.StatusOK}
@@ -79,6 +85,11 @@ func withRecover(next http.Handler, m *metrics) http.Handler {
 // latency/code-class metrics.
 func withAccessLog(next http.Handler, m *metrics) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// withAccessLog runs inside withRecover in chain (below), so w here is
+		// already a *respRecorder and this branch always takes the ok path; the
+		// wrap (!ok) branch is dead under the current order. Kept so
+		// withAccessLog stays correct standalone (e.g. in a test, or if it's
+		// ever moved outside withRecover).
 		rec, ok := w.(*respRecorder)
 		if !ok {
 			rec = &respRecorder{ResponseWriter: w, status: http.StatusOK}
@@ -95,6 +106,36 @@ func withAccessLog(next http.Handler, m *metrics) http.Handler {
 	})
 }
 
+// defaultSearchMaxConcurrency bounds concurrent /search requests by default,
+// mirroring mcp.defaultMaxConcurrency (8): both guard a CPU-bound scan that can
+// otherwise saturate every core under concurrent broad queries.
+const defaultSearchMaxConcurrency = 8
+
+// withConcurrencyLimit bounds the number of requests reaching next
+// concurrently via a buffered channel acting as a semaphore. Once n requests
+// are in flight, the next one is rejected immediately with 503 rather than
+// queuing — /search runs a full cross-shard regex/literal scan that can pin a
+// core for up to the request timeout, so an unbounded queue is its own
+// resource-exhaustion vector. n<=0 disables the limit (passthrough). Mirrors
+// mcp.WithMaxConcurrency, the MCP server's equivalent guard.
+func withConcurrencyLimit(next http.Handler, n int, m *metrics) http.Handler {
+	if n <= 0 {
+		return next
+	}
+	sem := make(chan struct{}, n)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case sem <- struct{}{}:
+		default:
+			m.incSearchRejected()
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "too many concurrent searches"})
+			return
+		}
+		defer func() { <-sem }()
+		next.ServeHTTP(w, r)
+	})
+}
+
 // withTimeout bounds the HTTP response with http.TimeoutHandler (503 on expiry).
 // On expiry it cancels r.Context(), which Corpus.Regex/Literal thread into the
 // search path: the scan's hot loops check cancellation on a stride, so an expired
@@ -105,6 +146,22 @@ func withTimeout(next http.Handler, d time.Duration) http.Handler {
 	return http.TimeoutHandler(next, d, `{"error":"request timeout"}`)
 }
 
+// bearerPrefix is the scheme prefix on the Authorization header. It is public
+// (not secret), so checking it with a short-circuiting strings.HasPrefix
+// leaks nothing; only the token comparison itself needs to be constant-time.
+const bearerPrefix = "Bearer "
+
+// bearerTokenMatches reports whether header carries "Bearer <token>" exactly,
+// comparing the token in constant time so response timing cannot be used to
+// recover it byte-by-byte.
+func bearerTokenMatches(header, token string) bool {
+	if !strings.HasPrefix(header, bearerPrefix) {
+		return false
+	}
+	got := strings.TrimPrefix(header, bearerPrefix)
+	return subtle.ConstantTimeCompare([]byte(got), []byte(token)) == 1
+}
+
 // withAuth gates non-open paths behind a bearer token when one is configured.
 // /healthz and /metrics always pass. With no token configured it is a no-op.
 func withAuth(next http.Handler, token string) http.Handler {
@@ -113,9 +170,7 @@ func withAuth(next http.Handler, token string) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		const prefix = "Bearer "
-		got := r.Header.Get("Authorization")
-		if !strings.HasPrefix(got, prefix) || strings.TrimPrefix(got, prefix) != token {
+		if !bearerTokenMatches(r.Header.Get("Authorization"), token) {
 			w.Header().Set("WWW-Authenticate", "Bearer")
 			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 			return

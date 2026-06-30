@@ -93,6 +93,28 @@ func TestRestoreRebuildsBlobsAndPostings(t *testing.T) {
 	}
 }
 
+// TestRestoreAliasesContentWithoutCopying locks in Restore's documented
+// contract: unlike AddFile (which defensively copies) and Snapshot (which
+// deep-copies on the way out), Restore takes ownership of the BlobData slices
+// passed in and aliases them directly into the index. A caller that mutates
+// Content/Files after calling Restore would corrupt the indexed data.
+func TestRestoreAliasesContentWithoutCopying(t *testing.T) {
+	content := []byte("foo")
+	files := []FileRef{{Repo: "r", RelPath: "a.txt", AbsPath: "/a"}}
+	blobs := []BlobData{{SHA: "sha1", Content: content, Files: files}}
+
+	ix := Restore(blobs, nil)
+	content[0] = 'X'
+	files[0].RelPath = "mutated.txt"
+
+	if got := string(ix.Blob(0).Content); got != "Xoo" {
+		t.Errorf("index content = %q, want %q (Restore must alias, not copy, Content)", got, "Xoo")
+	}
+	if got := ix.Blob(0).Files[0].RelPath; got != "mutated.txt" {
+		t.Errorf("index RelPath = %q, want %q (Restore must alias, not copy, Files)", got, "mutated.txt")
+	}
+}
+
 // fakePP is a PostingProvider that serves from an in-memory map, letting us
 // assert that a lazily-loaded index delegates to its provider.
 type fakePP struct {

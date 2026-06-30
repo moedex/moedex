@@ -22,7 +22,11 @@ import (
 func buildDedupedDir(t *testing.T, repos map[string]map[string]string) string {
 	t.Helper()
 	dir := t.TempDir()
-	cw := diskstore.NewContentStoreWriter()
+	cw, err := diskstore.NewContentStoreWriter()
+	if err != nil {
+		t.Fatalf("NewContentStoreWriter: %v", err)
+	}
+	t.Cleanup(func() { cw.Close() })
 	labels := make([]string, 0, len(repos))
 	for label := range repos {
 		labels = append(labels, label)
@@ -446,7 +450,11 @@ func TestCorpusFingerprintContentTrueOnSameSizeHeader(t *testing.T) {
 // directory section is real and ContentStoreDirDigest is meaningful.
 func writeRealContentStore(t *testing.T, path string, contents [][]byte) {
 	t.Helper()
-	cw := diskstore.NewContentStoreWriter()
+	cw, err := diskstore.NewContentStoreWriter()
+	if err != nil {
+		t.Fatalf("NewContentStoreWriter: %v", err)
+	}
+	t.Cleanup(func() { cw.Close() })
 	for _, c := range contents {
 		cw.PutContent(diskstore.GitBlobSHA1(c), c)
 	}

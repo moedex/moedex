@@ -17,9 +17,10 @@ import (
 )
 
 // newTestChain builds the same hardened handler runHTTP serves: the real mux
-// (with /healthz, /metrics, /stats, /search) wrapped by chain(...). Tests drive
-// this, not reimplementations, so they exercise the production composition.
-func newTestChain(t *testing.T, token string, timeout time.Duration) (http.Handler, *corpusHolder, *metrics) {
+// (with /healthz, /metrics, /stats, /search) wrapped by chain(...), with /search
+// bounded by withConcurrencyLimit exactly as runHTTP wires it. Tests drive this,
+// not reimplementations, so they exercise the production composition.
+func newTestChain(t *testing.T, token string, timeout time.Duration, searchMaxConcurrency int) (http.Handler, *corpusHolder, *metrics) {
 	t.Helper()
 	dir := makeShardDir(t, "marker") // "marker" is the in-shard content token
 	c, err := server.Open(dir)
@@ -41,11 +42,11 @@ func newTestChain(t *testing.T, token string, timeout time.Duration) (http.Handl
 		defer snap.release()
 		writeJSON(w, http.StatusOK, map[string]any{"shards": snap.c.NumShards(), "blobs": snap.c.NumBlobs()})
 	})
-	mux.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/search", withConcurrencyLimit(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		snap := holder.acquire()
 		defer snap.release()
 		handleSearch(snap.c, w, r)
-	})
+	}), searchMaxConcurrency, m))
 	return chain(mux, token, timeout, m), holder, m
 }
 
@@ -62,7 +63,7 @@ func doGet(t *testing.T, h http.Handler, path, bearer string) *httptest.Response
 
 func TestAuthRequiredWhenTokenSet(t *testing.T) {
 	const tok = "s3cret-bearer" // distinct from the shard content marker
-	h, _, _ := newTestChain(t, tok, 5*time.Second)
+	h, _, _ := newTestChain(t, tok, 5*time.Second, defaultSearchMaxConcurrency)
 
 	// /search requires the token.
 	if rec := doGet(t, h, "/search?q=marker", ""); rec.Code != http.StatusUnauthorized {
@@ -89,7 +90,7 @@ func TestAuthRequiredWhenTokenSet(t *testing.T) {
 }
 
 func TestNoAuthWhenTokenEmpty(t *testing.T) {
-	h, _, _ := newTestChain(t, "", 5*time.Second)
+	h, _, _ := newTestChain(t, "", 5*time.Second, defaultSearchMaxConcurrency)
 	rec := doGet(t, h, "/search?q=marker", "")
 	if rec.Code != http.StatusOK {
 		t.Errorf("/search with empty token config: status = %d, want 200", rec.Code)
@@ -266,7 +267,7 @@ func TestEffectiveAddrLoopback(t *testing.T) {
 }
 
 func TestMetricsEndpointExposition(t *testing.T) {
-	h, holder, m := newTestChain(t, "", 5*time.Second)
+	h, holder, m := newTestChain(t, "", 5*time.Second, defaultSearchMaxConcurrency)
 
 	// Drive a couple of requests so counters/histogram have observations.
 	doGet(t, h, "/search?q=marker", "")

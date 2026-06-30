@@ -131,8 +131,23 @@ func Doctor(ctx context.Context, r Runner, cfg Config) Report {
 }
 
 // firstLine returns the first non-empty line of b, trimmed.
-func firstLine(b []byte) string {
-	for _, ln := range strings.Split(string(b), "\n") {
+func firstLine(b []byte) string { return nonEmptyLine(b, true) }
+
+// nonEmptyLine scans the lines of b (split on "\n") for the first one that is
+// non-empty after trimming, walking forward from the start if forward is true
+// or backward from the end if false. It is the shared engine behind firstLine
+// and lastLine, which differ only in scan direction.
+func nonEmptyLine(b []byte, forward bool) string {
+	lines := strings.Split(string(b), "\n")
+	if !forward {
+		for i := len(lines) - 1; i >= 0; i-- {
+			if s := strings.TrimSpace(lines[i]); s != "" {
+				return s
+			}
+		}
+		return ""
+	}
+	for _, ln := range lines {
 		if s := strings.TrimSpace(ln); s != "" {
 			return s
 		}

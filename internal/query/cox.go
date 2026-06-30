@@ -3,8 +3,8 @@ package query
 import (
 	"regexp/syntax"
 	"sort"
-	"unicode"
 
+	"moedex/internal/fold"
 	"moedex/internal/trigram"
 )
 
@@ -302,7 +302,7 @@ func foldedLiteralInfo(runes []rune) reInfo {
 	variants := make([][]byte, len(runes))
 	clean := make([]bool, len(runes))
 	for i, r := range runes {
-		variants[i], clean[i] = asciiFoldVariants(r)
+		variants[i], clean[i] = fold.ASCIIVariants(r)
 	}
 
 	var positions []Query
@@ -327,27 +327,6 @@ func foldedLiteralInfo(runes []rune) reInfo {
 		suffix:     newSet(""),
 		match:      And(positions...), // no clean position -> All (safe)
 	}
-}
-
-// asciiFoldVariants returns the distinct ASCII bytes a single ASCII rune can take
-// under Go's `(?i)` folding, plus whether its ENTIRE fold orbit stays ASCII. The
-// orbit is the unicode.SimpleFold cycle; ASCII letters whose orbit leaves ASCII
-// (k→U+212A, s→U+017F) report allASCII=false so callers skip positions that
-// include them rather than under-approximate.
-func asciiFoldVariants(r rune) (bytes []byte, allASCII bool) {
-	allASCII = true
-	for c := r; ; {
-		if c < 0x80 {
-			bytes = append(bytes, byte(c))
-		} else {
-			allASCII = false
-		}
-		c = unicode.SimpleFold(c)
-		if c == r {
-			break // SimpleFold cycles back to the start
-		}
-	}
-	return bytes, allASCII
 }
 
 // charClassInfo expands a character class into the complete set of

@@ -9,6 +9,18 @@ import (
 	"moedex/internal/search"
 )
 
+// newTestContentStoreWriter creates a ContentStoreWriter and registers its scratch
+// file for cleanup, so tests don't need to repeat the error check + defer Close.
+func newTestContentStoreWriter(t *testing.T) *ContentStoreWriter {
+	t.Helper()
+	w, err := NewContentStoreWriter()
+	if err != nil {
+		t.Fatalf("NewContentStoreWriter: %v", err)
+	}
+	t.Cleanup(func() { w.Close() })
+	return w
+}
+
 // buildSampleIndex returns an index with three blobs (two unique, one duplicated
 // across two file refs), keyed by git blob SHA so the content store dedups
 // correctly. It mirrors the shapes the export path produces.
@@ -27,7 +39,7 @@ func buildSampleIndex(t *testing.T) *index.Index {
 // TestContentStoreRoundTrip writes a content store and asserts every blob's
 // content reads back byte-identical, and an absent SHA is reported as absent.
 func TestContentStoreRoundTrip(t *testing.T) {
-	cw := NewContentStoreWriter()
+	cw := newTestContentStoreWriter(t)
 	a := []byte("alpha content")
 	b := []byte("bravo content longer")
 	ra := cw.PutContent("sha-a", a)
@@ -82,7 +94,7 @@ func TestSaveDedupedRoundTrip(t *testing.T) {
 
 	dir := t.TempDir()
 	shardPath := filepath.Join(dir, "shard-0000.idx")
-	cw := NewContentStoreWriter()
+	cw := newTestContentStoreWriter(t)
 	if err := SaveDeduped(ix, shardPath, cw); err != nil {
 		t.Fatalf("SaveDeduped: %v", err)
 	}
@@ -162,12 +174,12 @@ func TestLoadMmapDedupedMissingContentErrors(t *testing.T) {
 	ix := buildSampleIndex(t)
 	dir := t.TempDir()
 	shardPath := filepath.Join(dir, "shard-0000.idx")
-	cw := NewContentStoreWriter()
+	cw := newTestContentStoreWriter(t)
 	if err := SaveDeduped(ix, shardPath, cw); err != nil {
 		t.Fatalf("SaveDeduped: %v", err)
 	}
 	// Write an EMPTY content store (drops every blob's content).
-	empty := NewContentStoreWriter()
+	empty := newTestContentStoreWriter(t)
 	csPath := filepath.Join(dir, ContentStoreName)
 	if err := empty.Write(csPath); err != nil {
 		t.Fatalf("Write empty store: %v", err)
@@ -187,7 +199,7 @@ func TestLoadMmapDedupedMissingContentErrors(t *testing.T) {
 // git-blob SHA-1 of their content passes Verify (no false positives), and that
 // OpenContentStoreVerified returns the usable store.
 func TestContentStoreVerifyAcceptsCorrectKeys(t *testing.T) {
-	cw := NewContentStoreWriter()
+	cw := newTestContentStoreWriter(t)
 	a := []byte("alpha content")
 	b := []byte("bravo content longer")
 	cw.PutContent(GitBlobSHA1(a), a)
@@ -221,7 +233,7 @@ func TestContentStoreVerifyDetectsWrongBytes(t *testing.T) {
 	// Build a store that stores DIFFERENT bytes under `key` (simulating bit-rot or a
 	// truncated/garbled blobs.dat that still parses structurally).
 	corrupt := []byte("WRONG bytes — not what this key addresses\n")
-	cw := NewContentStoreWriter()
+	cw := newTestContentStoreWriter(t)
 	cw.PutContent(key, corrupt)
 	path := filepath.Join(t.TempDir(), ContentStoreName)
 	if err := cw.Write(path); err != nil {

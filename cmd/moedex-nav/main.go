@@ -264,33 +264,33 @@ func splitCSV(s string) []string {
 }
 
 // parsePos parses FILE:LINE:COL. COL is optional and defaults to 1.
+//
+// It peels off up to two trailing ":NUMBER" groups from the right rather than
+// splitting the whole string on ':', so a path containing ':' before the
+// LINE/COL suffix (e.g. a Windows drive letter like `C:\x.go:10:2`) still
+// parses: only colons that introduce a purely-numeric trailing segment are
+// treated as FILE/LINE/COL separators.
 func parsePos(s string) (navigate.Pos, error) {
-	// Split from the right so paths containing ':' (rare) still parse line/col.
-	parts := strings.Split(s, ":")
-	if len(parts) < 2 {
+	rest := s
+	var nums []int
+	for len(nums) < 2 {
+		idx := strings.LastIndexByte(rest, ':')
+		if idx < 0 {
+			break
+		}
+		n, err := strconv.Atoi(rest[idx+1:])
+		if err != nil {
+			break
+		}
+		nums = append([]int{n}, nums...)
+		rest = rest[:idx]
+	}
+	if len(nums) == 0 || rest == "" {
 		return navigate.Pos{}, fmt.Errorf("bad position %q, want FILE:LINE[:COL]", s)
 	}
 	col := 1
-	var lineStr string
-	var fileEnd int
-	if len(parts) >= 3 {
-		c, err := strconv.Atoi(parts[len(parts)-1])
-		if err == nil {
-			col = c
-			lineStr = parts[len(parts)-2]
-			fileEnd = len(parts) - 2
-		} else {
-			lineStr = parts[len(parts)-1]
-			fileEnd = len(parts) - 1
-		}
-	} else {
-		lineStr = parts[len(parts)-1]
-		fileEnd = len(parts) - 1
+	if len(nums) == 2 {
+		col = nums[1]
 	}
-	line, err := strconv.Atoi(lineStr)
-	if err != nil {
-		return navigate.Pos{}, fmt.Errorf("bad line in %q: %w", s, err)
-	}
-	file := strings.Join(parts[:fileEnd], ":")
-	return navigate.Pos{File: file, Line: line, Col: col}, nil
+	return navigate.Pos{File: rest, Line: nums[0], Col: col}, nil
 }

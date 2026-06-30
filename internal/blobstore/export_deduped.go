@@ -19,9 +19,7 @@ package blobstore
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
-	"time"
 
 	"moedex/internal/diskstore"
 	"moedex/internal/index"
@@ -55,76 +53,22 @@ func ExportDedupedShardDir(casDir, outShardDir string, shardBytes int64) (*parit
 	}
 	defer store.Close()
 
-	if shardBytes <= 0 {
-		shardBytes = parity.DefaultShardBytes
-	}
-	if err := os.MkdirAll(outShardDir, 0o755); err != nil {
-		return nil, 0, err
-	}
-
 	// One shared content-store writer for the WHOLE dir: PutContent is idempotent on
 	// the content hash, so a blob carried by repos that land in different shards is
 	// stored exactly once here — the served-side cross-shard dedup.
-	cw := diskstore.NewContentStoreWriter()
-
-	var (
-		shards   []parity.ShardManifest
-		heads    []parity.RepoHead
-		ix       = index.New()
-		curBytes int64
-		curRepos []string
-		curSeen  = map[string]bool{}
-		shardIdx int
-	)
-	flush := func() error {
-		if ix.NumBlobs() == 0 {
-			return nil
-		}
-		path := filepath.Join(outShardDir, fmt.Sprintf("shard-%04d.idx", shardIdx))
-		if err := diskstore.SaveDeduped(ix, path, cw); err != nil {
-			return fmt.Errorf("blobstore: save deduped shard %d: %w", shardIdx, err)
-		}
-		shards = append(shards, parity.ShardManifest{Path: path, Repos: curRepos, ContentBytes: curBytes})
-		shardIdx++
-		ix = index.New()
-		curBytes = 0
-		curRepos = nil
-		curSeen = map[string]bool{}
-		return nil
+	cw, err := diskstore.NewContentStoreWriter()
+	if err != nil {
+		return nil, 0, err
 	}
-
-	for _, r := range m.Repos {
-		heads = append(heads, parity.RepoHead{Dir: r.Dir, Label: r.Label, Head: r.Head})
-		contributed := false
-		seen := map[string]bool{}
-		for _, f := range r.Files {
-			abs := filepath.Join(r.Dir, f.RelPath)
-			if seen[abs] {
-				continue // same abspath already in this repo's batch (matches build)
-			}
-			seen[abs] = true
-			content, err := store.Get(f.SHA)
-			if err != nil {
-				return nil, 0, fmt.Errorf("blobstore: export repo %s file %s: %w", r.Label, f.RelPath, err)
-			}
-			// AddFile builds the trigram postings + blob/file mapping exactly as
-			// ExportShardDir does; SaveDeduped later registers the content in cw and
-			// writes the shard WITHOUT inlining it.
-			ix.AddFile(r.Label, f.RelPath, abs, f.SHA, content)
-			curBytes += int64(len(content))
-			contributed = true
-		}
-		if contributed && !curSeen[r.Dir] {
-			curSeen[r.Dir] = true
-			curRepos = append(curRepos, r.Dir)
-		}
-		if curBytes >= shardBytes {
-			if err := flush(); err != nil {
-				return nil, 0, err
-			}
-		}
+	defer cw.Close()
+	saveShard := func(ix *index.Index, path string) error {
+		// AddFile (in exportShards) builds the trigram postings + blob/file mapping
+		// exactly as ExportShardDir does; SaveDeduped here registers the content in
+		// cw and writes the shard WITHOUT inlining it.
+		return diskstore.SaveDeduped(ix, path, cw)
 	}
-	if err := flush(); err != nil {
+	out, err := exportShards(m, store, outShardDir, shardBytes, saveShard)
+	if err != nil {
 		return nil, 0, err
 	}
 
@@ -132,18 +76,6 @@ func ExportDedupedShardDir(casDir, outShardDir string, shardBytes int64) (*parit
 	// place the corpus's content bytes are stored — once per unique blob.
 	if err := cw.Write(filepath.Join(outShardDir, diskstore.ContentStoreName)); err != nil {
 		return nil, 0, fmt.Errorf("blobstore: write shared content store: %w", err)
-	}
-
-	out := &parity.Manifest{
-		Version:  parity.ManifestVersion,
-		Root:     m.Root,
-		BuiltAt:  time.Now(),
-		ShardDir: outShardDir,
-		Heads:    heads,
-		Shards:   shards,
-	}
-	if err := parity.WriteManifest(filepath.Join(outShardDir, parity.ManifestName), out); err != nil {
-		return nil, 0, fmt.Errorf("blobstore: write exported manifest: %w", err)
 	}
 	return out, cw.BytesStored(), nil
 }

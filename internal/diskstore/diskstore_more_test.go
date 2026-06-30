@@ -173,6 +173,34 @@ func TestParseHeaderErrors(t *testing.T) {
 	}
 }
 
+// TestParseHeaderSelectiveOverflow: a MOEDEX04 header whose selCount*trigram.N
+// overflows uint64 and wraps around to a small value must still be rejected.
+// selCount below is chosen so that, mod 2^64, selCount*3 == 64: the naive check
+// `h.selOff + h.selCount*trigram.N > uint64(len(data))` computes 64+64 == 128,
+// which is NOT greater than len(data)==128, so it wrongly accepts a selCount of
+// ~1.2e19 — a SELECTION section that would run ~3.6e19 bytes past EOF. The
+// overflow-safe check must catch this via division, which cannot overflow.
+func TestParseHeaderSelectiveOverflow(t *testing.T) {
+	const dataLen = 128
+	b := make([]byte, dataLen)
+	copy(b[0:8], magicSelective)
+	binary.LittleEndian.PutUint32(b[8:12], formatVersionV4)
+	binary.LittleEndian.PutUint64(b[16:24], 0)            // numBlobs
+	binary.LittleEndian.PutUint64(b[24:32], 0)            // numTrigrams
+	binary.LittleEndian.PutUint64(b[32:40], headerSizeV4) // blobOff
+	binary.LittleEndian.PutUint64(b[40:48], headerSizeV4) // postOff
+	binary.LittleEndian.PutUint64(b[48:56], headerSizeV4) // selOff
+	binary.LittleEndian.PutUint64(b[56:64], 12297829382473034432) // selCount: *3 wraps mod 2^64 to 64
+
+	_, err := parseHeader(b)
+	if err == nil {
+		t.Fatal("parseHeader accepted a selCount whose *trigram.N overflows uint64 and wraps past the bound check, want corrupt-selection error")
+	}
+	if !contains(err.Error(), "corrupt selection") {
+		t.Errorf("parseHeader err = %q, want substring %q", err, "corrupt selection")
+	}
+}
+
 func TestLoadNonexistent(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "does-not-exist.moedex")
 

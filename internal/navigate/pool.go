@@ -2,6 +2,7 @@ package navigate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand/v2"
 	"sync"
@@ -40,16 +41,37 @@ type Pool struct {
 	// Lifetime activity counters, read atomically by Stats. They live on Pool
 	// (which compiles in both build arms) and are purely numeric, so they add no
 	// dependency on any -tags lsp symbol and keep the default pure-Go build green.
-	nQueries   atomic.Int64
-	nSpawns    atomic.Int64
-	nRestarts  atomic.Int64
-	nEvictions atomic.Int64
+	nQueries         atomic.Int64
+	nSpawns          atomic.Int64
+	nSpawnAttempts   atomic.Int64
+	nRestarts        atomic.Int64
+	nEvictions       atomic.Int64
+	nCooldownRejects atomic.Int64
+
+	// cooldowns tracks, per (root,language) key, a consecutive-exhaustion streak
+	// that survives across NavigatorFor calls (unlike the loop-local failCount
+	// below). See recordExhausted for why this is the F-022 fix.
+	cooldowns map[string]*poolCooldown
 
 	// closeWG tracks the detached server-close goroutines spawned by eviction,
 	// idle-sweep, LRU, and restart paths, so Close() can join them and is a true
 	// teardown barrier (no language-server child outliving Close()'s return).
 	closeWG sync.WaitGroup
 }
+
+// poolCooldown is a key's "do not respawn before until" gate plus the streak
+// of consecutive NavigatorFor calls that have exhausted all maxRestart
+// attempts since the key last produced a live server. Guarded by Pool.mu.
+type poolCooldown struct {
+	until  time.Time
+	streak int
+}
+
+// ErrCooldown is wrapped by the error NavigatorFor returns when it fast-fails
+// a call for a key that is still cooling down from a prior call's exhausted
+// retries, so callers can branch on errors.Is(err, ErrCooldown). Lives in
+// pool.go (no build tag) so it is identical in both build arms.
+var ErrCooldown = errors.New("navigate: server cooling down after repeated failures")
 
 // goClose shuts a server down in the background while letting Close() wait for
 // it. Use this instead of a bare `go nav.Close()` for any server removed from
@@ -68,11 +90,13 @@ func (p *Pool) goClose(nav *LSP) {
 // counters are sync/atomic.Int64 read via Load. Stats lives in pool.go (no build
 // tag) so it exists in both build arms.
 type Stats struct {
-	Queries   int64 `json:"queries"`   // file-routed Definition/References/Implementations calls dispatched
-	Spawns    int64 `json:"spawns"`    // language servers successfully created (NewLSP ok)
-	Restarts  int64 `json:"restarts"`  // dead/errored servers evicted-and-recreated by Navigator's retry loop
-	Evictions int64 `json:"evictions"` // entries removed from the pool (evict() calls)
-	Live      int   `json:"live"`      // servers currently in the entries map at snapshot time
+	Queries         int64 `json:"queries"`          // file-routed Definition/References/Implementations calls dispatched
+	Spawns          int64 `json:"spawns"`           // language servers successfully created (NewLSP ok)
+	SpawnAttempts   int64 `json:"spawn_attempts"`   // every NewLSP call attempted, success or failure
+	Restarts        int64 `json:"restarts"`         // dead/errored servers evicted-and-recreated by Navigator's retry loop
+	Evictions       int64 `json:"evictions"`        // entries removed from the pool (evict() calls)
+	CooldownRejects int64 `json:"cooldown_rejects"` // NavigatorFor calls fast-failed by an active per-key cooldown
+	Live            int   `json:"live"`             // servers currently in the entries map at snapshot time
 }
 
 // Stats returns an atomically-sampled snapshot of the Pool's lifetime activity.
@@ -83,11 +107,13 @@ func (p *Pool) Stats() Stats {
 	live := len(p.entries)
 	p.mu.Unlock()
 	return Stats{
-		Queries:   p.nQueries.Load(),
-		Spawns:    p.nSpawns.Load(),
-		Restarts:  p.nRestarts.Load(),
-		Evictions: p.nEvictions.Load(),
-		Live:      live,
+		Queries:         p.nQueries.Load(),
+		Spawns:          p.nSpawns.Load(),
+		SpawnAttempts:   p.nSpawnAttempts.Load(),
+		Restarts:        p.nRestarts.Load(),
+		Evictions:       p.nEvictions.Load(),
+		CooldownRejects: p.nCooldownRejects.Load(),
+		Live:            live,
 	}
 }
 
@@ -143,6 +169,58 @@ func backoff(attempt int, base, max time.Duration) time.Duration {
 	return d
 }
 
+// cooldownStatus reports whether key k is still cooling down at now from a
+// prior call's exhausted retries, and if so when that cooldown expires. A
+// key in cooldown is fast-failed by NavigatorFor before it ever touches the
+// entries map or calls NewLSP — the F-022 fix: without this, a server that
+// crashes on every startup got re-spawned up to maxRestart times per call,
+// forever, because the failure streak lived only in NavigatorFor's loop-local
+// failCount and was discarded the instant that call returned. Expired entries
+// are pruned lazily here, same approach as sweepIdleLocked, so a key that has
+// since recovered never lingers in the map. Must be called with p.mu free
+// (it takes the lock itself).
+func (p *Pool) cooldownStatus(k string, now time.Time) (active bool, until time.Time) {
+	p.mu.Lock()
+	cd, ok := p.cooldowns[k]
+	if !ok {
+		p.mu.Unlock()
+		return false, time.Time{}
+	}
+	if now.Before(cd.until) {
+		until = cd.until
+		p.mu.Unlock()
+		return true, until
+	}
+	delete(p.cooldowns, k)
+	p.mu.Unlock()
+	return false, time.Time{}
+}
+
+// recordExhausted bumps key k's consecutive-exhaustion streak and (re)arms its
+// cooldown so the next NavigatorFor call for this known-bad key fails fast
+// instead of re-spawning. Only called after a call has burned through every
+// maxRestart attempt without producing a live server — never on caller
+// cancellation, which is a property of the caller, not the server. The streak
+// lives on the Pool rather than the call stack, so repeated calls for a
+// perpetually-crashing key back off further each time, mirroring how the
+// in-call backoff grows with repeated attempts within a single call. A
+// successful creation (see NavigatorFor's spawn-success path) clears the
+// streak, so a server that recovers starts the backoff fresh on its next
+// failure rather than carrying forward an inflated streak.
+func (p *Pool) recordExhausted(k string, now time.Time) time.Duration {
+	p.mu.Lock()
+	cd := p.cooldowns[k]
+	if cd == nil {
+		cd = &poolCooldown{}
+		p.cooldowns[k] = cd
+	}
+	cd.streak++
+	delay := backoff(cd.streak-1, p.cfg.BaseBackoff, p.cfg.MaxBackoff)
+	cd.until = now.Add(delay)
+	p.mu.Unlock()
+	return delay
+}
+
 // NewPool returns a Pool that creates servers from cfg. cfg.RootDir is ignored
 // for routing — each query's (language, root) is derived from its file — but
 // cfg.Server / cfg.Args carry through to every spawned server. When cfg.Server
@@ -161,7 +239,11 @@ func NewPool(cfg Config) *Pool {
 	if cfg.MaxBackoff <= 0 {
 		cfg.MaxBackoff = defaultMaxBackoff
 	}
-	return &Pool{cfg: cfg, entries: make(map[string]*poolEntry)}
+	return &Pool{
+		cfg:       cfg,
+		entries:   make(map[string]*poolEntry),
+		cooldowns: make(map[string]*poolCooldown),
+	}
 }
 
 // clock returns the current time through the test seam (cfg.now) when set,
@@ -199,6 +281,16 @@ func (p *Pool) Navigator(ctx context.Context, root string) (*LSP, error) {
 // pool key but not the command — the configured server handles every language.
 func (p *Pool) NavigatorFor(ctx context.Context, lang, root string) (*LSP, error) {
 	k := keyFor(lang, root)
+
+	// Fail fast on a key still cooling down from a prior call's exhausted
+	// retries, before touching the entries map or calling NewLSP at all (F-022:
+	// the cooldown is what survives across calls; failCount below does not).
+	checkNow := p.clock()
+	if active, until := p.cooldownStatus(k, checkNow); active {
+		p.nCooldownRejects.Add(1)
+		return nil, fmt.Errorf("navigate: server for (%s,%s) is cooling down after repeated failures, retry after %s: %w", lang, root, until.Sub(checkNow), ErrCooldown)
+	}
+
 	failCount := 0 // consecutive create/restart failures for this root, carried
 	// across loop iterations (the entry is recreated each spin, so the count
 	// can't live on the entry).
@@ -256,6 +348,7 @@ func (p *Pool) NavigatorFor(ctx context.Context, lang, root string) (*LSP, error
 		if cfg.Server == "" {
 			cfg.Language = lang
 		}
+		p.nSpawnAttempts.Add(1)
 		nav, err := NewLSP(ctx, cfg)
 		ent.nav, ent.err = nav, err
 		close(ent.ready)
@@ -278,11 +371,13 @@ func (p *Pool) NavigatorFor(ctx context.Context, lang, root string) (*LSP, error
 			return nil, fmt.Errorf("navigate: pool closed")
 		}
 		ent.touch(p.clock())
+		delete(p.cooldowns, k) // creation succeeded: clear any stale streak/cooldown for k
 		p.mu.Unlock()
 		p.nSpawns.Add(1)
 		return nav, nil
 	}
-	return nil, fmt.Errorf("navigate: server for (%s,%s) kept dying after %d restarts", lang, root, maxRestart)
+	delay := p.recordExhausted(k, p.clock())
+	return nil, fmt.Errorf("navigate: server for (%s,%s) kept dying after %d restarts; cooling down for %s before the next attempt", lang, root, maxRestart, delay)
 }
 
 // sleepBackoff sleeps for a jittered backoff appropriate to attempt (>=1),
@@ -422,15 +517,39 @@ func (p *Pool) Sweep() {
 
 // evict removes ent from the map only if it is still the current entry for key
 // (so we never drop a healthy replacement another goroutine just installed), and
-// closes its server in the background.
+// closes its server in the background. It is also called on a failed creation
+// (ent.nav == nil — nothing was ever spawned), so the eviction counter only
+// moves when a real server is being removed; otherwise Spawns-Evictions would
+// not be a clean "live servers" signal.
 func (p *Pool) evict(key string, ent *poolEntry) {
 	p.mu.Lock()
 	if p.entries[key] == ent {
 		delete(p.entries, key)
-		p.nEvictions.Add(1)
+		if ent.nav != nil {
+			p.nEvictions.Add(1)
+		}
 	}
 	p.mu.Unlock()
 	p.goClose(ent.nav)
+}
+
+// routingLang resolves the language used for both the pool key and (via
+// NavigatorFor's "cfg.Server == "" => cfg.Language = lang") the per-spawn
+// Config.Language, given fileLang — the file's OWN extension-derived language
+// from workspaceRoot. A Pool configured with a pinned Config.Language (forced
+// -lang mode: cmd/moedex-nav's buildConfig sets Config{Language: canon} with
+// Server left empty so NewLSP's registry branch resolves InitOptions/
+// ResolveEnv) must route EVERY file to that one pinned language, not the
+// file's own — otherwise the first query against a file whose extension
+// disagrees with the forced language would silently clobber it back to
+// auto-detected routing. Legacy override mode (Server set) is unaffected: per
+// the documented NavigatorFor contract, lang still selects the pool key but
+// never the launched command, so falling through to fileLang here is correct.
+func (p *Pool) routingLang(fileLang string) string {
+	if p.cfg.Server == "" && p.cfg.Language != "" {
+		return p.cfg.Language
+	}
+	return fileLang
 }
 
 // --- file-routed convenience queries ---------------------------------------
@@ -439,12 +558,15 @@ func (p *Pool) evict(key string, ent *poolEntry) {
 // pair's server, and run the query — the ergonomic entry point for a lane that
 // just has a cursor position and doesn't want to manage roots. For a Go file
 // workspaceRoot yields ("go", <go.mod dir>), identical to the original
-// moduleRoot routing; a polyglot repo routes each file to its language's server.
+// moduleRoot routing; a polyglot repo routes each file to its language's
+// server — unless the Pool was configured with a pinned Config.Language
+// (forced -lang mode), in which case routingLang overrides the per-file
+// language while workspaceRoot's root resolution is unaffected.
 
 func (p *Pool) Definition(ctx context.Context, at Pos) ([]Location, error) {
 	p.nQueries.Add(1)
-	lang, root := workspaceRoot(at.File)
-	nav, err := p.NavigatorFor(ctx, lang, root)
+	fileLang, root := workspaceRoot(at.File)
+	nav, err := p.NavigatorFor(ctx, p.routingLang(fileLang), root)
 	if err != nil {
 		return nil, err
 	}
@@ -453,8 +575,8 @@ func (p *Pool) Definition(ctx context.Context, at Pos) ([]Location, error) {
 
 func (p *Pool) References(ctx context.Context, at Pos, includeDecl bool) ([]Location, error) {
 	p.nQueries.Add(1)
-	lang, root := workspaceRoot(at.File)
-	nav, err := p.NavigatorFor(ctx, lang, root)
+	fileLang, root := workspaceRoot(at.File)
+	nav, err := p.NavigatorFor(ctx, p.routingLang(fileLang), root)
 	if err != nil {
 		return nil, err
 	}
@@ -463,8 +585,8 @@ func (p *Pool) References(ctx context.Context, at Pos, includeDecl bool) ([]Loca
 
 func (p *Pool) Implementations(ctx context.Context, at Pos) ([]Location, error) {
 	p.nQueries.Add(1)
-	lang, root := workspaceRoot(at.File)
-	nav, err := p.NavigatorFor(ctx, lang, root)
+	fileLang, root := workspaceRoot(at.File)
+	nav, err := p.NavigatorFor(ctx, p.routingLang(fileLang), root)
 	if err != nil {
 		return nil, err
 	}
@@ -476,8 +598,8 @@ func (p *Pool) Implementations(ctx context.Context, at Pos) ([]Location, error) 
 // for that file — from any lane sharing the same pooled server — see the overlay
 // until DropOverlay.
 func (p *Pool) SetOverlay(ctx context.Context, file string, content []byte) error {
-	lang, root := workspaceRoot(file)
-	nav, err := p.NavigatorFor(ctx, lang, root)
+	fileLang, root := workspaceRoot(file)
+	nav, err := p.NavigatorFor(ctx, p.routingLang(fileLang), root)
 	if err != nil {
 		return err
 	}
@@ -486,8 +608,8 @@ func (p *Pool) SetOverlay(ctx context.Context, file string, content []byte) erro
 
 // DropOverlay removes a file's overlay on its owning server, reverting to disk.
 func (p *Pool) DropOverlay(ctx context.Context, file string) error {
-	lang, root := workspaceRoot(file)
-	nav, err := p.NavigatorFor(ctx, lang, root)
+	fileLang, root := workspaceRoot(file)
+	nav, err := p.NavigatorFor(ctx, p.routingLang(fileLang), root)
 	if err != nil {
 		return err
 	}
@@ -502,8 +624,8 @@ func (p *Pool) DropOverlay(ctx context.Context, file string) error {
 func (p *Pool) NotifyChanged(ctx context.Context, files ...string) error {
 	byKey := make(map[string][]string)
 	for _, f := range files {
-		lang, root := workspaceRoot(f)
-		k := keyFor(lang, root)
+		fileLang, root := workspaceRoot(f)
+		k := keyFor(p.routingLang(fileLang), root)
 		byKey[k] = append(byKey[k], f)
 	}
 	for k, group := range byKey {
@@ -513,7 +635,11 @@ func (p *Pool) NotifyChanged(ctx context.Context, files ...string) error {
 		if !ok {
 			continue // no server yet; nothing cached to invalidate
 		}
-		<-ent.ready
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ent.ready:
+		}
 		if ent.err != nil || ent.nav == nil || !ent.nav.Alive() {
 			continue
 		}

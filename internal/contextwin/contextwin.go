@@ -218,6 +218,11 @@ func Assemble(ix *index.Index, results []rank.RankedResult, opts Options) Contex
 		text := sliceLines(c.content, c.startLine, c.endLine)
 		cost := estimateTokens(text)
 		if len(win.Blocks) > 0 && win.TokenEstimate+cost > budget {
+			// Intentionally continue, not break: a later, lower-scored, smaller
+			// candidate may still fit in the remainder of the budget even though
+			// this larger one didn't. This packs the window for maximum budget
+			// use rather than emitting a strict score-prefix; Truncated records
+			// that at least one candidate was skipped for size.
 			win.Truncated = true
 			continue
 		}
@@ -492,36 +497,25 @@ func indentOf(line []byte) int {
 	return n
 }
 
-// mergeFile merges overlapping/adjacent candidates (all from one file). Input
-// order need not be sorted; output is sorted by start line.
+// mergeFile merges overlapping/adjacent candidates (all from one file), via the
+// shared rank.MergeLineRanges adjacency rule. Input order need not be sorted;
+// output is sorted by start line. A merged candidate keeps the max Score (and
+// that result's Lexical/Dense/order) of its parts.
 func mergeFile(cands []candidate) []candidate {
-	if len(cands) == 0 {
-		return nil
-	}
-	sort.SliceStable(cands, func(i, j int) bool {
-		if cands[i].startLine != cands[j].startLine {
-			return cands[i].startLine < cands[j].startLine
-		}
-		return cands[i].endLine < cands[j].endLine
-	})
-	out := []candidate{cands[0]}
-	for _, c := range cands[1:] {
-		last := &out[len(out)-1]
-		if c.startLine <= last.endLine+1 { // overlap or touch
-			if c.endLine > last.endLine {
-				last.endLine = c.endLine
+	return rank.MergeLineRanges(cands,
+		func(c candidate) (int, int) { return c.startLine, c.endLine },
+		func(a, b candidate) candidate {
+			if b.endLine > a.endLine {
+				a.endLine = b.endLine
 			}
-			if c.score > last.score {
-				last.score = c.score
-				last.lexical = c.lexical
-				last.dense = c.dense
+			if b.score > a.score {
+				a.score = b.score
+				a.lexical = b.lexical
+				a.dense = b.dense
 			}
-			if c.order < last.order {
-				last.order = c.order
+			if b.order < a.order {
+				a.order = b.order
 			}
-			continue
-		}
-		out = append(out, c)
-	}
-	return out
+			return a
+		})
 }

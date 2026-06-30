@@ -86,6 +86,12 @@ func Open(dir string) (*Corpus, error) {
 // Close unmaps every shard and the shared content store (if any). After Close the
 // Corpus must not be queried — querying mapped-out memory crashes. Close is
 // idempotent.
+//
+// Close is NOT concurrency-safe against an in-flight query: it does not itself
+// wait for queries already running against this Corpus to finish, so a caller
+// that hot-swaps Corpus instances (see cmd/moedex-serve/reload.go's
+// corpusSnapshot/rankSnapshot) MUST drain in-flight queries — e.g. via a
+// refcounted WaitGroup — before calling Close on the retired instance.
 func (c *Corpus) Close() error {
 	var first error
 	for i := range c.shards {
@@ -119,9 +125,11 @@ func (c *Corpus) NumBlobs() int {
 }
 
 // Regex runs pattern against every shard and returns the merged, deterministically
-// ordered matches. A malformed pattern is reported once (the first shard's parse
-// error); per-shard scans that fail abort the whole query. A cancelled/expired
-// ctx aborts the per-shard scans promptly and surfaces ctx.Err().
+// ordered matches. Shards are scanned concurrently; if more than one fails (e.g. a
+// malformed pattern), the lowest-indexed shard's error is the one surfaced, not
+// necessarily the first to fail in wall-clock time. Per-shard scans that fail
+// abort the whole query. A cancelled/expired ctx aborts the per-shard scans
+// promptly and surfaces ctx.Err().
 func (c *Corpus) Regex(ctx context.Context, pattern string) ([]search.Match, search.Stats, error) {
 	return c.fan(ctx, func(ctx context.Context, ix *index.Index) ([]search.Match, search.Stats, error) {
 		m, s, err := search.RegexWithStats(ctx, ix, pattern)

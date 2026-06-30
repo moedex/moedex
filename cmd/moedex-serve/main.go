@@ -76,6 +76,7 @@ func main() {
 	tlsCert := flag.String("tls-cert", os.Getenv("MOEDEX_TLS_CERT"), "TLS certificate file; serve -http over HTTPS (requires -tls-key)")
 	tlsKey := flag.String("tls-key", os.Getenv("MOEDEX_TLS_KEY"), "TLS private key file; serve -http over HTTPS (requires -tls-cert)")
 	requestTimeout := flag.Duration("request-timeout", 30*time.Second, "per-request HTTP timeout on -http (503 on expiry; the underlying scan observes cancellation and aborts promptly)")
+	searchMaxConcurrency := flag.Int("search-max-concurrency", envOrInt("MOEDEX_SEARCH_MAX_CONCURRENCY", defaultSearchMaxConcurrency), "cap concurrent in-flight /search requests on -http; each one scans the full corpus and can pin a core for up to -request-timeout. 0 disables the cap. Mirrors the MCP server's request-concurrency guard.")
 	showVersion := flag.Bool("version", false, "print build identity (name, commit, dense capability) and exit")
 	flag.Parse()
 
@@ -149,15 +150,16 @@ func main() {
 		return
 	}
 	cfg := httpConfig{
-		addr:           *httpAddr,
-		shardDir:       *shardDir,
-		token:          authTok,
-		tlsCert:        *tlsCert,
-		tlsKey:         *tlsKey,
-		requestTimeout: *requestTimeout,
-		bootElapsed:    time.Since(start),
-		shards:         corpus.NumShards(),
-		blobs:          corpus.NumBlobs(),
+		addr:                 *httpAddr,
+		shardDir:             *shardDir,
+		token:                authTok,
+		tlsCert:              *tlsCert,
+		tlsKey:               *tlsKey,
+		requestTimeout:       *requestTimeout,
+		bootElapsed:          time.Since(start),
+		shards:               corpus.NumShards(),
+		blobs:                corpus.NumBlobs(),
+		searchMaxConcurrency: *searchMaxConcurrency,
 	}
 	if err := runHTTP(corpus, cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "moedex-serve: %v\n", err)
@@ -490,15 +492,46 @@ func runOneShot(c *server.Corpus, pattern string, isRegex bool, limit int) {
 // httpConfig carries the resolved -http settings into runHTTP so the boot-line
 // reporting and server wiring stay in one place.
 type httpConfig struct {
-	addr           string
-	shardDir       string
-	token          string
-	tlsCert        string
-	tlsKey         string
-	requestTimeout time.Duration
-	bootElapsed    time.Duration
-	shards         int
-	blobs          int
+	addr                 string
+	shardDir             string
+	token                string
+	tlsCert              string
+	tlsKey               string
+	requestTimeout       time.Duration
+	bootElapsed          time.Duration
+	shards               int
+	blobs                int
+	searchMaxConcurrency int
+}
+
+// newHTTPMux builds the retrieval daemon's route table: /healthz and /metrics
+// stay open (see openPaths), /stats and /search read the live corpus through
+// holder. /search is wrapped in withConcurrencyLimit since it alone runs a
+// full cross-shard scan that can pin a core for up to the request timeout —
+// the other routes are cheap and unbounded concurrency there is not a risk.
+// Shared by runHTTP and the test helper newTestChain so both exercise the
+// identical composition.
+func newHTTPMux(holder *corpusHolder, m *metrics, searchMaxConcurrency int) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok\n"))
+	})
+	mux.Handle("/metrics", metricsHandler(holder, m))
+	mux.HandleFunc("/stats", func(w http.ResponseWriter, r *http.Request) {
+		snap := holder.acquire()
+		defer snap.release()
+		writeJSON(w, http.StatusOK, map[string]any{
+			"shards": snap.c.NumShards(),
+			"blobs":  snap.c.NumBlobs(),
+		})
+	})
+	mux.Handle("/search", withConcurrencyLimit(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		snap := holder.acquire()
+		defer snap.release()
+		handleSearch(snap.c, w, r)
+	}), searchMaxConcurrency, m))
+	return mux
 }
 
 // runHTTP serves the corpus over a minimal JSON API until SIGINT/SIGTERM. A
@@ -536,26 +569,7 @@ func runHTTP(c *server.Corpus, cfg httpConfig) error {
 
 	holder := newCorpusHolder(c)
 	m := newMetrics()
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok\n"))
-	})
-	mux.Handle("/metrics", metricsHandler(holder, m))
-	mux.HandleFunc("/stats", func(w http.ResponseWriter, r *http.Request) {
-		snap := holder.acquire()
-		defer snap.release()
-		writeJSON(w, http.StatusOK, map[string]any{
-			"shards": snap.c.NumShards(),
-			"blobs":  snap.c.NumBlobs(),
-		})
-	})
-	mux.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
-		snap := holder.acquire()
-		defer snap.release()
-		handleSearch(snap.c, w, r)
-	})
+	mux := newHTTPMux(holder, m, cfg.searchMaxConcurrency)
 
 	srv := &http.Server{
 		Addr:              effAddr,

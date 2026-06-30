@@ -55,10 +55,11 @@ func (h *histogram) snapshot() (buckets []uint64, count uint64, sum float64) {
 // expvar.Map keys are stable label values (code class, reload result) so the
 // scrape can expand them into labeled Prometheus series.
 type metrics struct {
-	requests *expvar.Map // by code class: "2xx" | "4xx" | "5xx"
-	panics   *expvar.Int
-	reloads  *expvar.Map // by result: "ok" | "fail"
-	dur      *histogram
+	requests       *expvar.Map // by code class: "2xx" | "4xx" | "5xx"
+	panics         *expvar.Int
+	reloads        *expvar.Map // by result: "ok" | "fail"
+	dur            *histogram
+	searchRejected *expvar.Int // /search requests rejected by withConcurrencyLimit
 }
 
 var defaultBuckets = []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10}
@@ -68,10 +69,11 @@ var defaultBuckets = []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5,
 // most once per process — runHTTP calls it once. Tests use newUnpublishedMetrics.
 func newMetrics() *metrics {
 	return &metrics{
-		requests: expvar.NewMap("moedex_http_requests_total"),
-		panics:   expvar.NewInt("moedex_http_panics_total"),
-		reloads:  expvar.NewMap("moedex_reloads_total"),
-		dur:      newHistogram(defaultBuckets),
+		requests:       expvar.NewMap("moedex_http_requests_total"),
+		panics:         expvar.NewInt("moedex_http_panics_total"),
+		reloads:        expvar.NewMap("moedex_reloads_total"),
+		dur:            newHistogram(defaultBuckets),
+		searchRejected: expvar.NewInt("moedex_http_search_rejected_total"),
 	}
 }
 
@@ -80,10 +82,11 @@ func newMetrics() *metrics {
 // (e.g. once per test) without tripping expvar's duplicate-name panic.
 func newUnpublishedMetrics() *metrics {
 	return &metrics{
-		requests: new(expvar.Map).Init(),
-		panics:   new(expvar.Int),
-		reloads:  new(expvar.Map).Init(),
-		dur:      newHistogram(defaultBuckets),
+		requests:       new(expvar.Map).Init(),
+		panics:         new(expvar.Int),
+		reloads:        new(expvar.Map).Init(),
+		dur:            newHistogram(defaultBuckets),
+		searchRejected: new(expvar.Int),
 	}
 }
 
@@ -93,8 +96,9 @@ func (m *metrics) observe(code int, seconds float64) {
 	m.dur.observe(seconds)
 }
 
-func (m *metrics) incPanic()             { m.panics.Add(1) }
+func (m *metrics) incPanic()               { m.panics.Add(1) }
 func (m *metrics) incReload(result string) { m.reloads.Add(result, 1) }
+func (m *metrics) incSearchRejected()      { m.searchRejected.Add(1) }
 
 // codeClass buckets an HTTP status into the Prometheus-conventional class label.
 func codeClass(code int) string {
@@ -116,9 +120,9 @@ func codeClass(code int) string {
 func metricsHandler(holder *corpusHolder, m *metrics) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		snap := holder.acquire()
+		defer snap.release()
 		shards := snap.c.NumShards()
 		blobs := snap.c.NumBlobs()
-		snap.release()
 
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
@@ -132,6 +136,10 @@ func metricsHandler(holder *corpusHolder, m *metrics) http.HandlerFunc {
 
 		writeCounterMap(w, "moedex_reloads_total",
 			"Total shard reloads by result.", "result", m.reloads)
+
+		fmt.Fprintf(w, "# HELP moedex_http_search_rejected_total Total /search requests rejected by the concurrency limiter.\n")
+		fmt.Fprintf(w, "# TYPE moedex_http_search_rejected_total counter\n")
+		fmt.Fprintf(w, "moedex_http_search_rejected_total %d\n", m.searchRejected.Value())
 
 		// Latency histogram, cumulative buckets + sum + count.
 		buckets, count, sum := m.dur.snapshot()
@@ -162,11 +170,11 @@ func metricsHandler(holder *corpusHolder, m *metrics) http.HandlerFunc {
 func rankMetricsHandler(holder *rankHolder, m *metrics) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		snap := holder.acquire()
+		defer snap.release()
 		blobs := snap.rc.NumBlobs()
 		docs := snap.rc.NumDocs()
 		symBlobs := snap.rc.NumSymbolBlobs()
 		dense := snap.rc.DenseChunks()
-		snap.release()
 
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 		w.WriteHeader(http.StatusOK)

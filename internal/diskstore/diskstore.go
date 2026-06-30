@@ -63,6 +63,7 @@ package diskstore
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -137,6 +138,19 @@ func Save(ix *index.Index, path string) error {
 		return err
 	}
 
+	if err := writePostings(w, ix, trigrams); err != nil {
+		return err
+	}
+	return w.Flush()
+}
+
+// writePostings serializes trigrams' encoded posting lists to w in the
+// POSTINGS SECTION layout shared by MOEDEX03/04/05 (3 trigram bytes + uint64
+// encLen + enc, per trigram). Save and saveDeduped pass w the output bufio.Writer
+// directly, since the postings section is the last thing they write; saveSelective
+// passes an in-memory buffer instead, because it must know the section's total
+// length (for selOff) before writing the header that precedes it.
+func writePostings(w io.Writer, ix *index.Index, trigrams []trigram.Trigram) error {
 	scratch := make([]byte, 3+8) // 3 trigram bytes + uint64 encLen
 	for _, t := range trigrams {
 		enc := index.EncodePostings(ix.Postings(t))
@@ -149,7 +163,7 @@ func Save(ix *index.Index, path string) error {
 			return err
 		}
 	}
-	return w.Flush()
+	return nil
 }
 
 // saveSelective writes a MOEDEX04 shard: the MOEDEX03 sections plus a SELECTION
@@ -172,16 +186,11 @@ func saveSelective(ix *index.Index, sel map[trigram.Trigram]struct{}, path strin
 	postOff := blobOff + uint64(len(blobBuf))
 
 	// Postings buffer, so we know where the selection section begins.
-	postBuf := make([]byte, 0, 1<<16)
-	scratch := make([]byte, 3+8)
-	for _, t := range trigrams {
-		enc := index.EncodePostings(ix.Postings(t))
-		scratch[0], scratch[1], scratch[2] = t[0], t[1], t[2]
-		binary.LittleEndian.PutUint64(scratch[3:11], uint64(len(enc)))
-		postBuf = append(postBuf, scratch...)
-		postBuf = append(postBuf, enc...)
+	var postBuf bytes.Buffer
+	if err := writePostings(&postBuf, ix, trigrams); err != nil {
+		return err
 	}
-	selOff := postOff + uint64(len(postBuf))
+	selOff := postOff + uint64(postBuf.Len())
 
 	f, err := os.Create(path)
 	if err != nil {
@@ -206,7 +215,7 @@ func saveSelective(ix *index.Index, sel map[trigram.Trigram]struct{}, path strin
 	if _, err := w.Write(blobBuf); err != nil {
 		return err
 	}
-	if _, err := w.Write(postBuf); err != nil {
+	if _, err := w.Write(postBuf.Bytes()); err != nil {
 		return err
 	}
 	// SELECTION section: 3 bytes per kept gram.
@@ -240,7 +249,9 @@ func appendU32LenBytes(buf, p []byte) []byte {
 
 // Load reads a file written by Save fully into memory and reconstructs the
 // index (postings materialized into a map). Convenient and self-contained; use
-// LoadMmap to keep postings off the heap.
+// LoadMmap to keep postings off the heap. Test/convenience-only: it has no
+// production callers and, unlike LoadMmap/LoadBlobs, is not exercised by the
+// corruption-hardening test suite — don't assume it shares their guarantees.
 func Load(path string) (*index.Index, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -262,7 +273,11 @@ func Load(path string) (*index.Index, error) {
 		return nil, err
 	}
 	if hdr.selective {
-		return index.RestoreSelective(blobs, postings, loadSelection(data, hdr)), nil
+		sel, err := loadSelection(data, hdr)
+		if err != nil {
+			return nil, err
+		}
+		return index.RestoreSelective(blobs, postings, sel), nil
 	}
 	return index.Restore(blobs, postings), nil
 }
@@ -331,9 +346,14 @@ func LoadMmap(path string) (*index.Index, io.Closer, error) {
 		// uses the plain mmapProvider, which does NOT implement gramMember, so the
 		// loaded index keeps the all-indexed (universal-true) fast path and never
 		// pays the per-gram membership check.
+		sel, err := loadSelection(data, hdr)
+		if err != nil {
+			region.Close()
+			return nil, nil, err
+		}
 		ix := index.RestoreLazy(blobs, &selectiveMmapProvider{
 			mmapProvider: base,
-			selected:     loadSelection(data, hdr),
+			selected:     sel,
 		})
 		return ix, region, nil
 	}
@@ -460,7 +480,10 @@ func parseHeader(data []byte) (header, error) {
 			h.selOff > uint64(len(data)) || h.blobOff > h.postOff || h.postOff > h.selOff {
 			return header{}, fmt.Errorf("diskstore: corrupt section offsets")
 		}
-		if h.selOff+h.selCount*trigram.N > uint64(len(data)) {
+		// selOff is already bounds-checked above, so len(data)-selOff cannot
+		// underflow; dividing (rather than multiplying selCount*N) cannot overflow
+		// either, unlike the multiply-then-compare this replaces.
+		if h.selCount > (uint64(len(data))-h.selOff)/trigram.N {
 			return header{}, fmt.Errorf("diskstore: corrupt selection section")
 		}
 		return h, nil
@@ -470,15 +493,21 @@ func parseHeader(data []byte) (header, error) {
 }
 
 // loadSelection reads the SELECTION section (3 bytes per kept gram) into a set.
-// Only valid when h.selective.
-func loadSelection(data []byte, h header) map[trigram.Trigram]struct{} {
+// Only valid when h.selective. Like walkPostings, it indexes through the
+// bounds-checked reader rather than the raw mmap slice, so a header that
+// somehow describes a section running past EOF fails with io.ErrUnexpectedEOF
+// instead of panicking.
+func loadSelection(data []byte, h header) (map[trigram.Trigram]struct{}, error) {
 	sel := make(map[trigram.Trigram]struct{}, h.selCount)
-	base := h.selOff
+	r := &reader{b: data, pos: int(h.selOff)}
 	for i := uint64(0); i < h.selCount; i++ {
-		off := base + i*trigram.N
-		sel[trigram.Trigram{data[off], data[off+1], data[off+2]}] = struct{}{}
+		tb, err := r.bytes(trigram.N)
+		if err != nil {
+			return nil, fmt.Errorf("diskstore: selection gram %d: %w", i, err)
+		}
+		sel[trigram.Trigram{tb[0], tb[1], tb[2]}] = struct{}{}
 	}
-	return sel
+	return sel, nil
 }
 
 // walkPostings iterates the postings section, calling fn with each trigram and
@@ -522,6 +551,9 @@ func loadBlobs(sec []byte, n int) ([]index.BlobData, error) {
 		}
 		numFiles, err := r.u32()
 		if err != nil {
+			return nil, fmt.Errorf("diskstore: blob %d numFiles: %w", i, err)
+		}
+		if err := r.checkCount(numFiles, minFileRefSize); err != nil {
 			return nil, fmt.Errorf("diskstore: blob %d numFiles: %w", i, err)
 		}
 		files := make([]index.FileRef, numFiles)
@@ -597,6 +629,25 @@ func (r *reader) lenBytes() ([]byte, error) {
 		return nil, err
 	}
 	return r.bytes(int(n))
+}
+
+// minFileRefSize is the smallest possible on-disk encoding of an
+// index.FileRef: three length-prefixed strings, each at least the 4-byte
+// length prefix with zero content bytes.
+const minFileRefSize = 4 + 4 + 4
+
+// checkCount rejects an untrusted item count before a caller does an eager
+// make([]T, n) sized off it: n items of at least minItemSize bytes each could
+// never fit in the bytes remaining in the reader, so a count exceeding that
+// bound is corrupt. Without this, a record claiming e.g. numFiles near the
+// uint32 max drives a multi-GB allocation before the per-item bounds-checked
+// reads below get a chance to fail cleanly on EOF.
+func (r *reader) checkCount(n uint32, minItemSize int) error {
+	remaining := len(r.b) - r.pos
+	if uint64(n) > uint64(remaining)/uint64(minItemSize) {
+		return fmt.Errorf("count %d exceeds remaining data (%d bytes)", n, remaining)
+	}
+	return nil
 }
 
 // mmapRegion is a read-only memory mapping that also serves as the io.Closer

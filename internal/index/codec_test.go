@@ -1,6 +1,8 @@
 package index
 
 import (
+	"encoding/binary"
+	"math"
 	"reflect"
 	"testing"
 )
@@ -28,6 +30,35 @@ func TestPostingsCodecRoundTrip(t *testing.T) {
 		if !reflect.DeepEqual(got, ps) {
 			t.Errorf("case %d: round-trip mismatch\n want %v\n  got %v", i, ps, got)
 		}
+	}
+}
+
+// TestDecodePostingsRejectsOffsetOverflow guards against int(prevOff)
+// silently wrapping. prevOff accumulates from untrusted mmap'd varint deltas;
+// a crafted/corrupt buffer with an offset beyond math.MaxInt must not produce
+// a wrapped (e.g. negative) Offset that would later drive an out-of-bounds
+// slice in Blob.LineAt. Like other malformed-input cases in DecodePostings,
+// it should stop and return what was decoded so far rather than fabricate a
+// bad posting.
+func TestDecodePostingsRejectsOffsetOverflow(t *testing.T) {
+	buf := make([]byte, 0, 32)
+	tmp := make([]byte, binary.MaxVarintLen64)
+	put := func(v uint64) {
+		n := binary.PutUvarint(tmp, v)
+		buf = append(buf, tmp[:n]...)
+	}
+	put(0)                        // blob delta -> blob 0
+	put(1)                        // count: one posting in this group
+	put(uint64(math.MaxInt) + 1) // offset delta overflows int
+
+	got := DecodePostings(buf)
+	for _, p := range got {
+		if p.Offset < 0 {
+			t.Fatalf("DecodePostings produced wrapped negative Offset %d from overflowing input", p.Offset)
+		}
+	}
+	if len(got) != 0 {
+		t.Fatalf("DecodePostings with overflowing offset = %v, want no postings decoded from the malformed group", got)
 	}
 }
 

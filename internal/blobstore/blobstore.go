@@ -177,6 +177,12 @@ func (s *Store) loadIndex() error {
 		if err != nil {
 			return fmt.Errorf("blobstore: index entry %d clen: %w", i, err)
 		}
+		// packOff and packLen are both untrusted uint64 values read straight from
+		// the index; packOff+packLen can overflow uint64 and wrap back below
+		// packBytes, so compare each bound separately rather than summing first.
+		if packOff > packBytes || packLen > packBytes-packOff {
+			return fmt.Errorf("blobstore: index entry %d pack range [%d,+%d) exceeds pack bounds %d", i, packOff, packLen, packBytes)
+		}
 		key := string(sha)
 		s.byID[key] = entry{packOff: int64(packOff), packLen: int64(packLen), contentLen: int64(contentLen)}
 		s.order = append(s.order, key)
@@ -229,9 +235,18 @@ func (s *Store) Get(sha string) ([]byte, error) {
 	if err := s.packW.Flush(); err != nil {
 		return nil, err
 	}
+	// Defense in depth: loadIndex already rejects an out-of-bounds entry at load
+	// time, but bound it again here before the alloc below so a corrupt in-memory
+	// entry (any future code path that bypasses loadIndex) can never trigger an
+	// unbounded make() or an out-of-bounds ReadAt.
+	if e.packOff < 0 || e.packLen < 0 || e.packOff > s.packPos || e.packLen > s.packPos-e.packOff {
+		return nil, fmt.Errorf("blobstore: sha %s has out-of-bounds pack range [%d,+%d) (pack size %d)", sha, e.packOff, e.packLen, s.packPos)
+	}
 	buf := make([]byte, e.packLen)
-	if _, err := s.packF.ReadAt(buf, e.packOff); err != nil && err != io.EOF {
-		// packF is opened write-only for appends; reopen read-only for ReadAt.
+	if _, err := s.packF.ReadAt(buf, e.packOff); err != nil {
+		// Any error — including io.EOF from a short read on a truncated/corrupt
+		// pack tail — must not decode a partial buffer. packF is also opened
+		// write-only for appends, so reopen read-only for ReadAt.
 		return s.getViaReopen(e)
 	}
 	return decodeRecord(buf)
@@ -328,11 +343,45 @@ func (s *Store) writeIndex() error {
 		buf = binary.LittleEndian.AppendUint64(buf, uint64(e.packLen))
 		buf = binary.LittleEndian.AppendUint64(buf, uint64(e.contentLen))
 	}
-	tmp := filepath.Join(s.dir, idxName+".tmp")
-	if err := os.WriteFile(tmp, buf, 0o644); err != nil {
+	return writeFileDurable(filepath.Join(s.dir, idxName), buf, 0o644)
+}
+
+// writeFileDurable writes data to path atomically (temp+rename): the temp file
+// is fsynced before the rename and path's parent directory is fsynced after, so
+// a hard crash can never leave the directory entry visible before its bytes (or
+// the rename itself) are durable. Mirrors parity.WriteManifest; shared by
+// writeIndex and WriteBlobManifest so both CAS metadata writers carry the same
+// durability guarantee the package doc promises.
+func writeFileDurable(path string, data []byte, perm os.FileMode) error {
+	tmp := path + ".tmp"
+	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, perm)
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, filepath.Join(s.dir, idxName))
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		return err
+	}
+	// fsync the temp file's contents BEFORE the rename, so the bytes are durable
+	// before the directory entry that exposes them.
+	if err := f.Sync(); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return err
+	}
+	// fsync the parent directory so the rename itself is durable across a hard
+	// crash. Best-effort: some platforms reject fsync on a directory handle —
+	// that does not invalidate the file-content fsync above.
+	if d, err := os.Open(filepath.Dir(path)); err == nil {
+		_ = d.Sync()
+		_ = d.Close()
+	}
+	return nil
 }
 
 // Close flushes and persists the store, then releases the pack handle.

@@ -127,7 +127,7 @@ func buildCAS(root, casDir string, discover discoverFn, ingestRepo ingestFn, hea
 
 	m := &BlobManifest{Version: BlobManifestVersion, Root: root, CASDir: casDir}
 	for _, dir := range repos {
-		rb, raw, refs, err := ingestRepoBlobs(store, dir, ingestRepo, head)
+		rb, raw, refs, _, err := ingestRepoBlobs(store, dir, ingestRepo, head)
 		if err != nil {
 			// A repo that fails to ingest is skipped (not fatal), matching parity.Build.
 			continue
@@ -149,18 +149,21 @@ func buildCAS(root, casDir string, discover discoverFn, ingestRepo ingestFn, hea
 }
 
 // ingestRepoBlobs ingests one repo, Puts each unique-per-batch file's content
-// into the store, and returns the repo's RepoBlobs record plus the raw bytes seen
-// and the file-ref count. It dedups by AbsPath within the repo's batch exactly as
-// parity.Build/buildShards do (nested-repo overlap guard).
-func ingestRepoBlobs(store *Store, dir string, ingestRepo ingestFn, head headFn) (RepoBlobs, int64, int, error) {
+// into the store, and returns the repo's RepoBlobs record, the raw bytes seen,
+// the file-ref count, and the number of Puts that were dedup no-ops (skipped,
+// an already-present SHA — store.Put's added=false). It dedups by AbsPath within
+// the repo's batch exactly as parity.Build/buildShards do (nested-repo overlap
+// guard).
+func ingestRepoBlobs(store *Store, dir string, ingestRepo ingestFn, head headFn) (RepoBlobs, int64, int, int, error) {
 	files, err := ingestRepo(filepath.Base(dir), dir)
 	if err != nil {
-		return RepoBlobs{}, 0, 0, err
+		return RepoBlobs{}, 0, 0, 0, err
 	}
 	h, _ := head(dir) // "" if unreadable; recorded as-is (commitless-repo stable)
 	rb := RepoBlobs{Dir: dir, Label: filepath.Base(dir), Head: h}
 
 	var raw int64
+	var skipped int
 	seen := map[string]bool{}
 	for _, f := range files {
 		if seen[f.AbsPath] {
@@ -171,13 +174,17 @@ func ingestRepoBlobs(store *Store, dir string, ingestRepo ingestFn, head headFn)
 		// dirty file (working tree != committed blob) is stored under its real
 		// content hash and a Put only dedups against genuinely identical bytes.
 		key := contentKey(f.Content)
-		if _, err := store.Put(key, f.Content); err != nil {
-			return RepoBlobs{}, 0, 0, err
+		added, err := store.Put(key, f.Content)
+		if err != nil {
+			return RepoBlobs{}, 0, 0, 0, err
+		}
+		if !added {
+			skipped++
 		}
 		rb.Files = append(rb.Files, FileEntry{SHA: key, RelPath: f.RelPath})
 		raw += int64(len(f.Content))
 	}
-	return rb, raw, len(rb.Files), nil
+	return rb, raw, len(rb.Files), skipped, nil
 }
 
 // RefreshCAS performs a per-blob delta refresh against an existing CAS. Given the
@@ -244,7 +251,7 @@ func refreshCAS(old *BlobManifest, root, casDir string, discover discoverFn, ing
 			// it is simply omitted this round and surfaced as failed (the next
 			// refresh retries it) — matching parity.Build's skip-on-ingest-error.
 			ds.AddedRepos = append(ds.AddedRepos, dir)
-			rb, raw, refs, err := ingestRepoBlobs(store, dir, ingestRepo, head)
+			rb, raw, refs, _, err := ingestRepoBlobs(store, dir, ingestRepo, head)
 			if err != nil {
 				ds.FailedRepos = append(ds.FailedRepos, dir)
 				continue
@@ -267,8 +274,7 @@ func refreshCAS(old *BlobManifest, root, casDir string, discover discoverFn, ing
 		}
 		// Changed: re-ingest ONLY this repo; only net-new blobs are physically added.
 		ds.ChangedRepos = append(ds.ChangedRepos, dir)
-		ds.PutsSkipped += countPresent(store, ingestRepo, dir) // pre-count of dedup hits
-		rb, raw, refs, err := ingestRepoBlobs(store, dir, ingestRepo, head)
+		rb, raw, refs, skipped, err := ingestRepoBlobs(store, dir, ingestRepo, head)
 		if err != nil {
 			// Re-ingest FAILED for a repo that is STILL ON DISK (discover found it):
 			// this is a transient git/read error, NOT a removal. Dropping it here
@@ -284,6 +290,7 @@ func refreshCAS(old *BlobManifest, root, casDir string, discover discoverFn, ing
 			m.Stats.FileRefs += len(oldRepo.Files)
 			continue
 		}
+		ds.PutsSkipped += skipped
 		m.Repos = append(m.Repos, rb)
 		m.Stats.RawBytes += raw
 		m.Stats.FileRefs += refs
@@ -334,30 +341,6 @@ func rawBytesOf(store *Store, r RepoBlobs) int64 {
 	for _, f := range r.Files {
 		if e, ok := store.byID[f.SHA]; ok {
 			n += e.contentLen
-		}
-	}
-	return n
-}
-
-// countPresent re-ingests a changed repo's file list (cheaply, before the real
-// ingest) and counts how many of its distinct-by-abspath files already have their
-// SHA in the store — i.e. the Puts that will be dedup no-ops. It is an honest
-// measurement of the co-resident/unchanged-blob saving, separate from the actual
-// ingest below. A re-ingest error yields 0 (the real ingest will handle it).
-func countPresent(store *Store, ingestRepo ingestFn, dir string) int {
-	files, err := ingestRepo(filepath.Base(dir), dir)
-	if err != nil {
-		return 0
-	}
-	n := 0
-	seen := map[string]bool{}
-	for _, f := range files {
-		if seen[f.AbsPath] {
-			continue
-		}
-		seen[f.AbsPath] = true
-		if store.Has(contentKey(f.Content)) {
-			n++
 		}
 	}
 	return n

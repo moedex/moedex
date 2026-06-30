@@ -35,17 +35,18 @@ All library code lives under `internal/`; executables under `cmd/`.
 | Package | Path | Responsibility | Key exported surface |
 |---|---|---|---|
 | trigram | [`internal/trigram`](internal/trigram) | The positional-trigram primitive | `const N = 3`; `type Trigram [N]byte`; `(Trigram) String()` |
+| fold | [`internal/fold`](internal/fold) | ASCII case-fold variants for a rune, shared by `query` (Cox reduction) and `search` (verify prefilter) so both agree on every rune | `ASCIIVariants(r) (bytes []byte, allASCII bool)` |
 | index | [`internal/index`](internal/index) | In-memory content-addressed trigram index | `Index`, `New`, `(*Index) AddFile/Postings/Blob/NumBlobs/Trigrams/Snapshot`; `Blob`, `FileRef`, `Posting`, `BlobData`; `Restore`, `RestoreLazy`, `PostingProvider`; `EncodePostings`, `DecodePostings` |
 | ingest | [`internal/ingest`](internal/ingest) | Read a git repo's tracked text files; discover all repos under a root | `File`; `Repo(repoName, dir) ([]File, error)`; `DiscoverRepos(root) ([]string, error)`; `CountGitEntries(root) (int, error)` |
 | query | [`internal/query`](internal/query) | Regex → boolean trigram query (Cox reduction) | `Query` (`Eval`, `String`); `All`; `And`, `Or`; `FromRegexp(pattern) (Query, error)` |
-| search | [`internal/search`](internal/search) | Candidate retrieval + verify → line matches | `Match`; `Literal(ix, q) []Match`; `Regex(ix, pattern) ([]Match, error)` |
+| search | [`internal/search`](internal/search) | Candidate retrieval + verify → line matches | `Match`; `Literal(ctx, ix, q) ([]Match, error)`; `Regex(ctx, ix, pattern) ([]Match, error)` |
 | diskstore | [`internal/diskstore`](internal/diskstore) | Persist/reload the index; mmap postings; the deduped served format + shared content store | `Save(ix, path)`; `Load(path)`; `LoadMmap(path) (*index.Index, io.Closer, error)`; `LoadBlobs`; `SaveDeduped`, `LoadMmapDeduped`, `LoadBlobsDeduped`, `IsDeduped`; `ContentStoreWriter`, `NewContentStoreWriter`, `ContentStore`, `OpenContentStore`, `ContentStoreName` |
 | blobstore | [`internal/blobstore`](internal/blobstore) | Global content-addressable store (CAS): each unique blob stored once corpus-wide (cross-shard dedup) + per-blob delta refresh + deduped served export | `Store`, `Open`, `(*Store) Has/Put/Get/Len/BytesStored/SHAs/Close`; `BlobManifest`, `RepoBlobs`, `Stats`, `WriteBlobManifest`, `LoadBlobManifest`; `BuildCAS`, `RefreshCAS`, `DeltaStats`, `ExportShardDir`, `ExportDedupedShardDir` |
 | tokenindex | [`internal/tokenindex`](internal/tokenindex) | Persistent inverted index of BM25 term stats | `TokenIndex`; `Build(ix)`; `Tokenize(text)`; `NumDocs/AvgDocLen/DocLen/DocFreq/TermFreq`; `Save`, `Load` |
 | embed | [`internal/embed`](internal/embed) | Dense arm: chunk → vector → cosine search | `Vector`, `Embedder`; `HTTPEmbedder`, `NewHTTPEmbedder`; `ONNXEmbedder`, `NewONNXEmbedder`, `NewONNXEmbedderFromFiles` (real only under `-tags onnx`; a no-op stub otherwise); `Chunk`, `ChunkBlob`; `Store`, `BuildStore`, `Hit`, `(*Store) Search/Save/Len/Dim`; `LoadStore` |
 | rank | [`internal/rank`](internal/rank) | Fuse lexical + dense + symbol + path arms via RRF | `RankedResult`, `LineSpan`; `Config`; `Ranker`, `New`, `(*Ranker) Rank/SetSymbols/SetDense/UseTokenCandidates` |
 | contextwin | [`internal/contextwin`](internal/contextwin) | Assemble ranked results into token-budgeted blocks | `ContextBlock`, `ContextWindow`, `Options`; `Assemble(ix, results, opts) ContextWindow` |
-| symbol | [`internal/symbol`](internal/symbol) | Polyglot syntactic symbol layer for block scoping + the symbol-name arm | `Symbol`, `Kind`, `Index`, `NewIndex`, `Enclosing`, `EnclosingBytesFunc`; `Extractor`, `GoExtractor`, `CSharpExtractor`, `TSExtractor`, `SQLExtractor`, `CFExtractor`, `ExtractorForPath`, `Build`, `BuildMulti`; `Save`, `Load` |
+| symbol | [`internal/symbol`](internal/symbol) | Polyglot syntactic symbol layer for block scoping + the symbol-name arm | `Symbol`, `Kind`, `Role`, `Occurrence`, `Ref`, `Index`, `NewIndex`, `Enclosing`, `EnclosingBytesFunc`, `(*Index) References/Definitions`; `Extractor`, `GoExtractor`, `CSharpExtractor`, `TSExtractor`, `SQLExtractor`, `CFExtractor`, `ExtractorForPath`, `Build`, `BuildMulti`; `Save`, `Load` |
 | eval | [`internal/eval`](internal/eval) | IR-metrics + ranker evaluation harness | `GoldQuery`, `NewBinaryGold`; `RecallAtK`, `PrecisionAtK`, `MRR`, `NDCGAtK`; `Runner`, `NewRunner`, `Evaluate`, `Report`, `QueryReport`; `BuildIndexFromCorpus`, `BuildIndexFromFiles` |
 | parity | [`internal/parity`](internal/parity) | Full-corpus exact-match retrieval parity harness + shard-level freshness | `Config`, `RunConfig`, `Run`; `Build`, `Built`, `FileTable`, `DefaultShardBytes`; `Generate`, `Battery`, `Query`, `Bucket`; `QueryResult`, `Verdict`; `WriteReport`, `ReportMeta`; `Manifest`, `ShardManifest`, `RepoHead`, `WriteManifest`, `LoadManifest`, `DetectChanges`, `Changes`, `Rebuild` |
 | server | [`internal/server`](internal/server) | Warm multi-shard serving spine: mmap'd retrieval + ranked agent context | `Corpus`, `Open`, `(*Corpus) Regex/Literal/NumShards/NumBlobs/Close`; `RankCorpus`, `RankConfig`, `OpenRank`, `(*RankCorpus) SearchContext`; `BuildSidecars` |
@@ -55,7 +56,7 @@ All library code lives under `internal/`; executables under `cmd/`.
 | moedex | [`cmd/moedex`](cmd/moedex) | CLI: index one repo, run a literal/regex query | — |
 | moedex-mcp | [`cmd/moedex-mcp`](cmd/moedex-mcp) | Single-repo MCP server binary | — |
 | moedex-serve | [`cmd/moedex-serve`](cmd/moedex-serve) | Warm retrieval daemon over a prebuilt shard dir: `-http` retrieval API, `-q` one-shot, `-mcp` ranked context | — |
-| moedex-index | [`cmd/moedex-index`](cmd/moedex-index) | Offline shard-dir builder/freshness tool: `build` / `check` / `refresh`, plus the CAS commands `cas-build` / `cas-refresh` / `cas-export` | — |
+| moedex-index | [`cmd/moedex-index`](cmd/moedex-index) | Offline shard-dir builder/freshness tool: `build` / `check` / `refresh`, plus the CAS commands `cas-build` / `cas-refresh` / `cas-export` / `cas-compact` | — |
 | scale | [`cmd/scale`](cmd/scale) | Index many repos, report size/throughput/mmap memory | — |
 | moedex-parity | [`cmd/moedex-parity`](cmd/moedex-parity) | Full-corpus parity gate: build + battery + oracles + `PARITY-REPORT.md`, non-zero exit on failure | — |
 | moedex-corpus | [`cmd/moedex-corpus`](cmd/moedex-corpus) | Corpus setup + freshness CLI: `doctor` / `clone` / `sync` (`-reindex`) / `groups`, scoped to gitlab.tcdevops.com | — |
@@ -167,11 +168,13 @@ extraction.
 [`contextwin.Assemble`](internal/contextwin/contextwin.go) expands each span into a
 block, merges overlapping/touching blocks within a file, walks results best-first
 (score desc, then originating order, then path, then start line — fully
-deterministic), and emits blocks while the running token estimate
-(`ceil(len(text)/4)`) stays within budget (`DefaultTokenBudget = 8000`). The first
-block is always emitted even if it alone exceeds budget; any later skip sets
-`Truncated`. The MCP layer renders the window as text under
-`path:start-end (score)` headers.
+deterministic), and packs blocks under the token budget
+(`ceil(len(text)/4)` per block, `DefaultTokenBudget = 8000`). The first block is
+always emitted even if it alone exceeds budget; after that, a block that would
+push the running total over budget is skipped (not a break) so a later, smaller,
+lower-scored block still gets a chance to fit in the remainder — maximizing
+budget use rather than emitting a strict score-prefix. Any skip sets `Truncated`.
+The MCP layer renders the window as text under `path:start-end (score)` headers.
 
 ---
 
@@ -187,7 +190,7 @@ code that embodies them; read the ADR for the alternatives weighed and the numbe
 | Necessary-condition regex→trigram (Cox) reduction; ripgrep parity, never under-approximate | `internal/query`, `internal/search`, `internal/parity` | [0003](docs/adr/0003-cox-reduction-ripgrep-parity.md) |
 | Content addressing by git blob SHA — global dedup, per-blob delta, deduped served format | `internal/index`, `internal/blobstore`, `internal/diskstore` | [0004](docs/adr/0004-content-addressable-blob-store.md) |
 | mmap'd compact (varint-delta) postings — postings off-heap | `internal/index/codec.go`, `internal/diskstore` | [0005](docs/adr/0005-mmap-compact-postings.md) |
-| Multi-arm hybrid ranking fused via RRF (not a learned reranker) | `internal/rank` | [0006](docs/adr/0006-rrf-hybrid-ranking.md) |
+| Multi-arm hybrid ranking fused via RRF by default; an optional post-fusion linear-reranker mode exists but is off by default | `internal/rank` | [0006](docs/adr/0006-rrf-hybrid-ranking.md) |
 | Optional dense arm — zero-dep default (ONNX behind `-tags onnx` / local HTTP) | `internal/embed` | [0007](docs/adr/0007-optional-dense-arm.md) |
 | Polyglot symbol layer as a precomputed sidecar (not tree-sitter in-binary) | `internal/symbol` | [0008](docs/adr/0008-polyglot-symbol-sidecar.md) |
 | Agent-first context API — token-budgeted, deduped, symbol-scoped windows over MCP | `internal/contextwin`, `internal/mcp` | [0009](docs/adr/0009-agent-context-api.md) |
@@ -210,7 +213,7 @@ All binary sidecar/store formats are little-endian and round-trippable.
 | CAS blob store | `MOEBLOB1` (v1) | [`blobstore`](internal/blobstore/blobstore.go) | Two files. `blobs.pack`: append-only, one record per **unique** blob (`shaLen`+sha, `contentLen`+content) — each unique content stored once for the whole corpus. `blobs.idx`: 32-byte header (magic, version, reserved, numBlobs, packBytes) then per blob a directory entry (sha, packOff, packLen, contentLen), written atomically (temp+rename) only after the pack is fsynced, so a crash never indexes non-durable bytes. The SHA is an opaque variable-length key (SHA-1 today, SHA-256-ready). |
 | Token index | `TKI1` (v1) | [`tokenindex/codec.go`](internal/tokenindex/codec.go) | 4-byte magic + version, then the BM25 term statistics; `Save`/`Load` round-trip them. |
 | Embedding store | `MDXE` (v1) | [`embed/codec.go`](internal/embed/codec.go) | 4-byte magic, version, dim, count; then `count` chunk records (blob, startLine/endLine as uint32, startByte/endByte as uint64); then `count` contiguous float32 vectors. |
-| Symbol sidecar | `SYM1` | [`symbol/codec.go`](internal/symbol/codec.go) | 4-byte magic, uvarint blob count; per blob: blobID, symCount, then per symbol the name, kind, and four byte offsets (nameStart/nameEnd/bodyStart/bodyEnd) — all uvarint. Holds symbols from every language extractor (Go/C#/TS/SQL/CFML), not just Go. |
+| Symbol sidecar | `SYM2` (legacy `SYM1` still readable) | [`symbol/codec.go`](internal/symbol/codec.go) | 4-byte magic, uvarint blob count; per blob: blobID, symCount, then per symbol the name, kind, and four byte offsets (nameStart/nameEnd/bodyStart/bodyEnd) — all uvarint. A second section (absent under the legacy `SYM1` magic) records per-blob reference occurrences (name, kind, role, start, end) so `References`/`Definitions` round-trip. Holds symbols from every language extractor (Go/C#/TS/SQL/CFML), not just Go. |
 
 The serving layer adds two JSON sidecars that are not part of the index codecs: a
 freshness `manifest.json` (`internal/parity/manifest.go` — repo→shard membership +
@@ -274,8 +277,10 @@ side ([`cmd/moedex-index`](cmd/moedex-index)) produces and refreshes that direct
 the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
 
 - **Retrieval corpus** ([`server.Corpus`](internal/server/corpus.go)). `Open` mmaps
-  every `*.idx` shard once (`diskstore.LoadMmap`) and holds the mappings for its
-  lifetime, so postings never enter the Go heap. `Regex`/`Literal` fan a per-shard
+  every `*.idx` shard once and holds the mappings for its lifetime, so postings
+  never enter the Go heap; each shard loads via `diskstore.LoadMmapDeduped`
+  (sharing a corpus-wide content-store mapping) for a deduped (`MOEDEX05`) shard
+  dir, or `diskstore.LoadMmap` for a legacy inlined-content shard. `Regex`/`Literal` fan a per-shard
   scan across all shards (bounded by `NumCPU`) and merge the results; because
   `search.Match` carries absolute/repo/relative paths, matches from independent
   shards merge by concatenation with no cross-shard blob-ID space to reconcile. This
@@ -289,7 +294,7 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
   over the whole corpus.
 - **Sidecar persistence.** `OpenRank` is **load-or-build-and-save** for all three
   ranking sidecars: the BM25 token index (default `corpus-tokens.tki`, `TKI1`), the
-  symbol index (default `corpus-symbols.sym`, `SYM1`), and (when an embedder is set)
+  symbol index (default `corpus-symbols.sym`, `SYM2`), and (when an embedder is set)
   the embedding store (`corpus-embeddings.store`, `MDXE`). Each is reused only if its
   `.meta` validator matches the current corpus fingerprint; otherwise it is rebuilt
   and re-persisted (best-effort — a failed cache write never fails a boot).
@@ -309,7 +314,8 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
 - **Daemon hardening** ([`cmd/moedex-serve`](cmd/moedex-serve)). The `-http` server
   defends a hostile network: optional **bearer auth** (`Authorization: Bearer`,
   enabled by `-auth-token` or `MOEDEX_AUTH_TOKEN`; `/healthz` and `/metrics` stay
-  open), a **loopback-default bind** when no token is set, optional **TLS**
+  open), an unconditional **loopback-default bind** (a bare host/port rewrites to
+  `127.0.0.1`, token or not), optional **TLS**
   (`-tls-cert`/`-tls-key`), structured logging via **`log/slog`** plus a `/metrics`
   endpoint, a panic-recovery + per-request-timeout middleware chain, and bounded
   `http.Server` read/write/idle timeouts. **SIGHUP** hot-swaps the served corpus (or
@@ -456,10 +462,13 @@ northstar and [`research/`](research):
   still shard-level (rebuilds whole affected shards), `cas-export` without `-deduped`
   still writes the inlined `MOEDEX03` bridge (kept as the proven default), and a
   delta-aware deduped re-export (append a changed repo's net-new content + rewrite only
-  affected shards, instead of re-exporting the whole dir) is not yet built. CAS pack
-  compaction/GC of blobs no longer referenced by any repo is also deferred (the
-  append-only pack grows monotonically; the blob manifest's referenced-set is the
-  liveness signal a future compactor needs).
+  affected shards, instead of re-exporting the whole dir) is not yet built.
+  **Compaction-GC is built**, though, as a separate cheap in-place reclaim pass:
+  `moedex-index cas-compact` (`internal/blobstore/compact.go`'s `CompactCAS` and
+  `CompactDedupedShardDir`) rewrites the CAS pack and/or the deduped `blobs.dat`
+  from their own live entries — keyed off the blob manifest's / live shards'
+  referenced-set — to drop content no repo references anymore, without
+  re-ingesting from git or re-exporting from the CAS.
 - **Distribution / sharding** — sharded on disk and served as a multi-shard corpus,
   but still **single-node**: there is no cross-node distribution or replication.
 - **Native SIMD intersection/verification kernel** — see
@@ -479,8 +488,12 @@ northstar and [`research/`](research):
   SIMD prefilter remain deferred. The engine ships pure Go by default.
 - **FM-index compressed cold tier** — see
   [`research/fm-index-cold-tier.md`](research/fm-index-cold-tier.md).
-- **Learned reranker** — RRF over the four arms is the current fusion; see
-  [`research/learned-reranker.md`](research/learned-reranker.md).
+- **Learned reranker** — RRF over the four arms is the current *default* fusion;
+  see [`research/learned-reranker.md`](research/learned-reranker.md). A linear
+  post-fusion reranker mode is already built (`internal/rank/reranker.go`'s
+  `Fusion`/`LinearReranker`, wired via `Ranker.SetFusion`/`SetReranker`) but no
+  production caller opts into `FusionLinear` yet, and a GBDT upgrade remains
+  deferred behind a future build tag.
 - **Deeper / semantic symbols** — the polyglot extractors (Go/C#/TS/SQL/CFML) are
   syntactic and best-effort (the non-Go ones are regex/byte scanners, not full
   parsers; see [`research/symbol-layer.md`](research/symbol-layer.md)). Tree-sitter
@@ -575,6 +588,7 @@ The content-addressable family operates the CAS (`internal/blobstore`):
 moedex-index cas-build   -corpus ROOT -cas-dir DIR
 moedex-index cas-refresh -cas-dir DIR [-corpus ROOT]
 moedex-index cas-export  -cas-dir DIR -shard-dir OUT [-shard-bytes N] [-force] [-deduped]
+moedex-index cas-compact [-cas-dir DIR] [-shard-dir DIR]
 ```
 
 `cas-build` ingests every repo into a global content-addressed blob store, storing
@@ -592,7 +606,11 @@ content-less `MOEDEX05` shards plus one shared `blobs.dat` content store, so eac
 unique blob's content is stored once corpus-wide (footprint ≈ the CAS `StoredBytes`)
 rather than re-inlined per shard. `server.Open`/`OpenRank` auto-detect the shared
 store and resolve content from it — returning byte-identical `(file,line)` matches
-(parity-validated against the direct build and ripgrep).
+(parity-validated against the direct build and ripgrep). `cas-compact` reclaims
+dead (unreferenced) content in place — rewriting the CAS pack (`-cas-dir`) and/or
+the deduped served store (`-shard-dir`) from their own live entries, keeping only
+blobs the manifest/live shards still reference — without re-ingesting from git or
+re-exporting from the CAS; pass either or both flags.
 
 ### `moedex-serve` — warm retrieval / context daemon
 

@@ -54,6 +54,10 @@ type PostingProvider interface {
 // Restore rebuilds an index from blob data and a posting map without
 // re-tokenizing. blobs[i] must be the blob with ID i (the IDs referenced by
 // postings). Intended for persistence loaders.
+//
+// Restore takes ownership of each BlobData's Content and Files: they are
+// aliased directly into the index, not copied (unlike AddFile, which
+// defensively copies). Callers must not mutate them after the call.
 func Restore(blobs []BlobData, postings map[trigram.Trigram][]Posting) *Index {
 	ix := restoreBlobs(blobs)
 	ix.postings = postings
@@ -61,8 +65,10 @@ func Restore(blobs []BlobData, postings map[trigram.Trigram][]Posting) *Index {
 }
 
 // RestoreLazy rebuilds an index whose postings are served on demand by pp.
-// Blob content and metadata are materialized as in Restore; only the postings
-// stay lazy, which is what keeps a loaded index's heap near content size.
+// Blob content and metadata are materialized as in Restore (same
+// take-ownership, no-copy contract on BlobData.Content/Files); only the
+// postings stay lazy, which is what keeps a loaded index's heap near content
+// size.
 //
 // Membership: the resulting index's IndexedGram defers to pp when pp implements
 // gramMember (a selective shard's provider); otherwise the index is treated as

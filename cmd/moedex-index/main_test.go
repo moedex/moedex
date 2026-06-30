@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"moedex/internal/ingest"
@@ -152,6 +153,51 @@ func TestMoedexIndexBuildProducesSidecars(t *testing.T) {
 	if !rc2.TokensFromCache() || !rc2.SymbolsFromCache() {
 		t.Errorf("post-refresh daemon did not find warm sidecars: tokens=%v symbols=%v",
 			rc2.TokensFromCache(), rc2.SymbolsFromCache())
+	}
+}
+
+// TestPrepareDirRejectsUnreadableNonEmptyDirWithoutForce guards F-059:
+// prepareDir must not silently bypass the -force guard when os.ReadDir fails
+// for a reason other than the dir not existing (e.g. permission denied). The
+// old code only acted on err == nil, so a permission error fell through
+// straight to os.MkdirAll, which is a silent no-op success for a dir that
+// already exists — discarding the -force guard's intent for a dir whose
+// contents could not even be inspected.
+func TestPrepareDirRejectsUnreadableNonEmptyDirWithoutForce(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("permission bits not enforced the same way on windows")
+	}
+	if os.Geteuid() == 0 {
+		t.Skip("root bypasses directory permission checks")
+	}
+	root := t.TempDir()
+	dir := filepath.Join(root, "shard-dir")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "child.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(dir, 0o755) // let t.TempDir() clean up afterward
+
+	if err := prepareDir(dir, false); err == nil {
+		t.Fatal("prepareDir returned nil for an unreadable non-empty dir; the -force guard was silently bypassed")
+	}
+}
+
+// TestPrepareDirCreatesMissingDir covers the legitimate not-exist path still
+// works after distinguishing it from other ReadDir errors.
+func TestPrepareDirCreatesMissingDir(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "fresh", "shard-dir")
+	if err := prepareDir(dir, false); err != nil {
+		t.Fatalf("prepareDir on missing dir: %v", err)
+	}
+	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
+		t.Fatalf("prepareDir did not create %s: %v", dir, err)
 	}
 }
 

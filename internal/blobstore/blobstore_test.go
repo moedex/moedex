@@ -129,6 +129,48 @@ func TestStoreRoundTrip(t *testing.T) {
 	}
 }
 
+// TestWriteFileDurable locks in the shared atomic-write helper that writeIndex
+// and WriteBlobManifest both use: temp-file write, rename into place, no leftover
+// temp file, and replacement (not corruption) of an existing destination. It
+// can't observe the fsync syscalls themselves (no crash injection in a unit
+// test), but it pins the surrounding contract so the durability fix can't
+// regress the rename semantics it depends on.
+func TestWriteFileDurable(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "thing.dat")
+
+	if err := writeFileDurable(path, []byte("v1"), 0o644); err != nil {
+		t.Fatalf("first write: %v", err)
+	}
+	if got, err := os.ReadFile(path); err != nil || string(got) != "v1" {
+		t.Fatalf("content after first write = %q, err %v", got, err)
+	}
+	if _, err := os.Stat(path + ".tmp"); !os.IsNotExist(err) {
+		t.Fatalf("temp file left behind after first write: err=%v", err)
+	}
+
+	// A second write must atomically replace the first (rename-over-existing).
+	if err := writeFileDurable(path, []byte("v2-longer"), 0o644); err != nil {
+		t.Fatalf("second write: %v", err)
+	}
+	if got, err := os.ReadFile(path); err != nil || string(got) != "v2-longer" {
+		t.Fatalf("content after second write = %q, err %v", got, err)
+	}
+	if _, err := os.Stat(path + ".tmp"); !os.IsNotExist(err) {
+		t.Fatalf("temp file left behind after second write: err=%v", err)
+	}
+
+	// A write into a missing directory must fail cleanly and create nothing at
+	// the destination.
+	bad := filepath.Join(dir, "missing-subdir", "thing.dat")
+	if err := writeFileDurable(bad, []byte("x"), 0o644); err == nil {
+		t.Fatal("write into missing directory: want error, got nil")
+	}
+	if _, err := os.Stat(bad); !os.IsNotExist(err) {
+		t.Fatalf("destination created despite write error: err=%v", err)
+	}
+}
+
 // --- B. GLOBAL DEDUP (headline win) --------------------------------------
 
 // TestGlobalCrossShardDedup proves the cross-shard dedup the per-shard model
@@ -948,6 +990,65 @@ func TestOpenRecoversTruncatedPack(t *testing.T) {
 	added, err := s2.Put("sha2", []byte("after recovery\n"))
 	if err != nil || !added {
 		t.Fatalf("Put after recovery: added=%v err=%v", added, err)
+	}
+}
+
+// --- regression: Get must not swallow a short-read io.EOF -----------------
+
+// TestGetTruncatedPackTailErrorsInsteadOfPartialContent is the regression for a
+// bug in Get: `if _, err := s.packF.ReadAt(buf, e.packOff); err != nil && err !=
+// io.EOF` treated io.EOF — which ReadAt returns precisely when it reads FEWER
+// bytes than requested — as a successful read, decoding a zero-padded partial
+// buffer instead of falling through to getViaReopen's error path. A blob whose
+// record straddles a truncated/corrupted pack tail must return an error, never
+// truncated or garbage content (parity forbids silently-wrong content).
+//
+// s.packF is normally write-only (O_WRONLY), so ReadAt on it fails with EBADF
+// rather than io.EOF on POSIX — masking the bug for the live append handle in
+// practice. This test swaps in a read-capable handle on the SAME (truncated)
+// on-disk pack to force the exact short-read-io.EOF condition the buggy branch
+// was meant to special-case, so the bug is exercised deterministically.
+func TestGetTruncatedPackTailErrorsInsteadOfPartialContent(t *testing.T) {
+	dir := t.TempDir()
+	s, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := bytes.Repeat([]byte("X"), 200)
+	if _, err := s.Put("sha-trunc", content); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Flush(); err != nil {
+		t.Fatal(err)
+	}
+
+	e := s.byID["sha-trunc"]
+	packPath := filepath.Join(dir, packName)
+
+	// Cut the last 50 bytes off the record's tail directly on disk, simulating a
+	// crash/corruption that leaves a short pack tail mid-record.
+	const cut = 50
+	if err := os.Truncate(packPath, e.packOff+e.packLen-cut); err != nil {
+		t.Fatal(err)
+	}
+
+	// Swap the live append handle for a read-capable one on the same truncated
+	// file, so ReadAt actually attempts the read and returns a genuine short-read
+	// io.EOF (what the buggy branch checked for) instead of EBADF.
+	rw, err := os.OpenFile(packPath, os.O_RDWR, 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	orig := s.packF
+	s.packF = rw
+	t.Cleanup(func() {
+		rw.Close()
+		orig.Close()
+	})
+
+	got, err := s.Get("sha-trunc")
+	if err == nil {
+		t.Fatalf("Get on a truncated pack record returned no error; got %d bytes %q (want an error, not partial/garbage content)", len(got), got)
 	}
 }
 
