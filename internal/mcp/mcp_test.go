@@ -185,6 +185,96 @@ func TestToolsCallStructuredFormat(t *testing.T) {
 	}
 }
 
+func TestStructuredBlockCarriesPathWithNamespace(t *testing.T) {
+	// The corpus is laid out as <root>/<path_with_namespace>, so a block's
+	// abs_path = <root>/<namespace>/<rel_path>. With the corpus root known, the
+	// emitted structured block must carry the FULL namespace (so an agent can
+	// clone the repo), while keeping the leaf `repo` field for back-compat.
+	root := "/corpus/TCGitlab"
+	fs := &fakeSearcher{win: contextwin.ContextWindow{
+		Blocks: []contextwin.ContextBlock{{
+			Blob:    7,
+			Repo:    "TC.MarketplaceApi", // leaf only (the bug's symptom)
+			RelPath: "src/Api/Handler.cs",
+			AbsPath: "/corpus/TCGitlab/Services.Domains/TC.MarketplaceApi/src/Api/Handler.cs",
+			Text:    "class Handler {}\n",
+		}},
+	}}
+	s := NewServer(fs, WithCorpusRoot(root))
+	resps := drive(t, s, map[string]interface{}{
+		"jsonrpc": "2.0", "id": 9, "method": "tools/call",
+		"params": map[string]interface{}{
+			"name":      "search_context",
+			"arguments": map[string]interface{}{"query": "needle", "format": "structured"},
+		},
+	})
+	res := resps[0].Result.(map[string]interface{})
+	sc := res["structuredContent"].(map[string]interface{})
+	blk := sc["blocks"].([]interface{})[0].(map[string]interface{})
+
+	if got := blk["repo"].(string); got != "TC.MarketplaceApi" {
+		t.Errorf("repo (leaf, back-compat) = %q, want %q", got, "TC.MarketplaceApi")
+	}
+	pwn, ok := blk["path_with_namespace"].(string)
+	if !ok {
+		t.Fatalf("structured block missing path_with_namespace field; block=%+v", blk)
+	}
+	if pwn != "Services.Domains/TC.MarketplaceApi" {
+		t.Errorf("path_with_namespace = %q, want %q", pwn, "Services.Domains/TC.MarketplaceApi")
+	}
+}
+
+func TestStructuredBlockNamespaceOmittedWhenUnderivable(t *testing.T) {
+	// No corpus root configured (e.g. single-repo moedex-mcp): the namespace can't
+	// be derived, so the field must be empty/omitted, never fabricated.
+	fs := &fakeSearcher{win: contextwin.ContextWindow{
+		Blocks: []contextwin.ContextBlock{{
+			Repo: "r", RelPath: "a.go", AbsPath: "/somewhere/a.go", Text: "x\n",
+		}},
+	}}
+	s := NewServer(fs) // no WithCorpusRoot
+	resps := drive(t, s, map[string]interface{}{
+		"jsonrpc": "2.0", "id": 10, "method": "tools/call",
+		"params": map[string]interface{}{
+			"name":      "search_context",
+			"arguments": map[string]interface{}{"query": "x", "format": "structured"},
+		},
+	})
+	res := resps[0].Result.(map[string]interface{})
+	sc := res["structuredContent"].(map[string]interface{})
+	blk := sc["blocks"].([]interface{})[0].(map[string]interface{})
+	if pwn, ok := blk["path_with_namespace"]; ok && pwn.(string) != "" {
+		t.Errorf("path_with_namespace should be empty/omitted when underivable, got %q", pwn)
+	}
+}
+
+func TestDeriveNamespace(t *testing.T) {
+	cases := []struct {
+		name, root, abs, rel, want string
+	}{
+		{"multi-level namespace", "/c/TCGitlab",
+			"/c/TCGitlab/Services.Domains/TC.MarketplaceApi/src/Foo.cs", "src/Foo.cs",
+			"Services.Domains/TC.MarketplaceApi"},
+		{"single-level namespace", "/c/TCGitlab",
+			"/c/TCGitlab/Solo/main.go", "main.go", "Solo"},
+		{"trailing-slash root tolerated", "/c/TCGitlab/",
+			"/c/TCGitlab/Grp/Repo/x.go", "x.go", "Grp/Repo"},
+		{"abs not under root -> empty", "/c/TCGitlab",
+			"/other/Repo/x.go", "x.go", ""},
+		{"no root -> empty", "",
+			"/c/TCGitlab/Grp/Repo/x.go", "x.go", ""},
+		{"rel not a suffix of abs -> empty", "/c/TCGitlab",
+			"/c/TCGitlab/Grp/Repo/x.go", "totally/different.go", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := deriveNamespace(c.abs, c.rel, c.root); got != c.want {
+				t.Errorf("deriveNamespace(%q, %q, %q) = %q, want %q", c.abs, c.rel, c.root, got, c.want)
+			}
+		})
+	}
+}
+
 func TestUnknownFormatIsToolError(t *testing.T) {
 	s := NewServer(&fakeSearcher{})
 	resps := drive(t, s, map[string]interface{}{

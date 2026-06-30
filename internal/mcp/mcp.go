@@ -66,6 +66,13 @@ type Server struct {
 	maxRequestBytes int
 	maxQueryBytes   int
 
+	// corpusRoot is the directory the corpus was built under (cfg.Root), if known.
+	// The mirror is laid out as <corpusRoot>/<path_with_namespace>, so a block's
+	// abs_path lets us recover the repo's full namespace for the structured block.
+	// Empty when unknown (e.g. single-repo serving), which omits the field rather
+	// than fabricating one.
+	corpusRoot string
+
 	// extraTools are additional tools registered alongside the built-in
 	// search_context (e.g. the LSP navigation tools the warm daemon exposes under
 	// -tags lsp). order preserves tools/list ordering; byName dispatches calls.
@@ -149,6 +156,17 @@ func WithMaxQueryBytes(n int) Option {
 		if n > 0 {
 			s.maxQueryBytes = n
 		}
+	}
+}
+
+// WithCorpusRoot tells the server the directory the corpus was built under, so
+// the structured block can carry each hit's full path_with_namespace (the corpus
+// is laid out as <root>/<path_with_namespace>). An empty value leaves the field
+// omitted — never fabricated. Used by the warm daemon / offline indexer, which
+// recover root from the served shard dir's manifest.
+func WithCorpusRoot(root string) Option {
+	return func(s *Server) {
+		s.corpusRoot = root
 	}
 }
 
@@ -474,7 +492,7 @@ func (s *Server) callTool(ctx context.Context, raw json.RawMessage) (map[string]
 		return nil, err
 	}
 	if p.Arguments.Format == "structured" {
-		return structuredResult(win), nil
+		return structuredResult(win, s.corpusRoot), nil
 	}
 	return textResult(formatWindow(win), false), nil
 }
@@ -523,19 +541,51 @@ type structuredSummary struct {
 }
 
 type structuredBlock struct {
-	Blob      uint64  `json:"blob"`
-	Repo      string  `json:"repo"`
-	RelPath   string  `json:"rel_path"`
-	AbsPath   string  `json:"abs_path"`
-	StartLine int     `json:"start_line"`
-	EndLine   int     `json:"end_line"`
-	Score     float64 `json:"score"`
-	Lexical   float64 `json:"lexical"`
-	Dense     float64 `json:"dense"` // 0 when the dense arm did not fire (treat as "arm absent")
-	Text      string  `json:"text"`
+	Blob uint64 `json:"blob"`
+	Repo string `json:"repo"`
+	// PathWithNamespace is the repo's full GitLab namespace path (e.g.
+	// "Services.Domains/TC.MarketplaceApi"), recovered from abs_path relative to
+	// the corpus root. It is what an agent needs to actually clone the repo; Repo
+	// (the bare leaf) is kept for back-compat. Omitted when the corpus root is
+	// unknown or abs_path doesn't fall under it (never fabricated).
+	PathWithNamespace string  `json:"path_with_namespace,omitempty"`
+	RelPath           string  `json:"rel_path"`
+	AbsPath           string  `json:"abs_path"`
+	StartLine         int     `json:"start_line"`
+	EndLine           int     `json:"end_line"`
+	Score             float64 `json:"score"`
+	Lexical           float64 `json:"lexical"`
+	Dense             float64 `json:"dense"` // 0 when the dense arm did not fire (treat as "arm absent")
+	Text              string  `json:"text"`
 }
 
-func newStructuredWindow(win contextwin.ContextWindow) structuredWindow {
+// deriveNamespace recovers a repo's full path_with_namespace from a block's
+// absolute path. The corpus mirror is laid out as <root>/<path_with_namespace>,
+// and abs = <root>/<path_with_namespace>/<rel>, so stripping the rel suffix from
+// abs yields the repo dir and stripping the root prefix yields the namespace. It
+// returns "" (field omitted) whenever the namespace cannot be derived honestly:
+// no root, abs not under root, or rel not a suffix of abs. Never fabricates.
+func deriveNamespace(abs, rel, root string) string {
+	if root == "" || abs == "" {
+		return ""
+	}
+	repoDir := strings.TrimSuffix(abs, rel)
+	if repoDir == abs {
+		return "" // rel was not a suffix of abs — can't trust the split
+	}
+	repoDir = strings.TrimRight(repoDir, "/")
+	root = strings.TrimRight(root, "/")
+	if repoDir == root {
+		return "" // the repo IS the root (no namespace level)
+	}
+	prefix := root + "/"
+	if !strings.HasPrefix(repoDir, prefix) {
+		return "" // abs path does not fall under the corpus root
+	}
+	return strings.TrimPrefix(repoDir, prefix)
+}
+
+func newStructuredWindow(win contextwin.ContextWindow, corpusRoot string) structuredWindow {
 	sw := structuredWindow{
 		Summary: structuredSummary{
 			Blocks:        len(win.Blocks),
@@ -546,16 +596,17 @@ func newStructuredWindow(win contextwin.ContextWindow) structuredWindow {
 	}
 	for _, blk := range win.Blocks {
 		sw.Blocks = append(sw.Blocks, structuredBlock{
-			Blob:      blk.Blob,
-			Repo:      blk.Repo,
-			RelPath:   blk.RelPath,
-			AbsPath:   blk.AbsPath,
-			StartLine: blk.StartLine,
-			EndLine:   blk.EndLine,
-			Score:     blk.Score,
-			Lexical:   blk.Lexical,
-			Dense:     blk.Dense,
-			Text:      blk.Text,
+			Blob:              blk.Blob,
+			Repo:              blk.Repo,
+			PathWithNamespace: deriveNamespace(blk.AbsPath, blk.RelPath, corpusRoot),
+			RelPath:           blk.RelPath,
+			AbsPath:           blk.AbsPath,
+			StartLine:         blk.StartLine,
+			EndLine:           blk.EndLine,
+			Score:             blk.Score,
+			Lexical:           blk.Lexical,
+			Dense:             blk.Dense,
+			Text:              blk.Text,
 		})
 	}
 	return sw
@@ -565,7 +616,7 @@ func newStructuredWindow(win contextwin.ContextWindow) structuredWindow {
 // short text fallback (content) and the typed payload (structuredContent), per
 // ADR 0015. structuredContent is the machine channel; the text content keeps MCP
 // clients that ignore structuredContent functional.
-func structuredResult(win contextwin.ContextWindow) map[string]interface{} {
+func structuredResult(win contextwin.ContextWindow, corpusRoot string) map[string]interface{} {
 	summary := fmt.Sprintf("%d context block(s), ~%d tokens", len(win.Blocks), win.TokenEstimate)
 	if win.Truncated {
 		summary += " (truncated to fit budget)"
@@ -574,7 +625,7 @@ func structuredResult(win contextwin.ContextWindow) map[string]interface{} {
 		"content": []interface{}{
 			map[string]interface{}{"type": "text", "text": summary},
 		},
-		"structuredContent": newStructuredWindow(win),
+		"structuredContent": newStructuredWindow(win, corpusRoot),
 		"isError":           false,
 	}
 }

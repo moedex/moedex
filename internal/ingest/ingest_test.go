@@ -123,6 +123,50 @@ func TestRepoStripsBOM(t *testing.T) {
 	}
 }
 
+func TestRepoSkipsVCSInternalPaths(t *testing.T) {
+	// A repo that has committed VCS-internal junk into git (e.g. an SVN working
+	// copy's pristine base-file cache checked into a git mirror) must NOT have
+	// those files ingested: a 40-hex .svn-base blob is not searchable code.
+	// git ls-files only filters out the OUTER .git/ dir; nested VCS metadata that
+	// was actually committed (.svn/, an inner .git/, .hg/, .bzr/) still appears,
+	// so ingest must drop any path with such a segment.
+	dir := gitRepo(t, map[string][]byte{
+		// SVN pristine base-file cache — the exact symptom.
+		".svn/pristine/ab/abcdef0123456789abcdef0123456789abcdef01.svn-base": []byte("0123456789abcdef0123456789abcdef01234567"),
+		".svn/entries":               []byte("svn metadata"),
+		"vendor/sub/.git/config":     []byte("[core]\n"), // committed nested git dir
+		"nested/.hg/store/data.i":    []byte("hg internal"),
+		"old/.bzr/checkout/dirstate": []byte("bzr internal"),
+		// Legitimately-named files that merely CONTAIN a vcs token as a substring
+		// (not a path segment) must be kept — no over-matching.
+		"config/my.git.config": []byte("keep me"),
+		"docs/.svnotes.md":     []byte("keep me too"),
+		"src/main.go":          []byte("package main\n"),
+	})
+
+	files, err := Repo("r", dir)
+	if err != nil {
+		t.Fatalf("Repo: %v", err)
+	}
+	m := byRel(files)
+	for _, junk := range []string{
+		".svn/pristine/ab/abcdef0123456789abcdef0123456789abcdef01.svn-base",
+		".svn/entries",
+		"vendor/sub/.git/config",
+		"nested/.hg/store/data.i",
+		"old/.bzr/checkout/dirstate",
+	} {
+		if _, ok := m[junk]; ok {
+			t.Errorf("VCS-internal path should be skipped: %q", junk)
+		}
+	}
+	for _, keep := range []string{"config/my.git.config", "docs/.svnotes.md", "src/main.go"} {
+		if _, ok := m[keep]; !ok {
+			t.Errorf("legitimate path should be kept: %q", keep)
+		}
+	}
+}
+
 func TestRepoSkipsFileMissingFromWorktree(t *testing.T) {
 	dir := gitRepo(t, map[string][]byte{
 		"keep.txt": []byte("kept"),

@@ -14,6 +14,7 @@ import (
 	"moedex/internal/embed"
 	"moedex/internal/index"
 	"moedex/internal/mcp"
+	"moedex/internal/parity"
 	"moedex/internal/rank"
 	"moedex/internal/symbol"
 	"moedex/internal/tokenindex"
@@ -72,7 +73,17 @@ type RankCorpus struct {
 	tokenCached bool                    // true when the token index was loaded from a persisted sidecar
 	symsCached  bool                    // true when the symbol index was loaded from a persisted sidecar
 	searcher    *mcp.IndexSearcher
+	// corpusRoot is the directory the corpus was built under, recovered from the
+	// shard dir's manifest.json (parity.Manifest.Root). Empty if the manifest is
+	// absent/unreadable. It lets the MCP layer emit each hit's full
+	// path_with_namespace (the mirror is laid out as <root>/<path_with_namespace>).
+	corpusRoot string
 }
+
+// CorpusRoot returns the directory the corpus was built under (from the shard
+// dir's manifest), or "" if it could not be determined. The MCP server uses it
+// (via mcp.WithCorpusRoot) to recover each hit's full path_with_namespace.
+func (rc *RankCorpus) CorpusRoot() string { return rc.corpusRoot }
 
 // Close releases the shared content store mmap (deduped dir) backing the corpus'
 // blob content. It is required for a deduped dir, where the unified index's blob
@@ -171,7 +182,19 @@ func OpenRank(ctx context.Context, dir string, cfg RankConfig) (*RankCorpus, err
 	searcher.SetEnclosingBytes(syms.EnclosingBytesFunc())
 
 	ok = true // hand cs ownership to the RankCorpus; the deferred close is now a no-op
-	return &RankCorpus{ix: ix, ti: ti, syms: syms, store: store, content: cs, denseCached: cached, tokenCached: tokenCached, symsCached: symsCached, searcher: searcher}, nil
+	return &RankCorpus{ix: ix, ti: ti, syms: syms, store: store, content: cs, denseCached: cached, tokenCached: tokenCached, symsCached: symsCached, searcher: searcher, corpusRoot: loadCorpusRoot(dir)}, nil
+}
+
+// loadCorpusRoot best-effort reads the corpus build root from the shard dir's
+// parity manifest (written by every build/export into the served dir). A missing
+// or unparseable manifest yields "" — never an error: the corpus serves fine
+// without it, the path_with_namespace field is simply omitted.
+func loadCorpusRoot(shardDir string) string {
+	m, err := parity.LoadManifest(filepath.Join(shardDir, parity.ManifestName))
+	if err != nil {
+		return ""
+	}
+	return m.Root
 }
 
 // loadUnified globs the "*.idx" shards under dir (sorted), concatenates their

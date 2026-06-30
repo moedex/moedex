@@ -291,7 +291,7 @@ func runMCP(shardDir string, topK int, embedKind, onnxRuntime string) error {
 
 	navtools, navClose := navTools()
 	defer navClose()
-	srv := mcp.NewServer(holder, mcp.WithTools(navtools...))
+	srv := mcp.NewServer(holder, mcp.WithTools(navtools...), mcp.WithCorpusRoot(rc.CorpusRoot()))
 	fmt.Fprintln(os.Stderr, "moedex-serve: MCP ready on stdio (SIGHUP to reload)")
 	return srv.Serve(ctx, os.Stdin, os.Stdout)
 }
@@ -352,7 +352,7 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 	if len(navtools) > 0 {
 		slog.Info("lsp navigation tools enabled", "count", len(navtools))
 	}
-	mcpSrv := mcp.NewServer(holder, mcp.WithTools(navtools...))
+	mcpSrv := mcp.NewServer(holder, mcp.WithTools(navtools...), mcp.WithCorpusRoot(rc.CorpusRoot()))
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

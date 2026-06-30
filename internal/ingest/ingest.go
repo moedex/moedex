@@ -23,6 +23,31 @@ type File struct {
 	Content []byte
 }
 
+// vcsInternalDirs are version-control metadata directory names whose contents
+// are never useful search context. A repo can have such a directory committed
+// into git (e.g. an SVN working copy mirrored into a git repo carries its
+// .svn/pristine/<2>/<40hex>.svn-base base-file cache as tracked blobs); git
+// ls-files only excludes the OUTER .git/, so these still reach ingest.
+var vcsInternalDirs = map[string]bool{
+	".git": true,
+	".svn": true,
+	".hg":  true,
+	".bzr": true,
+}
+
+// isVCSInternalPath reports whether rel (a forward-slash repo-relative path, as
+// git ls-files emits) has any path SEGMENT that names a VCS-internal directory.
+// It matches on segment boundaries, not bare substring, so a legitimately-named
+// file like "config/my.git.config" or "docs/.svnotes.md" is NOT dropped.
+func isVCSInternalPath(rel string) bool {
+	for _, seg := range strings.Split(rel, "/") {
+		if vcsInternalDirs[seg] {
+			return true
+		}
+	}
+	return false
+}
+
 // Head returns the git commit the repo at dir currently points at
 // (`git -C dir rev-parse HEAD`), trimmed of trailing whitespace. It is the
 // freshness key: re-indexing can be skipped for a repo whose HEAD is unchanged
@@ -61,6 +86,9 @@ func Repo(repoName, dir string) ([]File, error) {
 		}
 		sha := fields[1]
 		rel := string(entry[tab+1:])
+		if isVCSInternalPath(rel) {
+			continue // VCS-internal metadata committed into the tree — never search context
+		}
 		abs := filepath.Join(dir, rel)
 
 		content, err := os.ReadFile(abs)
