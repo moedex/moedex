@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand/v2"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -591,6 +592,82 @@ func (p *Pool) Implementations(ctx context.Context, at Pos) ([]Location, error) 
 		return nil, err
 	}
 	return nav.Implementations(ctx, at)
+}
+
+// DocumentSymbol is file-routed exactly like Definition/References/
+// Implementations above: it resolves (language, root) from the file's own
+// extension and creates that server on demand.
+func (p *Pool) DocumentSymbol(ctx context.Context, file string) ([]Symbol, error) {
+	p.nQueries.Add(1)
+	fileLang, root := workspaceRoot(file)
+	nav, err := p.NavigatorFor(ctx, p.routingLang(fileLang), root)
+	if err != nil {
+		return nil, err
+	}
+	return nav.DocumentSymbol(ctx, file)
+}
+
+// WorkspaceSymbol is the ADR 0018 root-routed name lookup: workspace/symbol has
+// no file to route by, so the caller supplies root directly.
+//
+// With lang set, it behaves like the file-routed queries above: the (lang,
+// root) server is created on demand if it isn't already live.
+//
+// With lang empty (the polyglot case), it merges every server ALREADY LIVE for
+// root across every language — it never spawns one purely to answer a name
+// search, so a cold root with no live server yet returns (nil, nil) rather
+// than fanning out to every registered language. This is deliberate "coverage
+// honesty" (ADR 0018): only languages whose server is up contribute, and a
+// caller that wants full multi-language coverage should have already warmed
+// the languages it cares about via a file-routed call. A live server that
+// errors mid-query is skipped rather than failing the whole merge, so one
+// flaky/dying peer never blanks out the others' results.
+func (p *Pool) WorkspaceSymbol(ctx context.Context, root, lang, query string) ([]Symbol, error) {
+	p.nQueries.Add(1)
+	if lang != "" {
+		nav, err := p.NavigatorFor(ctx, lang, root)
+		if err != nil {
+			return nil, err
+		}
+		return nav.WorkspaceSymbol(ctx, query)
+	}
+	var out []Symbol
+	for _, nav := range p.liveNavigatorsForRoot(root) {
+		syms, err := nav.WorkspaceSymbol(ctx, query)
+		if err != nil {
+			continue
+		}
+		out = append(out, syms...)
+	}
+	return out, nil
+}
+
+// liveNavigatorsForRoot returns every already-created, live pooled server for
+// root across all languages (keyFor's NUL separator makes a plain suffix match
+// exact — a lang value can never itself contain the separator). It never
+// creates a server and never blocks on an in-flight creation; both are
+// deliberately skipped so WorkspaceSymbol's polyglot merge only ever queries
+// servers that were already warm.
+func (p *Pool) liveNavigatorsForRoot(root string) []*LSP {
+	suffix := "\x00" + root
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	var out []*LSP
+	for k, ent := range p.entries {
+		if !strings.HasSuffix(k, suffix) {
+			continue
+		}
+		select {
+		case <-ent.ready:
+		default:
+			continue // in-flight creation — not live yet
+		}
+		if ent.err != nil || ent.nav == nil || !ent.nav.Alive() {
+			continue
+		}
+		out = append(out, ent.nav)
+	}
+	return out
 }
 
 // SetOverlay routes an in-memory live-buffer override to the server owning the

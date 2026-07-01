@@ -66,6 +66,22 @@ type Location struct {
 
 func (l Location) String() string { return l.Start.String() }
 
+// Symbol is a named, kind-tagged declaration returned by the name-based
+// navigation tools (ADR 0018: workspace/symbol and textDocument/documentSymbol)
+// — as opposed to the bare Location the position-based tools return. Kind is
+// the LSP SymbolKind spelled out as text (e.g. "Function", "Struct",
+// "Interface"), not the raw protocol integer.
+type Symbol struct {
+	Name string
+	Kind string
+	Loc  Location
+}
+
+// String is the ADR 0018 pinned text-result line format: name TAB kind TAB
+// file:line:col. find_symbol and symbols_overview render one Symbol per line
+// this way; Protostar's moedex-nav parser mirrors it.
+func (s Symbol) String() string { return s.Name + "\t" + s.Kind + "\t" + s.Loc.Start.String() }
+
 // Navigator is the type-resolved navigation surface. Every method takes a cursor
 // Pos and returns resolved Locations across the whole workspace (cross-file,
 // import-aware, overload- and inheritance-aware) — the semantics ADR 0008's

@@ -59,10 +59,11 @@ func navTools() ([]mcp.ToolHandler, func() error) {
 			},
 		},
 	}
-	tools := make([]mcp.ToolHandler, 0, len(defs))
+	tools := make([]mcp.ToolHandler, 0, len(defs)+2)
 	for _, d := range defs {
 		tools = append(tools, &navTool{name: d.name, desc: d.desc, pool: pool, run: d.run})
 	}
+	tools = append(tools, &findSymbolTool{pool: pool}, &symbolsOverviewTool{pool: pool})
 	return tools, pool.Close
 }
 
@@ -130,4 +131,109 @@ func (t *navTool) Call(ctx context.Context, raw json.RawMessage) (map[string]int
 		fmt.Fprintf(&b, "%s:%d:%d\n", l.File, l.Start.Line, l.Start.Col)
 	}
 	return mcp.TextResult(strings.TrimRight(b.String(), "\n"), false), nil
+}
+
+// symbolsResult renders a Symbol slice the ADR 0018 pinned way: one
+// "name\tkind\tfile:line:col" line per Symbol (Symbol.String), or "no results"
+// text for an empty slice — shared by both name-based tools below.
+func symbolsResult(syms []navigate.Symbol) map[string]interface{} {
+	if len(syms) == 0 {
+		return mcp.TextResult("no results", false)
+	}
+	var b strings.Builder
+	for _, s := range syms {
+		b.WriteString(s.String())
+		b.WriteByte('\n')
+	}
+	return mcp.TextResult(strings.TrimRight(b.String(), "\n"), false)
+}
+
+// findSymbolTool is the ADR 0018 Tool 1 — LSP workspace/symbol — a name-based,
+// workspace-scoped lookup. Unlike the position tools it cannot route by a
+// file's extension, so it routes by the caller-supplied root (and optional
+// lang; see Pool.WorkspaceSymbol for the polyglot-merge behavior when lang is
+// omitted).
+type findSymbolTool struct {
+	pool *navigate.Pool
+}
+
+func (t *findSymbolTool) Name() string { return "find_symbol" }
+
+func (t *findSymbolTool) Descriptor() map[string]interface{} {
+	return map[string]interface{}{
+		"name": "find_symbol",
+		"description": "Find symbols by name across a workspace via a real language server (LSP workspace/symbol) — a fuzzy/substring match, not an exact resolver. Returns Symbol[] as name\\tkind\\tfile:line:col, one per line. Route by root; omit lang to merge every language server ALREADY live for that root (a cold root with no live server yet returns no results — warm it first with find_definition/symbols_overview, or pass lang to spawn it directly).",
+		"inputSchema": map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"query": map[string]interface{}{"type": "string", "description": "Symbol name to search for (fuzzy/substring, server-dependent)."},
+				"root":  map[string]interface{}{"type": "string", "description": "Absolute path to the workspace root (must exist on the daemon host)."},
+				"lang":  map[string]interface{}{"type": "string", "description": "Optional canonical language (e.g. \"go\", \"typescript\") to select one server; omitted merges every language already live for root."},
+			},
+			"required": []string{"query", "root"},
+		},
+	}
+}
+
+type findSymbolArgs struct {
+	Query string `json:"query"`
+	Root  string `json:"root"`
+	Lang  string `json:"lang"`
+}
+
+func (t *findSymbolTool) Call(ctx context.Context, raw json.RawMessage) (map[string]interface{}, error) {
+	var a findSymbolArgs
+	if err := json.Unmarshal(raw, &a); err != nil {
+		return mcp.TextResult("invalid arguments: "+err.Error(), true), nil
+	}
+	if strings.TrimSpace(a.Query) == "" || strings.TrimSpace(a.Root) == "" {
+		return mcp.TextResult("query and root are required", true), nil
+	}
+	syms, err := t.pool.WorkspaceSymbol(ctx, a.Root, a.Lang, a.Query)
+	if err != nil {
+		return mcp.TextResult(fmt.Sprintf("find_symbol failed: %v", err), true), nil
+	}
+	return symbolsResult(syms), nil
+}
+
+// symbolsOverviewTool is the ADR 0018 Tool 2 — LSP textDocument/documentSymbol
+// — a file-scoped enumeration. It routes exactly like the position tools (by
+// the file's extension + enclosing root).
+type symbolsOverviewTool struct {
+	pool *navigate.Pool
+}
+
+func (t *symbolsOverviewTool) Name() string { return "symbols_overview" }
+
+func (t *symbolsOverviewTool) Descriptor() map[string]interface{} {
+	return map[string]interface{}{
+		"name":        "symbols_overview",
+		"description": "List every top-level and nested declaration in a file via a real language server (LSP textDocument/documentSymbol), flattened. Returns Symbol[] as name\\tkind\\tfile:line:col, one per line.",
+		"inputSchema": map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"file": map[string]interface{}{"type": "string", "description": "Absolute path to the source file (must exist on the daemon host)."},
+			},
+			"required": []string{"file"},
+		},
+	}
+}
+
+type symbolsOverviewArgs struct {
+	File string `json:"file"`
+}
+
+func (t *symbolsOverviewTool) Call(ctx context.Context, raw json.RawMessage) (map[string]interface{}, error) {
+	var a symbolsOverviewArgs
+	if err := json.Unmarshal(raw, &a); err != nil {
+		return mcp.TextResult("invalid arguments: "+err.Error(), true), nil
+	}
+	if strings.TrimSpace(a.File) == "" {
+		return mcp.TextResult("file (absolute path) is required", true), nil
+	}
+	syms, err := t.pool.DocumentSymbol(ctx, a.File)
+	if err != nil {
+		return mcp.TextResult(fmt.Sprintf("symbols_overview failed: %v", err), true), nil
+	}
+	return symbolsResult(syms), nil
 }

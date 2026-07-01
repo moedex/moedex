@@ -450,6 +450,148 @@ func (c *LSP) locationQuery(ctx context.Context, method string, at Pos, extra ma
 	return out, nil
 }
 
+// symNode is a decode union for the two shapes a server can hand back a named
+// symbol in: the hierarchical textDocument/documentSymbol reply
+// (DocumentSymbol: SelectionRange + nested Children, no own URI — it's the
+// queried file) and the flat workspace/symbol / SymbolInformation reply
+// (Location: URI + Range, no Children). A single struct absorbs both because
+// json.Unmarshal silently leaves absent fields at their zero value, so one
+// decode path serves every server ADR 0018 has to support.
+type symNode struct {
+	Name string `json:"name"`
+	Kind int    `json:"kind"`
+	// SelectionRange is the identifier span (DocumentSymbol only) — preferred
+	// over Range (the whole declaration, often starting at a keyword) so the
+	// resolved position lands ON the name, which is what a follow-up
+	// find_references/find_definition query needs.
+	SelectionRange *lspRange    `json:"selectionRange"`
+	Range          *lspRange    `json:"range"`
+	Location       *symLocation `json:"location"`
+	Children       []symNode    `json:"children"`
+}
+
+// symLocation is workspace/symbol's (and flat SymbolInformation's) location
+// field. Range is a pointer because LSP 3.17 WorkspaceSymbol permits a
+// range-less {uri} location for a cheap, unresolved result.
+type symLocation struct {
+	URI   string    `json:"uri"`
+	Range *lspRange `json:"range"`
+}
+
+// symbolKindNames maps the LSP SymbolKind integer enum to its spec name.
+var symbolKindNames = map[int]string{
+	1: "File", 2: "Module", 3: "Namespace", 4: "Package", 5: "Class",
+	6: "Method", 7: "Property", 8: "Field", 9: "Constructor", 10: "Enum",
+	11: "Interface", 12: "Function", 13: "Variable", 14: "Constant",
+	15: "String", 16: "Number", 17: "Boolean", 18: "Array", 19: "Object",
+	20: "Key", 21: "Null", 22: "EnumMember", 23: "Struct", 24: "Event",
+	25: "Operator", 26: "TypeParameter",
+}
+
+// symbolKindName spells out a raw LSP SymbolKind integer; an unrecognized value
+// (a future protocol addition) degrades to "Unknown" rather than panicking.
+func symbolKindName(kind int) string {
+	if name, ok := symbolKindNames[kind]; ok {
+		return name
+	}
+	return "Unknown"
+}
+
+// flattenSymbolNodes converts a decoded symNode tree into flat Symbols.
+// defaultURI is the file being queried, used when a node carries no Location
+// of its own (the DocumentSymbol shape, which is implicitly scoped to the
+// queried file). Range selection prefers SelectionRange (the identifier) over
+// Range (the whole declaration) or Location.Range, in that order.
+func flattenSymbolNodes(nodes []symNode, defaultURI string) []Symbol {
+	out := make([]Symbol, 0, len(nodes))
+	for _, n := range nodes {
+		uri := defaultURI
+		var rng lspRange
+		switch {
+		case n.SelectionRange != nil:
+			rng = *n.SelectionRange
+		case n.Range != nil:
+			rng = *n.Range
+		case n.Location != nil:
+			uri = n.Location.URI
+			if n.Location.Range != nil {
+				rng = *n.Location.Range
+			}
+		}
+		file := uriToPath(uri)
+		out = append(out, Symbol{
+			Name: n.Name,
+			Kind: symbolKindName(n.Kind),
+			Loc: Location{
+				File:  file,
+				Start: lspToPos(file, rng.Start),
+				End:   lspToPos(file, rng.End),
+			},
+		})
+		if len(n.Children) > 0 {
+			out = append(out, flattenSymbolNodes(n.Children, uri)...)
+		}
+	}
+	return out
+}
+
+// decodeSymbolResult shares the null/empty/method-not-found handling
+// locationQuery uses, decoding into the symNode union and flattening it.
+func decodeSymbolResult(raw json.RawMessage, err error, method, defaultURI string) ([]Symbol, error) {
+	if err != nil {
+		var rpcErr *rpcError
+		if errors.As(err, &rpcErr) && rpcErr.Code == codeMethodNotFound {
+			// Partial-capability server (mirrors locationQuery): degrade to no
+			// results rather than erroring, so a language without name lookup
+			// fails soft (ADR 0018).
+			return nil, nil
+		}
+		return nil, err
+	}
+	if len(raw) == 0 || string(raw) == "null" {
+		return nil, nil
+	}
+	var nodes []symNode
+	if jerr := json.Unmarshal(raw, &nodes); jerr != nil {
+		return nil, fmt.Errorf("navigate: decode %s result: %w", method, jerr)
+	}
+	return flattenSymbolNodes(nodes, defaultURI), nil
+}
+
+// WorkspaceSymbol runs the ADR 0018 name-based lookup (LSP workspace/symbol): a
+// fuzzy/substring match over every symbol name in the server's workspace, not
+// an exact resolver. Workspace-scoped, so — unlike Definition/References/
+// Implementations — it takes no file/position; ensureInit derives the server's
+// root the same way those do when RootDir was not supplied at construction (a
+// direct caller invoking WorkspaceSymbol as the very first query on a server
+// with no RootDir will root at "."; Pool always supplies RootDir explicitly).
+func (c *LSP) WorkspaceSymbol(ctx context.Context, query string) ([]Symbol, error) {
+	if err := c.ensureInit(ctx, ""); err != nil {
+		return nil, err
+	}
+	raw, err := c.call(ctx, "workspace/symbol", map[string]any{"query": query})
+	return decodeSymbolResult(raw, err, "workspace/symbol", "")
+}
+
+// DocumentSymbol runs the ADR 0018 file-scoped enumeration (LSP
+// textDocument/documentSymbol): every top-level and nested declaration in
+// file, flattened into one slice (a server returning the hierarchical
+// DocumentSymbol shape has its Children walked by flattenSymbolNodes; a server
+// returning the flat SymbolInformation shape needs no walk at all).
+func (c *LSP) DocumentSymbol(ctx context.Context, file string) ([]Symbol, error) {
+	if err := c.ensureInit(ctx, file); err != nil {
+		return nil, err
+	}
+	if err := c.ensureFresh(file); err != nil {
+		return nil, err
+	}
+	uri := pathToURI(file)
+	raw, err := c.call(ctx, "textDocument/documentSymbol", map[string]any{
+		"textDocument": map[string]any{"uri": uri},
+	})
+	return decodeSymbolResult(raw, err, "textDocument/documentSymbol", uri)
+}
+
 // ensureInit runs the initialize/initialized handshake exactly once, but is
 // RETRYABLE on failure: a transient request-ctx cancel during the first query
 // must not permanently poison a shared server (a sync.Once would). The root is
@@ -489,6 +631,15 @@ func (c *LSP) ensureInit(ctx context.Context, file string) error {
 				"synchronization": map[string]any{
 					"didOpen": true, "didChange": true, "didClose": true,
 				},
+				// hierarchicalDocumentSymbolSupport asks for the nested
+				// DocumentSymbol[] shape (ADR 0018); flattenSymbolNodes flattens
+				// it back out. A server that ignores this and returns the flat
+				// SymbolInformation[] shape still decodes via symNode's
+				// Location fallback.
+				"documentSymbol": map[string]any{"hierarchicalDocumentSymbolSupport": true},
+			},
+			"workspace": map[string]any{
+				"symbol": map[string]any{},
 			},
 		},
 	}

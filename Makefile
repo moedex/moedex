@@ -171,14 +171,16 @@ build-lsp:
 ## drive a real gopls against self-contained throwaway Go modules (no corpus, no
 ## network) and skip if gopls is not on PATH. -race is load-bearing here: the
 ## Pool concurrency tests (ADR 0017 Condition 2) prove parallel-lane safety.
+## cmd/moedex-serve carries the ADR 0018 find_symbol/symbols_overview MCP-tool
+## tests (nav_lsp_test.go), also gopls-gated.
 test-lsp:
-	@echo "=== go test -tags lsp -race ./internal/navigate/ ==="
-	go test -tags lsp -race ./internal/navigate/ -count=1
+	@echo "=== go test -tags lsp -race ./internal/navigate/ ./cmd/moedex-serve/ ==="
+	go test -tags lsp -race ./internal/navigate/ ./cmd/moedex-serve/ -count=1
 
 ## vet-lsp: type-check the lsp-tagged navigation arm + cmd without running gopls.
 vet-lsp:
-	@echo "=== go vet -tags lsp ./internal/navigate/ ./cmd/moedex-nav/ ==="
-	go vet -tags lsp ./internal/navigate/ ./cmd/moedex-nav/
+	@echo "=== go vet -tags lsp ./internal/navigate/ ./cmd/moedex-nav/ ./cmd/moedex-serve/ ==="
+	go vet -tags lsp ./internal/navigate/ ./cmd/moedex-nav/ ./cmd/moedex-serve/
 	@echo "LSP navigation arm + moedex-nav compile OK."
 
 ## bench-setops: pure-Go set-ops benchmarks on the host arch (the always-built

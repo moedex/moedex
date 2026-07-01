@@ -95,3 +95,6 @@ func (*LSP) Alive() bool { return false }
 func (*LSP) SetOverlay(context.Context, string, []byte) error  { return errNoLSP }
 func (*LSP) DropOverlay(context.Context, string) error         { return errNoLSP }
 func (*LSP) NotifyChanged(context.Context, ...string) error    { return errNoLSP }
+
+func (*LSP) WorkspaceSymbol(context.Context, string) ([]Symbol, error) { return nil, errNoLSP }
+func (*LSP) DocumentSymbol(context.Context, string) ([]Symbol, error)  { return nil, errNoLSP }
