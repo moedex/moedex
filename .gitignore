@@ -4,11 +4,16 @@
 .parity-work-p3-rerun-latency
 .parity-work-p4-twofilters-latency
 
-# built daemon binaries
+# built binaries (cmd/* names, when built into the repo root)
+/moedex
+/moedex-mcp
 /moedex-serve
 /moedex-serve-dense
 /moedex-index
 /moedex-corpus
+/moedex-nav
+/moedex-parity
+/scale
 
 # Claude Code worktrees (transient; never commit the gitlink)
 .claude/worktrees/
@@ -18,5 +23,3 @@
 # go test -c / -cpuprofile leftovers
 *.test
 test.log
-
-moedex-serve-dense
