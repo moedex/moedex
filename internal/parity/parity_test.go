@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"unicode/utf8"
 
 	"moedex/internal/diskstore"
 	"moedex/internal/index"
@@ -123,6 +124,17 @@ func TestBatteryDeterministic(t *testing.T) {
 		}
 		if same {
 			t.Error("different seed produced identical battery (selection not seed-driven)")
+		}
+	}
+}
+
+func TestBatteryPatternsAreValidUTF8(t *testing.T) {
+	pool := newTermPool(1)
+	pool.observe([]byte("Bef\xfcllen caf\xc3\xa9\xffna\xc3\xafve"))
+	bat := Generate(pool, 7)
+	for _, q := range bat.Queries {
+		if !utf8.ValidString(q.Pattern) {
+			t.Errorf("query %d (%s) contains invalid UTF-8: %q", q.ID, q.Bucket, q.Pattern)
 		}
 	}
 }

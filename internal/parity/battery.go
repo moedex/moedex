@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode/utf8"
 )
 
 // Bucket names the query category (AC-D2 a–i).
@@ -230,6 +231,9 @@ type gen struct {
 func (g *gen) add(b Bucket, pattern string, literal, ic, nu bool) {
 	if pattern == "" {
 		return
+	}
+	if !utf8.ValidString(pattern) {
+		panic(fmt.Sprintf("battery generated invalid UTF-8 pattern %q", pattern))
 	}
 	key := fmt.Sprintf("%s\x00%s\x00%v%v%v", b, pattern, literal, ic, nu)
 	if g.seen[key] {

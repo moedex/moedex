@@ -23,6 +23,7 @@ import (
 	"sort"
 	"syscall"
 	"time"
+	"unicode/utf8"
 
 	"moedex/internal/diskstore"
 	"moedex/internal/index"
@@ -491,28 +492,60 @@ func isLiteralByte(c byte) bool {
 	return c > ' ' && c < 0x7f // printable, non-space ASCII (includes metachars)
 }
 
-// observeUnicode reservoir-samples a short literal containing a multibyte rune.
+// observeUnicode reservoir-samples a short, valid UTF-8 literal containing a
+// multibyte rune. Corpus files may contain legacy single-byte encodings; those
+// bytes cannot be passed to ripgrep as CLI patterns and must not enter the
+// Unicode battery.
 func (p *TermPool) observeUnicode(line []byte) {
-	for i := 0; i < len(line); i++ {
+	for i := 0; i < len(line); {
 		if line[i] < 0x80 {
+			i++
 			continue
 		}
+		r, size := utf8.DecodeRune(line[i:])
+		if r == utf8.RuneError && size == 1 {
+			i++
+			continue
+		}
+
 		lo := i
-		for lo > 0 && (line[lo-1] >= 0x80 || isWordByte(line[lo-1])) {
-			lo--
+		for lo > 0 {
+			if isWordByte(line[lo-1]) {
+				lo--
+				continue
+			}
+			if line[lo-1] < 0x80 {
+				break
+			}
+			r, size := utf8.DecodeLastRune(line[:lo])
+			if r == utf8.RuneError && size == 1 {
+				break
+			}
+			lo -= size
 		}
-		hi := i
-		for hi < len(line) && (line[hi] >= 0x80 || isWordByte(line[hi])) {
-			hi++
+
+		hi := i + size
+		for hi < len(line) {
+			if isWordByte(line[hi]) {
+				hi++
+				continue
+			}
+			if line[hi] < 0x80 {
+				break
+			}
+			r, size := utf8.DecodeRune(line[hi:])
+			if r == utf8.RuneError && size == 1 {
+				break
+			}
+			hi += size
 		}
+
 		w := line[lo:hi]
-		if n := len(w); n >= 2 && n <= 30 && hasMultibyte(w) {
+		if n := len(w); n >= 2 && n <= 30 && utf8.Valid(w) && hasMultibyte(w) {
 			p.unicodes = reservoirAdd(p.rng, p.unicodes, p.unicodesSeen, string(w), reservoirUnicode)
 			p.unicodesSeen++
 		}
-		if hi > i {
-			i = hi
-		}
+		i = hi
 	}
 }
 

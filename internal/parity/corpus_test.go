@@ -1,6 +1,9 @@
 package parity
 
-import "testing"
+import (
+	"testing"
+	"unicode/utf8"
+)
 
 // TestObserveUnicodeLeftExtensionReachesLineStart guards the boundary the
 // left-extension scan in observeUnicode must handle without an
@@ -25,5 +28,26 @@ func TestObserveUnicodeLeftExtensionReachesLineStart(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("observeUnicode(%q): want %q in unicodes, got %v", line, want, p.unicodes)
+	}
+}
+
+func TestObserveUnicodeRejectsInvalidUTF8AndKeepsValidRuns(t *testing.T) {
+	p := newTermPool(1)
+	line := []byte("Bef\xfcllen caf\xc3\xa9\xffna\xc3\xafve")
+	p.observeUnicode(line)
+
+	want := map[string]bool{"café": false, "naïve": false}
+	for _, u := range p.unicodes {
+		if !utf8.ValidString(u) {
+			t.Fatalf("observeUnicode sampled invalid UTF-8 %q", u)
+		}
+		if _, ok := want[u]; ok {
+			want[u] = true
+		}
+	}
+	for u, found := range want {
+		if !found {
+			t.Errorf("observeUnicode did not retain valid run %q; got %q", u, p.unicodes)
+		}
 	}
 }
