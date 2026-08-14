@@ -1,6 +1,6 @@
 # Program 0019: Moedex-managed submodule corpus
 
-- **Status:** In progress (Phase 1 complete)
+- **Status:** In progress (Phase 2 automation complete; operator cutover approval pending)
 - **ADR:** [0019](../adr/0019-moedex-managed-submodule-corpus.md)
 - **Goal:** A fresh authenticated operator can ask Moedex to create, snapshot, synchronize,
   validate, and index its own local corpus without adopting an existing directory.
@@ -28,7 +28,7 @@ The managed-corpus program is complete when:
 | Phase | Plan | Delivers | Exit gate |
 |---|---|---|---|
 | 1 | [Managed corpus foundation](./phases/01-managed-corpus-foundation/PLAN.md) ([summary](./phases/01-managed-corpus-foundation/SUMMARY.md)) | Versioned marker/lock, stable project identity, hermetic fixtures, `init`, and failure-safe reconciliation | Complete |
-| 2 | [Managed corpus integration and rollout](./phases/02-managed-corpus-integration/PLAN.md) | CLI/doctor, lock-driven privacy-aware indexing, default-only parity, deployment integration, sibling cutover | privacy audit, `make health`, `make roundtrip`, default parity, doctor, and operator cutover approval pass |
+| 2 | [Managed corpus integration and rollout](./phases/02-managed-corpus-integration/PLAN.md) ([summary](./phases/02-managed-corpus-integration/SUMMARY.md), [rollout](./phases/02-managed-corpus-integration/ROLLOUT.md)) | CLI/doctor, lock-driven privacy-aware indexing, default-only parity, deployment integration, sibling cutover | Automated gates pass; operator scope/cutover approval pending |
 
 ## Dependency boundary
 
