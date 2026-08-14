@@ -2,11 +2,12 @@
 # refresh-corpus.sh — refresh the moedex serving corpus end-to-end WITHOUT stalling
 # the warm daemon.
 #
-# Pipeline:
-#   1. (optional) sync the corpus from gitlab      — moedex-corpus sync   (REFRESH_SYNC=1)
-#   2. refresh shards + token/symbol sidecars      — moedex-index [cas-]refresh
-#   3. build/refresh the dense embedding sidecar    — moedex-serve -build-embeddings   ← the missing piece
-#   4. hot-swap the live daemon                      — SIGHUP → warm reload (no downtime)
+# Pipeline (fail-stop):
+#   1. sync the managed lock + submodules           — moedex-corpus sync
+#   2. refresh the content-addressable store        — moedex-index cas-refresh
+#   3. refresh/export deduped served shards          — moedex-index cas-export -deduped
+#   4. build/refresh the dense embedding sidecar     — moedex-serve -build-embeddings
+#   5. hot-swap the live daemon                      — SIGHUP → warm reload (no downtime)
 #
 # Why step 3 exists: token/symbol sidecars rebuild in seconds, but embedding is the
 # expensive arm. If the daemon rebuilt the dense store INLINE on reload it would go
@@ -22,14 +23,15 @@
 # content is re-embedded.
 #
 # Env (all optional; defaults target this machine):
-#   MOEDEX_SHARD_DIR      shard/CAS dir            (default ~/.moedex-index/shards)
+#   MOEDEX_SHARD_DIR      served shard dir         (default ~/.moedex-index/shards)
+#   MOEDEX_CAS_DIR        content-addressable store(default ~/.moedex-index/cas)
 #   ONNXRUNTIME_LIB_PATH  onnx runtime dylib       (default /opt/homebrew/lib/libonnxruntime.dylib)
 #   MOEDEX_EMBED          dense embedder           (default onnx)
 #   MOEDEX_SERVE_BIN      dense moedex-serve       (default ~/.local/bin/moedex-serve)
 #   MOEDEX_INDEX_BIN      moedex-index             (default: ~/go/bin, ~/.local/bin, or PATH)
-#   MOEDEX_CORPUS         corpus root for sync     (default ~/.moedex; refresh uses the manifest Root)
+#   MOEDEX_CORPUS         managed corpus root      (default ~/.moedex)
 #   MOEDEX_LAUNCHD_LABEL  daemon label             (default com.moedex.serve)
-#   REFRESH_SYNC=1        run step 1 (corpus pull); OFF by default (needs glab auth)
+#   REFRESH_SYNC=0        skip managed sync; ON by default (needs VPN/glab/Git)
 #   REFRESH_SKIP_SHARDS=1 skip step 2 (embeddings-only refresh)
 
 set -euo pipefail
@@ -44,10 +46,13 @@ die() { printf '[refresh] ERROR: %s\n' "$*" >&2; exit 1; }
 export PATH="$HOME/.local/bin:$HOME/go/bin:/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 
 SHARD_DIR="${MOEDEX_SHARD_DIR:-$HOME/.moedex-index/shards}"
+CAS_DIR="${MOEDEX_CAS_DIR:-$HOME/.moedex-index/cas}"
+CORPUS_ROOT="${MOEDEX_CORPUS:-$HOME/.moedex}"
 ONNX_LIB="${ONNXRUNTIME_LIB_PATH:-/opt/homebrew/lib/libonnxruntime.dylib}"
 EMBED="${MOEDEX_EMBED:-onnx}"
 SERVE_BIN="${MOEDEX_SERVE_BIN:-$HOME/.local/bin/moedex-serve}"
 LABEL="${MOEDEX_LAUNCHD_LABEL:-com.moedex.serve}"
+CORPUS_BIN="${MOEDEX_CORPUS_BIN:-$(command -v moedex-corpus 2>/dev/null || true)}"
 
 INDEX_BIN="${MOEDEX_INDEX_BIN:-}"
 if [ -z "$INDEX_BIN" ]; then
@@ -59,20 +64,22 @@ if [ -z "$INDEX_BIN" ]; then
 fi
 
 [ -x "$SERVE_BIN" ] || die "dense moedex-serve not found at $SERVE_BIN (set MOEDEX_SERVE_BIN; must be the -tags onnx build)"
-[ -d "$SHARD_DIR" ] || die "shard dir not found: $SHARD_DIR"
+[ -n "$INDEX_BIN" ] && [ -x "$INDEX_BIN" ] || die "moedex-index not found (set MOEDEX_INDEX_BIN)"
+[ -f "$CORPUS_ROOT/.moedex/corpus.json" ] || die "managed corpus marker not found at $CORPUS_ROOT; refuse filesystem-discovery fallback"
+[ -f "$CAS_DIR/blobmanifest.json" ] || die "CAS manifest not found at $CAS_DIR/blobmanifest.json (build the sibling CAS before scheduling refresh)"
 
-# 1. corpus sync (optional — needs glab auth available to this session)
-if [ "${REFRESH_SYNC:-0}" = "1" ]; then
-  if command -v moedex-corpus >/dev/null 2>&1; then
-    log "sync: moedex-corpus sync"
-    # Non-fatal: a failed pull (e.g. glab auth unavailable to a headless timer) just
-    # means we refresh over the current on-disk corpus rather than aborting the run.
-    MOEDEX_CORPUS="${MOEDEX_CORPUS:-$HOME/.moedex}" moedex-corpus sync || log "sync: FAILED (continuing with on-disk corpus)"
-  else
-    log "sync: REFRESH_SYNC=1 but moedex-corpus not on PATH — skipping"
+corpus_args=(-corpus "$CORPUS_ROOT")
+
+# 1. managed corpus sync. Any partial/unsafe sync stops the pipeline before CAS,
+# served shards, sidecars, or the warm daemon can advance.
+if [ "${REFRESH_SYNC:-1}" = "1" ]; then
+  [ -n "$CORPUS_BIN" ] && [ -x "$CORPUS_BIN" ] || die "moedex-corpus not found (set MOEDEX_CORPUS_BIN)"
+  log "sync: $CORPUS_BIN sync -corpus $CORPUS_ROOT"
+  if ! "$CORPUS_BIN" sync "${corpus_args[@]}" -no-banner; then
+    die "managed sync failed; CAS and served snapshot were not advanced"
   fi
 else
-  log "sync: skipped (set REFRESH_SYNC=1 to pull the corpus first)"
+  log "sync: skipped by REFRESH_SYNC=0; indexing the currently locked snapshot"
 fi
 
 # 1b. PREFLIGHT: abort BEFORE the destructive shard swap if the install is unsafe.
@@ -80,31 +87,25 @@ fi
 #     ambiguous shard-dir layout, no shards) — exactly the conditions that turned a
 #     refresh into the index-loss incident. Stale embeddings etc. are WARN, not
 #     CRIT, so a normal refresh still proceeds and fixes them.
-if [ -n "$INDEX_BIN" ]; then
+if [ -f "$SHARD_DIR/manifest.json" ]; then
   log "preflight: $INDEX_BIN doctor -shard-dir $SHARD_DIR"
   if ! "$INDEX_BIN" doctor -shard-dir "$SHARD_DIR"; then
     die "doctor found critical problems — aborting before the destructive refresh"
   fi
+else
+  log "preflight: no served manifest yet (initial sibling export)"
 fi
 
-# 2. shards + token/symbol sidecars (atomic rebuild-and-swap). The layout is keyed by
-#    its manifest: a CAS dir has blobmanifest.json (-> cas-refresh -cas-dir); a standard
-#    build dir has manifest.json (-> refresh -shard-dir), even though it may also carry a
-#    deduped blobs.dat content store.
+# 2-3. Refresh CAS, then atomically refresh/export the deduped served directory.
+# cas-export's delta path keeps the prior live directory until the complete new
+# manifest, shards, and blobs.dat are durable.
 if [ "${REFRESH_SKIP_SHARDS:-0}" = "1" ]; then
   log "shards: skipped (REFRESH_SKIP_SHARDS=1) — re-embedding over the existing shards"
-elif [ -z "$INDEX_BIN" ]; then
-  log "shards: moedex-index not found — skipping (set MOEDEX_INDEX_BIN); re-embedding over existing shards"
-elif [ -f "$SHARD_DIR/blobmanifest.json" ]; then
-  log "shards: $INDEX_BIN cas-refresh -cas-dir $SHARD_DIR (CAS layout)"
-  "$INDEX_BIN" cas-refresh -cas-dir "$SHARD_DIR" ${MOEDEX_CORPUS:+-corpus "$MOEDEX_CORPUS"}
 else
-  # -keep-backup is REQUIRED for safety: refresh does a destructive atomic dir-swap,
-  # and without a retained backup a bad refresh (e.g. a stale/mismatched moedex-index)
-  # is unrecoverable. The backup makes any failed refresh a one-command restore; stale
-  # backups are pruned at the end of a successful run.
-  log "shards: $INDEX_BIN refresh -shard-dir $SHARD_DIR -keep-backup (manifest.json layout)"
-  "$INDEX_BIN" refresh -shard-dir "$SHARD_DIR" -keep-backup ${MOEDEX_CORPUS:+-corpus "$MOEDEX_CORPUS"}
+  log "cas: $INDEX_BIN cas-refresh -cas-dir $CAS_DIR -corpus $CORPUS_ROOT"
+  "$INDEX_BIN" cas-refresh -cas-dir "$CAS_DIR" "${corpus_args[@]}"
+  log "shards: $INDEX_BIN cas-export -deduped -cas-dir $CAS_DIR -shard-dir $SHARD_DIR"
+  "$INDEX_BIN" cas-export -deduped -cas-dir "$CAS_DIR" -shard-dir "$SHARD_DIR"
 fi
 
 # 3. dense embedding sidecar — built OUT OF BAND so the reload never re-embeds inline.
@@ -119,11 +120,17 @@ else
   log "reload: $LABEL not loaded — start it to pick up the refreshed corpus"
 fi
 
-# Prune stale refresh backups (refresh -keep-backup leaves $SHARD_DIR.bak-*, each of
-# which can carry a multi-GB stale embedding store). Keep only the most recent.
+# Prune stale refresh backups. Resolve the glob first so an empty backup set is a
+# successful no-op under set -o pipefail. Keep the most recent rollback copy.
 parent="$(dirname "$SHARD_DIR")"; base="$(basename "$SHARD_DIR")"
-ls -dt "$parent/$base".bak-* 2>/dev/null | tail -n +2 | while read -r old; do
-  log "prune: removing stale backup $old"
-  rm -rf "$old"
-done
+shopt -s nullglob
+backups=("$parent/$base".bak-* "$parent/$base".dedup-bak-*)
+if [ "${#backups[@]}" -gt 1 ]; then
+  IFS=$'\n' backups=($(ls -dt "${backups[@]}"))
+  unset IFS
+  for old in "${backups[@]:1}"; do
+    log "prune: removing stale backup $old"
+    rm -rf "$old"
+  done
+fi
 log "done."

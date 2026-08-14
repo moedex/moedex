@@ -12,8 +12,9 @@
 #      deploy/ templates, (re)bootstrapping only when they actually changed
 #   6. run `moedex-index doctor` to verify
 #
-# It does NOT clone the corpus or build the index (those are heavy and need VPN/glab);
-# it prints the exact commands if they're missing.
+# It initializes a NEW/empty managed corpus when glab + VPN + Git transport are
+# ready. It never adopts a populated unmarked corpus and never changes live index
+# paths; build and cutover remain explicit rollout steps.
 #
 # Usage:
 #   scripts/install-macos.sh            # do it
@@ -33,6 +34,7 @@ INDEX_DIR="${MOEDEX_INDEX_DIR:-$HOME/.moedex-index}"
 CORPUS="${MOEDEX_CORPUS:-$HOME/.moedex}"
 LAUNCH_AGENTS="$HOME/Library/LaunchAgents"
 TOKEN_FILE="$INDEX_DIR/auth-token"
+CORPUS_BIN="${MOEDEX_CORPUS_BIN:-$BINDIR/moedex-corpus}"
 
 log()  { printf '[setup] %s\n' "$*"; }
 warn() { printf '[setup] WARN: %s\n' "$*" >&2; }
@@ -60,6 +62,22 @@ else
   warn "libonnxruntime not found — the dense arm will be OFF until: brew install onnxruntime"
 fi
 
+# --- ownership gate: never adopt a populated legacy/user-owned root ---
+CORPUS_NEEDS_INIT=0
+if [ -f "$CORPUS/.moedex/corpus.json" ]; then
+  log "managed corpus marker present at $CORPUS"
+elif [ -e "$CORPUS" ]; then
+  shopt -s nullglob dotglob
+  corpus_entries=("$CORPUS"/*)
+  shopt -u dotglob
+  if [ "${#corpus_entries[@]}" -gt 0 ]; then
+    die "refusing to adopt populated unmarked corpus $CORPUS. Keep it as rollback; initialize a sibling with: MOEDEX_CORPUS=$CORPUS-managed $BINDIR/moedex-corpus init -corpus $CORPUS-managed"
+  fi
+  CORPUS_NEEDS_INIT=1
+else
+  CORPUS_NEEDS_INIT=1
+fi
+
 # --- 2. build + install binaries (canonical dir, shadows removed) ---
 log "installing binaries to $BINDIR (make install-dense)"
 if [ "$DRY_RUN" = 1 ]; then
@@ -71,6 +89,19 @@ case ":$PATH:" in
   *":$BINDIR:"*) : ;;
   *) warn "$BINDIR is not on PATH for THIS shell — the ~/.zshrc block fixes new shells" ;;
 esac
+
+# --- 2b. initialize only a new/empty managed corpus ---
+if [ "$CORPUS_NEEDS_INIT" = 1 ]; then
+  if [ "$DRY_RUN" = 1 ]; then
+    log "[dry-run] would initialize managed corpus at $CORPUS (requires active TC VPN, glab auth, and Git transport)"
+  else
+    [ -x "$CORPUS_BIN" ] || die "moedex-corpus not found at $CORPUS_BIN after install"
+    have glab || die "glab is required to initialize the managed corpus"
+    have git || die "git is required to initialize the managed corpus"
+    log "initializing new managed corpus at $CORPUS"
+    "$CORPUS_BIN" init -corpus "$CORPUS" -no-banner
+  fi
+fi
 
 # --- 3. index dir + auth token ---
 if [ "$DRY_RUN" = 1 ]; then
@@ -134,8 +165,8 @@ log "installing launchd agents"
 install_agent com.moedex.serve   com.moedex.serve.plist
 install_agent com.moedex.refresh com.moedex.refresh.plist
 
-# --- 6. data-presence hints (not built here; heavy + need VPN) ---
-[ -d "$CORPUS" ] || warn "corpus missing at $CORPUS — clone it: moedex-corpus clone (needs glab auth + VPN)"
+# --- 6. data-presence hints (index is built/cut over separately) ---
+[ -f "$CORPUS/.moedex/corpus.json" ] || [ "$DRY_RUN" = 1 ] || warn "managed corpus marker missing at $CORPUS"
 if ! ls "$INDEX_DIR"/shards/*.idx >/dev/null 2>&1; then
   warn "no shard index at $INDEX_DIR/shards — build it once:"
   warn "  moedex-index build -corpus $CORPUS -shard-dir $INDEX_DIR/shards"

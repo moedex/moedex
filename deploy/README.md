@@ -8,8 +8,10 @@
 > It builds and installs every binary to `~/.local/bin` (removing stale `~/go/bin`
 > shadows), writes a 0600 auth token, adds the env block to `~/.zshrc`, and renders
 > + bootstraps the `com.moedex.serve` (warm daemon) and `com.moedex.refresh` (daily
-> 13:00 local time) launchd agents from the `deploy/*.plist` templates. It does **not** clone
-> the corpus or build the index (heavy, need VPN/glab) — it prints those commands.
+> 13:00 local time) launchd agents from the `deploy/*.plist` templates. For a new
+> or empty corpus path it initializes the managed submodule corpus after the
+> VPN, `glab`, and Git transport checks pass. It refuses a populated unmarked
+> path; index build and live cutover remain explicit sibling-rollout steps.
 > Verify anytime with `moedex-index doctor`. The rest of this file is the manual /
 > Linux (Docker + systemd) path.
 
@@ -34,7 +36,7 @@ the offline shard tool (`moedex-index`). Two deployment shapes are covered:
 | -------------- | ------------------------------------------------------------------- |
 | `moedex-serve` | Warm retrieval daemon. `-http` (HTTP API), `-mcp` (agent context), or `-q` (one-shot). mmaps shards once; SIGHUP hot-reload; SIGINT/SIGTERM 5s graceful drain. |
 | `moedex-index` | Offline shard tool: `build`, `check`, `refresh`, and the CAS family (`cas-build`/`cas-refresh`/`cas-export`) over a corpus. |
-| `moedex-corpus` | Corpus setup + freshness: `doctor`, `clone`, `sync` against `gitlab.tcdevops.com` (only). Shells out to `glab`/`git`/`moedex-index`; the engine is never linked into it. |
+| `moedex-corpus` | Corpus setup + freshness: managed `init`/`sync`/`doctor`, plus compatibility `clone`, against `gitlab.tcdevops.com` only. |
 
 HTTP routes on `-http`: `/healthz` (200 `ok`), `/metrics`, `/stats`, `/search`.
 `/healthz` and `/metrics` stay open even with auth enabled.
@@ -58,57 +60,100 @@ make build-dense          # -> ./moedex-serve-dense  (needs ONNXRUNTIME_LIB_PATH
 
 ## Standing up the corpus from zero (`moedex-corpus`)
 
-`moedex-corpus` owns corpus *acquisition* and *freshness*: it clones the curated
-TurnCommerce repos from `gitlab.tcdevops.com` (and only that host) using your own
-glab auth + access levels, then keeps the mirror fresh and re-indexed. It shells
+`moedex-corpus` owns corpus *acquisition* and *freshness*: it creates a local Git
+superproject whose stable-ID submodules and committed lock describe the exact
+curated default-branch snapshot. It uses your own glab auth + access levels and shells
 out to `glab`, `git`, and `moedex-index` — the retrieval engine is never linked
 into it, so the zero-dependency posture of the daemon is preserved.
 
-Prereqs: the [`glab`](https://gitlab.com/gitlab-org/cli) CLI and `git`. Check the
-whole setup first — `doctor` never changes anything:
+Prereqs: active TC VPN, the [`glab`](https://gitlab.com/gitlab-org/cli) CLI, and
+`git`. The VPN session times out after 12 hours, so the macOS refresh runs at
+13:00 local time when an operator is more likely to be connected. `doctor` never
+changes anything and reports the external layers separately:
 
 ```sh
 moedex-corpus doctor
-#   ✓ glab CLI installed   ✓ authenticated to gitlab.tcdevops.com   ✓ git installed
+#   ✓ authenticated to gitlab.tcdevops.com
+#   ✓ GitLab host/VPN reachable
+#   ✓ Git clone/fetch transport
 #   repos: N project(s) in scope
 # If not authenticated, it prints the exact command to run:
 #   glab auth login --hostname gitlab.tcdevops.com
 ```
 
-**First run** — clone everything and build the served shards in one step:
+**First run** — initialize and index a new sibling. Never point `init` at a
+populated legacy corpus:
 
 ```sh
-moedex-corpus clone \
-  -corpus  /srv/moedex/corpus \
-  -reindex -cas-dir /srv/moedex/cas -shard-dir /srv/moedex/shards \
-  -reload "systemctl reload moedex-serve"
+moedex-corpus init -corpus /srv/moedex/corpus-managed
+moedex-index cas-build \
+  -corpus /srv/moedex/corpus-managed \
+  -cas-dir /srv/moedex/cas-managed
+moedex-index cas-export -deduped \
+  -cas-dir /srv/moedex/cas-managed \
+  -shard-dir /srv/moedex/shards-managed
 ```
 
-This shallow-clones (`--depth 1`) every curated project into
-`<corpus>/<group>/<repo>` (many at once; idempotent — re-running skips what's
-present), then `cas-build` → `cas-export -deduped` produces a servable shard dir
-(the deduped format: content-less shards + one shared `blobs.dat`), then reloads
-the daemon. Drop `-reindex` (and the CAS/reload flags) to clone only.
+`init` requires a nonexistent or empty destination. A populated unmarked root is
+user-owned and is refused with a sibling-root instruction. Keep the old corpus,
+CAS, and shards as the immediate rollback set. The compatibility `clone` command
+still maintains independent shallow clones, but marked roots are always lock-driven.
 
 **Scope.** By default the built-in curated allowlist (the TurnCommerce top-level
 groups) is used. Override with `-groups FILE`; regenerate a list from an existing
 mirror with `moedex-corpus groups --from-disk > corpus-groups.txt`.
 
-**Steady state** — pull fresh + delta re-index + reload:
+**Steady state** — fail-stop sync, CAS refresh, deduped export, sidecars, reload:
 
 ```sh
-moedex-corpus sync \
-  -corpus  /srv/moedex/corpus \
-  -reindex -cas-dir /srv/moedex/cas -shard-dir /srv/moedex/shards \
-  -reload "systemctl reload moedex-serve"
+MOEDEX_CORPUS=/srv/moedex/corpus-managed \
+MOEDEX_CAS_DIR=/srv/moedex/cas-managed \
+MOEDEX_SHARD_DIR=/srv/moedex/shards-managed \
+scripts/refresh-corpus.sh
 ```
 
-`sync` reconciles against the server: clones newly-created repos, fast-forwards
-existing ones (fetch + hard reset — shallow-safe, force-push-proof), and
-*reports* repos that disappeared on the server. Add `-prune` to also remove those
-local repos (it deletes directories — review the "missing" report first). Then
-`cas-refresh` adds only net-new blobs and `cas-export -deduped` rewrites only the
-changed shards. Automate it with `moedex-sync.timer` (hourly) — see [systemd](#systemd).
+`sync` reconciles by stable project ID and commits the new lock/gitlink snapshot.
+Any partial, auth, VPN, Git transport, missing-source, or lock mismatch failure
+stops before CAS/index advancement. `cas-refresh` adds net-new blobs and
+`cas-export -deduped` atomically swaps a complete served snapshot. Token/symbol
+and dense sidecars are prepared before SIGHUP. The currently served directory is
+not replaced on a failed earlier stage.
+
+### Sibling validation, hot-swap, soak, and rollback
+
+Do not edit the running service paths during installation or while building the
+sibling. Record the old and new snapshot IDs, redacted project/file/blob counts,
+and every gate in
+[`ROLLOUT.md`](../docs/plans/phases/02-managed-corpus-integration/ROLLOUT.md).
+
+```sh
+moedex-corpus doctor -corpus /srv/moedex/corpus-managed
+moedex-index doctor -shard-dir /srv/moedex/shards-managed
+moedex-index check \
+  -corpus /srv/moedex/corpus-managed \
+  -shard-dir /srv/moedex/shards-managed
+make parity MOEDEX_CORPUS=/srv/moedex/corpus-managed
+```
+
+Only after health, freshness, exact-result parity, and rollback rehearsal pass:
+
+1. Change the service environment to the three `*-managed` sibling paths.
+2. Send SIGHUP (`launchctl kill -HUP gui/$(id -u)/com.moedex.serve` on macOS,
+   `systemctl reload moedex-serve` on Linux).
+3. Confirm health and the new shard fingerprint, then begin the recorded soak.
+4. Retain the old corpus, CAS, and shards throughout the soak. Rollback is a
+   configuration-path restore plus another warm reload; no rebuild is required.
+
+Before relying on the 13:00 macOS run, check each prerequisite independently:
+
+```sh
+glab auth status --hostname gitlab.tcdevops.com  # credential only
+moedex-corpus doctor -corpus /srv/moedex/corpus-managed  # VPN/API + Git transport + local lock
+```
+
+An authenticated `glab` session with an expired/disconnected VPN is expected to
+fail the reachability check; a reachable API with broken SSH/HTTPS credentials is
+expected to fail the Git transport check.
 
 > Why shallow: the engine only indexes the working tree at HEAD, so `--depth 1`
 > single-branch clones are sufficient and keep the mirror small; LFS blobs are
@@ -214,7 +259,7 @@ Files (in `deploy/`): `moedex-serve.service`, `moedex-serve.env.example`, and
 **two freshness options — enable ONE:**
 
 - **`moedex-sync.service` + `moedex-sync.timer`** — the complete loop: pull from
-  GitLab + per-blob-delta reindex + reload (`moedex-corpus sync -reindex`). Needs
+  GitLab + fail-stop managed sync + CAS refresh + deduped export + reload. Needs
   network + the service identity authenticated to `gitlab.tcdevops.com` + write
   to the corpus tree. **Recommended** for a GitLab-connected host.
 - **`moedex-refresh.service` + `moedex-refresh.timer`** — reindex only, from a
@@ -236,8 +281,9 @@ sudo install -m 0640 -o root -g moedex \
   deploy/moedex-serve.env.example /etc/moedex/moedex-serve.env
 sudoedit /etc/moedex/moedex-serve.env     # set MOEDEX_SHARD_DIR + MOEDEX_AUTH_TOKEN
 
-# 4. shard dir owned by the service user
-sudo install -d -o moedex -g moedex /srv/moedex /srv/moedex/shards
+# 4. sibling managed paths owned by the service user
+sudo install -d -o moedex -g moedex \
+  /srv/moedex /srv/moedex/corpus-managed /srv/moedex/cas-managed /srv/moedex/shards-managed
 
 # 5. units
 sudo install -m 0644 deploy/moedex-serve.service   /etc/systemd/system/
@@ -272,7 +318,7 @@ instead of the refresh units:
 sudo install -m 0755 moedex-corpus /usr/local/bin/moedex-corpus
 sudo install -m 0644 deploy/moedex-sync.service /etc/systemd/system/
 sudo install -m 0644 deploy/moedex-sync.timer   /etc/systemd/system/
-# Set MOEDEX_CORPUS + MOEDEX_CAS_DIR in /etc/moedex/moedex-serve.env, and make
+# Set the three managed sibling paths in /etc/moedex/moedex-serve.env, and make
 # the service identity able to reach GitLab (see below).
 sudo systemctl daemon-reload
 sudo systemctl enable --now moedex-sync.timer    # NOT also moedex-refresh.timer

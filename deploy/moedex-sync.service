@@ -42,12 +42,14 @@ Group=moedex
 # MOEDEX_CORPUS, MOEDEX_CAS_DIR, MOEDEX_SHARD_DIR (+ optional GITLAB_TOKEN).
 EnvironmentFile=/etc/moedex/moedex-serve.env
 
-# Pull fresh, then cas-refresh -> cas-export -deduped. The built-in curated
-# allowlist is used unless you add `-groups /etc/moedex/corpus-groups.txt`. Add
-# `-prune` to remove repos deleted on the server (OFF by default — it deletes
-# local dirs; review the "missing" report first).
-ExecStart=/usr/local/bin/moedex-corpus sync -no-banner -reindex \
-    -corpus ${MOEDEX_CORPUS} -cas-dir ${MOEDEX_CAS_DIR} -shard-dir ${MOEDEX_SHARD_DIR}
+# Fail-stop managed sequence. A sync failure (including a partial/carry-forward
+# result) prevents CAS and served snapshots from advancing. cas-export's deduped
+# delta path preserves the prior served directory until the replacement is
+# complete and durable.
+ExecStartPre=/usr/local/bin/moedex-corpus doctor -no-banner -corpus ${MOEDEX_CORPUS}
+ExecStart=/usr/local/bin/moedex-corpus sync -no-banner -corpus ${MOEDEX_CORPUS}
+ExecStart=/usr/local/bin/moedex-index cas-refresh -cas-dir ${MOEDEX_CAS_DIR} -corpus ${MOEDEX_CORPUS}
+ExecStart=/usr/local/bin/moedex-index cas-export -deduped -cas-dir ${MOEDEX_CAS_DIR} -shard-dir ${MOEDEX_SHARD_DIR}
 
 # Hot-reload the running daemon onto the fresh shards (|| true keeps the timer
 # green if the daemon is down). Same mechanism as moedex-refresh; reloading an
