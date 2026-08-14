@@ -161,7 +161,23 @@ install_agent() {
   printf '%s\n' "$rendered" > "$dst"
   if [ "$changed" = 1 ] || ! launchctl print "$domain/$label" >/dev/null 2>&1; then
     launchctl bootout "$domain/$label" 2>/dev/null || true
-    launchctl bootstrap "$domain" "$dst"
+    # launchd can return EIO briefly while an old KeepAlive job is still
+    # finishing its asynchronous unload. Retry only this exact rendered plist;
+    # fail closed if the job still cannot be registered after the bounded wait.
+    bootstrap_ok=0
+    if launchctl bootstrap "$domain" "$dst"; then
+      bootstrap_ok=1
+    else
+      warn "$label bootstrap failed while the prior job may still be unloading; retrying for up to 10 seconds"
+      for bootstrap_try in {1..10}; do
+        sleep 1
+        if launchctl bootstrap "$domain" "$dst" 2>/dev/null; then
+          bootstrap_ok=1
+          break
+        fi
+      done
+    fi
+    [ "$bootstrap_ok" = 1 ] || die "$label bootstrap failed after 10 retries; plist retained at $dst"
     log "$label (re)bootstrapped"
   else
     log "$label already current — left running"

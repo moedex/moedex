@@ -21,7 +21,7 @@ write_stub() {
 write_stub moedex-corpus 'printf "corpus %s\n" "$*" >> "$TRACE"; [ "${FAIL_STAGE:-}" != sync ]'
 write_stub moedex-index 'printf "index %s\n" "$*" >> "$TRACE"; case "${1:-}" in cas-refresh) [ "${FAIL_STAGE:-}" != cas-refresh ];; cas-export) [ "${FAIL_STAGE:-}" != cas-export ];; esac'
 write_stub moedex-serve 'printf "serve %s\n" "$*" >> "$TRACE"'
-write_stub launchctl 'printf "launchctl %s\n" "$*" >> "$TRACE"'
+write_stub launchctl 'printf "launchctl %s\n" "$*" >> "$TRACE"; if [ "${FAIL_FIRST_BOOTSTRAP:-0}" = 1 ] && [ "${1:-}" = bootstrap ] && [ ! -f "$TRACE.bootstrap-failed" ]; then : > "$TRACE.bootstrap-failed"; exit 5; fi'
 write_stub uname 'printf "Darwin\n"'
 write_stub go ':'
 write_stub make ':'
@@ -148,12 +148,13 @@ render_shards="$render_case/shards-managed"
 mkdir -p "$render_home" "$render_corpus/.moedex" "$render_cas" "$render_shards"
 printf '{}\n' > "$render_corpus/.moedex/corpus.json"
 env HOME="$render_home" PATH="$BIN:$PATH" TRACE="$TRACE" \
+  FAIL_FIRST_BOOTSTRAP=1 \
   BINDIR="$BIN" \
   MOEDEX_INDEX_DIR="$render_case/index" \
   MOEDEX_CORPUS="$render_corpus" \
   MOEDEX_CAS_DIR="$render_cas" \
   MOEDEX_SHARD_DIR="$render_shards" \
-  bash "$REPO/scripts/install-macos.sh" >/dev/null 2>&1
+  bash "$REPO/scripts/install-macos.sh" > "$render_case/install.log" 2>&1
 serve_plist="$render_home/Library/LaunchAgents/com.moedex.serve.plist"
 refresh_plist="$render_home/Library/LaunchAgents/com.moedex.refresh.plist"
 serve_args="$(/usr/libexec/PlistBuddy -c 'Print:ProgramArguments:2' "$serve_plist")"
@@ -165,5 +166,8 @@ assert_plist_value "$refresh_plist" 'EnvironmentVariables:MOEDEX_CORPUS' "$rende
 assert_plist_value "$refresh_plist" 'EnvironmentVariables:MOEDEX_CAS_DIR' "$render_cas"
 assert_plist_value "$refresh_plist" 'EnvironmentVariables:MOEDEX_SHARD_DIR' "$render_shards"
 assert_plist_value "$refresh_plist" 'StartCalendarInterval:Hour' '13'
+assert_contains "$render_case/install.log" 'bootstrap failed while the prior job may still be unloading; retrying for up to 10 seconds'
+[ "$(grep -c '^launchctl bootstrap ' "$TRACE")" -ge 3 ] ||
+  fail "installer did not retry the transient launchd bootstrap failure"
 
 printf 'managed-refresh-test: PASS\n'
