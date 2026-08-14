@@ -328,6 +328,54 @@ func TestDoctorManagedAgreementAndRecoveryInstruction(t *testing.T) {
 	}
 }
 
+func TestDoctorManagedCleanlinessScopesUntrackedFiles(t *testing.T) {
+	newRoot := func(t *testing.T) (string, Lock) {
+		t.Helper()
+		fixture := newManagedGitFixture(t)
+		root := filepath.Join(t.TempDir(), "managed")
+		cfg := Config{Host: DefaultHost, Root: root, Groups: []string{"g"}, Concurrency: 1}
+		if _, err := InitManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}); err != nil {
+			t.Fatalf("InitManaged: %v", err)
+		}
+		lock, err := LoadLock(root, DefaultHost)
+		if err != nil {
+			t.Fatalf("LoadLock: %v", err)
+		}
+		return root, lock
+	}
+
+	t.Run("untracked superproject noise is ignored", func(t *testing.T) {
+		root, lock := newRoot(t)
+		if err := os.WriteFile(filepath.Join(root, ".DS_Store"), []byte("finder metadata"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if got := doctorManagedCleanliness(t.Context(), ExecRunner{}, root, lock); got.Status != StatusOK {
+			t.Fatalf("cleanliness = %+v, want root-level OS noise ignored", got)
+		}
+	})
+
+	t.Run("untracked managed metadata fails closed", func(t *testing.T) {
+		root, lock := newRoot(t)
+		if err := os.WriteFile(filepath.Join(root, ManagedDirName, "local-state"), []byte("local"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if got := doctorManagedCleanliness(t.Context(), ExecRunner{}, root, lock); got.Status != StatusFail {
+			t.Fatalf("cleanliness = %+v, want untracked managed metadata failure", got)
+		}
+	})
+
+	t.Run("untracked submodule work fails closed", func(t *testing.T) {
+		root, lock := newRoot(t)
+		dest := filepath.Join(root, filepath.FromSlash(lock.Projects[0].PathWithNamespace))
+		if err := os.WriteFile(filepath.Join(dest, "local-state"), []byte("local"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if got := doctorManagedCleanliness(t.Context(), ExecRunner{}, root, lock); got.Status != StatusFail {
+			t.Fatalf("cleanliness = %+v, want untracked submodule failure", got)
+		}
+	})
+}
+
 func findDoctorCheck(t *testing.T, rep Report, name string) Check {
 	t.Helper()
 	return findCheck(t, rep.Checks, name)

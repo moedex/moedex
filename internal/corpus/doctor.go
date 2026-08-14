@@ -277,25 +277,55 @@ func doctorManagedRoot(ctx context.Context, r Runner, cfg Config) []Check {
 	}
 	checks = append(checks, Check{Name: "managed acquisition lock", Status: StatusOK, Detail: fmt.Sprintf("%d locked project(s)", len(lock.Projects))})
 
-	checks = append(checks, doctorManagedCleanliness(ctx, r, cfg.Root))
+	checks = append(checks, doctorManagedCleanliness(ctx, r, cfg.Root, lock))
 	checks = append(checks, doctorManagedAgreement(ctx, r, cfg.Root, lock))
 	return checks
 }
 
-func doctorManagedCleanliness(ctx context.Context, r Runner, root string) Check {
-	res, err := r.RunEnv(ctx, gitEnv, "git", "-C", root, "status", "--porcelain", "--untracked-files=all")
-	if err != nil || !res.Ok() {
-		return Check{Name: "managed recoverable cleanliness", Status: StatusFail, Detail: commandFailureDetail(err, res, "could not inspect work tree"), Fix: "inspect the superproject without mutating it, then restore or commit an intentional snapshot"}
+func doctorManagedCleanliness(ctx context.Context, r Runner, root string, lock Lock) Check {
+	failInspect := func(detail string) Check {
+		return Check{Name: "managed recoverable cleanliness", Status: StatusFail, Detail: detail, Fix: "inspect the superproject without mutating it, then restore or commit an intentional snapshot"}
 	}
-	if len(res.Stdout) != 0 {
+	failDirty := func() Check {
 		return Check{
 			Name:   "managed recoverable cleanliness",
 			Status: StatusFail,
-			Detail: "managed metadata, gitlinks, or submodules have local changes",
+			Detail: "tracked managed metadata, gitlinks, or submodule worktrees have local changes",
 			Fix:    "preserve any local work, then restore the last committed managed snapshot before syncing",
 		}
 	}
-	return Check{Name: "managed recoverable cleanliness", Status: StatusOK, Detail: "work tree matches the committed snapshot"}
+
+	// Ignore untracked files outside Moedex-owned paths. Finder metadata and
+	// similar superproject-root noise cannot enter ingestion (which is driven by
+	// the lock and git ls-files), while staged/tracked changes remain fatal.
+	res, err := r.RunEnv(ctx, gitEnv, "git", "-C", root, "status", "--porcelain", "--untracked-files=no")
+	if err != nil || !res.Ok() {
+		return failInspect(commandFailureDetail(err, res, "could not inspect work tree"))
+	}
+	if len(res.Stdout) != 0 {
+		return failDirty()
+	}
+
+	// Untracked files are not benign inside Moedex-owned metadata or an indexed
+	// submodule: preserve them as local work and stop before sync can advance.
+	res, err = r.RunEnv(ctx, gitEnv, "git", "-C", root, "status", "--porcelain", "--untracked-files=all", "--", ".gitmodules", ManagedDirName)
+	if err != nil || !res.Ok() {
+		return failInspect(commandFailureDetail(err, res, "could not inspect managed metadata"))
+	}
+	if len(res.Stdout) != 0 {
+		return failDirty()
+	}
+	for _, project := range lock.Projects {
+		dest := filepath.Join(root, filepath.FromSlash(project.PathWithNamespace))
+		res, err = r.RunEnv(ctx, gitEnv, "git", "-C", dest, "status", "--porcelain", "--untracked-files=all")
+		if err != nil || !res.Ok() {
+			return failInspect(commandFailureDetail(err, res, "could not inspect a managed submodule worktree"))
+		}
+		if len(res.Stdout) != 0 {
+			return failDirty()
+		}
+	}
+	return Check{Name: "managed recoverable cleanliness", Status: StatusOK, Detail: "tracked snapshot and managed submodule worktrees are clean"}
 }
 
 func doctorManagedAgreement(ctx context.Context, r Runner, root string, lock Lock) Check {
