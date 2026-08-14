@@ -37,7 +37,7 @@ All library code lives under `internal/`; executables under `cmd/`.
 | trigram | [`internal/trigram`](internal/trigram) | The positional-trigram primitive | `const N = 3`; `type Trigram [N]byte`; `(Trigram) String()` |
 | fold | [`internal/fold`](internal/fold) | ASCII case-fold variants for a rune, shared by `query` (Cox reduction) and `search` (verify prefilter) so both agree on every rune | `ASCIIVariants(r) (bytes []byte, allASCII bool)` |
 | index | [`internal/index`](internal/index) | In-memory content-addressed trigram index | `Index`, `New`, `(*Index) AddFile/Postings/Blob/NumBlobs/Trigrams/Snapshot`; `Blob`, `FileRef`, `Posting`, `BlobData`; `Restore`, `RestoreLazy`, `PostingProvider`; `EncodePostings`, `DecodePostings` |
-| ingest | [`internal/ingest`](internal/ingest) | Read a git repo's tracked text files; discover all repos under a root | `File`; `Repo(repoName, dir) ([]File, error)`; `DiscoverRepos(root) ([]string, error)`; `CountGitEntries(root) (int, error)` |
+| ingest | [`internal/ingest`](internal/ingest) | Read a git repo's privacy-eligible tracked text files; discover managed/unmanaged sources | `File`; `Repo(repoName, dir) ([]File, error)`; `RepoSource`; `DiscoverRepos`, `DiscoverSources`; `AIPrivacyFingerprint`; `CountGitEntries` |
 | query | [`internal/query`](internal/query) | Regex → boolean trigram query (Cox reduction) | `Query` (`Eval`, `String`); `All`; `And`, `Or`; `FromRegexp(pattern) (Query, error)` |
 | search | [`internal/search`](internal/search) | Candidate retrieval + verify → line matches | `Match`; `Literal(ctx, ix, q) ([]Match, error)`; `Regex(ctx, ix, pattern) ([]Match, error)` |
 | diskstore | [`internal/diskstore`](internal/diskstore) | Persist/reload the index; mmap postings; the deduped served format + shared content store | `Save(ix, path)`; `Load(path)`; `LoadMmap(path) (*index.Index, io.Closer, error)`; `LoadBlobs`; `SaveDeduped`, `LoadMmapDeduped`, `LoadBlobsDeduped`, `IsDeduped`; `ContentStoreWriter`, `NewContentStoreWriter`, `ContentStore`, `OpenContentStore`, `ContentStoreName` |
@@ -69,7 +69,7 @@ All library code lives under `internal/`; executables under `cmd/`.
 ### Pipeline A — index build
 
 ```
-git ls-files ──▶ ingest.Repo ──▶ index.AddFile (per file)
+.ai-privacy.yml ──▶ ingest.Repo ──▶ git ls-files ──▶ index.AddFile (eligible file)
                                       │
                                       ├─▶ tokenindex.Build   (BM25 term stats)
                                       ├─▶ embed.BuildStore   (optional dense vectors)
@@ -78,9 +78,12 @@ git ls-files ──▶ ingest.Repo ──▶ index.AddFile (per file)
 index ──▶ diskstore.Save ──▶ diskstore.Load / LoadMmap
 ```
 
-1. **Ingest** ([`ingest.Repo`](internal/ingest/ingest.go)) shells out to
-   `git -C <dir> ls-files -s -z`, taking git's own blob SHA as the content
-   identity. Files are read from the working tree; **binary blobs** (those
+1. **Ingest** ([`ingest.Repo`](internal/ingest/ingest.go)) first reads the root
+   `.ai-privacy.yml` (missing/empty defaults to level 3), fails closed on invalid
+   policy, returns no content for a global level 1, and filters effective level-1
+   paths before file open. The bootstrap policy itself and tracked symlinks/gitlinks
+   are not indexed. It then shells out to `git -C <dir> ls-files -s -z`, taking
+   git's own blob SHA as the content identity. Eligible files are read from the working tree; **binary blobs** (those
    containing a NUL byte, as ripgrep detects them) are skipped, and a leading
    UTF-8 BOM is stripped so line/match boundaries stay aligned with ripgrep.
 2. **Index** ([`index.AddFile`](internal/index/index.go)) deduplicates by SHA: a
@@ -217,12 +220,12 @@ All binary sidecar/store formats are little-endian and round-trippable.
 
 The serving layer adds two JSON sidecars that are not part of the index codecs: a
 freshness `manifest.json` (`internal/parity/manifest.go` — repo→shard membership +
-each repo's git HEAD) and per-cache `.meta` validators next to the corpus token,
+each repo's git HEAD and effective privacy-policy fingerprint) and per-cache `.meta` validators next to the corpus token,
 symbol, and embedding sidecars (`internal/server/rankcorpus.go` — a shard-set
 fingerprint + blob count, plus the embedding model for the embedding store, so a
 stale cache is detected and rebuilt rather than silently reused). The CAS adds a
 third JSON sidecar, `blobmanifest.json` (`internal/blobstore/manifest.go` —
-repo→{git HEAD, ordered file entries of `{sha, rel}`} plus global dedup stats),
+repo→{git HEAD, privacy fingerprint, ordered eligible file entries of `{sha, rel}`} plus global dedup stats),
 which records a repo's *blob set* so a per-repo refresh is a pure set-diff.
 
 ---
@@ -303,8 +306,9 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
   byte-for-byte); embeddings are a serve-time concern and are not built there.
 - **Freshness** ([`internal/parity/manifest.go`](internal/parity/manifest.go)).
   `moedex-index build` writes a `manifest.json` recording, per shard, which repos
-  contributed blobs, and per repo its git HEAD at ingest. `check` compares each
-  repo's current `git rev-parse HEAD` against the manifest (`DetectChanges`);
+  contributed blobs, and per repo its git HEAD plus privacy fingerprint at ingest.
+  `check` compares both values against the manifest (`DetectChanges`), so an
+  uncommitted policy-only restriction still triggers a rebuild;
   `refresh` rebuilds **only the shards whose repo set intersects the changed repos**
   (`Rebuild`), carries the untouched shards forward byte-for-byte, atomically swaps
   the new dir into place, and rebuilds the token/symbol sidecars. Freshness is
@@ -445,6 +449,11 @@ registry (`navigate.Servers()`) so they never drift from what the daemon routes.
 `navigate.Pool.Stats()` exposes lifetime spawn/restart/eviction/query counters
 (surfaced by `moedex-nav -stats`). This is a spike behind `-tags lsp`; the pure-Go
 default build is untouched and gains none of it. See ADR 0017 for the full gate.
+Index filtering alone does not make an external language server privacy-safe: it
+may scan an entire workspace or dependencies. ADR 0021 therefore limits the current
+privacy guarantee to index-backed retrieval; the branch rollout plan requires
+LSP-enabled deployments to reject Restricted workspaces unless a sanitized workspace
+is proven.
 ADR 0018 closes the bidirectional name↔position mismatch this leaves for a
 caller (e.g. Protostar's `CodebaseMapper`) holding a *name* rather than a
 `file:line:col`: `find_symbol` (`workspace/symbol`, root-routed, root+lang or

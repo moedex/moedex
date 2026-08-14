@@ -35,6 +35,7 @@ files_modified:
 autonomous: false
 requirements:
   - ADR-0020
+  - ADR-0021
 user_setup:
   - Active TC VPN and authenticated Git transport for final refresh/parity/capacity measurements.
   - Sibling CAS/shard/sidecar capacity and a rollback configuration retaining the default-only index.
@@ -45,6 +46,7 @@ must_haves:
     - Explicit project/branch/all scope is applied before exact limiting and ranked candidate fusion/top-K.
     - Structured and text results report an exact selected branch and commit without misleading filesystem paths.
     - Default parity/relevance do not regress, branch-scoped parity passes, and production remains one configuration switch from rollback.
+    - No default or branch scope can return content excluded by that commit snapshot's privacy policy.
   artifacts:
     - path: internal/source/scope.go
       provides: Shared validated scope and deterministic eligible-source selection.
@@ -70,6 +72,7 @@ must_haves:
     - Never include feature-branch-only content in an unscoped request.
     - Never filter ranked results after top-K or exact results after a caller's limit.
     - Never route a non-default source to an LSP server reading the default checkout.
+    - Never start or query a live LSP workspace containing effective level-1 paths unless it is a proven privacy-sanitized workspace.
     - Never cut over when a capacity, default-parity, relevance, recovery, or provenance gate is unresolved.
 ---
 
@@ -97,6 +100,7 @@ operator-approved rollout report.
 @docs/adr/0015-structured-context-result.md
 @docs/adr/0017-lsp-navigation-and-the-serena-boundary.md
 @docs/adr/0020-branch-aware-indexing.md
+@docs/adr/0021-ai-privacy-aware-indexing.md
 @docs/plans/phases/03-branch-acquisition/PLAN.md
 @docs/plans/phases/03-branch-acquisition/CAPACITY.md
 @docs/plans/phases/05-source-provenance-format/PLAN.md
@@ -123,6 +127,8 @@ operator-approved rollout report.
   an empty result that looks authoritative.
 - Source eligibility is computed at blob-candidate entry, before postings/ranking limits. Output
   selection is separate from content identity.
+- Privacy eligibility is resolved during snapshot ingestion and is never overridable by query scope;
+  branch filters can narrow eligible sources but cannot restore excluded occurrences.
 
 ## Artifacts this phase produces
 
@@ -195,7 +201,10 @@ behavior. Structured output adds `project_id`, `path_with_namespace`, `branch`, 
 `navigable_path`; keep legacy repo/path fields where truthful. Text headers use
 `path_with_namespace@branch:relative_path`. Validate request size/counts and reject an explicit
 branch combined with include-all. Navigation accepts only a non-empty `NavigablePath`; structured non-default
-results must not suggest calling position-based LSP tools with another checkout's path. Metrics use
+results must not suggest calling position-based LSP tools with another checkout's path. Before a
+live LSP server starts or receives a query, fail closed if the workspace policy is invalid or any
+effective level-1 path is within that workspace; a future sanitized-workspace implementation may
+replace this conservative block only with dedicated proof. Metrics use
 bounded scope labels (`default`, `branch`, `all`), never raw project/branch names.
   </action>
   <verify>go test ./internal/mcp ./cmd/moedex-serve -run 'Test.*(Scope|Branch|Structured|Text|Navigation|Metrics)' -count=1</verify>
@@ -203,6 +212,7 @@ bounded scope labels (`default`, `branch`, `all`), never raw project/branch name
     - Old HTTP/MCP/CLI requests are byte/field compatible except for additive optional response fields.
     - Explicit branch requests round trip through parsing, retrieval, and structured/text rendering.
     - Non-default structured blocks omit `navigable_path`/truthful `abs_path` and identify exact commit.
+    - LSP-tagged tests prove invalid/global/path-level Restricted workspaces launch no server and return no symbol/location data.
     - Raw branch/project values never become metric labels or unbounded logs.
   </acceptance_criteria>
   <done>Every supported client can request branches explicitly and receives consistent honest provenance.</done>
@@ -225,12 +235,16 @@ fetch, failed V6 export, failed sidecar build, and daemon reload; each must reta
 complete served snapshot. Update doctor/metrics/docs and `ARCHITECTURE.md` only after tests describe
 the behavior that actually ships. Record redacted baseline-versus-actual evidence in
 `BENCHMARKS.md` and create `ROLLOUT.md` with switch, rollback, owner, timestamps, and soak fields;
-do not include tokens, credential URLs, or private project names.
+do not include tokens, credential URLs, or private project names. The branch oracle must apply the
+exact commit's `.ai-privacy.yml` before ripgrep comparison and assert zero results/sidecar inputs
+for every effective level-1 occurrence. Record aggregate policy and excluded-reference counts in
+the rollout evidence.
   </action>
   <verify>go test ./internal/parity ./internal/eval ./internal/server -run 'Test(BranchParity|CorpusGoldGate|.*Branch.*Recovery)' -count=1</verify>
   <acceptance_criteria>
     - Default parity passes unchanged before branch-specific assertions run.
     - Every branch fixture matches the exact locked-commit ripgrep oracle with source provenance.
+    - Branches with different policies at different commits expose only their own privacy-eligible result universe.
     - Default gold metrics meet their existing floors and the report records before/after values.
     - Every observed capacity/latency value is compared to an owned threshold from the approved baseline.
     - Failure injection always leaves the old or new complete directory reloadable.
@@ -240,7 +254,7 @@ do not include tokens, credential URLs, or private project names.
 
 <task type="checkpoint:human-verify" gate="blocking" id="6.5">
   <what-built>A sibling branch-aware CAS, MOEDEX06 shard directory, sidecars, and test daemon with scoped CLI/HTTP/MCP behavior.</what-built>
-  <how-to-verify>Review the Phase 3 baseline-versus-actual report; run the full verification block; compare unscoped results and gold metrics to the default-only deployment; inspect feature-only, deleted, alias, and force-push queries with exact provenance; verify non-default results have no LSP path; test SIGHUP and rollback configuration; then approve the hot-swap. Keep the old directory and `ref_policy: default` configuration through the recorded soak period.</how-to-verify>
+  <how-to-verify>Review the Phase 3 baseline-versus-actual report; run the full verification block; compare unscoped results and gold metrics to the default-only deployment; inspect feature-only, deleted, alias, force-push, and branch-specific privacy cases with exact provenance; verify non-default results have no LSP path and Restricted workspaces cannot launch/query LSP; test SIGHUP and rollback configuration; then approve the hot-swap. Keep the old directory and `ref_policy: default` configuration through the recorded soak period.</how-to-verify>
   <resume-signal>Type `approved` with the rollout/soak report path, or describe the failed gate.</resume-signal>
 </task>
 
@@ -256,6 +270,7 @@ do not include tokens, credential URLs, or private project names.
 - [ ] `make test-dense`
 - [ ] `moedex-index doctor -shard-dir /path/to/branch-aware-shards`
 - [ ] Unscoped, explicit-branch, all-branch, legacy-shard, reload, and rollback smoke tests pass.
+- [ ] Per-snapshot privacy parity and LSP fail-closed tests pass for default and non-default branches.
 - [ ] Rollout report contains baseline/actual capacity, relevance, parity, provenance samples, health, rollback, owner, and soak outcome.
 
 </verification>
@@ -265,6 +280,7 @@ do not include tokens, credential URLs, or private project names.
 - Automated gates and the human production checkpoint pass.
 - Unscoped behavior remains default-only across exact, ranked, HTTP, CLI, and MCP paths.
 - Explicit branch scope returns branch-only content with exact project/branch/commit provenance.
+- Query scope never widens the privacy-eligible universe and live LSP remains blocked for Restricted workspaces.
 - The deployed system remains recoverable by restoring the prior configured shard directory and
   `ref_policy: default`.
 - ADR 0020 can move from Proposed to Accepted/Implemented with evidence links.

@@ -63,6 +63,11 @@ reference but does not immediately reclaim append-only CAS content.
 
 For each distinct locked commit, ingestion uses `git ls-tree -r -z --full-tree` to enumerate paths
 and blob object IDs, then `git cat-file --batch` to read required unique objects efficiently.
+The tree walk first locates the commit's root `.ai-privacy.yml`; that one bootstrap blob is parsed
+before any other blob content is requested. Missing policy defaults to level 3, effective level-1
+paths are never requested from `cat-file`, invalid policy fails the snapshot, and symlink/gitlink
+objects are never followed. Privacy is evaluated per commit because different branches can carry
+different policies ([0021](./0021-ai-privacy-aware-indexing.md)).
 Content passes through the same text/binary classification, VCS-internal-path filtering, UTF-8 BOM
 normalization, and content-true hashing used by the current CAS path. Tree entry modes (regular
 file, executable, symlink, and gitlink) must be pinned by parity tests before cutover; nested gitlink
@@ -76,7 +81,7 @@ working-tree behavior; managed corpus builds are committed-snapshot builds.
 
 Branch mode requires the content-addressable path ([0004](./0004-content-addressable-blob-store.md)).
 The CAS manifest advances to a source-snapshot schema: project metadata plus commit snapshots,
-branch aliases, and ordered file entries. Refresh processes only added/moved snapshots, uses
+branch aliases, privacy-policy fingerprint, and ordered privacy-eligible file entries. Refresh processes only added/moved snapshots, uses
 idempotent `Put` for net-new normalized content, carries unchanged snapshots verbatim, and retains
 the prior snapshot on any ambiguous or transient ingest failure.
 
@@ -130,7 +135,9 @@ HTTP output add project/branch/commit/source-locator fields; text output renders
 LSP navigation remains a live/default-working-tree capability ([0017](./0017-lsp-navigation-and-the-serena-boundary.md)).
 Moedex does not send a branch result to an LSP server reading another checkout. Navigation is
 available only when the selected source matches the checked-out locked default commit. Temporary
-branch worktrees and branch-specific LSP pools are a separate future decision.
+branch worktrees and branch-specific LSP pools are a separate future decision. ADR 0021 governs
+index-backed search; an LSP-tagged deployment must separately prove a privacy-aware sanitized
+workspace before live navigation is enabled for repositories containing level-1 paths.
 
 ## Consequences
 
@@ -191,5 +198,6 @@ branch worktrees and branch-specific LSP pools are a separate future decision.
 [0015](./0015-structured-context-result.md),
 [0016](./0016-incremental-embedding-refresh.md),
 [0017](./0017-lsp-navigation-and-the-serena-boundary.md),
-[0019](./0019-moedex-managed-submodule-corpus.md);
+[0019](./0019-moedex-managed-submodule-corpus.md),
+[0021](./0021-ai-privacy-aware-indexing.md);
 [implementation plan](../plans/0020-branch-aware-indexing.md).

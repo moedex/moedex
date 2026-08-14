@@ -24,6 +24,7 @@ These ADRs capture the architectural decisions behind moedex, a clean-room, sing
 | [0018](./0018-name-based-navigation-workspace-symbol.md) | Name-based navigation — `find_symbol` (workspace/symbol) + `symbols_overview` (documentSymbol); the name→position unblock for a Serena drop-in | Proposed (implemented: `internal/navigate` `WorkspaceSymbol`/`DocumentSymbol` + MCP tools, `-tags lsp`) |
 | [0019](./0019-moedex-managed-submodule-corpus.md) | Moedex-managed corpus — local Git superproject, curated submodules, and an exact committed corpus lock | Proposed ([program and phases](../plans/0019-managed-submodule-corpus.md)) |
 | [0020](./0020-branch-aware-indexing.md) | Branch-aware indexing — locked Git trees, content-deduped snapshots, honest provenance, and explicit branch scope | Proposed ([program and phases](../plans/0020-branch-aware-indexing.md)) |
+| [0021](./0021-ai-privacy-aware-indexing.md) | AI-privacy-aware indexing — fail-closed level-1 exclusion and policy-aware freshness | Accepted |
 
 **Companion docs**: [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) (what the code is today),
 [`../plans/`](../plans/) (implementation plans for proposed decisions),

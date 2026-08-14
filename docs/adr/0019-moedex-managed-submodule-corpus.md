@@ -104,6 +104,17 @@ builds a sibling managed corpus, CAS, and shard directory; validates it; hot-swa
 retains the previous corpus/index through a soak period. A future explicit `adopt` command may be
 designed separately, but implicit adoption is forbidden.
 
+### AI-privacy boundary
+
+Acquisition does not authorize indexing every acquired byte. Before any tracked content is read,
+all managed and unmanaged indexing paths load the repository-root `.ai-privacy.yml`, default a
+missing policy to level 3, and apply the most restrictive matching rule. Globally level-1
+repositories contribute zero file references; level-1 path overrides are excluded before file
+open; the policy itself is not searchable; and tracked symlinks are not followed. Invalid policies
+stop publication rather than becoming ordinary skipped repositories. CAS and served manifests
+record a privacy fingerprint alongside `HEAD`, so policy-only working-tree changes trigger a scrub.
+The complete decision is [ADR 0021](./0021-ai-privacy-aware-indexing.md).
+
 ## Consequences
 
 **Positive**
@@ -146,12 +157,15 @@ designed separately, but implicit adoption is forbidden.
 
 - `internal/corpus` already proves authenticated enumeration, curated filtering, clone/sync
   reconciliation, path containment, pinned-host URLs, and bounded parallel Git operations.
-- `internal/ingest.DiscoverRepos` recognizes only `.git` directories, whereas the existing
-  `CountGitEntries` documentation already calls out `.git` files for worktrees/submodules. A naive
-  submodule conversion would therefore discover the superproject and miss its children.
+- Source discovery now recognizes both `.git` directories and `.git` files, while managed indexing
+  consumes the lock/catalog rather than indexing the superproject or inferring membership from the
+  filesystem.
 - The 2026-08-14 scheduled refresh reached the local corpus successfully but its GitLab sync failed
   before VPN connectivity was available, demonstrating why connectivity and authentication must be
   distinct diagnostics and why a failed enumeration must never imply prune authority.
+- The rollout preflight found 114 canonical `.ai-privacy.yml` policies in the conventional corpus;
+  the first sibling initialization was stopped before CAS/index creation when the missing
+  enforcement was discovered.
 
 ## Related
 
@@ -159,5 +173,6 @@ designed separately, but implicit adoption is forbidden.
 [0010](./0010-warm-serving-spine.md),
 [0011](./0011-shard-level-freshness.md),
 [0017](./0017-lsp-navigation-and-the-serena-boundary.md),
-[0020](./0020-branch-aware-indexing.md);
+[0020](./0020-branch-aware-indexing.md),
+[0021](./0021-ai-privacy-aware-indexing.md);
 [implementation plan](../plans/0019-managed-submodule-corpus.md).

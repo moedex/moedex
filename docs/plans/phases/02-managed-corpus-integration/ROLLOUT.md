@@ -27,9 +27,12 @@ usernames, or other corpus membership details.
 |---|---:|---:|---|
 | Projects | `<n>` | `<n>` | equal |
 | Locked default commits | `<n>` | `<n>` | equals managed projects |
-| Indexed files | `<n>` | `<n>` | equal |
+| Canonical `.ai-privacy.yml` policies | `<n>` | `<n>` | equal and all parse |
+| Globally level-1 repositories | `<n>` | `<n>` | equal; zero indexed file references |
+| Level-1 path overrides | `<n>` | `<n>` | equal; zero indexed file references |
+| Privacy-eligible indexed files | `<n>` | `<n>` | equal |
 | Unique blobs | `<n>` | `<n>` | explain any dedup-only difference |
-| File references | `<n>` | `<n>` | equal |
+| Privacy-eligible file references | `<n>` | `<n>` | equal |
 
 ## Automated gates
 
@@ -37,6 +40,10 @@ usernames, or other corpus membership details.
       VPN/API reachability, and Git transport checks.
 - [ ] `moedex-index doctor -shard-dir <new-shards>` passes.
 - [ ] `moedex-index check -shard-dir <new-shards> -corpus <new-corpus>` reports no changes.
+- [ ] Policy-only audit validates every canonical `.ai-privacy.yml` without reading repository
+      content; the current conventional-corpus baseline is 114 policies and zero `.yaml` aliases.
+- [ ] CAS and served manifests contain privacy fingerprints for every repository; every global or
+      path-level effective level-1 scope contributes zero searchable references.
 - [ ] `make parity MOEDEX_CORPUS=<new-corpus>` passes.
 - [ ] Default-only exact result comparison passes for
       `(path_with_namespace, relative_path, line, matched_text)`.
@@ -49,6 +56,13 @@ Evidence (redacted command summaries, digests, counts):
 ```text
 <paste redacted evidence>
 ```
+
+## Preflight deviations
+
+- The first sibling initialization was stopped before CAS/index creation when the missing
+  `.ai-privacy.yml` enforcement was discovered.
+- Its incomplete sibling root is retained untouched pending explicit cleanup authorization; it is
+  not a rollout candidate and was never connected to the live daemon.
 
 ## Configuration switch
 

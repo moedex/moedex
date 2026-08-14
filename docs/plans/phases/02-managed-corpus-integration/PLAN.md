@@ -11,16 +11,25 @@ files_modified:
   - internal/corpus/doctor.go
   - internal/corpus/corpus_test.go
   - internal/ingest/discover.go
+  - internal/ingest/ingest.go
+  - internal/ingest/ingest_test.go
+  - internal/ingest/privacy.go
   - internal/ingest/source.go
   - internal/ingest/discover_test.go
   - internal/parity/corpus.go
   - internal/parity/manifest.go
+  - internal/parity/manifest_test.go
   - internal/parity/corpus_test.go
   - internal/blobstore/build.go
+  - internal/blobstore/blobstore_test.go
+  - internal/blobstore/export_shared.go
   - internal/blobstore/manifest.go
+  - internal/blobstore/refresh_deduped.go
   - internal/blobstore/cas_export_parity_test.go
   - internal/blobstore/refresh_deduped_parity_test.go
   - cmd/moedex-index/main.go
+  - cmd/scale/main.go
+  - internal/eval/runner_corpus.go
   - scripts/install-macos.sh
   - scripts/refresh-corpus.sh
   - scripts/managed-refresh-test.sh
@@ -28,9 +37,21 @@ files_modified:
   - deploy/moedex-serve.env.example
   - deploy/README.md
   - docs/plans/phases/02-managed-corpus-integration/ROLLOUT.md
+  - docs/adr/0019-moedex-managed-submodule-corpus.md
+  - docs/adr/0020-branch-aware-indexing.md
+  - docs/adr/0021-ai-privacy-aware-indexing.md
+  - docs/adr/README.md
+  - docs/plans/0019-managed-submodule-corpus.md
+  - docs/plans/0020-branch-aware-indexing.md
+  - docs/plans/phases/03-branch-acquisition/PLAN.md
+  - docs/plans/phases/04-branch-aware-cas/PLAN.md
+  - docs/plans/phases/05-source-provenance-format/PLAN.md
+  - docs/plans/phases/06-scoped-serving-rollout/PLAN.md
+  - ARCHITECTURE.md
 autonomous: false
 requirements:
   - ADR-0019
+  - ADR-0021
 user_setup:
   - An authenticated `glab` session for `gitlab.tcdevops.com`.
   - Active TC VPN access during the real-corpus checkpoint.
@@ -39,6 +60,7 @@ must_haves:
   truths:
     - CLI users can initialize, sync, dry-run, and diagnose a managed corpus with distinct auth, VPN, and Git-transport failures.
     - Every default-branch indexing path consumes the managed lock and excludes the superproject itself.
+    - Every build reads `.ai-privacy.yml` before repository content, excludes effective level-1 paths, and fails closed on invalid policy.
     - Unmanaged and single-repository workflows keep their existing discovery and output behavior.
     - A managed default-only corpus is cut over beside the live corpus only after parity and health checks pass.
   artifacts:
@@ -50,6 +72,8 @@ must_haves:
       provides: Ownership, snapshot, auth, reachability, and Git transport diagnostics.
     - path: scripts/refresh-corpus.sh
       provides: Managed sync to CAS refresh/export/sidecar/reload orchestration.
+    - path: internal/ingest/privacy.go
+      provides: Strict governance-policy parsing, effective-level resolution, and freshness fingerprints.
   key_links:
     - from: .moedex/corpus.lock.json
       to: internal/ingest/source.go
@@ -60,10 +84,14 @@ must_haves:
     - from: scripts/refresh-corpus.sh
       to: moedex-corpus sync and moedex-index cas-refresh
       via: Corpus snapshot advances before index snapshot and warm reload.
+    - from: .ai-privacy.yml
+      to: internal/ingest/ingest.go and freshness manifests
+      via: Policy is validated before content, level-1 paths are never opened, and policy fingerprints invalidate stale snapshots.
   prohibitions:
     - Never silently fall back from an invalid managed lock to filesystem discovery.
     - Never index the superproject root as a source repository.
     - Never switch or delete the existing live corpus/index during automated setup.
+    - Never index or embed effective level-1 content, follow tracked symlinks, or treat malformed policy as an ordinary skipped repository.
 ---
 
 <objective>
@@ -85,6 +113,7 @@ scripts/configuration, and a human-approved managed-corpus cutover report.
 
 <context>
 @docs/adr/0019-moedex-managed-submodule-corpus.md
+@docs/adr/0021-ai-privacy-aware-indexing.md
 @docs/plans/phases/01-managed-corpus-foundation/PLAN.md
 @docs/plans/phases/01-managed-corpus-foundation/SUMMARY.md
 @cmd/moedex-corpus/main.go
@@ -104,6 +133,9 @@ scripts/configuration, and a human-approved managed-corpus cutover report.
   fallback that could silently alter corpus membership.
 - An unmarked root retains current recursive discovery, including nested ordinary repositories.
 - `.git` files are recognized as repository markers without descending into Git metadata.
+- The canonical repository policy is `.ai-privacy.yml` (not `.ai-privacy.yaml`); missing policy
+  defaults to level 3, while effective level-1 content is excluded before file reads.
+- CAS and served freshness compare both Git `HEAD` and the effective privacy-policy fingerprint.
 - The live migration creates a sibling root and sibling CAS/shards; the old paths remain the
   immediate rollback until the soak period is accepted.
 
@@ -113,6 +145,7 @@ scripts/configuration, and a human-approved managed-corpus cutover report.
 - `internal/ingest.RepoSource` and `DiscoverSources` (or equivalently named typed seam).
 - Lock-driven source wiring for direct build, parity, CAS build/refresh, and served export.
 - Default-only managed/unmanaged equivalence tests.
+- AI-privacy enforcement shared by direct, parity, CAS, served, scale, and eval indexing paths.
 - Updated install/refresh/deployment examples and a rollout report template.
 - `docs/plans/phases/02-managed-corpus-integration/ROLLOUT.md` for redacted counts, gates,
   configuration switch, rollback, owner, and soak result.
@@ -217,9 +250,39 @@ case must fail the refresh and prove that the previously served snapshot remains
   <done>Hermetic tests isolate and prove the default-only compatibility gate required before branch work.</done>
 </task>
 
-<task type="checkpoint:human-verify" gate="blocking" id="2.5">
+<task type="auto" id="2.5">
+  <name>Task 5: Enforce AI-privacy policy before content ingestion</name>
+  <files>internal/ingest/privacy.go, internal/ingest/ingest.go, internal/ingest/ingest_test.go, internal/blobstore/build.go, internal/blobstore/manifest.go, internal/blobstore/export_shared.go, internal/blobstore/refresh_deduped.go, internal/blobstore/blobstore_test.go, internal/parity/corpus.go, internal/parity/manifest.go, internal/parity/manifest_test.go, cmd/moedex-index/main.go, cmd/scale/main.go, internal/eval/runner_corpus.go, docs/adr/0019-moedex-managed-submodule-corpus.md, docs/adr/0021-ai-privacy-aware-indexing.md, ARCHITECTURE.md</files>
+  <read_first>TurnCommerce AI Governance §10, internal/ingest/ingest.go, internal/blobstore/build.go, internal/blobstore/refresh_deduped.go, internal/parity/manifest.go</read_first>
+  <action>
+Add a dependency-free strict parser for the canonical repository-root `.ai-privacy.yml`. Missing or
+empty policy defaults to global level 3; the effective level is the most restrictive global/exact/
+ancestor rule; malformed, unsafe, or more-permissive overrides fail closed. Load the policy before
+`git ls-files`; globally level-1 repos return no content, level-1 paths are filtered before file
+open, the policy is excluded from search, and tracked symlinks/gitlinks are never followed. Make
+privacy errors fatal in every build path. Persist an effective-policy fingerprint alongside HEAD in
+CAS and served manifests, trigger refresh on policy-only changes, preserve zero-shard repo identity,
+and re-export stale refs out of served shards. Validate real-corpus policy syntax without reading
+repository content, capture the boundary in ADR 0021, and carry per-commit privacy-first object
+ingestion plus LSP workspace restrictions into ADR 0020 and Phases 3–6.
+  </action>
+  <verify>
+GOCACHE=/tmp/moedex-phase2-gocache go test ./internal/ingest ./internal/blobstore ./internal/parity ./cmd/moedex-index ./cmd/scale ./internal/eval -run 'Test.*AIPrivacy|TestRepoSkipsTrackedSymlink|TestRebuildPreservesRestricted' -count=1
+GOCACHE=/tmp/moedex-phase2-gocache MOEDEX_PRIVACY_CORPUS=/path/to/conventional-corpus go test ./internal/ingest -run TestCorpusAIPrivacyPoliciesParse -count=1 -v
+  </verify>
+  <acceptance_criteria>
+    - No effective level-1 file is opened, stored, mirrored, indexed, embedded, or served.
+    - Missing/empty policy defaults to level 3; invalid policy aborts publication and preserves the prior manifest.
+    - An uncommitted policy-only change triggers CAS and served refresh despite an unchanged HEAD.
+    - A globally Restricted repository remains in freshness manifests with zero file references and can be re-indexed after a permitted policy relaxation.
+    - All canonical policies in the conventional corpus parse successfully in a policy-only audit.
+  </acceptance_criteria>
+  <done>Managed acquisition cannot advance to indexing until the privacy boundary is proven across every publication path.</done>
+</task>
+
+<task type="checkpoint:human-verify" gate="blocking" id="2.6">
   <what-built>A complete sibling managed corpus, CAS, served shard directory, sidecars, and test daemon using the authenticated TC GitLab corpus.</what-built>
-  <how-to-verify>With VPN active, initialize and sync the sibling root; run the verification block below; compare project/lock/file/blob counts and sample exact results; exercise one refresh; then approve the configuration switch only if health, parity, freshness, and rollback paths are recorded. Retain the old corpus/index for the agreed soak period.</how-to-verify>
+  <how-to-verify>With VPN active, initialize and sync the sibling root; run the verification block below; record the redacted privacy-policy count and prove every level-1 scope has zero searchable references; compare privacy-eligible project/lock/file/blob counts and sample exact results; exercise one refresh; then approve the configuration switch only if privacy, health, parity, freshness, and rollback paths are recorded. Retain the old corpus/index for the agreed soak period.</how-to-verify>
   <resume-signal>Type `approved` with the rollout-report path, or describe the failed gate.</resume-signal>
 </task>
 
@@ -228,13 +291,15 @@ case must fail the refresh and prove that the previously served snapshot remains
 <verification>
 
 - [ ] `go test ./cmd/moedex-corpus ./internal/corpus ./internal/ingest ./internal/parity ./internal/blobstore ./cmd/moedex-index -count=1`
+- [ ] `MOEDEX_PRIVACY_CORPUS=/path/to/conventional-corpus go test ./internal/ingest -run TestCorpusAIPrivacyPoliciesParse -count=1 -v`
 - [ ] `make health`
 - [ ] `make roundtrip`
 - [ ] `make parity MOEDEX_CORPUS=/path/to/managed-default-only-corpus`
 - [ ] `moedex-corpus doctor -corpus /path/to/managed-default-only-corpus`
 - [ ] `moedex-index doctor -shard-dir /path/to/new-shards`
 - [ ] `moedex-index check -shard-dir /path/to/new-shards`
-- [ ] Sibling rollout report records old/new lock, project/file/blob counts, health, rollback, and soak owner.
+- [ ] Sibling rollout report records old/new lock, privacy-policy/restricted counts,
+      privacy-eligible project/file/blob counts, health, rollback, and soak owner.
 
 </verification>
 
@@ -242,6 +307,7 @@ case must fail the refresh and prove that the previously served snapshot remains
 
 - Automated tests and the human checkpoint pass.
 - The managed default-only result universe is equivalent to the conventional corpus.
+- Effective level-1 content is absent from direct, CAS, deduped served, parity, and sidecar inputs.
 - The live service can roll back by restoring the prior configured paths without rebuilding.
 - ADR 0020 Phase 3 is unblocked only after the rollout report is approved.
 

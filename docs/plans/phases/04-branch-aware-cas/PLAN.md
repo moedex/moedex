@@ -20,6 +20,7 @@ files_modified:
 autonomous: true
 requirements:
   - ADR-0020
+  - ADR-0021
 user_setup: []
 must_haves:
   truths:
@@ -27,6 +28,7 @@ must_haves:
     - Refresh tree-walks only new project commits and reuses unchanged snapshot file lists exactly.
     - Branch deletion removes only source references; content remains live while any snapshot references it.
     - An ingest or lock ambiguity carries the prior complete project manifest and cannot publish a silent deletion.
+    - Every snapshot persists the exact privacy-policy fingerprint applied to its privacy-eligible file list.
   artifacts:
     - path: internal/blobstore/manifest.go
       provides: Version-2 project/snapshot/branch/file manifest plus version-1 reader compatibility.
@@ -42,7 +44,7 @@ must_haves:
       via: Lock-v2 project/branch/commit state is the sole desired-state input for a managed refresh.
     - from: internal/ingest/tree.go
       to: internal/blobstore/manifest.go
-      via: Each new commit yields ordered file occurrences keyed by normalized content hash.
+      via: Each new commit yields a policy fingerprint plus ordered privacy-eligible file occurrences keyed by normalized content hash.
     - from: internal/blobstore/manifest.go
       to: internal/blobstore/compact.go
       via: The union of every live snapshot's file content keys defines CAS liveness.
@@ -50,6 +52,7 @@ must_haves:
     - Never export a branch-aware manifest through MOEDEX05, which cannot persist branch provenance.
     - Never reinterpret or rewrite a version-1 CAS manifest in place as version 2.
     - Never reclaim a blob referenced by any live project snapshot.
+    - Never reuse a snapshot file list across a mismatched or absent privacy-policy fingerprint.
 ---
 
 <objective>
@@ -72,6 +75,7 @@ and an explicit export barrier until MOEDEX06 exists.
 @docs/adr/0004-content-addressable-blob-store.md
 @docs/adr/0011-shard-level-freshness.md
 @docs/adr/0020-branch-aware-indexing.md
+@docs/adr/0021-ai-privacy-aware-indexing.md
 @docs/plans/phases/03-branch-acquisition/PLAN.md
 @docs/plans/phases/03-branch-acquisition/SUMMARY.md
 @internal/blobstore/manifest.go
@@ -87,14 +91,15 @@ and an explicit export barrier until MOEDEX06 exists.
   directory; no implicit in-place conversion is allowed.
 - Project identity is numeric project ID. Namespace rename is metadata-only.
 - Commit snapshots own ordered file occurrences; branch names are aliases on snapshots.
+- Commit snapshots also own their validated privacy-policy fingerprint; content eligibility is not inherited across commits.
 - CAS content identity is the normalized content key, while Git OID remains acquisition metadata.
 - Phase 4 may build and compact branch CAS data, but served export fails closed until Phase 5 can
   write source-aware shards.
 
 ## Artifacts this phase produces
 
-- `BlobManifestVersion = 2` representation with `ProjectBlobs`, `SnapshotBlobs`, branch aliases, and
-  ordered source file entries.
+- `BlobManifestVersion = 2` representation with `ProjectBlobs`, `SnapshotBlobs`, branch aliases,
+  privacy fingerprints, and ordered privacy-eligible source file entries.
 - `SnapshotDelta`/`ProjectDelta` classification for unchanged, added, alias-moved, removed,
   metadata-only, and carried-forward states.
 - `BuildManagedCAS` and `RefreshManagedCAS` (or equivalent lock-driven entry points).
@@ -111,8 +116,8 @@ and an explicit export barrier until MOEDEX06 exists.
   <action>
 Add a version-2 manifest organized as stable project ID -> commit snapshot -> ordered file
 occurrences. Project metadata includes namespace and default branch. Snapshot metadata includes
-commit, ordered aliases, default status, and files containing relative path, normalized content key,
-Git OID, and tree mode. Enforce deterministic ordering and validate duplicate IDs, duplicate branch
+commit, ordered aliases, default status, privacy-policy fingerprint, and files containing relative
+path, normalized content key, Git OID, and tree mode. Enforce deterministic ordering and validate duplicate IDs, duplicate branch
 ownership, commit/hash shape, path safety, default-branch presence, and stats consistency. Keep an
 explicit v1 decode path that maps each legacy repo record to one default/unknown-project snapshot;
 unknown versions fail closed. Do not write v2 over an existing v1 path except through an explicit
@@ -123,6 +128,7 @@ rebuild destination.
     - V1 fixture bytes still load with their original repo/file/head semantics.
     - V2 round trips deterministically and rejects inconsistent alias/default/file state.
     - Two file occurrences may share one content key while retaining distinct paths and source snapshots.
+    - A snapshot with level-1 exclusions records its policy fingerprint and contains no prohibited file occurrence.
     - Unknown manifest versions and mixed v1/v2 fields are errors.
   </acceptance_criteria>
   <done>The storage manifest can state branch provenance and content liveness without breaking legacy reads.</done>
@@ -136,7 +142,8 @@ rebuild destination.
 Compare desired lock-v2 state to the prior v2 manifest by project ID, branch, and commit. Classify
 unchanged snapshot, added commit, alias moved between already-known commits, removed alias/snapshot,
 namespace-only rename, and failed project. Reuse unchanged snapshot file slices byte-for-byte; walk
-and ingest only a commit not already present for that project. Register normalized content with
+and ingest only a commit not already present for that project, but only when the snapshot's recorded
+privacy fingerprint matches the commit policy. Register normalized content with
 idempotent CAS `Put`. Apply a project's new manifest only after all of its required new snapshots
 ingest successfully. On any project failure, copy the prior complete project record and mark the
 aggregate refresh partial/non-zero while allowing independent projects to advance. Allow removals
@@ -148,6 +155,7 @@ only from a complete lock snapshot.
     - A force-push ingests only its new commit and adds only net-new normalized blobs.
     - A failed new snapshot leaves every prior branch result for that project represented in the output manifest.
     - Project rename changes metadata without re-reading content.
+    - A missing/mismatched privacy fingerprint forces safe snapshot re-validation rather than file-list reuse.
     - Refresh statistics reconcile exactly with the before/after manifests and CAS index.
   </acceptance_criteria>
   <done>Incremental work and removal semantics are explicit, measurable, and safe under partial failure.</done>
@@ -214,6 +222,7 @@ version, lock-to-manifest project coverage, content availability, and export eli
 <success_criteria>
 
 - Manifest v2 preserves every source occurrence and deduplicates normalized content.
+- Manifest v2 proves which privacy policy produced each snapshot's eligible occurrence set.
 - Delta work is proportional to new per-project commits, not raw branch count.
 - Branch deletion and partial failure cannot remove still-live or prior-safe content.
 - Phase 5 receives complete source metadata and an enforced no-loss export boundary.

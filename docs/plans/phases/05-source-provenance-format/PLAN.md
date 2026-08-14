@@ -30,6 +30,7 @@ files_modified:
 autonomous: true
 requirements:
   - ADR-0020
+  - ADR-0021
 user_setup: []
 must_haves:
   truths:
@@ -37,6 +38,7 @@ must_haves:
     - Non-default sources never claim an absolute path to bytes from the default checkout.
     - MOEDEX06 normalizes project/snapshot metadata and file refs point to source IDs instead of repeating branch strings.
     - MOEDEX03, MOEDEX04, and MOEDEX05 shards remain readable with explicit legacy provenance.
+    - MOEDEX06 export contains only privacy-eligible occurrences and its served manifest retains each snapshot's policy fingerprint.
   artifacts:
     - path: internal/source/ref.go
       provides: Canonical project/snapshot/file source identity, display, equality, and navigation rules.
@@ -60,6 +62,7 @@ must_haves:
     - Never synthesize a non-default `AbsPath` from the default checkout root.
     - Never make new branch-aware writers emit MOEDEX03/04/05.
     - Never remove or silently reinterpret legacy readers in this phase.
+    - Never flatten away or omit the policy fingerprint used to classify a branch snapshot.
 ---
 
 <objective>
@@ -82,6 +85,7 @@ export/refresh, server loading, legacy compatibility, and corruption/overflow co
 @docs/adr/0015-structured-context-result.md
 @docs/adr/0017-lsp-navigation-and-the-serena-boundary.md
 @docs/adr/0020-branch-aware-indexing.md
+@docs/adr/0021-ai-privacy-aware-indexing.md
 @docs/plans/phases/04-branch-aware-cas/PLAN.md
 @docs/plans/phases/04-branch-aware-cas/SUMMARY.md
 @internal/index/index.go
@@ -103,6 +107,8 @@ export/refresh, server loading, legacy compatibility, and corruption/overflow co
   ID, relative path, and Git OID.
 - Existing v3/v4/v5 readers remain immutable compatibility paths. Rollback points the daemon back to
   the previous sibling shard directory; no downgrade writer is required.
+- Privacy fingerprints live in the directory/source manifest rather than per content blob, but are
+  included in freshness and sidecar fingerprints.
 
 ## Artifacts this phase produces
 
@@ -176,6 +182,8 @@ served-delta classification with project/snapshot/source metadata so alias or na
 rewrite affected ref metadata even when content keys do not change. Keep V1 -> V5 export behavior
 unchanged. Update deduped compaction to read both V5 and V6 and copy all source tables. Full export
 and delta refresh of the same final manifest must produce semantically identical loaded indexes.
+Carry each snapshot's privacy fingerprint into the served manifest and reject any occurrence whose
+snapshot is missing that proof.
   </action>
   <verify>go test ./internal/blobstore -run 'Test.*(V6Export|V6Refresh|MetadataOnly|FullDeltaParity|Compact)' -count=1</verify>
   <acceptance_criteria>
@@ -183,6 +191,7 @@ and delta refresh of the same final manifest must produce semantically identical
     - V1 default-only manifests keep writing/reading their existing compatible format path.
     - Alias and namespace-only changes update loaded refs without adding content bytes.
     - Full and delta outputs expose identical source refs, content, and postings for the same manifest.
+    - Served freshness changes when policy eligibility changes even if remaining content keys are unchanged.
   </acceptance_criteria>
   <done>The served snapshot is a lossless projection of the branch-aware CAS manifest.</done>
 </task>
@@ -196,7 +205,8 @@ Teach exact and ranked corpus loaders to open mixed legacy and V6 shard director
 directory manifest declares a compatible snapshot; reject accidental mixed-generation output.
 Ensure eager and mmap corpus paths expose identical canonical refs. Include source-table bytes or a
 canonical source digest in corpus/sidecar fingerprints so branch alias, commit, or project metadata
-changes invalidate provenance-bearing caches even when blob content is unchanged. LSP/navigation
+changes invalidate provenance-bearing caches even when blob content is unchanged. Include
+privacy-policy fingerprints in that canonical source digest. LSP/navigation
 wiring must see only `NavigablePath`, never a synthesized non-default path. Add reload tests for V6
 and legacy rollback directories.
   </action>
@@ -204,6 +214,7 @@ and legacy rollback directories.
   <acceptance_criteria>
     - Exact and rank loaders return identical V6 source refs on eager and mmap paths.
     - Metadata-only source changes alter the corpus fingerprint and invalidate affected sidecars.
+    - Privacy-policy fingerprint changes invalidate every sidecar capable of exposing source content.
     - A V6 load never exposes an absolute path for a non-default snapshot.
     - Switching back to an unchanged V5 directory remains supported.
   </acceptance_criteria>
@@ -226,6 +237,7 @@ and legacy rollback directories.
 <success_criteria>
 
 - Branch/project/commit provenance is lossless from manifest to loaded index.
+- Privacy eligibility proof remains attached to the served snapshot and its sidecar freshness.
 - Content remains deduplicated while source metadata is normalized.
 - Non-default results cannot be mistaken for checked-out filesystem files.
 - Legacy shard rollback remains available without a migration command.

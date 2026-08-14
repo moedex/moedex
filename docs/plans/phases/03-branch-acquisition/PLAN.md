@@ -18,6 +18,7 @@ files_modified:
   - internal/ingest/tree.go
   - internal/ingest/catfile.go
   - internal/ingest/ingest.go
+  - internal/ingest/privacy.go
   - internal/ingest/tree_test.go
   - internal/ingest/catfile_test.go
   - internal/ingest/snapshot_test.go
@@ -26,6 +27,7 @@ files_modified:
 autonomous: false
 requirements:
   - ADR-0020
+  - ADR-0021
 user_setup:
   - Active TC VPN and authenticated `glab`/Git transport for the real-corpus capacity run.
   - A reviewed disk, memory, refresh-duration, and daemon-RSS budget for all-head indexing.
@@ -35,6 +37,7 @@ must_haves:
     - A successful sync locks a complete deterministic branch-to-commit snapshot without checking out non-default branches.
     - A failed ref fetch/list carries the prior complete project ref snapshot and cannot imply branch deletion.
     - Managed ingestion reads exact locked commit trees and content from Git objects, not mutable working-tree bytes.
+    - Every commit snapshot parses its own `.ai-privacy.yml` bootstrap blob before requesting any other blob content and never requests effective level-1 objects.
   artifacts:
     - path: internal/corpus/inventory.go
       provides: Machine-readable real-corpus branch/content/capacity inventory.
@@ -54,10 +57,14 @@ must_haves:
     - from: internal/ingest/catfile.go
       to: internal/ingest/ingest.go
       via: Git object bytes pass through the same text, BOM, path, and content-hash normalization contract.
+    - from: commit tree .ai-privacy.yml
+      to: internal/ingest/catfile.go
+      via: Policy blob is requested first; its effective rules filter all remaining object requests.
   prohibitions:
     - Never fetch full history, tags, merge-request refs, or local-only branches in the initial policy.
     - Never interpolate a branch, path, ref, or object ID into a shell command.
     - Never enable `ref_policy: all` before the capacity checkpoint is approved.
+    - Never infer one branch's privacy policy from the default checkout or request a level-1 blob from `git cat-file`.
 ---
 
 <objective>
@@ -79,6 +86,7 @@ tree/object ingestion, and deterministic local-remote fixtures.
 
 <context>
 @docs/adr/0020-branch-aware-indexing.md
+@docs/adr/0021-ai-privacy-aware-indexing.md
 @docs/plans/phases/02-managed-corpus-integration/PLAN.md
 @docs/plans/phases/02-managed-corpus-integration/SUMMARY.md
 @internal/corpus/lock.go
@@ -95,6 +103,7 @@ tree/object ingestion, and deterministic local-remote fixtures.
   owners before ref acquisition changes the managed lock.
 - Lock schema v1 stays readable as default-only input; branch-enabled writes use v2.
 - The working-tree ingestion path remains available for unmarked/single-repository commands.
+- AI privacy is snapshot-scoped: two branch tips at different commits may apply different policies.
 
 ## Artifacts this phase produces
 
@@ -102,6 +111,7 @@ tree/object ingestion, and deterministic local-remote fixtures.
 - Version-2 catalog/lock fields for ref policy, default branch, branch-to-commit map, and aliases.
 - `internal/corpus.AcquireRemoteHeads` with staged refs and atomic canonical-ref promotion.
 - `internal/ingest.TreeEntries`, `CatFileBatch`, `Snapshot`, and shared normalization helpers.
+- Commit-exact privacy bootstrap and policy fingerprints on every snapshot.
 - `CAPACITY.json` containing redacted aggregate measurements and `CAPACITY.md` recording threshold
   owners, pass/fail decisions, and the approved ref policy.
 
@@ -121,12 +131,14 @@ checkouts, catalog, lock, or canonical managed refs. JSON output must be determi
 enough raw counts to recompute ratios. Unit tests use local bare remotes. The real run writes
 redacted aggregate evidence to this phase's `CAPACITY.json` and threshold owner/limit/observed/
 pass-fail decisions to `CAPACITY.md`; any per-project raw report stays in an operator-selected local
-path and is not committed.
+path and is not committed. Report policy counts and privacy-excluded occurrence counts separately;
+read/normalize/project sidecar capacity only for privacy-eligible blobs, never level-1 content.
   </action>
   <verify>go test ./internal/corpus ./cmd/moedex-corpus -run 'Test.*Inventory' -count=1</verify>
   <acceptance_criteria>
     - Repeated fixture inventories emit identical counts and ordering.
     - The report separates raw source occurrences from unique normalized blobs and bytes.
+    - Capacity measurements never request effective level-1 blob content and identify exclusions only through redacted aggregates.
     - The command leaves marker, lock, gitlinks, checkouts, and canonical managed refs unchanged.
     - Cleanup deletes only the transaction's own staging refs and never broad ref namespaces or working files.
     - A partial project measurement is explicit and cannot be presented as a complete baseline.
@@ -169,15 +181,18 @@ the prior project's entire branch snapshot; never merge a partial new list with 
 
 <task type="auto" id="3.4">
   <name>Task 3: Implement exact tree and batch-object ingestion</name>
-  <files>internal/ingest/source.go, internal/ingest/tree.go, internal/ingest/catfile.go, internal/ingest/ingest.go, internal/ingest/tree_test.go, internal/ingest/catfile_test.go, internal/ingest/snapshot_test.go</files>
-  <read_first>internal/ingest/source.go, internal/ingest/ingest.go, internal/blobstore/build.go, docs/adr/0003-cox-reduction-ripgrep-parity.md</read_first>
+  <files>internal/ingest/source.go, internal/ingest/tree.go, internal/ingest/catfile.go, internal/ingest/ingest.go, internal/ingest/privacy.go, internal/ingest/tree_test.go, internal/ingest/catfile_test.go, internal/ingest/snapshot_test.go</files>
+  <read_first>internal/ingest/source.go, internal/ingest/ingest.go, internal/ingest/privacy.go, internal/blobstore/build.go, docs/adr/0003-cox-reduction-ripgrep-parity.md, docs/adr/0021-ai-privacy-aware-indexing.md</read_first>
   <action>
 Extend the source model with project identity, commit snapshot, ordered branch aliases, default flag,
 and tree-entry metadata. Parse `git ls-tree -r -z --full-tree COMMIT` records without path
 splitting or shell expansion. Keep one `git cat-file --batch` process per repository ingestion,
 request each unique object ID once, verify announced type/size, read exactly the payload plus
 terminator, and guarantee close/wait on success, error, and context cancellation. Apply the existing
-VCS-path filter and binary/BOM rules through shared helpers. Record Git object ID separately from a
+VCS-path filter and binary/BOM rules through shared helpers. Locate and request only the root
+`.ai-privacy.yml` bootstrap blob first, parse the strict policy, and filter every effective level-1
+tree entry before requesting its object. A missing policy defaults to level 3; an invalid policy
+fails that project snapshot. Record the effective policy fingerprint and Git object ID separately from a
 content key computed after normalization. Index regular/executable blobs, skip gitlinks, and lock
 symlink behavior to the default-checkout ripgrep oracle before enabling it. Walk each distinct commit
 once even when several branches alias it. Managed default commits use this path; unmanaged repos keep
@@ -190,6 +205,7 @@ working-tree ingestion.
     - Alias branches cause one tree walk and one read per distinct object.
     - Identical normalized content across commits produces one content key and multiple source occurrences.
     - The locked default tree exactly matches the materialized default-checkout search universe.
+    - Tests prove a globally Restricted commit requests only its policy blob, path-restricted blobs are never requested, and branches at different commits apply their own policy.
   </acceptance_criteria>
   <done>Managed ingestion is commit-exact, deterministic, content-true, and independent of checkout mutation.</done>
 </task>
@@ -201,6 +217,7 @@ working-tree ingestion.
 - [ ] `go test ./internal/corpus ./cmd/moedex-corpus -count=1`
 - [ ] `go test -race ./internal/corpus -run 'Test.*Ref.*Concurrent' -count=1`
 - [ ] `go test -race ./internal/ingest -count=1`
+- [ ] Snapshot tests prove zero `cat-file` requests for effective level-1 content.
 - [ ] Real-corpus inventory is complete and every capacity threshold has owner/limit/observed/status.
 - [ ] The approved policy is recorded in the report and catalog; `all` is not enabled on a failed gate.
 - [ ] `git diff --check`
@@ -212,6 +229,7 @@ working-tree ingestion.
 - The capacity checkpoint has an explicit decision and evidence path.
 - Lock v2 advances only from complete remote-head acquisition.
 - Default and non-default sources are read from exact locked commits without worktrees.
+- Every snapshot applies its own fail-closed privacy policy before non-policy object reads.
 - Phase 4 receives a deterministic project/commit/branch/file stream and normalized content keys.
 
 </success_criteria>

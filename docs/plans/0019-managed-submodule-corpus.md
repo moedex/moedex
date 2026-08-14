@@ -17,15 +17,18 @@ The managed-corpus program is complete when:
    force-pushed default branches;
 4. `moedex-index` consumes the managed lock without indexing the superproject or omitting
    submodules whose `.git` is a file;
-5. default-only managed and conventional corpora produce equivalent exact-search results; and
-6. deployment builds a sibling corpus/index and switches only after automated and human checks.
+5. every managed and conventional indexing path applies `.ai-privacy.yml` before content and
+   excludes effective level-1 files;
+6. default-only managed and conventional corpora produce equivalent privacy-eligible exact-search
+   results; and
+7. deployment builds a sibling corpus/index and switches only after automated and human checks.
 
 ## Execution phases
 
 | Phase | Plan | Delivers | Exit gate |
 |---|---|---|---|
 | 1 | [Managed corpus foundation](./phases/01-managed-corpus-foundation/PLAN.md) ([summary](./phases/01-managed-corpus-foundation/SUMMARY.md)) | Versioned marker/lock, stable project identity, hermetic fixtures, `init`, and failure-safe reconciliation | Complete |
-| 2 | [Managed corpus integration and rollout](./phases/02-managed-corpus-integration/PLAN.md) | CLI/doctor, lock-driven indexing, default-only parity, deployment integration, sibling cutover | `make health`, `make roundtrip`, default parity, doctor, and operator cutover approval pass |
+| 2 | [Managed corpus integration and rollout](./phases/02-managed-corpus-integration/PLAN.md) | CLI/doctor, lock-driven privacy-aware indexing, default-only parity, deployment integration, sibling cutover | privacy audit, `make health`, `make roundtrip`, default parity, doctor, and operator cutover approval pass |
 
 ## Dependency boundary
 
@@ -39,5 +42,7 @@ from later branch/provenance changes.
   0019 rather than weakening the safety rule.
 - If managed default-only parity differs, branch acquisition remains blocked until the difference
   is fixed or explicitly adjudicated.
+- If any effective level-1 content reaches an index, CAS reference, shard, or sidecar input, stop
+  rollout and preserve the prior live snapshot.
 - If an existing root contains any user-owned or unmanaged files, leave it untouched and use a
   sibling root.
