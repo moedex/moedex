@@ -15,7 +15,7 @@ affects: [03-branch-acquisition, 04-branch-aware-cas, deployment, indexing]
 
 actuals:
   tasks: 5
-  implementation_commits: 13
+  implementation_commits: 15
 
 tech-stack:
   added: []
@@ -42,19 +42,20 @@ key-decisions:
   - "Managed locks, not filesystem discovery, are authoritative for indexing."
   - "Missing policies default to level 3; effective level 1 is excluded before content reads."
   - "Root OS metadata is ignored without mutation, but managed metadata and submodule work fail closed."
-  - "The operator-owned 24-hour production soak gates Phase 3."
+  - "An observed, successful production refresh on the fixed 14:10 path gates Phase 3."
 
 requirements-completed: []
 
 duration: 3h23m
 completed: null
-status: soaking
+status: awaiting-production-refresh
 ---
 
 # Phase 2: Managed Corpus Integration and Rollout Summary
 
-**The managed snapshot is live, all immediate production checks pass, and the operator-owned
-24-hour soak runs through 2026-08-15T13:53:44-06:00.**
+**The managed snapshot is live and healthy. The 14:10 calendar trigger was proven, but its first
+production run exposed and was terminated for a dense reuse-seed bug; the tested fix is installed
+and awaits explicit approval for one production kickstart.**
 
 ## Accomplishments
 
@@ -70,7 +71,8 @@ status: soaking
 - Proved the post-refresh candidate against ripgrep over 63,225 eligible files and 1,046 queries
   with zero under-approximations, over-approximations, or oracle errors.
 - Switched both launchd agents coherently to the managed corpus/CAS/shards, retained the legacy
-  rollback set, and verified health, authenticated MCP, representative search, and the 13:00 job.
+  rollback set, and verified health, authenticated MCP, representative search, and the 14:10
+  launchd calendar trigger.
 
 ## Implementation Commits
 
@@ -87,6 +89,8 @@ status: soaking
 11. `ddde968` — report restricted policy counts
 12. `ccf271e` — keep managed launchd paths coherent
 13. `23b22bc` — retry transient launchd bootstrap
+14. `3bb3a8b` — schedule the production refresh for 14:10 local
+15. `4317b61` — retain the dense reuse seed across deduped export
 
 ## Automated Evidence
 
@@ -105,7 +109,10 @@ status: soaking
 - Legacy service after token rotation — health pass and authenticated MCP `200`
 - Managed production service — 55,080 blobs, 27,833 symbol blobs, 942,718 dense chunks; health,
   authenticated MCP, and redacted representative search pass
-- Production refresh agent — all three managed paths, loaded but idle as expected, scheduled 13:00
+- Production refresh agent — all three managed paths, loaded, scheduled 14:10 local; calendar
+  trigger observed
+- Dense wall-clock regression — cross-corpus seed reused 852,481/942,724 chunks and completed in
+  11m22s; a current same-corpus repeat completed in 4.47s with nothing to embed
 
 See [ROLLOUT.md](./ROLLOUT.md) and the root [PARITY-REPORT.md](../../../../PARITY-REPORT.md) for
 redacted aggregate evidence and the generated full-corpus report.
@@ -133,19 +140,26 @@ redacted aggregate evidence and the generated full-corpus report.
 7. **launchd briefly rejected the first production bootstrap while unloading the old KeepAlive
    job.** The exact managed plist succeeded on retry after about 83 seconds of startup downtime.
    The installer now performs a bounded retry, covered by a forced-failure shell test.
+8. **The first real 14:10 refresh discarded its dense reuse seed during the deduped directory
+   swap.** Sync, CAS, and shard export succeeded, but the resulting full dense rebuild was still
+   running after 39 minutes and the operator terminated it without service impact. Delta export
+   now leaves an unchanged served directory in place and hard-links a complete dense seed pair
+   across changed-directory swaps. Repository-wide tests pass; a production-scale temporary
+   benchmark completed the seeded migration in 11m22s and the steady-state repeat in 4.47s.
 
-## Active Soak Checkpoint
+## Active Production Refresh Checkpoint
 
 The retained live index has 359 manifest heads and 48,300 served blobs. The managed candidate has
 491 heads and 55,080 served blobs. Hermetic same-commit conventional/managed parity passes, and the
 candidate equals ripgrep, but literal live/candidate equality is impossible because the live scope
 is stale and smaller.
 
-The operator approved the scope expansion and production switch and owns the 24-hour soak from
-`2026-08-14T13:53:44-06:00` through `2026-08-15T13:53:44-06:00`. The managed daemon is live; the
-legacy corpus and shards remain untouched for rollback. Phase 3 stays blocked until the production
-13:00 refresh is observed and the operator accepts the final soak outcome.
+The operator approved the scope expansion and production switch. The managed daemon is live; the
+legacy corpus and shards remain available for rollback. The fixed binaries and 14:10 schedule are
+installed, and a v2 cross-corpus seed is staged for incremental reuse. Phase 3 stays blocked until
+the operator explicitly approves one production kickstart, it exits zero after warm reload, and
+the post-refresh privacy/health checks pass.
 
 ---
 *Phase: 02-managed-corpus-integration*
-*Status: soaking*
+*Status: awaiting-production-refresh*

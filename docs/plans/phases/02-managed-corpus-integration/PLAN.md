@@ -209,7 +209,7 @@ Teach install to initialize only a missing/new managed root and refuse implicit 
 refresh sequence `managed sync -> CAS refresh -> deduped export/refresh -> sidecar refresh -> warm
 SIGHUP`, stopping before later stages when the snapshot is unsafe. Preserve prior index data on any
 failure. Fix the no-backup prune pipeline so an empty backup set is a successful no-op under
-`pipefail`. Document the existing 13:00 local schedule, VPN/auth prerequisite, 12-hour VPN timeout,
+`pipefail`. Document the 14:10 local schedule, VPN/auth prerequisite, 12-hour VPN timeout,
 sibling paths, validation commands, hot-swap, soak, and rollback. Do not change live paths during
 installation or documentation tests. Add a shell harness with stub `glab`, Git, index, signal, and
 filesystem commands to exercise stage ordering, fail-stop behavior, empty-backup pruning, and
@@ -224,7 +224,7 @@ bash scripts/managed-refresh-test.sh
     - Install refuses a populated unmarked root and prints the sibling-root procedure.
     - A sync failure prevents CAS/index advancement while leaving the currently served directory intact.
     - An empty backup directory does not cause a successful refresh to exit non-zero.
-    - Deployment docs specify 13:00 local refresh and separate VPN, `glab`, and Git transport checks.
+    - Deployment docs specify 14:10 local refresh and separate VPN, `glab`, and Git transport checks.
     - The report template contains old/new snapshot IDs, redacted counts, parity/health gates, switch, rollback, owner, and soak outcome.
   </acceptance_criteria>
   <done>The operational path can create and refresh a sibling managed corpus without implicitly touching the live one.</done>
