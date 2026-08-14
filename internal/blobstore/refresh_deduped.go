@@ -55,6 +55,8 @@ import (
 const (
 	dedupRefreshTmpSuffix = ".dedup-refresh-" // sibling holding the new dir being built
 	dedupBakSuffix        = ".dedup-bak-"     // sibling holding the prior live dir moved aside
+	denseStoreName        = "corpus-embeddings.store"
+	denseStoreMetaName    = denseStoreName + ".meta"
 )
 
 // DedupedDeltaStats reports what a RefreshDedupedShardDir actually did, for honest
@@ -78,6 +80,10 @@ type DedupedDeltaStats struct {
 	// dedup no-ops (content already present in the carried-forward store) — the
 	// cross-shard / co-resident saving the append realizes.
 	PutsDeduped int
+	// DenseSeedCarried reports that the prior dense store and its validation metadata
+	// were hard-linked into the staged directory. The embedding refresh may safely use
+	// the stale store as a content-keyed reuse seed before atomically replacing it.
+	DenseSeedCarried bool
 }
 
 // IsDedupedDir reports whether dir is an existing deduped served dir (it has a
@@ -279,6 +285,12 @@ func RefreshDedupedShardDir(casDir, outShardDir string, shardBytes int64) (*pari
 			affected[h.Dir] = true
 		}
 	}
+	// A steady-state daily refresh commonly has no corpus delta. Keep the live
+	// directory byte-for-byte and inode-for-inode unchanged: swapping an equivalent
+	// directory is wasted I/O and, historically, discarded the dense reuse seed.
+	if len(affected) == 0 {
+		return oldServed, ds, nil
+	}
 
 	// --- 2. Partition prior shards: carry-forward vs rewrite. ---------------------
 	// A shard is affected iff any of its repos is affected. Carried shards are copied
@@ -468,6 +480,12 @@ func RefreshDedupedShardDir(casDir, outShardDir string, shardBytes int64) (*pari
 		ds.ShardsRewritten++
 	}
 
+	// Preserve the expensive dense store as an incremental reuse seed. tmpDir is a
+	// sibling of outShardDir, so hard links are same-filesystem and O(1), even for a
+	// multi-gigabyte store. Carry the pair only when both are regular files; a missing,
+	// partial, or unsupported seed safely falls back to a full rebuild later.
+	ds.DenseSeedCarried = carryDenseEmbeddingSeed(outShardDir, tmpDir)
+
 	// Freshness identity is independent of shard membership. In particular, a
 	// globally Restricted repo contributes zero blobs but must remain represented
 	// so policy relaxation is detected and steady-state refreshes stay stable.
@@ -567,4 +585,32 @@ func copyFile(src, dst string) error {
 		return err
 	}
 	return os.WriteFile(dst, in, 0o644)
+}
+
+// carryDenseEmbeddingSeed hard-links the generated dense store and its validation
+// metadata into dstDir as an all-or-nothing pair. RefreshEmbeddings validates the
+// model before reuse and writes the replacement store via atomic rename, so carrying
+// a stale fingerprint is both intentional and safe. This function is best-effort:
+// correctness never depends on the optimization.
+func carryDenseEmbeddingSeed(srcDir, dstDir string) bool {
+	names := []string{denseStoreName, denseStoreMetaName}
+	for _, name := range names {
+		info, err := os.Lstat(filepath.Join(srcDir, name))
+		if err != nil || !info.Mode().IsRegular() {
+			return false
+		}
+	}
+
+	linked := make([]string, 0, len(names))
+	for _, name := range names {
+		dst := filepath.Join(dstDir, name)
+		if err := os.Link(filepath.Join(srcDir, name), dst); err != nil {
+			for _, path := range linked {
+				_ = os.Remove(path)
+			}
+			return false
+		}
+		linked = append(linked, dst)
+	}
+	return true
 }

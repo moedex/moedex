@@ -593,6 +593,11 @@ func runCASExport(args []string) error {
 		if err != nil {
 			return err
 		}
+		if len(ds.ChangedRepos) == 0 && len(ds.AddedRepos) == 0 && len(ds.RemovedRepos) == 0 {
+			fmt.Printf("cas-export (deduped, DELTA): no repo changes; served dir unchanged (%d shard(s), %d repo(s))\n",
+				len(m.Shards), len(m.Heads))
+			return nil
+		}
 		// The shard set changed, so any prior ranking sidecars in the dir are now
 		// stale; rebuild them (best-effort, as build/refresh do).
 		sidecars := buildSidecars(out)
@@ -601,6 +606,9 @@ func runCASExport(args []string) error {
 		fmt.Printf("  appended %d net-new blob(s), %.1f MB to blobs.dat (%d dedup no-op PutContent skipped)\n",
 			ds.BlobsAppended, float64(ds.BytesAppended)/1e6, ds.PutsDeduped)
 		fmt.Printf("  served dir now: %d shard(s) from %d repo(s) at %s%s\n", len(m.Shards), len(m.Heads), out, sidecars)
+		if ds.DenseSeedCarried {
+			fmt.Println("  dense embedding reuse seed carried forward (incremental refresh enabled)")
+		}
 		return nil
 	}
 
