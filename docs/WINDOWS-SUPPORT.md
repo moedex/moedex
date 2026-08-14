@@ -171,7 +171,7 @@ This is where the real surface area is. Mapping each macOS piece to Windows:
 | macOS | Windows native |
 |---|---|
 | launchd `com.moedex.serve` (KeepAlive) | **Windows Service** via SCM. Use `github.com/kardianos/service` (cross-platform service install from Go) or `sc.exe create … start= auto` + a wrapper. Auto-restart = recovery actions. |
-| launchd `com.moedex.refresh` (StartCalendarInterval 03:30) | **Task Scheduler** (`schtasks /create /sc daily /st 03:30`) running `refresh-corpus.ps1`. |
+| launchd `com.moedex.refresh` (StartCalendarInterval 13:00 local time) | **Task Scheduler** (`schtasks /create /sc daily /st 13:00`) running `refresh-corpus.ps1`. |
 | `launchctl kickstart -p` (run refresh now) | `schtasks /run` or call `POST /admin/reload` after a manual refresh. |
 | `scripts/install-macos.sh` (bash) | **`scripts/install-windows.ps1`** (PowerShell). |
 | `scripts/refresh-corpus.sh` (bash) | `scripts/refresh-corpus.ps1` (or run the bash one under Git-Bash). |

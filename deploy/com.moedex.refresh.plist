@@ -36,14 +36,14 @@
     <string>@CORPUS@</string>
   </dict>
 
-  <!-- Daily at 03:30. RunAtLoad is false so installing it never kicks a heavy
+  <!-- Daily at 13:00 local time. RunAtLoad is false so installing it never kicks a heavy
        rebuild immediately; use `launchctl kickstart -p` to run on demand. -->
   <key>StartCalendarInterval</key>
   <dict>
     <key>Hour</key>
-    <integer>3</integer>
+    <integer>13</integer>
     <key>Minute</key>
-    <integer>30</integer>
+    <integer>0</integer>
   </dict>
   <key>RunAtLoad</key>
   <false/>

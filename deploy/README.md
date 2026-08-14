@@ -8,7 +8,7 @@
 > It builds and installs every binary to `~/.local/bin` (removing stale `~/go/bin`
 > shadows), writes a 0600 auth token, adds the env block to `~/.zshrc`, and renders
 > + bootstraps the `com.moedex.serve` (warm daemon) and `com.moedex.refresh` (daily
-> 03:30) launchd agents from the `deploy/*.plist` templates. It does **not** clone
+> 13:00 local time) launchd agents from the `deploy/*.plist` templates. It does **not** clone
 > the corpus or build the index (heavy, need VPN/glab) — it prints those commands.
 > Verify anytime with `moedex-index doctor`. The rest of this file is the manual /
 > Linux (Docker + systemd) path.
