@@ -22,7 +22,14 @@ These ADRs capture the architectural decisions behind moedex, a clean-room, sing
 | [0016](./0016-incremental-embedding-refresh.md) | Incremental embedding refresh — reuse unchanged chunk vectors across a rebuild | Accepted |
 | [0017](./0017-lsp-navigation-and-the-serena-boundary.md) | LSP-precise navigation — the three conditions to subsume Serena (real LSP semantics · concurrency-safe under parallel lanes · live working-tree freshness) | Proposed (all 3 conditions met & productionized in-process: `internal/navigate`, `-tags lsp` — multi-language, pooled, incremental sync) |
 | [0018](./0018-name-based-navigation-workspace-symbol.md) | Name-based navigation — `find_symbol` (workspace/symbol) + `symbols_overview` (documentSymbol); the name→position unblock for a Serena drop-in | Proposed (implemented: `internal/navigate` `WorkspaceSymbol`/`DocumentSymbol` + MCP tools, `-tags lsp`) |
+| [0019](./0019-moedex-managed-submodule-corpus.md) | Moedex-managed corpus — local Git superproject, curated submodules, and an exact committed corpus lock | Proposed ([program and phases](../plans/0019-managed-submodule-corpus.md)) |
+| [0020](./0020-branch-aware-indexing.md) | Branch-aware indexing — locked Git trees, content-deduped snapshots, honest provenance, and explicit branch scope | Proposed ([program and phases](../plans/0020-branch-aware-indexing.md)) |
 
-**Companion docs** (repo root): [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) (what the code is today), [`../../zoekt-2026-redesign.md`](../../zoekt-2026-redesign.md) (the northstar / design lineage), [`../../PRODUCTION-ROADMAP.md`](../../PRODUCTION-ROADMAP.md) (remaining work to an operable service), [`../../research/`](../../research) (the deep-research notes these decisions rest on), and `../../PARITY-REPORT.md` (the generated correctness-gate artifact, see [0003](./0003-cox-reduction-ripgrep-parity.md)).
+**Companion docs**: [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) (what the code is today),
+[`../plans/`](../plans/) (implementation plans for proposed decisions),
+[`../../zoekt-2026-redesign.md`](../../zoekt-2026-redesign.md) (the northstar / design lineage),
+[`../../research/`](../../research) (the deep-research notes these decisions rest on), and
+[`../../PARITY-REPORT.md`](../../PARITY-REPORT.md) (the generated correctness-gate artifact, see
+[0003](./0003-cox-reduction-ripgrep-parity.md)).
 
 > Format: lightweight ADR — Status · Context · Decision · Consequences · Evidence · Related. One decision per record.
