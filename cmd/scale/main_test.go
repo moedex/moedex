@@ -10,12 +10,9 @@ import (
 	"testing"
 )
 
-// TestRunRepoDiscoveryMatchesEngineSemantics guards F-057: scale must count
-// repos exactly as the engine's ingest.DiscoverRepos does (".git" directories
-// only), not via its own os.Stat(".git") check that also matches a gitlink
-// FILE (a worktree/submodule pointer with no real .git directory there). A
-// root with one real repo and one gitlink-only directory must be reported as
-// exactly 1 repo.
+// TestRunRepoDiscoveryMatchesEngineSemantics guards F-057 and the managed-corpus
+// discovery contract: scale must count repos exactly as ingest.DiscoverRepos
+// does, including a worktree/submodule whose .git marker is a regular gitfile.
 func TestRunRepoDiscoveryMatchesEngineSemantics(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
@@ -24,17 +21,16 @@ func TestRunRepoDiscoveryMatchesEngineSemantics(t *testing.T) {
 	t.Setenv("MOEDEX_MMAP", "")
 
 	root := t.TempDir()
-	gitInitRepo(t, filepath.Join(root, "real"), "f.go", "package real\n")
+	realDir := filepath.Join(root, "real")
+	gitInitRepo(t, realDir, "f.go", "package real\n")
 
-	// A gitlink: ".git" is a file, not a directory. No real .git directory
-	// exists anywhere under this path, so the engine's discovery (keyed on
-	// ".git" directories) must not count it.
-	gitlinkDir := filepath.Join(root, "gitlink-only")
-	if err := os.MkdirAll(gitlinkDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(gitlinkDir, ".git"), []byte("gitdir: ../nonexistent\n"), 0o644); err != nil {
-		t.Fatal(err)
+	// A linked worktree uses a regular .git file that points at the primary
+	// repository's metadata, matching the shape of a checked-out submodule.
+	gitfileDir := filepath.Join(root, "gitfile-worktree")
+	cmd := exec.Command("git", "-C", realDir, "worktree", "add", "-q", "--detach", gitfileDir, "HEAD")
+	cmd.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git worktree add: %v\n%s", err, out)
 	}
 
 	out := captureStdout(t, func() {
@@ -43,9 +39,9 @@ func TestRunRepoDiscoveryMatchesEngineSemantics(t *testing.T) {
 		}
 	})
 
-	want := "found 1 git repos under " + root
+	want := "found 2 git repos under " + root
 	if !strings.Contains(out, want) {
-		t.Fatalf("output does not report exactly 1 repo (gitlink-only dir must not count):\n%s\nwant line containing %q", out, want)
+		t.Fatalf("output does not count both directory and gitfile repositories:\n%s\nwant line containing %q", out, want)
 	}
 }
 
