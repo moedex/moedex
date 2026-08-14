@@ -98,6 +98,15 @@ func (l Lock) Validate(host string) error {
 			return fmt.Errorf("project %d has invalid lock status %q", project.ID, project.Status)
 		}
 	}
+	for i := range l.Projects {
+		for j := i + 1; j < len(l.Projects); j++ {
+			left := l.Projects[i].PathWithNamespace
+			right := l.Projects[j].PathWithNamespace
+			if managedPathsOverlap(left, right) {
+				return fmt.Errorf("managed corpus paths overlap: %q and %q", left, right)
+			}
+		}
+	}
 	return nil
 }
 
@@ -212,4 +221,8 @@ func validGitObjectID(value string) bool {
 		}
 	}
 	return true
+}
+
+func managedPathsOverlap(left, right string) bool {
+	return strings.HasPrefix(left, right+"/") || strings.HasPrefix(right, left+"/")
 }

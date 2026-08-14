@@ -166,7 +166,7 @@ func validateManagedProjects(cfg Config, projects []Project) ([]Project, error) 
 		for j := i + 1; j < len(ordered); j++ {
 			left := ordered[i].PathWithNamespace
 			right := ordered[j].PathWithNamespace
-			if strings.HasPrefix(left, right+"/") || strings.HasPrefix(right, left+"/") {
+			if managedPathsOverlap(left, right) {
 				return nil, fmt.Errorf("managed corpus paths overlap: %q and %q", left, right)
 			}
 		}

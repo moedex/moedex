@@ -2,13 +2,17 @@ package corpus
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 const (
@@ -128,6 +132,10 @@ func TestLockRejectsDuplicateIDsAndPaths(t *testing.T) {
 	duplicatePath := lockedProject(2, base.PathWithNamespace, fixtureCommitB)
 	if _, err := NewLock(DefaultHost, true, []LockedProject{base, duplicatePath}); err == nil || !strings.Contains(err.Error(), "duplicate") {
 		t.Fatalf("duplicate paths should be rejected, got %v", err)
+	}
+	overlappingPath := lockedProject(2, base.PathWithNamespace+"/nested", fixtureCommitB)
+	if _, err := NewLock(DefaultHost, true, []LockedProject{base, overlappingPath}); err == nil || !strings.Contains(err.Error(), "overlap") {
+		t.Fatalf("overlapping paths should be rejected, got %v", err)
 	}
 }
 
@@ -369,9 +377,276 @@ func TestInitManagedFailureLeavesMarkedRecoverableRoot(t *testing.T) {
 	}
 }
 
+func TestManagedReconcileUsesStableIDsAndPruneAuthority(t *testing.T) {
+	previous, err := NewLock(DefaultHost, true, []LockedProject{
+		lockedProject(1, "g/current", fixtureCommitA),
+		lockedProject(2, "g/old-name", fixtureCommitA),
+		lockedProject(3, "g/missing", fixtureCommitA),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	incoming := []Project{
+		managedProject(4, "g/new"),
+		managedProject(2, "g/new-name"),
+		managedProject(1, "g/current"),
+	}
+
+	incomplete := ReconcileManaged(DefaultHost, previous, incoming, ManagedSyncOptions{EnumerationComplete: false, Prune: true})
+	assertManagedActionKinds(t, incomplete, map[int64]ManagedActionKind{
+		1: ManagedActionUpdate,
+		2: ManagedActionMove,
+		3: ManagedActionCarryForward,
+		4: ManagedActionAdd,
+	})
+	if got := incomplete.ActionsOfKind(ManagedActionPrune); len(got) != 0 {
+		t.Fatalf("incomplete enumeration authorized prune: %+v", got)
+	}
+
+	missing := ReconcileManaged(DefaultHost, previous, incoming, ManagedSyncOptions{EnumerationComplete: true})
+	assertManagedActionKinds(t, missing, map[int64]ManagedActionKind{1: ManagedActionUpdate, 2: ManagedActionMove, 3: ManagedActionMissing, 4: ManagedActionAdd})
+	prune := ReconcileManaged(DefaultHost, previous, incoming, ManagedSyncOptions{EnumerationComplete: true, Prune: true})
+	assertManagedActionKinds(t, prune, map[int64]ManagedActionKind{1: ManagedActionUpdate, 2: ManagedActionMove, 3: ManagedActionPrune, 4: ManagedActionAdd})
+}
+
+func TestManagedReconcileReportsIDAndPathConflicts(t *testing.T) {
+	previous, err := NewLock(DefaultHost, true, []LockedProject{lockedProject(1, "g/owned", fixtureCommitA)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	duplicateID := ReconcileManaged(DefaultHost, previous, []Project{
+		managedProject(1, "g/one"), managedProject(1, "g/two"),
+	}, ManagedSyncOptions{EnumerationComplete: true, Prune: true})
+	if actions := duplicateID.ActionsOfKind(ManagedActionConflict); len(actions) != 1 || actions[0].ProjectID != 1 {
+		t.Fatalf("duplicate ID did not become one conflict: %+v", duplicateID.Actions)
+	}
+	pathCollision := ReconcileManaged(DefaultHost, previous, []Project{managedProject(2, "g/owned")}, ManagedSyncOptions{EnumerationComplete: true, Prune: true})
+	if actions := pathCollision.ActionsOfKind(ManagedActionConflict); len(actions) != 1 || actions[0].ProjectID != 2 {
+		t.Fatalf("ID/path collision did not become a conflict: %+v", pathCollision.Actions)
+	}
+	if actions := pathCollision.ActionsOfKind(ManagedActionPrune); len(actions) != 1 || actions[0].ProjectID != 1 {
+		t.Fatalf("existing owner should remain a separately explicit prune decision: %+v", pathCollision.Actions)
+	}
+}
+
+func TestManagedSyncUpdateForcePushMoveAndNoChange(t *testing.T) {
+	fixture := newManagedGitFixture(t)
+	root := filepath.Join(t.TempDir(), "managed")
+	cfg := Config{Host: DefaultHost, Root: root, Groups: []string{"g"}, Concurrency: 2}
+	if _, err := InitManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}); err != nil {
+		t.Fatalf("InitManaged: %v", err)
+	}
+	initialHead := strings.TrimSpace(runFixtureGit(t, "-C", root, "rev-parse", "HEAD"))
+	initialLock, err := os.ReadFile(LockPath(root))
+	if err != nil {
+		t.Fatal(err)
+	}
+	initialCatalog, err := os.ReadFile(CatalogPath(root))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	noChange, err := SyncManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}, ManagedSyncOptions{EnumerationComplete: true})
+	if err != nil {
+		t.Fatalf("no-change SyncManaged: %v", err)
+	}
+	if noChange.Changed || noChange.SuperprojectCommit != "" {
+		t.Fatalf("no-change sync created a snapshot: %+v", noChange)
+	}
+	assertFileBytes(t, LockPath(root), initialLock)
+	assertFileBytes(t, CatalogPath(root), initialCatalog)
+	if head := strings.TrimSpace(runFixtureGit(t, "-C", root, "rev-parse", "HEAD")); head != initialHead {
+		t.Fatalf("no-change sync advanced superproject: %s -> %s", initialHead, head)
+	}
+
+	updatedCommit := commitManagedFixture(t, &fixture, "ordinary update\n", false)
+	updated, err := SyncManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}, ManagedSyncOptions{EnumerationComplete: true})
+	if err != nil || !updated.Changed {
+		t.Fatalf("ordinary update result=%+v err=%v", updated, err)
+	}
+	assertLockedCommit(t, root, fixture.Project.ID, updatedCommit, LockStatusCurrent)
+
+	forceCommit := commitManagedFixture(t, &fixture, "force-pushed replacement\n", true)
+	forced, err := SyncManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}, ManagedSyncOptions{EnumerationComplete: true})
+	if err != nil || !forced.Changed {
+		t.Fatalf("force-push update result=%+v err=%v", forced, err)
+	}
+	assertLockedCommit(t, root, fixture.Project.ID, forceCommit, LockStatusCurrent)
+
+	renamed := fixture.Project
+	renamed.PathWithNamespace = "renamed group/repo"
+	moved, err := SyncManaged(t.Context(), ExecRunner{}, cfg, []Project{renamed}, ManagedSyncOptions{EnumerationComplete: true})
+	if err != nil || !moved.Changed {
+		t.Fatalf("stable-ID move result=%+v err=%v", moved, err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "g", "repo")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("old submodule path survived move: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(renamed.PathWithNamespace), ".git")); err != nil {
+		t.Fatalf("new submodule path missing after move: %v", err)
+	}
+	lock, err := LoadLock(root, DefaultHost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lock.Projects) != 1 || lock.Projects[0].PathWithNamespace != renamed.PathWithNamespace || lock.Projects[0].DefaultCommit != forceCommit {
+		t.Fatalf("moved lock entry is inconsistent: %+v", lock)
+	}
+	modulePath := strings.TrimSpace(runFixtureGit(t, "-C", root, "config", "-f", ".gitmodules", "--get", "submodule.project-101.path"))
+	if modulePath != renamed.PathWithNamespace {
+		t.Fatalf(".gitmodules path = %q, want %q", modulePath, renamed.PathWithNamespace)
+	}
+}
+
+func TestManagedSyncAddMissingDirtyAndExplicitPrune(t *testing.T) {
+	fixture := newManagedGitFixture(t)
+	second := addManagedFixtureProject(t, fixture, 202, "g/second")
+	root := filepath.Join(t.TempDir(), "managed")
+	cfg := Config{Host: DefaultHost, Root: root, Groups: []string{"g"}, Concurrency: 2}
+	if _, err := InitManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}); err != nil {
+		t.Fatal(err)
+	}
+	if result, err := SyncManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project, second.Project}, ManagedSyncOptions{EnumerationComplete: true}); err != nil || !result.Changed {
+		t.Fatalf("add result=%+v err=%v", result, err)
+	}
+	assertLockedCommit(t, root, second.Project.ID, second.Commit, LockStatusCurrent)
+
+	missing, err := SyncManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}, ManagedSyncOptions{EnumerationComplete: true})
+	if err != nil || !missing.Changed {
+		t.Fatalf("missing carry-forward result=%+v err=%v", missing, err)
+	}
+	assertLockedCommit(t, root, second.Project.ID, second.Commit, LockStatusCarriedForward)
+	lockBytes, err := os.ReadFile(LockPath(root))
+	if err != nil {
+		t.Fatal(err)
+	}
+	head := strings.TrimSpace(runFixtureGit(t, "-C", root, "rev-parse", "HEAD"))
+	repeated, err := SyncManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}, ManagedSyncOptions{EnumerationComplete: true})
+	if err != nil || repeated.Changed {
+		t.Fatalf("repeated missing sync result=%+v err=%v", repeated, err)
+	}
+	assertFileBytes(t, LockPath(root), lockBytes)
+	if got := strings.TrimSpace(runFixtureGit(t, "-C", root, "rev-parse", "HEAD")); got != head {
+		t.Fatalf("repeated sync created a commit: %s -> %s", head, got)
+	}
+
+	dirtyPath := filepath.Join(root, "g", "second", "do-not-delete.txt")
+	if err := os.WriteFile(dirtyPath, []byte("local data"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	conflicted, err := SyncManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}, ManagedSyncOptions{EnumerationComplete: true, Prune: true})
+	var partial *ManagedSyncError
+	if !errors.As(err, &partial) || len(partial.Failures) != 1 || conflicted.Changed {
+		t.Fatalf("dirty prune result=%+v err=%v", conflicted, err)
+	}
+	if _, err := os.Stat(dirtyPath); err != nil {
+		t.Fatalf("dirty submodule content was removed: %v", err)
+	}
+	if err := os.Remove(dirtyPath); err != nil {
+		t.Fatal(err)
+	}
+
+	pruned, err := SyncManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}, ManagedSyncOptions{EnumerationComplete: true, Prune: true})
+	if err != nil || !pruned.Changed {
+		t.Fatalf("explicit prune result=%+v err=%v", pruned, err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "g", "second")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("pruned working tree still exists: %v", err)
+	}
+	lock, err := LoadLock(root, DefaultHost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lock.Projects) != 1 || lock.Projects[0].ID != fixture.Project.ID {
+		t.Fatalf("pruned project remains in lock: %+v", lock)
+	}
+}
+
+func TestManagedSyncFailedFetchCarriesPriorWhileSuccessAdvances(t *testing.T) {
+	fixture := newManagedGitFixture(t)
+	second := addManagedFixtureProject(t, fixture, 202, "g/second")
+	root := filepath.Join(t.TempDir(), "managed")
+	cfg := Config{Host: DefaultHost, Root: root, Groups: []string{"g"}, Concurrency: 2}
+	if _, err := InitManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project, second.Project}); err != nil {
+		t.Fatal(err)
+	}
+	advanced := commitManagedFixture(t, &fixture, "first advances\n", false)
+	unreachable := second.Project
+	unreachable.SSHURL = "git@" + DefaultHost + ":g/not-present.git"
+
+	result, err := SyncManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project, unreachable}, ManagedSyncOptions{EnumerationComplete: true})
+	var partial *ManagedSyncError
+	if !errors.As(err, &partial) || len(partial.Failures) != 1 || !result.Changed || result.SuperprojectCommit == "" {
+		t.Fatalf("partial sync result=%+v err=%v", result, err)
+	}
+	assertLockedCommit(t, root, fixture.Project.ID, advanced, LockStatusCurrent)
+	assertLockedCommit(t, root, second.Project.ID, second.Commit, LockStatusCarriedForward)
+	gitlink := runFixtureGit(t, "-C", root, "ls-tree", "HEAD", "--", second.Project.PathWithNamespace)
+	if !strings.Contains(gitlink, "160000 commit "+second.Commit) {
+		t.Fatalf("failed project gitlink was not carried forward: %q", gitlink)
+	}
+}
+
+func TestManagedSyncDirtyMoveIsConflictAndPreservesOldPath(t *testing.T) {
+	fixture := newManagedGitFixture(t)
+	root := filepath.Join(t.TempDir(), "managed")
+	cfg := Config{Host: DefaultHost, Root: root, Groups: []string{"g"}, Concurrency: 1}
+	if _, err := InitManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}); err != nil {
+		t.Fatal(err)
+	}
+	dirtyPath := filepath.Join(root, "g", "repo", "local-only.txt")
+	if err := os.WriteFile(dirtyPath, []byte("keep me"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	renamed := fixture.Project
+	renamed.PathWithNamespace = "g/renamed"
+
+	result, err := SyncManaged(t.Context(), ExecRunner{}, cfg, []Project{renamed}, ManagedSyncOptions{EnumerationComplete: true})
+	var partial *ManagedSyncError
+	if !errors.As(err, &partial) || len(partial.Failures) != 1 || !result.Changed {
+		t.Fatalf("dirty move result=%+v err=%v", result, err)
+	}
+	if _, err := os.Stat(dirtyPath); err != nil {
+		t.Fatalf("dirty content was lost: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "g", "renamed")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("conflicted move created new path: %v", err)
+	}
+	lock, err := LoadLock(root, DefaultHost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lock.Projects) != 1 || lock.Projects[0].PathWithNamespace != fixture.Project.PathWithNamespace || lock.Projects[0].Status != LockStatusCarriedForward {
+		t.Fatalf("dirty move did not carry old entry: %+v", lock)
+	}
+}
+
+func TestManagedConcurrentFetches(t *testing.T) {
+	fixture := newManagedGitFixture(t)
+	second := addManagedFixtureProject(t, fixture, 202, "g/second")
+	root := filepath.Join(t.TempDir(), "managed")
+	cfg := Config{Host: DefaultHost, Root: root, Groups: []string{"g"}, Concurrency: 2}
+	projects := []Project{fixture.Project, second.Project}
+	if _, err := InitManaged(t.Context(), ExecRunner{}, cfg, projects); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	runner := newConcurrentFetchRunner(ExecRunner{}, 2)
+	if _, err := SyncManaged(ctx, runner, cfg, projects, ManagedSyncOptions{EnumerationComplete: true}); err != nil {
+		t.Fatalf("concurrent SyncManaged: %v", err)
+	}
+	if peak := runner.peak.Load(); peak < 2 {
+		t.Fatalf("fetch peak = %d, want at least 2", peak)
+	}
+}
+
 type managedGitFixture struct {
-	Project Project
-	Commit  string
+	Project    Project
+	Commit     string
+	Base       string
+	RemoteRoot string
+	Work       string
 }
 
 // newManagedGitFixture creates a local bare remote while exposing it through a
@@ -388,9 +663,7 @@ func newManagedGitFixture(t *testing.T) managedGitFixture {
 	home := filepath.Join(base, "home")
 	configPath := filepath.Join(base, "gitconfig")
 	remoteRoot := filepath.Join(base, "remotes")
-	remote := filepath.Join(remoteRoot, "g", "repo.git")
-	work := filepath.Join(base, "work")
-	for _, dir := range []string{home, filepath.Dir(remote)} {
+	for _, dir := range []string{home, remoteRoot} {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -401,6 +674,25 @@ func newManagedGitFixture(t *testing.T) managedGitFixture {
 	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
 	t.Setenv("GIT_TERMINAL_PROMPT", "0")
 
+	filePrefix := "file://" + filepath.ToSlash(remoteRoot) + "/"
+	runFixtureGit(t, "config", "--file", configPath, "url."+filePrefix+".insteadOf", "git@"+DefaultHost+":")
+	runFixtureGit(t, "config", "--file", configPath, "protocol.file.allow", "always")
+
+	fixture := managedGitFixture{Base: base, RemoteRoot: remoteRoot}
+	created := addManagedFixtureProject(t, fixture, 101, "g/repo")
+	fixture.Project = created.Project
+	fixture.Commit = created.Commit
+	fixture.Work = created.Work
+	return fixture
+}
+
+func addManagedFixtureProject(t *testing.T, fixture managedGitFixture, id int64, projectPath string) managedGitFixture {
+	t.Helper()
+	remote := filepath.Join(fixture.RemoteRoot, filepath.FromSlash(projectPath)+".git")
+	work := filepath.Join(fixture.Base, fmt.Sprintf("work-%d", id))
+	if err := os.MkdirAll(filepath.Dir(remote), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	runFixtureGit(t, "init", "--bare", "--", remote)
 	runFixtureGit(t, "init", "--", work)
 	if err := os.WriteFile(filepath.Join(work, "README.md"), []byte("managed fixture\n"), 0o644); err != nil {
@@ -415,20 +707,72 @@ func newManagedGitFixture(t *testing.T) managedGitFixture {
 	runFixtureGit(t, "-C", work, "remote", "add", "origin", remote)
 	runFixtureGit(t, "-C", work, "push", "origin", "main")
 	commit := strings.TrimSpace(runFixtureGit(t, "-C", work, "rev-parse", "HEAD"))
-
-	filePrefix := "file://" + filepath.ToSlash(remoteRoot) + "/"
-	runFixtureGit(t, "config", "--file", configPath, "url."+filePrefix+".insteadOf", "git@"+DefaultHost+":")
-	runFixtureGit(t, "config", "--file", configPath, "protocol.file.allow", "always")
-
 	return managedGitFixture{
-		Project: Project{
-			ID:                101,
-			PathWithNamespace: "g/repo",
-			SSHURL:            "git@" + DefaultHost + ":g/repo.git",
-			DefaultBranch:     "main",
-		},
-		Commit: commit,
+		Project:    managedProject(id, projectPath),
+		Commit:     commit,
+		Base:       fixture.Base,
+		RemoteRoot: fixture.RemoteRoot,
+		Work:       work,
 	}
+}
+
+func commitManagedFixture(t *testing.T, fixture *managedGitFixture, content string, force bool) string {
+	t.Helper()
+	if force {
+		runFixtureGit(t, "-C", fixture.Work, "reset", "--hard", "HEAD~1")
+	}
+	if err := os.WriteFile(filepath.Join(fixture.Work, "README.md"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runFixtureGit(t, "-C", fixture.Work, "add", "--", "README.md")
+	runFixtureGit(t, "-C", fixture.Work,
+		"-c", "user.name=Moedex Test",
+		"-c", "user.email=moedex-test@localhost",
+		"commit", "-m", "fixture update")
+	pushArgs := []string{"-C", fixture.Work, "push"}
+	if force {
+		pushArgs = append(pushArgs, "--force")
+	}
+	pushArgs = append(pushArgs, "origin", "main")
+	runFixtureGit(t, pushArgs...)
+	fixture.Commit = strings.TrimSpace(runFixtureGit(t, "-C", fixture.Work, "rev-parse", "HEAD"))
+	return fixture.Commit
+}
+
+type concurrentFetchRunner struct {
+	Runner
+	target   int32
+	inFlight atomic.Int32
+	peak     atomic.Int32
+	release  chan struct{}
+	once     sync.Once
+}
+
+func newConcurrentFetchRunner(delegate Runner, target int32) *concurrentFetchRunner {
+	return &concurrentFetchRunner{Runner: delegate, target: target, release: make(chan struct{})}
+}
+
+func (r *concurrentFetchRunner) RunEnv(ctx context.Context, env []string, name string, args ...string) (Result, error) {
+	if name != "git" || !containsString(args, "fetch") {
+		return r.Runner.RunEnv(ctx, env, name, args...)
+	}
+	current := r.inFlight.Add(1)
+	defer r.inFlight.Add(-1)
+	for {
+		peak := r.peak.Load()
+		if current <= peak || r.peak.CompareAndSwap(peak, current) {
+			break
+		}
+	}
+	if current >= r.target {
+		r.once.Do(func() { close(r.release) })
+	}
+	select {
+	case <-r.release:
+	case <-ctx.Done():
+		return Result{}, ctx.Err()
+	}
+	return r.Runner.RunEnv(ctx, env, name, args...)
 }
 
 func runFixtureGit(t *testing.T, args ...string) string {
@@ -450,6 +794,64 @@ func lockedProject(id int64, projectPath, commit string) LockedProject {
 		DefaultCommit:     commit,
 		Status:            LockStatusCurrent,
 	}
+}
+
+func managedProject(id int64, projectPath string) Project {
+	return Project{
+		ID:                id,
+		PathWithNamespace: projectPath,
+		SSHURL:            fmt.Sprintf("git@%s:%s.git", DefaultHost, projectPath),
+		DefaultBranch:     "main",
+	}
+}
+
+func assertManagedActionKinds(t *testing.T, plan ManagedPlan, want map[int64]ManagedActionKind) {
+	t.Helper()
+	if len(plan.Actions) != len(want) {
+		t.Fatalf("actions = %+v, want one action for each of %+v", plan.Actions, want)
+	}
+	for _, action := range plan.Actions {
+		if wantKind, ok := want[action.ProjectID]; !ok || action.Kind != wantKind {
+			t.Fatalf("action for project %d = %s, want %s; all=%+v", action.ProjectID, action.Kind, wantKind, plan.Actions)
+		}
+	}
+}
+
+func assertLockedCommit(t *testing.T, root string, id int64, commit string, status LockStatus) {
+	t.Helper()
+	lock, err := LoadLock(root, DefaultHost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, project := range lock.Projects {
+		if project.ID == id {
+			if project.DefaultCommit != commit || project.Status != status {
+				t.Fatalf("project %d lock = %+v, want commit=%s status=%s", id, project, commit, status)
+			}
+			return
+		}
+	}
+	t.Fatalf("project %d missing from lock: %+v", id, lock)
+}
+
+func assertFileBytes(t *testing.T, path string, want []byte) {
+	t.Helper()
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, want) {
+		t.Fatalf("file %q changed:\n%s\nwant:\n%s", path, got, want)
+	}
+}
+
+func containsString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }
 
 func assertSameFileBytes(t *testing.T, first, second string) {
