@@ -151,16 +151,23 @@ func Build(cfg Config) (*Built, error) {
 		}
 	}
 
+	sources, err := ingest.DiscoverSources(cfg.Root)
+	if err != nil {
+		return nil, fmt.Errorf("discover sources: %w", err)
+	}
+	if cfg.MaxRepos > 0 && cfg.MaxRepos < len(sources) {
+		sources = sources[:cfg.MaxRepos]
+	}
+	repos := make([]string, len(sources))
+	for i, source := range sources {
+		repos[i] = source.Dir
+	}
 	gitCount, err := ingest.CountGitEntries(cfg.Root)
 	if err != nil {
 		return nil, fmt.Errorf("count .git: %w", err)
 	}
-	repos, err := ingest.DiscoverRepos(cfg.Root)
-	if err != nil {
-		return nil, fmt.Errorf("discover repos: %w", err)
-	}
-	if cfg.MaxRepos > 0 && cfg.MaxRepos < len(repos) {
-		repos = repos[:cfg.MaxRepos]
+	if len(sources) > 0 && sources[0].Managed {
+		gitCount = len(sources) // exclude the managed superproject itself
 	}
 	cfg.logf("discovered %d repos (.git entries: %d)", len(repos), gitCount)
 
@@ -214,15 +221,18 @@ func Build(cfg Config) (*Built, error) {
 		return nil
 	}
 
-	for _, repo := range repos {
-		files, err := ingest.Repo(filepath.Base(repo), repo)
+	for _, source := range sources {
+		if err := ingest.VerifySource(source); err != nil {
+			return nil, err
+		}
+		repo := source.Dir
+		files, err := ingest.Repo(source.Namespace, repo)
 		if err != nil {
 			b.Skipped = append(b.Skipped, SkippedRepo{Dir: repo, Reason: err.Error()})
 			continue
 		}
 		b.IngestedRepos++
-		head, _ := ingest.Head(repo) // "" if unreadable; recorded as-is
-		mb.recordHead(repo, filepath.Base(repo), head)
+		mb.recordHead(source)
 		for _, f := range files {
 			id, isNew := b.FT.add(f.Repo, f.RelPath, f.AbsPath)
 			if !isNew {

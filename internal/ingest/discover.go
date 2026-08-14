@@ -7,7 +7,7 @@ import (
 )
 
 // DiscoverRepos walks root and returns the directory of every git repo beneath
-// it — one entry per ".git" directory found, taking that directory's parent as
+// it — one entry per ".git" directory or file found, taking that entry's parent as
 // the repo. The returned slice is sorted for deterministic, reproducible
 // ingestion order.
 //
@@ -28,9 +28,11 @@ func DiscoverRepos(root string) ([]string, error) {
 			}
 			return nil
 		}
-		if d.IsDir() && d.Name() == ".git" {
+		if d.Name() == ".git" {
 			repos = append(repos, filepath.Dir(p))
-			return fs.SkipDir // a git object store holds no nested repos
+			if d.IsDir() {
+				return fs.SkipDir // a git object store holds no nested repos
+			}
 		}
 		return nil
 	})
@@ -44,9 +46,9 @@ func DiscoverRepos(root string) ([]string, error) {
 // CountGitEntries returns the number of ".git" entries (dirs or files) under
 // root, matching `find <root> -name .git | wc -l`. It is the ground-truth count
 // the discovery is checked against (AC-B1): a repo whose .git is a file (a git
-// worktree or submodule gitlink) is counted here even though DiscoverRepos —
-// which keys on ".git" directories — would still find its parent via the parent
-// directory's own ".git". In a plain mirror (no submodules) the two agree.
+// worktree or submodule gitlink) is counted here and by DiscoverRepos. In a
+// plain mirror the two agree; managed roots use DiscoverSources so the
+// superproject marker itself is never treated as an indexing source.
 func CountGitEntries(root string) (int, error) {
 	n := 0
 	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {

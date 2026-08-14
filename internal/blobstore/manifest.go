@@ -38,10 +38,12 @@ type FileEntry struct {
 // HEAD (the freshness key, "" if unreadable — same convention as ingest.Head),
 // and its ordered file entries.
 type RepoBlobs struct {
-	Dir   string      `json:"dir"`
-	Label string      `json:"label"`
-	Head  string      `json:"head"`
-	Files []FileEntry `json:"files"`
+	Dir       string      `json:"dir"`
+	Label     string      `json:"label"`
+	Head      string      `json:"head"`
+	ProjectID int64       `json:"project_id,omitempty"`
+	Managed   bool        `json:"managed,omitempty"`
+	Files     []FileEntry `json:"files"`
 }
 
 // blobSet returns the deduplicated, sorted set of blob SHAs this repo references.

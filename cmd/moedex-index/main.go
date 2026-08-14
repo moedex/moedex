@@ -230,11 +230,11 @@ func buildShards(root, shardDir string, shardBytes int64, sel index.GramSelector
 	if shardBytes <= 0 {
 		shardBytes = parity.DefaultShardBytes
 	}
-	repos, err := ingest.DiscoverRepos(root)
+	sources, err := ingest.DiscoverSources(root)
 	if err != nil {
-		return nil, 0, 0, fmt.Errorf("discover repos: %w", err)
+		return nil, 0, 0, fmt.Errorf("discover sources: %w", err)
 	}
-	logf("discovered %d repos under %s", len(repos), root)
+	logf("discovered %d repos under %s", len(sources), root)
 
 	var (
 		shards   []parity.ShardManifest
@@ -266,14 +266,18 @@ func buildShards(root, shardDir string, shardBytes int64, sel index.GramSelector
 		return nil
 	}
 
-	for _, repo := range repos {
-		files, err := ingest.Repo(filepath.Base(repo), repo)
+	for _, source := range sources {
+		if err := ingest.VerifySource(source); err != nil {
+			return nil, 0, 0, err
+		}
+		repo := source.Dir
+		files, err := ingest.Repo(source.Namespace, repo)
 		if err != nil {
 			logf("  skip %s: %v", repo, err)
 			continue
 		}
 		head, _ := ingest.Head(repo) // "" if unreadable; recorded as-is
-		heads = append(heads, parity.RepoHead{Dir: repo, Label: filepath.Base(repo), Head: head})
+		heads = append(heads, parity.RepoHead{Dir: repo, Label: source.Namespace, Head: head, ProjectID: source.ProjectID, Managed: source.Managed})
 
 		contributed := false
 		seen := map[string]bool{}
@@ -330,7 +334,7 @@ func runCheck(args []string) error {
 	if err != nil {
 		return err
 	}
-	ch, err := parity.DetectChanges(m, root, ingest.DiscoverRepos, ingest.Head)
+	ch, err := parity.DetectChanges(m, root, ingest.DiscoverSourceDirs, ingest.Head)
 	if err != nil {
 		return err
 	}
@@ -364,7 +368,7 @@ func runRefresh(args []string) error {
 	if err != nil {
 		return err
 	}
-	ch, err := parity.DetectChanges(m, root, ingest.DiscoverRepos, ingest.Head)
+	ch, err := parity.DetectChanges(m, root, ingest.DiscoverSourceDirs, ingest.Head)
 	if err != nil {
 		return err
 	}

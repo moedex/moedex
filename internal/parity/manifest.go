@@ -67,6 +67,9 @@ type RepoHead struct {
 	Label string `json:"label"`
 	// Head is `git rev-parse HEAD` at ingest time; "" if it could not be read.
 	Head string `json:"head"`
+	// ProjectID and Managed preserve stable source identity for managed corpora.
+	ProjectID int64 `json:"project_id,omitempty"`
+	Managed   bool  `json:"managed,omitempty"`
 }
 
 // ShardManifest records one persisted shard and the repos whose blobs it holds.
@@ -184,8 +187,11 @@ func newManifestBuilder(root, shardDir string) *manifestBuilder {
 }
 
 // recordHead notes a repo's HEAD at ingest. Call once per repo as it's ingested.
-func (mb *manifestBuilder) recordHead(dir, label, head string) {
-	mb.heads = append(mb.heads, RepoHead{Dir: dir, Label: label, Head: head})
+func (mb *manifestBuilder) recordHead(source ingest.RepoSource) {
+	mb.heads = append(mb.heads, RepoHead{
+		Dir: source.Dir, Label: source.Namespace, Head: source.LockedCommit,
+		ProjectID: source.ProjectID, Managed: source.Managed,
+	})
 }
 
 // noteBlob attributes a blob's content bytes (just ingested for repo dir) to the
@@ -342,6 +348,14 @@ func Rebuild(old *Manifest, ch Changes, newShardDir string, builtAt time.Time,
 		return nil, err
 	}
 	affected := ch.affectedRepoSet()
+	sources, err := ingest.DiscoverSources(old.Root)
+	if err != nil {
+		return nil, fmt.Errorf("discover rebuild sources: %w", err)
+	}
+	sourceByDir := make(map[string]ingest.RepoSource, len(sources))
+	for _, source := range sources {
+		sourceByDir[source.Dir] = source
+	}
 
 	// Partition old shards into carry-forward vs rebuild, and collect the repo
 	// set that must be re-ingested (every repo on any affected shard).
@@ -395,9 +409,9 @@ func Rebuild(old *Manifest, ch Changes, newShardDir string, builtAt time.Time,
 
 	// Copy carried-forward shards into the new dir (preserving their repo
 	// membership and HEADs).
-	headByDir := map[string]string{}
+	headByDir := map[string]RepoHead{}
 	for _, h := range old.Heads {
-		headByDir[h.Dir] = h.Head
+		headByDir[h.Dir] = h
 	}
 	for _, sm := range carry {
 		dst := nextShardPath()
@@ -407,7 +421,7 @@ func Rebuild(old *Manifest, ch Changes, newShardDir string, builtAt time.Time,
 		m.Shards = append(m.Shards, ShardManifest{Path: dst, Repos: sm.Repos, ContentBytes: sm.ContentBytes})
 		for _, r := range sm.Repos {
 			if !contains(ch.Removed, r) {
-				m.Heads = append(m.Heads, RepoHead{Dir: r, Label: filepath.Base(r), Head: headByDir[r]})
+				m.Heads = append(m.Heads, headByDir[r])
 			}
 		}
 	}
@@ -418,7 +432,14 @@ func Rebuild(old *Manifest, ch Changes, newShardDir string, builtAt time.Time,
 	// full corpus a content-byte threshold could re-pack co-resident repos, but
 	// correctness does not require it — see the package caveats.)
 	for _, dir := range reingestOrder {
-		files, err := ingest.Repo(filepath.Base(dir), dir)
+		source, ok := sourceByDir[dir]
+		if !ok {
+			continue
+		}
+		if err := ingest.VerifySource(source); err != nil {
+			return nil, err
+		}
+		files, err := ingest.Repo(source.Namespace, dir)
 		if err != nil {
 			// Repo vanished or unreadable: skip it (treated as removed).
 			continue
@@ -443,7 +464,7 @@ func Rebuild(old *Manifest, ch Changes, newShardDir string, builtAt time.Time,
 		}
 		head, _ := headFn(dir)
 		m.Shards = append(m.Shards, ShardManifest{Path: dst, Repos: []string{dir}, ContentBytes: bytes})
-		m.Heads = append(m.Heads, RepoHead{Dir: dir, Label: filepath.Base(dir), Head: head})
+		m.Heads = append(m.Heads, RepoHead{Dir: dir, Label: source.Namespace, Head: head, ProjectID: source.ProjectID, Managed: source.Managed})
 	}
 
 	if err := WriteManifest(filepath.Join(newShardDir, ManifestName), m); err != nil {

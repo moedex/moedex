@@ -8,10 +8,105 @@ import (
 	"runtime"
 	"testing"
 
+	"moedex/internal/corpus"
 	"moedex/internal/ingest"
 	"moedex/internal/parity"
 	"moedex/internal/server"
 )
+
+func TestManagedDefaultBuildUsesNamespaceIdentityAndExcludesSuperproject(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	root := initRepo(t, filepath.Join(t.TempDir(), "managed"), map[string]string{
+		"superproject-only.txt": "SuperprojectOnlyMarker\n",
+	})
+	first := initRepo(t, filepath.Join(root, "group-a", "same"), map[string]string{
+		"same.txt": "ManagedLeafMarker\n",
+	})
+	second := initRepo(t, filepath.Join(root, "group-b", "same"), map[string]string{
+		"same.txt": "ManagedLeafMarker\n",
+	})
+	writeManagedIndexLock(t, root, []struct {
+		id        int64
+		namespace string
+		dir       string
+	}{
+		{id: 22, namespace: "group-b/same", dir: second},
+		{id: 11, namespace: "group-a/same", dir: first},
+	})
+
+	shardDir := filepath.Join(t.TempDir(), "shards")
+	if err := runBuild([]string{"-corpus", root, "-shard-dir", shardDir}); err != nil {
+		t.Fatalf("managed build: %v", err)
+	}
+	m, err := parity.LoadManifest(filepath.Join(shardDir, parity.ManifestName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m.Heads) != 2 || m.Heads[0].ProjectID != 11 || m.Heads[0].Label != "group-a/same" || !m.Heads[0].Managed {
+		t.Fatalf("managed manifest identity = %+v", m.Heads)
+	}
+
+	c, err := server.Open(shardDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	matches, _, err := c.Literal(context.Background(), "ManagedLeafMarker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	repos := map[string]bool{}
+	for _, match := range matches {
+		repos[match.Repo] = true
+	}
+	if !repos["group-a/same"] || !repos["group-b/same"] || len(repos) != 2 {
+		t.Fatalf("managed repo labels = %v, want both namespace-qualified leaves", repos)
+	}
+	superMatches, _, err := c.Literal(context.Background(), "SuperprojectOnlyMarker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(superMatches) != 0 {
+		t.Fatalf("superproject content was indexed: %+v", superMatches)
+	}
+}
+
+func writeManagedIndexLock(t *testing.T, root string, projects []struct {
+	id        int64
+	namespace string
+	dir       string
+}) {
+	t.Helper()
+	cfg := corpus.Config{Host: corpus.DefaultHost, Root: root, Groups: []string{"group-a", "group-b"}}
+	catalog, err := corpus.NewCatalog(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := corpus.WriteCatalog(root, catalog); err != nil {
+		t.Fatal(err)
+	}
+	locked := make([]corpus.LockedProject, 0, len(projects))
+	for _, project := range projects {
+		head, err := ingest.Head(project.dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		locked = append(locked, corpus.LockedProject{
+			ID: project.id, PathWithNamespace: project.namespace,
+			CloneURL:      "git@" + corpus.DefaultHost + ":" + project.namespace + ".git",
+			DefaultBranch: "main", DefaultCommit: head, Status: corpus.LockStatusCurrent,
+		})
+	}
+	lock, err := corpus.NewLock(corpus.DefaultHost, true, locked)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := corpus.WriteLock(root, corpus.DefaultHost, lock); err != nil {
+		t.Fatal(err)
+	}
+}
 
 // TestBuildCheckRefresh exercises the full offline lifecycle over real temp git
 // repos: build a servable shard dir, confirm check sees no drift, commit a change

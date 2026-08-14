@@ -255,9 +255,11 @@ func RefreshDedupedShardDir(casDir, outShardDir string, shardBytes int64) (*pari
 	// record per repo.
 	servedHead := map[string]string{}
 	servedKnown := map[string]bool{}
+	servedMeta := map[string]parity.RepoHead{}
 	for _, h := range oldServed.Heads {
 		servedHead[h.Dir] = h.Head
 		servedKnown[h.Dir] = true
+		servedMeta[h.Dir] = h
 	}
 	casByDir := map[string]RepoBlobs{}
 	affected := map[string]bool{} // repo dir -> changed/added/removed
@@ -452,7 +454,9 @@ func RefreshDedupedShardDir(casDir, outShardDir string, shardBytes int64) (*pari
 		shards = append(shards, parity.ShardManifest{Path: rec, Repos: cs.repos, ContentBytes: cs.bytes})
 		ds.ShardsCarried++
 		for _, r := range cs.repos {
-			heads = append(heads, parity.RepoHead{Dir: r, Label: filepath.Base(r), Head: headForServed(servedHead, casByDir, r)})
+			head := servedMeta[r]
+			head.Head = headForServed(servedHead, casByDir, r)
+			heads = append(heads, head)
 		}
 	}
 
@@ -467,7 +471,8 @@ func RefreshDedupedShardDir(casDir, outShardDir string, shardBytes int64) (*pari
 		shards = append(shards, parity.ShardManifest{Path: rec, Repos: st.repos, ContentBytes: st.bytes})
 		ds.ShardsRewritten++
 		for _, r := range st.repos {
-			heads = append(heads, parity.RepoHead{Dir: r, Label: filepath.Base(r), Head: casByDir[r].Head})
+			repo := casByDir[r]
+			heads = append(heads, parity.RepoHead{Dir: r, Label: repo.Label, Head: repo.Head, ProjectID: repo.ProjectID, Managed: repo.Managed})
 		}
 	}
 

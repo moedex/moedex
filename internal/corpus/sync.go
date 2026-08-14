@@ -9,8 +9,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-
-	"moedex/internal/ingest"
 )
 
 // SyncOutcome categorizes what happened to one repo during a sync pass.
@@ -134,7 +132,7 @@ func LocalRepos(root string) ([]string, error) {
 	if _, err := os.Stat(root); errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
-	dirs, err := ingest.DiscoverRepos(root)
+	dirs, err := discoverLocalRepos(root)
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +145,34 @@ func LocalRepos(root string) ([]string, error) {
 		rels = append(rels, filepath.ToSlash(rel))
 	}
 	return rels, nil
+}
+
+// discoverLocalRepos mirrors ingest.DiscoverRepos without importing the ingest
+// package. Keeping corpus acquisition independent lets ingest consume the
+// managed catalog/lock contract without creating an import cycle.
+func discoverLocalRepos(root string) ([]string, error) {
+	var repos []string
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			if entry != nil && entry.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if entry.Name() != ".git" {
+			return nil
+		}
+		repos = append(repos, filepath.Dir(path))
+		if entry.IsDir() {
+			return fs.SkipDir
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	sort.Strings(repos)
+	return repos, nil
 }
 
 // PlanSync discovers the local repos under cfg.Root and reconciles them against

@@ -98,9 +98,10 @@ type DeltaStats struct {
 // ingestFn / headFn / discoverFn are injected in tests; production passes the
 // real ingest functions. They mirror the seams parity.DetectChanges already uses.
 type (
-	ingestFn   = func(repoName, dir string) ([]ingest.File, error)
-	headFn     = func(dir string) (string, error)
-	discoverFn = func(root string) ([]string, error)
+	ingestFn         = func(repoName, dir string) ([]ingest.File, error)
+	headFn           = func(dir string) (string, error)
+	discoverFn       = func(root string) ([]string, error)
+	sourceDiscoverFn = func(root string) ([]ingest.RepoSource, error)
 )
 
 // BuildCAS discovers every repo under root, ingests each, and Puts every text
@@ -111,13 +112,22 @@ type (
 // returns the manifest. The CAS is created fresh: an existing pack at casDir is
 // reused (Open is append-only), so call on an empty dir for a clean build.
 func BuildCAS(root, casDir string) (*BlobManifest, error) {
-	return buildCAS(root, casDir, ingest.DiscoverRepos, ingest.Repo, ingest.Head)
+	return buildCASSources(root, casDir, ingest.DiscoverSources, ingest.Repo, ingest.Head)
 }
 
 func buildCAS(root, casDir string, discover discoverFn, ingestRepo ingestFn, head headFn) (*BlobManifest, error) {
-	repos, err := discover(root)
+	return buildCASSources(root, casDir, legacySourceDiscover(discover, head), ingestRepo, head)
+}
+
+func buildCASSources(root, casDir string, discover sourceDiscoverFn, ingestRepo ingestFn, head headFn) (*BlobManifest, error) {
+	sources, err := discover(root)
 	if err != nil {
-		return nil, fmt.Errorf("blobstore: discover repos: %w", err)
+		return nil, fmt.Errorf("blobstore: discover sources: %w", err)
+	}
+	for _, source := range sources {
+		if err := ingest.VerifySource(source); err != nil {
+			return nil, err
+		}
 	}
 	store, err := Open(casDir)
 	if err != nil {
@@ -126,8 +136,8 @@ func buildCAS(root, casDir string, discover discoverFn, ingestRepo ingestFn, hea
 	defer store.Close()
 
 	m := &BlobManifest{Version: BlobManifestVersion, Root: root, CASDir: casDir}
-	for _, dir := range repos {
-		rb, raw, refs, _, err := ingestRepoBlobs(store, dir, ingestRepo, head)
+	for _, source := range sources {
+		rb, raw, refs, _, err := ingestSourceBlobs(store, source, ingestRepo, head)
 		if err != nil {
 			// A repo that fails to ingest is skipped (not fatal), matching parity.Build.
 			continue
@@ -155,12 +165,20 @@ func buildCAS(root, casDir string, discover discoverFn, ingestRepo ingestFn, hea
 // the repo's batch exactly as parity.Build/buildShards do (nested-repo overlap
 // guard).
 func ingestRepoBlobs(store *Store, dir string, ingestRepo ingestFn, head headFn) (RepoBlobs, int64, int, int, error) {
-	files, err := ingestRepo(filepath.Base(dir), dir)
+	source := ingest.RepoSource{Namespace: filepath.Base(dir), Dir: dir}
+	return ingestSourceBlobs(store, source, ingestRepo, head)
+}
+
+func ingestSourceBlobs(store *Store, source ingest.RepoSource, ingestRepo ingestFn, head headFn) (RepoBlobs, int64, int, int, error) {
+	if err := ingest.VerifySource(source); err != nil {
+		return RepoBlobs{}, 0, 0, 0, err
+	}
+	files, err := ingestRepo(source.Namespace, source.Dir)
 	if err != nil {
 		return RepoBlobs{}, 0, 0, 0, err
 	}
-	h, _ := head(dir) // "" if unreadable; recorded as-is (commitless-repo stable)
-	rb := RepoBlobs{Dir: dir, Label: filepath.Base(dir), Head: h}
+	h, _ := head(source.Dir) // "" if unreadable; recorded as-is (commitless-repo stable)
+	rb := RepoBlobs{Dir: source.Dir, Label: source.Namespace, Head: h, ProjectID: source.ProjectID, Managed: source.Managed}
 
 	var raw int64
 	var skipped int
@@ -215,20 +233,29 @@ func ingestRepoBlobs(store *Store, dir string, ingestRepo ingestFn, head headFn)
 // It rewrites the manifest and returns the new manifest plus DeltaStats proving
 // the delta was minimal. root defaults to old.Root when empty.
 func RefreshCAS(old *BlobManifest, root, casDir string) (*BlobManifest, DeltaStats, error) {
-	return refreshCAS(old, root, casDir, ingest.DiscoverRepos, ingest.Repo, ingest.Head)
+	return refreshCASSources(old, root, casDir, ingest.DiscoverSources, ingest.Repo, ingest.Head)
 }
 
 func refreshCAS(old *BlobManifest, root, casDir string, discover discoverFn, ingestRepo ingestFn, head headFn) (*BlobManifest, DeltaStats, error) {
+	return refreshCASSources(old, root, casDir, legacySourceDiscover(discover, head), ingestRepo, head)
+}
+
+func refreshCASSources(old *BlobManifest, root, casDir string, discover sourceDiscoverFn, ingestRepo ingestFn, head headFn) (*BlobManifest, DeltaStats, error) {
 	if root == "" {
 		root = old.Root
 	}
 	current, err := discover(root)
 	if err != nil {
-		return nil, DeltaStats{}, fmt.Errorf("blobstore: discover repos: %w", err)
+		return nil, DeltaStats{}, fmt.Errorf("blobstore: discover sources: %w", err)
+	}
+	for _, source := range current {
+		if err := ingest.VerifySource(source); err != nil {
+			return nil, DeltaStats{}, err
+		}
 	}
 	currentSet := map[string]bool{}
-	for _, d := range current {
-		currentSet[d] = true
+	for _, source := range current {
+		currentSet[source.Dir] = true
 	}
 
 	store, err := Open(casDir)
@@ -243,7 +270,8 @@ func refreshCAS(old *BlobManifest, root, casDir string, discover discoverFn, ing
 	var ds DeltaStats
 	m := &BlobManifest{Version: BlobManifestVersion, Root: root, CASDir: casDir}
 
-	for _, dir := range current {
+	for _, source := range current {
+		dir := source.Dir
 		oldRepo, known := old.RepoOf(dir)
 		if !known {
 			// Added repo: ingest fully. A transient ingest failure of a brand-new
@@ -251,7 +279,7 @@ func refreshCAS(old *BlobManifest, root, casDir string, discover discoverFn, ing
 			// it is simply omitted this round and surfaced as failed (the next
 			// refresh retries it) — matching parity.Build's skip-on-ingest-error.
 			ds.AddedRepos = append(ds.AddedRepos, dir)
-			rb, raw, refs, _, err := ingestRepoBlobs(store, dir, ingestRepo, head)
+			rb, raw, refs, _, err := ingestSourceBlobs(store, source, ingestRepo, head)
 			if err != nil {
 				ds.FailedRepos = append(ds.FailedRepos, dir)
 				continue
@@ -265,7 +293,7 @@ func refreshCAS(old *BlobManifest, root, casDir string, discover discoverFn, ing
 		if err != nil {
 			now = "" // normalize unreadable HEAD (commitless-repo stable)
 		}
-		if now == oldRepo.Head {
+		if now == oldRepo.Head && sourceMatchesRepo(source, oldRepo) {
 			// Unchanged: carry the recorded blob set forward verbatim; zero Puts.
 			m.Repos = append(m.Repos, oldRepo)
 			m.Stats.RawBytes += rawBytesOf(store, oldRepo)
@@ -274,7 +302,7 @@ func refreshCAS(old *BlobManifest, root, casDir string, discover discoverFn, ing
 		}
 		// Changed: re-ingest ONLY this repo; only net-new blobs are physically added.
 		ds.ChangedRepos = append(ds.ChangedRepos, dir)
-		rb, raw, refs, skipped, err := ingestRepoBlobs(store, dir, ingestRepo, head)
+		rb, raw, refs, skipped, err := ingestSourceBlobs(store, source, ingestRepo, head)
 		if err != nil {
 			// Re-ingest FAILED for a repo that is STILL ON DISK (discover found it):
 			// this is a transient git/read error, NOT a removal. Dropping it here
@@ -331,6 +359,28 @@ func refreshCAS(old *BlobManifest, root, casDir string, discover discoverFn, ing
 		return nil, DeltaStats{}, err
 	}
 	return m, ds, nil
+}
+
+func legacySourceDiscover(discover discoverFn, head headFn) sourceDiscoverFn {
+	return func(root string) ([]ingest.RepoSource, error) {
+		dirs, err := discover(root)
+		if err != nil {
+			return nil, err
+		}
+		sources := make([]ingest.RepoSource, 0, len(dirs))
+		for _, dir := range dirs {
+			h, err := head(dir)
+			if err != nil {
+				h = ""
+			}
+			sources = append(sources, ingest.RepoSource{Namespace: filepath.Base(dir), Dir: dir, LockedCommit: h})
+		}
+		return sources, nil
+	}
+}
+
+func sourceMatchesRepo(source ingest.RepoSource, repo RepoBlobs) bool {
+	return source.Namespace == repo.Label && source.ProjectID == repo.ProjectID && source.Managed == repo.Managed
 }
 
 // rawBytesOf sums the content bytes of a carried-forward repo's files by reading

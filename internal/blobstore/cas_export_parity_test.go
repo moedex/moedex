@@ -35,11 +35,113 @@ import (
 	"strings"
 	"testing"
 
+	"moedex/internal/corpus"
 	"moedex/internal/ingest"
 	"moedex/internal/parity"
 	"moedex/internal/search"
 	"moedex/internal/server"
 )
+
+func TestManagedSourceIdentityFlowsThroughCASExportAndMismatchPreservesManifest(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	root := t.TempDir()
+	first := filepath.Join(root, "group-a", "same")
+	second := filepath.Join(root, "group-b", "same")
+	commitGitRepo(t, first, map[string]string{"a.go": "package a\nconst ManagedCASMarker = 1\n"})
+	commitGitRepo(t, second, map[string]string{"b.go": "package b\nconst ManagedCASMarker = 2\n"})
+	writeManagedCASLock(t, root, []struct {
+		id        int64
+		namespace string
+		dir       string
+	}{
+		{id: 202, namespace: "group-b/same", dir: second},
+		{id: 101, namespace: "group-a/same", dir: first},
+	})
+
+	casDir := filepath.Join(t.TempDir(), "cas")
+	m, err := BuildCAS(root, casDir)
+	if err != nil {
+		t.Fatalf("BuildCAS: %v", err)
+	}
+	if len(m.Repos) != 2 || m.Repos[0].ProjectID != 101 || m.Repos[0].Label != "group-a/same" || !m.Repos[0].Managed {
+		t.Fatalf("managed CAS identities = %+v", m.Repos)
+	}
+	servedDir := filepath.Join(t.TempDir(), "served")
+	served, err := ExportShardDir(casDir, servedDir, 1<<20)
+	if err != nil {
+		t.Fatalf("ExportShardDir: %v", err)
+	}
+	if len(served.Heads) != 2 || served.Heads[1].ProjectID != 202 || served.Heads[1].Label != "group-b/same" || !served.Heads[1].Managed {
+		t.Fatalf("managed served identities = %+v", served.Heads)
+	}
+
+	manifestPath := filepath.Join(casDir, BlobManifestName)
+	before, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(first, "advance.go"), []byte("package a\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runGitCommand(t, first, "add", "advance.go")
+	runGitCommand(t, first, "commit", "-m", "advance")
+	if _, _, err := RefreshCAS(m, root, casDir); err == nil || !strings.Contains(err.Error(), "does not match locked default commit") {
+		t.Fatalf("RefreshCAS mismatch error = %v", err)
+	}
+	after, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(before) {
+		t.Fatal("failed managed refresh published a partial CAS manifest")
+	}
+}
+
+func writeManagedCASLock(t *testing.T, root string, projects []struct {
+	id        int64
+	namespace string
+	dir       string
+}) {
+	t.Helper()
+	cfg := corpus.Config{Host: corpus.DefaultHost, Root: root, Groups: []string{"group-a", "group-b"}}
+	catalog, err := corpus.NewCatalog(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := corpus.WriteCatalog(root, catalog); err != nil {
+		t.Fatal(err)
+	}
+	locked := make([]corpus.LockedProject, 0, len(projects))
+	for _, project := range projects {
+		head, err := ingest.Head(project.dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		locked = append(locked, corpus.LockedProject{
+			ID: project.id, PathWithNamespace: project.namespace,
+			CloneURL:      "git@" + corpus.DefaultHost + ":" + project.namespace + ".git",
+			DefaultBranch: "main", DefaultCommit: head, Status: corpus.LockStatusCurrent,
+		})
+	}
+	lock, err := corpus.NewLock(corpus.DefaultHost, true, locked)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := corpus.WriteLock(root, corpus.DefaultHost, lock); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func runGitCommand(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+	cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=Moedex Test", "GIT_AUTHOR_EMAIL=test@localhost", "GIT_COMMITTER_NAME=Moedex Test", "GIT_COMMITTER_EMAIL=test@localhost")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, out)
+	}
+}
 
 // loc is a (repo, rel-path, line) match location — the granularity at which the
 // two shard dirs are compared (abspath-independent so a relocated corpus still
@@ -139,7 +241,7 @@ func TestCASExportParityCorpus(t *testing.T) {
 		Root:       root,
 		WorkDir:    work,
 		Seed:       seed,
-		MaxRepos:   cap, // 0 = all; matches the subset's first-N (DiscoverRepos order)
+		MaxRepos:   cap,          // 0 = all; matches the subset's first-N (DiscoverRepos order)
 		ShardBytes: shardBytes(), // small shards => multiple shards => exercise the merge path
 		Logf:       t.Logf,
 	})
