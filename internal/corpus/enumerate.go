@@ -12,6 +12,9 @@ import (
 // Project is the subset of a GitLab project moedex-corpus needs to clone it and
 // place it at the right path in the corpus tree.
 type Project struct {
+	// ID is GitLab's stable numeric project identifier. Namespace paths can
+	// change, so managed-corpus reconciliation keys projects by this value.
+	ID int64 `json:"id"`
 	// PathWithNamespace is the full namespace path, e.g.
 	// "Services.Payment/TC.BillingApi". It doubles as the local relative path so
 	// the mirror layout matches GitLab exactly.
