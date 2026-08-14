@@ -244,7 +244,7 @@ func TestCorpusAIPrivacyPoliciesParse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("discover corpus repositories: %v", err)
 	}
-	policyCount := 0
+	var policyCount, globalRestricted, restrictedOverrides int
 	for _, repo := range repos {
 		policyPath := filepath.Join(repo, AIPrivacyFileName)
 		if _, err := os.Lstat(policyPath); err != nil {
@@ -254,14 +254,23 @@ func TestCorpusAIPrivacyPoliciesParse(t *testing.T) {
 			t.Fatalf("inspect privacy policy: %v", err)
 		}
 		policyCount++
-		if _, err := loadPrivacyPolicy(repo); err != nil {
+		policy, err := loadPrivacyPolicy(repo)
+		if err != nil {
 			t.Fatalf("validate privacy policy: %v", err)
+		}
+		if policy.globalLevel == restrictedAILevel {
+			globalRestricted++
+		}
+		for _, override := range policy.overrides {
+			if override.level == restrictedAILevel {
+				restrictedOverrides++
+			}
 		}
 	}
 	if policyCount == 0 {
 		t.Fatal("corpus contains no .ai-privacy.yml files")
 	}
-	t.Logf("validated %d .ai-privacy.yml files", policyCount)
+	t.Logf("validated policies=%d global_level1=%d level1_overrides=%d", policyCount, globalRestricted, restrictedOverrides)
 }
 
 func TestCorpusAIPrivacyPublicationAudit(t *testing.T) {
