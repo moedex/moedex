@@ -3,6 +3,7 @@ package corpus
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -562,7 +563,7 @@ func TestManagedSyncAddMissingDirtyAndExplicitPrune(t *testing.T) {
 	}
 }
 
-func TestManagedSyncFailedFetchCarriesPriorWhileSuccessAdvances(t *testing.T) {
+func TestManagedSyncFailureAtFetchCarriesPriorWhileSuccessAdvances(t *testing.T) {
 	fixture := newManagedGitFixture(t)
 	second := addManagedFixtureProject(t, fixture, 202, "g/second")
 	root := filepath.Join(t.TempDir(), "managed")
@@ -638,6 +639,169 @@ func TestManagedConcurrentFetches(t *testing.T) {
 	}
 	if peak := runner.peak.Load(); peak < 2 {
 		t.Fatalf("fetch peak = %d, want at least 2", peak)
+	}
+}
+
+func TestManagedFailureBoundariesPreserveRecoverableCommittedSnapshot(t *testing.T) {
+	tests := []struct {
+		name      string
+		operation string
+		move      bool
+		lockHook  bool
+	}{
+		{name: "path move", operation: "mv", move: true},
+		{name: "lock write", lockHook: true},
+		{name: "stage", operation: "add"},
+		{name: "commit", operation: "commit"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fixture := newManagedGitFixture(t)
+			root := filepath.Join(t.TempDir(), "managed")
+			cfg := Config{Host: DefaultHost, Root: root, Groups: []string{"g"}, Concurrency: 1}
+			if _, err := InitManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}); err != nil {
+				t.Fatal(err)
+			}
+			project := fixture.Project
+			if test.move {
+				project.PathWithNamespace = "g/moved"
+			} else {
+				commitManagedFixture(t, &fixture, "boundary update\n", false)
+			}
+
+			var runner Runner = ExecRunner{}
+			if test.operation != "" {
+				runner = &managedFaultRunner{Runner: runner, operation: test.operation}
+			}
+			hooks := managedSyncHooks{}
+			if test.lockHook {
+				hooks.beforeLockRename = func(string) error { return errors.New("injected lock-write failure") }
+			}
+			_, err := syncManaged(t.Context(), runner, cfg, []Project{project}, ManagedSyncOptions{EnumerationComplete: true}, hooks)
+			if err == nil || !strings.Contains(err.Error(), root) || !strings.Contains(err.Error(), "last committed snapshot") {
+				t.Fatalf("boundary failure did not report recoverable root: %v", err)
+			}
+			if _, loadErr := LoadCatalog(root); loadErr != nil {
+				t.Fatalf("failure made root unrecognizable: %v", loadErr)
+			}
+			if _, loadErr := LoadLock(root, DefaultHost); loadErr != nil {
+				t.Fatalf("failure left an unreadable worktree lock: %v", loadErr)
+			}
+			assertRecoverableCommittedSnapshot(t, root)
+		})
+	}
+}
+
+func TestManagedFailureAtCloneLeavesMarkedRootAndNoUserDeletion(t *testing.T) {
+	fixture := newManagedGitFixture(t)
+	root := filepath.Join(t.TempDir(), "managed")
+	runner := &managedFaultRunner{Runner: ExecRunner{}, operation: "submodule"}
+	_, err := InitManaged(t.Context(), runner, Config{Host: DefaultHost, Root: root, Groups: []string{"g"}}, []Project{fixture.Project})
+	if err == nil || !strings.Contains(err.Error(), root) || !strings.Contains(err.Error(), "interrupted") {
+		t.Fatalf("clone failure did not report marked root: %v", err)
+	}
+	if _, err := LoadCatalog(root); err != nil {
+		t.Fatalf("clone failure left an unmarked root: %v", err)
+	}
+	unmarkedRoot := filepath.Join(t.TempDir(), "empty-unmarked")
+	if err := os.Mkdir(unmarkedRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	initFault := &managedFaultRunner{Runner: ExecRunner{}, operation: "init"}
+	_, _ = InitManaged(t.Context(), initFault, Config{Host: DefaultHost, Root: unmarkedRoot}, []Project{fixture.Project})
+	if _, err := os.Stat(CatalogPath(unmarkedRoot)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("failure before the marker made an unmarked root managed: %v", err)
+	}
+
+	userRoot := t.TempDir()
+	sentinel := filepath.Join(userRoot, "user-owned")
+	if err := os.WriteFile(sentinel, []byte("keep"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, _ = InitManaged(t.Context(), runner, Config{Host: DefaultHost, Root: userRoot}, []Project{fixture.Project})
+	if got, readErr := os.ReadFile(sentinel); readErr != nil || string(got) != "keep" {
+		t.Fatalf("failed initialization removed user content: data=%q err=%v", got, readErr)
+	}
+	if _, err := os.Stat(CatalogPath(userRoot)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("user-owned root was marked: %v", err)
+	}
+}
+
+func TestManagedUnsafeArgumentsAreRejectedOrSeparated(t *testing.T) {
+	fixture := newManagedGitFixture(t)
+	odd := addManagedFixtureProject(t, fixture, 303, "odd-group/repo with space")
+	odd.Project.DefaultBranch = "feature/odd+name"
+	runFixtureGit(t, "-C", odd.Work, "branch", odd.Project.DefaultBranch)
+	runFixtureGit(t, "-C", odd.Work, "push", "origin", odd.Project.DefaultBranch)
+	root := filepath.Join(t.TempDir(), "managed corpus")
+	cfg := Config{Host: DefaultHost, Root: root, Groups: []string{"odd-group"}, Concurrency: 1}
+	recorder := &managedRecordingRunner{Runner: ExecRunner{}}
+	if _, err := InitManaged(t.Context(), recorder, cfg, []Project{odd.Project}); err != nil {
+		t.Fatalf("InitManaged with unusual argv values: %v\ncalls=%q", err, recorder.snapshot())
+	}
+	if _, err := SyncManaged(t.Context(), recorder, cfg, nil, ManagedSyncOptions{EnumerationComplete: true, Prune: true}); err != nil {
+		t.Fatalf("prune with whitespace-bearing path: %v", err)
+	}
+	for _, args := range recorder.snapshot() {
+		pathIndex := stringIndex(args, gitPathArg(odd.Project.PathWithNamespace))
+		if pathIndex >= 0 {
+			separator := stringIndex(args, "--")
+			if separator < 0 || separator > pathIndex {
+				t.Fatalf("path was not protected by an argv separator: %q", args)
+			}
+		}
+		urlIndex := stringIndex(args, odd.Project.SSHURL)
+		if urlIndex >= 0 {
+			separator := stringIndex(args, "--")
+			if separator < 0 || separator > urlIndex {
+				t.Fatalf("URL was not protected by an argv separator: %q", args)
+			}
+		}
+		branchIndex := stringIndex(args, odd.Project.DefaultBranch)
+		if branchIndex >= 0 && (branchIndex == 0 || args[branchIndex-1] != "--branch") {
+			t.Fatalf("branch was not passed as an option value: %q", args)
+		}
+	}
+
+	unsafe := []Project{
+		{ID: 1, PathWithNamespace: "g/repo", SSHURL: "git@" + DefaultHost + ":g/repo.git", DefaultBranch: "--upload-pack=bad"},
+		{ID: 1, PathWithNamespace: "g/repo", SSHURL: "--config=bad", DefaultBranch: "main"},
+		{ID: 1, PathWithNamespace: "-g/repo", SSHURL: "git@" + DefaultHost + ":-g/repo.git", DefaultBranch: "main"},
+	}
+	for i, project := range unsafe {
+		unsafeRoot := filepath.Join(t.TempDir(), fmt.Sprintf("unsafe-%d", i))
+		var calls []call
+		_, err := InitManaged(t.Context(), fakeRunner{calls: &calls}, Config{Host: DefaultHost, Root: unsafeRoot}, []Project{project})
+		if err == nil || len(calls) != 0 {
+			t.Fatalf("unsafe value reached Git: project=%+v err=%v calls=%+v", project, err, calls)
+		}
+		if _, statErr := os.Stat(unsafeRoot); !errors.Is(statErr, os.ErrNotExist) {
+			t.Fatalf("unsafe value created a root: %v", statErr)
+		}
+	}
+}
+
+func TestManagedRedactsCredentialDiagnostics(t *testing.T) {
+	secret := "super-secret-value"
+	runner := fakeRunner{runs: map[string]Result{
+		"git": {Code: 1, Stderr: []byte("fatal: https://oauth2:" + secret + "@" + DefaultHost + "/g/repo.git Authorization: Bearer " + secret + " token=" + secret + " glpat-abcd1234")},
+	}}
+	_, err := runManagedGit(t.Context(), runner, "probe remote", t.TempDir(), "fetch")
+	if err == nil {
+		t.Fatal("expected injected Git failure")
+	}
+	if strings.Contains(err.Error(), secret) || strings.Contains(strings.ToLower(err.Error()), "glpat-") {
+		t.Fatalf("credential material leaked in diagnostic: %v", err)
+	}
+	if !strings.Contains(err.Error(), "[REDACTED]") {
+		t.Fatalf("diagnostic did not show redaction marker: %v", err)
+	}
+
+	credentialProject := managedProject(1, "g/repo")
+	credentialProject.SSHURL = "https://oauth2:" + secret + "@" + DefaultHost + "/g/repo.git"
+	_, err = InitManaged(t.Context(), fakeRunner{}, Config{Host: DefaultHost, Root: filepath.Join(t.TempDir(), "managed")}, []Project{credentialProject})
+	if err == nil || strings.Contains(err.Error(), secret) {
+		t.Fatalf("credential-bearing URL leaked from validation: %v", err)
 	}
 }
 
@@ -748,6 +912,51 @@ type concurrentFetchRunner struct {
 	once     sync.Once
 }
 
+type managedFaultRunner struct {
+	Runner
+	operation string
+	mu        sync.Mutex
+	fired     bool
+}
+
+func (r *managedFaultRunner) RunEnv(ctx context.Context, env []string, name string, args ...string) (Result, error) {
+	r.mu.Lock()
+	match := !r.fired && name == "git" && containsString(args, r.operation)
+	if match {
+		r.fired = true
+	}
+	r.mu.Unlock()
+	if match {
+		return Result{Code: 1, Stderr: []byte("injected " + r.operation + " failure")}, nil
+	}
+	return r.Runner.RunEnv(ctx, env, name, args...)
+}
+
+type managedRecordingRunner struct {
+	Runner
+	mu    sync.Mutex
+	calls [][]string
+}
+
+func (r *managedRecordingRunner) RunEnv(ctx context.Context, env []string, name string, args ...string) (Result, error) {
+	if name == "git" {
+		r.mu.Lock()
+		r.calls = append(r.calls, append([]string(nil), args...))
+		r.mu.Unlock()
+	}
+	return r.Runner.RunEnv(ctx, env, name, args...)
+}
+
+func (r *managedRecordingRunner) snapshot() [][]string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := make([][]string, len(r.calls))
+	for i := range r.calls {
+		out[i] = append([]string(nil), r.calls[i]...)
+	}
+	return out
+}
+
 func newConcurrentFetchRunner(delegate Runner, target int32) *concurrentFetchRunner {
 	return &concurrentFetchRunner{Runner: delegate, target: target, release: make(chan struct{})}
 }
@@ -845,6 +1054,37 @@ func assertFileBytes(t *testing.T, path string, want []byte) {
 	}
 }
 
+func assertRecoverableCommittedSnapshot(t *testing.T, root string) {
+	t.Helper()
+	lockData := []byte(runFixtureGit(t, "-C", root, "show", "HEAD:.moedex/corpus.lock.json"))
+	var lock Lock
+	if err := json.Unmarshal(lockData, &lock); err != nil {
+		t.Fatalf("committed lock is not JSON: %v", err)
+	}
+	catalogData := []byte(runFixtureGit(t, "-C", root, "show", "HEAD:.moedex/corpus.json"))
+	var catalog Catalog
+	if err := json.Unmarshal(catalogData, &catalog); err != nil {
+		t.Fatalf("committed catalog is not JSON: %v", err)
+	}
+	if err := catalog.Validate(); err != nil {
+		t.Fatalf("committed catalog is invalid: %v", err)
+	}
+	if err := lock.Validate(catalog.Host); err != nil {
+		t.Fatalf("committed lock is invalid: %v", err)
+	}
+	modules := runFixtureGit(t, "-C", root, "show", "HEAD:.gitmodules")
+	for _, project := range lock.Projects {
+		gitlink := runFixtureGit(t, "-C", root, "ls-tree", "HEAD", "--", project.PathWithNamespace)
+		if !strings.Contains(gitlink, "160000 commit "+project.DefaultCommit) {
+			t.Fatalf("committed gitlink disagrees with lock entry %+v: %q", project, gitlink)
+		}
+		if !strings.Contains(modules, `[submodule "`+managedSubmoduleName(project.ID)+`"]`) ||
+			!strings.Contains(modules, "path = "+project.PathWithNamespace) {
+			t.Fatalf("committed .gitmodules disagrees with lock entry %+v:\n%s", project, modules)
+		}
+	}
+}
+
 func containsString(values []string, want string) bool {
 	for _, value := range values {
 		if value == want {
@@ -852,6 +1092,15 @@ func containsString(values []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func stringIndex(values []string, want string) int {
+	for i, value := range values {
+		if value == want {
+			return i
+		}
+	}
+	return -1
 }
 
 func assertSameFileBytes(t *testing.T, first, second string) {

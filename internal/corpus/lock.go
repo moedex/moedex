@@ -129,11 +129,15 @@ func LoadLock(root, host string) (Lock, error) {
 
 // WriteLock writes a canonical, fsync-durable acquisition snapshot.
 func WriteLock(root, host string, l Lock) error {
+	return writeLock(root, host, l, nil)
+}
+
+func writeLock(root, host string, l Lock, beforeRename func(string) error) error {
 	canonicalizeLock(&l)
 	if err := l.Validate(host); err != nil {
 		return fmt.Errorf("validate managed corpus lock: %w", err)
 	}
-	if err := writeCanonicalJSON(LockPath(root), l, nil); err != nil {
+	if err := writeCanonicalJSON(LockPath(root), l, beforeRename); err != nil {
 		return fmt.Errorf("write managed corpus lock: %w", err)
 	}
 	return nil
@@ -151,7 +155,7 @@ func canonicalizeLock(l *Lock) {
 }
 
 func validateManagedPath(value string) error {
-	if value == "" || value != strings.TrimSpace(value) || path.IsAbs(value) ||
+	if value == "" || value != strings.TrimSpace(value) || strings.HasPrefix(value, "-") || path.IsAbs(value) ||
 		value == "." || value == ".." || path.Clean(value) != value ||
 		strings.Contains(value, "\\") || strings.ContainsFunc(value, unicode.IsControl) {
 		return fmt.Errorf("unsafe managed corpus path %q", value)
@@ -171,7 +175,7 @@ func validateManagedPath(value string) error {
 func validateCloneURL(host, raw string) error {
 	if raw == "" || raw != strings.TrimSpace(raw) || strings.HasPrefix(raw, "-") ||
 		strings.ContainsFunc(raw, unicode.IsControl) {
-		return fmt.Errorf("invalid clone URL %q", raw)
+		return fmt.Errorf("invalid clone URL")
 	}
 
 	// SCP-like SSH syntax: git@host:namespace/project.git.
@@ -179,23 +183,23 @@ func validateCloneURL(host, raw string) error {
 		at := strings.IndexByte(raw, '@')
 		colon := strings.IndexByte(raw, ':')
 		if at <= 0 || colon <= at+1 || colon == len(raw)-1 || strings.Contains(raw[:at], ":") {
-			return fmt.Errorf("invalid clone URL %q", raw)
+			return fmt.Errorf("invalid clone URL")
 		}
 		if !strings.EqualFold(raw[at+1:colon], host) {
-			return fmt.Errorf("clone URL host %q does not match pinned host %q", raw[at+1:colon], host)
+			return fmt.Errorf("clone URL does not match pinned host %q", host)
 		}
 		return nil
 	}
 
 	u, err := url.Parse(raw)
 	if err != nil || u.Hostname() == "" || u.Path == "" {
-		return fmt.Errorf("invalid clone URL %q", raw)
+		return fmt.Errorf("invalid clone URL")
 	}
 	if u.Scheme != "ssh" && u.Scheme != "https" {
 		return fmt.Errorf("unsupported clone URL scheme %q", u.Scheme)
 	}
 	if !strings.EqualFold(u.Hostname(), host) {
-		return fmt.Errorf("clone URL host %q does not match pinned host %q", u.Hostname(), host)
+		return fmt.Errorf("clone URL does not match pinned host %q", host)
 	}
 	if u.RawQuery != "" || u.Fragment != "" {
 		return fmt.Errorf("clone URL must not contain query or fragment data")

@@ -27,7 +27,15 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"regexp"
 )
+
+var credentialRedactors = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)(https?://)[^/@\s]+@`),
+	regexp.MustCompile(`(?i)(authorization:\s*(?:bearer|basic)\s+)[^\s]+`),
+	regexp.MustCompile(`(?i)((?:private[-_]?token|access[-_]?token|token)=)[^&\s]+`),
+	regexp.MustCompile(`(?i)glpat-[a-z0-9_-]+`),
+}
 
 // Runner abstracts the external commands the corpus tool drives — glab, git, and
 // moedex-index — so the orchestration logic can be unit-tested without a network,
@@ -97,4 +105,18 @@ func (ExecRunner) RunEnv(ctx context.Context, env []string, name string, args ..
 		return res, err // could not run
 	}
 	return res, nil
+}
+
+// redactDiagnostic removes common credential forms from external-command
+// diagnostics before they are returned to an operator or persisted in logs.
+func redactDiagnostic(value string) string {
+	redacted := value
+	for i, pattern := range credentialRedactors {
+		replacement := "[REDACTED]"
+		if i < 3 {
+			replacement = "${1}[REDACTED]"
+		}
+		redacted = pattern.ReplaceAllString(redacted, replacement)
+	}
+	return redacted
 }

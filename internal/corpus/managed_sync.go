@@ -62,6 +62,10 @@ type ManagedSyncOptions struct {
 	Prune               bool
 }
 
+type managedSyncHooks struct {
+	beforeLockRename func(string) error
+}
+
 // ManagedFailure is one non-fatal project outcome included in an aggregate
 // ManagedSyncError after independent successes have been committed.
 type ManagedFailure struct {
@@ -208,6 +212,10 @@ func ReconcileManaged(host string, previous Lock, projects []Project, opts Manag
 // probes/fetches run concurrently across projects; all worktree, .gitmodules,
 // index, lock, and commit mutations are serialized below that boundary.
 func SyncManaged(ctx context.Context, r Runner, cfg Config, projects []Project, opts ManagedSyncOptions) (ManagedSyncResult, error) {
+	return syncManaged(ctx, r, cfg, projects, opts, managedSyncHooks{})
+}
+
+func syncManaged(ctx context.Context, r Runner, cfg Config, projects []Project, opts ManagedSyncOptions, hooks managedSyncHooks) (ManagedSyncResult, error) {
 	root, err := filepath.Abs(cfg.Root)
 	if err != nil {
 		return ManagedSyncResult{}, fmt.Errorf("resolve managed corpus root: %w", err)
@@ -313,7 +321,7 @@ func SyncManaged(ctx context.Context, r Runner, cfg Config, projects []Project, 
 	}
 	semanticChange := !reflect.DeepEqual(previous, next)
 	if semanticChange {
-		if err := WriteLock(root, catalog.Host, next); err != nil {
+		if err := writeLock(root, catalog.Host, next, hooks.beforeLockRename); err != nil {
 			return ManagedSyncResult{Plan: plan, Applied: applied}, recoverableSyncError(root, "writing the next lock", err)
 		}
 		mutated = true
@@ -446,7 +454,7 @@ func applyManagedProject(ctx context.Context, r Runner, cfg Config, action Manag
 			"submodule", "add",
 			"--name", managedSubmoduleName(project.ID),
 			"--branch", project.DefaultBranch,
-			"--", project.SSHURL, project.PathWithNamespace); err != nil {
+			"--", project.SSHURL, gitPathArg(project.PathWithNamespace)); err != nil {
 			return LockedProject{}, false, err
 		}
 		res, err := runManagedGit(ctx, r, "resolve added project commit", dest,
@@ -468,7 +476,7 @@ func applyManagedProject(ctx context.Context, r Runner, cfg Config, action Manag
 			return LockedProject{}, false, fmt.Errorf("create move destination parent: %w", err)
 		}
 		if _, err := runManagedGit(ctx, r, "move project submodule", cfg.Root,
-			"mv", "--", from, project.PathWithNamespace); err != nil {
+			"mv", "--", gitPathArg(from), gitPathArg(project.PathWithNamespace)); err != nil {
 			return LockedProject{}, false, err
 		}
 		if err := setManagedSubmoduleMetadata(ctx, r, cfg.Root, project); err != nil {
@@ -558,7 +566,7 @@ func ensureManagedActionClean(ctx context.Context, r Runner, root string, action
 		return fmt.Errorf("project %d at %q has local modifications or untracked files", action.ProjectID, path)
 	}
 	res, err = runManagedGit(ctx, r, "inspect superproject path", root,
-		"status", "--porcelain", "--untracked-files=all", "--", path)
+		"status", "--porcelain", "--untracked-files=all", "--", gitPathArg(path))
 	if err != nil {
 		return err
 	}
@@ -581,11 +589,11 @@ func ensureManagedAddTargetAbsent(cfg Config, project Project) error {
 func pruneManagedProject(ctx context.Context, r Runner, root string, action ManagedAction) error {
 	path := action.Previous.PathWithNamespace
 	if _, err := runManagedGit(ctx, r, "deinitialize project submodule", root,
-		"submodule", "deinit", "-f", "--", path); err != nil {
+		"submodule", "deinit", "-f", "--", gitPathArg(path)); err != nil {
 		return err
 	}
 	if _, err := runManagedGit(ctx, r, "remove project gitlink", root,
-		"rm", "-f", "--", path); err != nil {
+		"rm", "-f", "--", gitPathArg(path)); err != nil {
 		return err
 	}
 	return nil
@@ -620,7 +628,7 @@ func stageManagedSync(ctx context.Context, r Runner, root string, actions []Mana
 	}
 	ordered := make([]string, 0, len(paths))
 	for path := range paths {
-		ordered = append(ordered, path)
+		ordered = append(ordered, gitPathArg(path))
 	}
 	sort.Strings(ordered)
 	args := append([]string{"add", "--"}, ordered...)

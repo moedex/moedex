@@ -73,7 +73,7 @@ func InitManaged(ctx context.Context, r Runner, cfg Config, projects []Project) 
 			"submodule", "add",
 			"--name", name,
 			"--branch", project.DefaultBranch,
-			"--", project.SSHURL, project.PathWithNamespace); err != nil {
+			"--", project.SSHURL, gitPathArg(project.PathWithNamespace)); err != nil {
 			return fail("adding submodule "+name, err)
 		}
 		dest := cfg.Dest(project)
@@ -95,7 +95,7 @@ func InitManaged(ctx context.Context, r Runner, cfg Config, projects []Project) 
 			return fail("validating submodule "+name+" commit", fmt.Errorf("git returned malformed object ID %q", commit))
 		}
 		locked = append(locked, entry)
-		stagePaths = append(stagePaths, project.PathWithNamespace)
+		stagePaths = append(stagePaths, gitPathArg(project.PathWithNamespace))
 	}
 
 	lock, err := NewLock(cfg.Host, true, locked)
@@ -205,16 +205,25 @@ func managedSubmoduleName(id int64) string {
 	return "project-" + strconv.FormatInt(id, 10)
 }
 
+// gitPathArg keeps a flag-shaped relative path from being reinterpreted by
+// porcelain commands (or their internal child commands) even after "--".
+func gitPathArg(path string) string {
+	if strings.HasPrefix(path, "-") {
+		return "./" + path
+	}
+	return path
+}
+
 func runManagedGit(ctx context.Context, r Runner, action, worktree string, args ...string) (Result, error) {
 	gitArgs := make([]string, 0, len(args)+2)
 	gitArgs = append(gitArgs, "-C", worktree)
 	gitArgs = append(gitArgs, args...)
 	res, err := r.RunEnv(ctx, gitEnv, "git", gitArgs...)
 	if err != nil {
-		return Result{}, fmt.Errorf("%s: %w", action, err)
+		return Result{}, fmt.Errorf("%s: %s", action, redactDiagnostic(err.Error()))
 	}
 	if !res.Ok() {
-		detail := lastLine(res.Stderr)
+		detail := redactDiagnostic(lastLine(res.Stderr))
 		if detail == "" {
 			detail = "no diagnostic output"
 		}
