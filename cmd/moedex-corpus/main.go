@@ -12,6 +12,7 @@
 // Subcommands:
 //
 //	moedex-corpus doctor              # preflight: glab? authed to tcdevops only? git? projected repo count
+//	moedex-corpus init                # create a Moedex-owned submodule superproject
 //	moedex-corpus clone               # shallow-clone the curated corpus, many repos at once
 //	moedex-corpus groups --from-disk  # regenerate the group allowlist from an existing mirror
 //
@@ -40,6 +41,8 @@ func main() {
 	switch os.Args[1] {
 	case "doctor":
 		err = runDoctor(os.Args[2:])
+	case "init":
+		err = runInit(os.Args[2:])
 	case "clone":
 		err = runClone(os.Args[2:])
 	case "sync":
@@ -68,8 +71,12 @@ func usage() {
 
 Usage:
   moedex-corpus doctor [-corpus DIR] [-groups FILE] [-no-banner]
-      Preflight the setup: is glab installed? authenticated to `+corpus.DefaultHost+` only?
-      is git installed? If reachable, report how many repos a clone would pull.
+      Diagnose local managed-corpus integrity plus separate glab authentication,
+      GitLab/VPN reachability, and Git clone/fetch transport checks.
+
+  moedex-corpus init [-corpus DIR] [-groups FILE] [-concurrency N] [-no-banner]
+      Create a new Moedex-owned Git superproject at an empty/new destination,
+      add curated projects as stable-ID submodules, and commit the first lock.
 
   moedex-corpus clone [-corpus DIR] [-groups FILE] [-concurrency N] [-dry-run] [-no-banner]
       Shallow-clone (--depth 1) every curated project into the corpus tree, many
@@ -77,9 +84,9 @@ Usage:
       Without -groups, the built-in curated allowlist is used.
 
   moedex-corpus sync [-corpus DIR] [-groups FILE] [-concurrency N] [-prune] [-dry-run] [-no-banner]
-      Bring the mirror level with the server: clone newly-created repos,
-      fast-forward existing ones, and report repos gone from the server. With
-      -prune, remove those local repos too (default: keep + report).
+      Managed roots reconcile stable project IDs and commit a locked submodule
+      snapshot. Unmanaged roots retain the independent-clone compatibility path.
+      With -prune, remove projects absent after a complete enumeration.
 
   moedex-corpus groups --from-disk [-corpus DIR]
       Print the group allowlist derived from the top-level dirs of an existing
@@ -87,6 +94,51 @@ Usage:
 
 The tool only ever talks to `+corpus.DefaultHost+`.
 `)
+}
+
+// ---------------------------------------------------------------------------
+// init
+// ---------------------------------------------------------------------------
+
+func runInit(args []string) error {
+	fs := flag.NewFlagSet("init", flag.ContinueOnError)
+	corpusDir := fs.String("corpus", "", "new managed corpus root (default: $MOEDEX_CORPUS or ~/"+corpus.DefaultCorpusDirName+")")
+	groupsPath := fs.String("groups", "", "group allowlist file (default: built-in curated list)")
+	concurrency := fs.Int("concurrency", corpus.DefaultConcurrency(), "max parallel Git operations (Moe's tentacles)")
+	noBanner := fs.Bool("no-banner", false, "suppress the Moe banner")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if !*noBanner {
+		fmt.Fprint(os.Stderr, moeBanner)
+	}
+
+	root, err := corpus.ResolveRoot(*corpusDir)
+	if err != nil {
+		return err
+	}
+	groups, err := resolveGroups(*groupsPath)
+	if err != nil {
+		return err
+	}
+	cfg := corpus.Config{Host: corpus.DefaultHost, Root: root, Groups: groups, Concurrency: *concurrency}
+	ctx := context.Background()
+	r := corpus.ExecRunner{}
+	if rep := corpus.Doctor(ctx, r, cfg); !rep.OK() {
+		printReport(rep)
+		return fmt.Errorf("setup not ready — fix the item(s) marked %s above, then re-run", markFail)
+	}
+	projects, err := corpus.Enumerate(ctx, r, cfg)
+	if err != nil {
+		return fmt.Errorf("enumerate projects: %w", err)
+	}
+	result, err := corpus.InitManaged(ctx, r, cfg, projects)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("initialized managed corpus at %s with %d locked project(s) (snapshot %s)\n",
+		result.Root, len(result.Lock.Projects), shortObjectID(result.SuperprojectCommit))
+	return nil
 }
 
 // moeBanner is Moe, the eight-tentacled corpus wrangler. Printed to stderr so it
@@ -450,6 +502,14 @@ func runSync(args []string) error {
 		return fmt.Errorf("enumerate projects: %w", err)
 	}
 
+	managed, err := corpus.IsManagedRoot(root)
+	if err != nil {
+		return err
+	}
+	if managed {
+		return runManagedSync(ctx, r, cfg, projects, *prune, *dryRun, rf)
+	}
+
 	if *dryRun {
 		plan, err := corpus.PlanSync(cfg, projects)
 		if err != nil {
@@ -501,6 +561,65 @@ func runSync(args []string) error {
 		return fmt.Errorf("%d repo(s) failed to sync (see %s above) — re-run to retry", report.Failed, markFail)
 	}
 	return nil
+}
+
+func runManagedSync(ctx context.Context, r corpus.Runner, cfg corpus.Config, projects []corpus.Project, prune, dryRun bool, rf reindexFlags) error {
+	catalog, err := corpus.LoadCatalog(cfg.Root)
+	if err != nil {
+		return err
+	}
+	lock, err := corpus.LoadLock(cfg.Root, catalog.Host)
+	if err != nil {
+		return err
+	}
+	opts := corpus.ManagedSyncOptions{EnumerationComplete: true, Prune: prune}
+	if dryRun {
+		plan := corpus.ReconcileManaged(catalog.Host, lock, projects, opts)
+		fmt.Printf("managed dry-run for %s: %d action(s), no mutation\n", cfg.Root, len(plan.Actions))
+		for _, action := range plan.Actions {
+			fmt.Printf("  %-14s project=%d path=%s%s\n", action.Kind, action.ProjectID, managedActionPath(action), managedActionReason(action))
+		}
+		return nil
+	}
+
+	fmt.Printf("Moe is syncing %d curated project(s) into managed corpus %s...\n", len(projects), cfg.Root)
+	result, syncErr := corpus.SyncManaged(ctx, r, cfg, projects, opts)
+	for _, action := range result.Applied {
+		fmt.Printf("  %-14s project=%d path=%s%s\n", action.Kind, action.ProjectID, managedActionPath(action), managedActionReason(action))
+	}
+	if result.Changed {
+		fmt.Printf("managed snapshot committed: %s\n", shortObjectID(result.SuperprojectCommit))
+	} else {
+		fmt.Println("managed snapshot already current")
+	}
+	if syncErr != nil {
+		return syncErr
+	}
+	return maybeReindex(ctx, r, cfg, rf)
+}
+
+func managedActionPath(action corpus.ManagedAction) string {
+	if action.Project != nil {
+		return action.Project.PathWithNamespace
+	}
+	if action.Previous != nil {
+		return action.Previous.PathWithNamespace
+	}
+	return "-"
+}
+
+func managedActionReason(action corpus.ManagedAction) string {
+	if action.Reason == "" {
+		return ""
+	}
+	return " reason=" + action.Reason
+}
+
+func shortObjectID(value string) string {
+	if len(value) <= 12 {
+		return value
+	}
+	return value[:12]
 }
 
 // printSyncSummary prints the end-of-run tally and lists failures and (when kept)

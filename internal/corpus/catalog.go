@@ -92,6 +92,23 @@ func CatalogPath(root string) string {
 	return filepath.Join(root, ManagedDirName, CatalogFileName)
 }
 
+// IsManagedRoot reports whether root carries the Moedex ownership marker. A
+// present but corrupt marker still returns true: callers must route it through
+// LoadCatalog and fail closed rather than falling back to legacy discovery.
+func IsManagedRoot(root string) (bool, error) {
+	info, err := os.Lstat(CatalogPath(root))
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("inspect managed corpus marker: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return true, fmt.Errorf("managed corpus marker %q is not a regular file", CatalogPath(root))
+	}
+	return true, nil
+}
+
 // LoadCatalog strictly decodes and validates root's ownership marker.
 func LoadCatalog(root string) (Catalog, error) {
 	var c Catalog

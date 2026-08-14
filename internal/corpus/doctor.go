@@ -2,6 +2,10 @@ package corpus
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -50,15 +54,12 @@ func (r Report) OK() bool {
 // structured report. It never mutates anything and never handles tokens itself —
 // authentication is delegated entirely to glab; this only inspects and guides.
 //
-// The checks, in order:
-//  1. glab CLI installed (LookPath)
-//  2. authenticated to cfg.Host ONLY (`glab auth status --hostname HOST`)
-//  3. git installed (LookPath)
-//
-// When glab is present and authed, it also enumerates the curated set so the
-// operator sees how many repos the mirror will hold (Report.Projected).
+// Authentication, host reachability, and Git transport are intentionally
+// separate checks: a valid glab token does not imply that the VPN is connected,
+// and a reachable API does not prove that SSH/HTTPS clone credentials work.
 func Doctor(ctx context.Context, r Runner, cfg Config) Report {
 	rep := Report{Host: cfg.Host, Root: cfg.Root}
+	rep.Checks = append(rep.Checks, doctorManagedRoot(ctx, r, cfg)...)
 
 	// 1. glab installed.
 	glabOK := false
@@ -108,7 +109,33 @@ func Doctor(ctx context.Context, r Runner, cfg Config) Report {
 		}
 	}
 
-	// 3. git installed (needed for the clones themselves).
+	// 3. GitLab API / VPN reachability, distinct from stored authentication.
+	reachable := false
+	switch {
+	case !authOK:
+		rep.Checks = append(rep.Checks, Check{
+			Name:   "GitLab host/VPN reachable",
+			Status: StatusSkipped,
+			Detail: "skipped — authenticate glab first",
+		})
+	default:
+		res, err := r.Run(ctx, "glab", "api", "--hostname", cfg.Host, "/version")
+		if err == nil && res.Ok() {
+			rep.Checks = append(rep.Checks, Check{Name: "GitLab host/VPN reachable", Status: StatusOK, Detail: "API reachable"})
+			reachable = true
+		} else {
+			detail := commandFailureDetail(err, res, "host unreachable")
+			rep.Checks = append(rep.Checks, Check{
+				Name:   "GitLab host/VPN reachable",
+				Status: StatusFail,
+				Detail: detail,
+				Fix:    "connect the TC VPN, then re-run `moedex-corpus doctor`",
+			})
+		}
+	}
+
+	// 4. git installed (needed for the clone/fetch transport probe).
+	gitOK := false
 	if path, err := r.LookPath("git"); err != nil {
 		rep.Checks = append(rep.Checks, Check{
 			Name:   "git installed",
@@ -118,16 +145,245 @@ func Doctor(ctx context.Context, r Runner, cfg Config) Report {
 		})
 	} else {
 		rep.Checks = append(rep.Checks, Check{Name: "git installed", Status: StatusOK, Detail: path})
+		gitOK = true
 	}
 
-	// Projected clone count — best-effort, only when we can actually reach the host.
-	if glabOK && authOK {
-		if projects, err := Enumerate(ctx, r, cfg); err == nil {
+	// Enumerate once after the control-plane checks, then use a real visible
+	// project's configured protocol for the data-plane probe.
+	var projects []Project
+	if glabOK && authOK && reachable {
+		var err error
+		projects, err = Enumerate(ctx, r, cfg)
+		if err == nil {
 			rep.Projected = len(projects)
 			rep.ProjectedKnown = true
+		} else {
+			rep.Checks = append(rep.Checks, Check{
+				Name:   "curated project enumeration",
+				Status: StatusFail,
+				Detail: redactDiagnostic(err.Error()),
+				Fix:    "verify GitLab API access to the curated groups",
+			})
+		}
+	}
+
+	switch {
+	case !gitOK:
+		rep.Checks = append(rep.Checks, Check{Name: "Git clone/fetch transport", Status: StatusSkipped, Detail: "skipped — install git first"})
+	case !reachable:
+		rep.Checks = append(rep.Checks, Check{Name: "Git clone/fetch transport", Status: StatusSkipped, Detail: "skipped — GitLab host is not reachable"})
+	case !rep.ProjectedKnown:
+		rep.Checks = append(rep.Checks, Check{Name: "Git clone/fetch transport", Status: StatusSkipped, Detail: "skipped — project enumeration failed"})
+	default:
+		project, ok := firstTransportProject(projects)
+		if !ok {
+			rep.Checks = append(rep.Checks, Check{Name: "Git clone/fetch transport", Status: StatusSkipped, Detail: "skipped — no non-empty project is in scope"})
+			break
+		}
+		ref := "refs/heads/" + project.DefaultBranch
+		res, err := r.RunEnv(ctx, gitEnv, "git", "ls-remote", "--exit-code", "--", project.SSHURL, ref)
+		if err == nil && res.Ok() {
+			rep.Checks = append(rep.Checks, Check{Name: "Git clone/fetch transport", Status: StatusOK, Detail: "readable using the configured Git protocol"})
+		} else {
+			rep.Checks = append(rep.Checks, Check{
+				Name:   "Git clone/fetch transport",
+				Status: StatusFail,
+				Detail: commandFailureDetail(err, res, "transport probe failed"),
+				Fix:    "verify SSH keys or HTTPS Git credentials; test `git ls-remote <validated-project-url> <default-ref>`",
+			})
 		}
 	}
 	return rep
+}
+
+func firstTransportProject(projects []Project) (Project, bool) {
+	for _, project := range projects {
+		if !project.EmptyRepo && project.DefaultBranch != "" {
+			return project, true
+		}
+	}
+	return Project{}, false
+}
+
+func commandFailureDetail(err error, res Result, fallback string) string {
+	if err != nil {
+		return redactDiagnostic(err.Error())
+	}
+	if detail := redactDiagnostic(lastLine(res.Stderr)); detail != "" {
+		return detail
+	}
+	if res.Code != 0 {
+		return fmt.Sprintf("%s (exit %d)", fallback, res.Code)
+	}
+	return fallback
+}
+
+func doctorManagedRoot(ctx context.Context, r Runner, cfg Config) []Check {
+	managed, err := IsManagedRoot(cfg.Root)
+	if err != nil {
+		return []Check{{
+			Name:   "managed ownership marker",
+			Status: StatusFail,
+			Detail: redactDiagnostic(err.Error()),
+			Fix:    "restore a regular .moedex/corpus.json from the last committed snapshot; do not adopt this root implicitly",
+		}}
+	}
+	if !managed {
+		return nil
+	}
+
+	checks := make([]Check, 0, 5)
+	catalog, err := LoadCatalog(cfg.Root)
+	if err != nil {
+		return append(checks, Check{
+			Name:   "managed ownership marker",
+			Status: StatusFail,
+			Detail: redactDiagnostic(err.Error()),
+			Fix:    "restore .moedex/corpus.json from the last committed snapshot; do not edit or adopt in place",
+		})
+	}
+	if cfg.Host != "" && catalog.Host != cfg.Host {
+		checks = append(checks, Check{
+			Name:   "managed ownership marker",
+			Status: StatusFail,
+			Detail: fmt.Sprintf("marker host %q does not match pinned host %q", catalog.Host, cfg.Host),
+			Fix:    "create a new sibling managed corpus for the pinned host",
+		})
+		return checks
+	}
+	checks = append(checks, Check{Name: "managed ownership marker", Status: StatusOK, Detail: "schema and pinned host valid"})
+
+	res, runErr := r.RunEnv(ctx, gitEnv, "git", "-C", cfg.Root, "rev-parse", "--is-inside-work-tree")
+	if runErr != nil || !res.Ok() || strings.TrimSpace(string(res.Stdout)) != "true" {
+		checks = append(checks, Check{
+			Name:   "managed Git superproject",
+			Status: StatusFail,
+			Detail: commandFailureDetail(runErr, res, "root is not a Git work tree"),
+			Fix:    "restore the last committed superproject or initialize a new sibling root",
+		})
+		return checks
+	}
+	checks = append(checks, Check{Name: "managed Git superproject", Status: StatusOK, Detail: "work tree valid"})
+
+	lock, err := LoadLock(cfg.Root, catalog.Host)
+	if err != nil {
+		checks = append(checks, Check{
+			Name:   "managed acquisition lock",
+			Status: StatusFail,
+			Detail: redactDiagnostic(err.Error()),
+			Fix:    "restore .moedex/corpus.lock.json from HEAD; do not fall back to filesystem discovery",
+		})
+		return checks
+	}
+	checks = append(checks, Check{Name: "managed acquisition lock", Status: StatusOK, Detail: fmt.Sprintf("%d locked project(s)", len(lock.Projects))})
+
+	checks = append(checks, doctorManagedCleanliness(ctx, r, cfg.Root))
+	checks = append(checks, doctorManagedAgreement(ctx, r, cfg.Root, lock))
+	return checks
+}
+
+func doctorManagedCleanliness(ctx context.Context, r Runner, root string) Check {
+	res, err := r.RunEnv(ctx, gitEnv, "git", "-C", root, "status", "--porcelain", "--untracked-files=all")
+	if err != nil || !res.Ok() {
+		return Check{Name: "managed recoverable cleanliness", Status: StatusFail, Detail: commandFailureDetail(err, res, "could not inspect work tree"), Fix: "inspect the superproject without mutating it, then restore or commit an intentional snapshot"}
+	}
+	if len(res.Stdout) != 0 {
+		return Check{
+			Name:   "managed recoverable cleanliness",
+			Status: StatusFail,
+			Detail: "managed metadata, gitlinks, or submodules have local changes",
+			Fix:    "preserve any local work, then restore the last committed managed snapshot before syncing",
+		}
+	}
+	return Check{Name: "managed recoverable cleanliness", Status: StatusOK, Detail: "work tree matches the committed snapshot"}
+}
+
+func doctorManagedAgreement(ctx context.Context, r Runner, root string, lock Lock) Check {
+	fix := "restore .gitmodules, gitlinks, lock, and submodules from the same committed snapshot; do not repair by deleting projects"
+	expectedConfig := make(map[string]string, len(lock.Projects)*3)
+	for _, project := range lock.Projects {
+		section := "submodule." + managedSubmoduleName(project.ID)
+		expectedConfig[section+".path"] = project.PathWithNamespace
+		expectedConfig[section+".url"] = project.CloneURL
+		expectedConfig[section+".branch"] = project.DefaultBranch
+	}
+
+	actualConfig := map[string]string{}
+	if len(lock.Projects) > 0 {
+		res, err := r.RunEnv(ctx, gitEnv, "git", "-C", root, "config", "-f", ".gitmodules", "--get-regexp", `^submodule\..*\.(path|url|branch)$`)
+		if err != nil || !res.Ok() {
+			return Check{Name: "lock/module/gitlink agreement", Status: StatusFail, Detail: commandFailureDetail(err, res, "cannot read .gitmodules"), Fix: fix}
+		}
+		for _, line := range strings.Split(strings.TrimSpace(string(res.Stdout)), "\n") {
+			key, value, ok := strings.Cut(strings.TrimSpace(line), " ")
+			if !ok {
+				key, value, ok = strings.Cut(strings.TrimSpace(line), "\t")
+			}
+			if !ok || key == "" {
+				return Check{Name: "lock/module/gitlink agreement", Status: StatusFail, Detail: "malformed .gitmodules configuration", Fix: fix}
+			}
+			actualConfig[key] = strings.TrimSpace(value)
+		}
+	}
+	if !equalStringMap(expectedConfig, actualConfig) {
+		return Check{Name: "lock/module/gitlink agreement", Status: StatusFail, Detail: ".gitmodules does not exactly match the managed lock", Fix: fix}
+	}
+
+	res, err := r.RunEnv(ctx, gitEnv, "git", "-C", root, "ls-tree", "-rz", "HEAD")
+	if err != nil || !res.Ok() {
+		return Check{Name: "lock/module/gitlink agreement", Status: StatusFail, Detail: commandFailureDetail(err, res, "cannot inspect committed gitlinks"), Fix: fix}
+	}
+	gitlinks := parseGitlinks(res.Stdout)
+	if len(gitlinks) != len(lock.Projects) {
+		return Check{Name: "lock/module/gitlink agreement", Status: StatusFail, Detail: "committed gitlink count does not match the managed lock", Fix: fix}
+	}
+	for _, project := range lock.Projects {
+		if gitlinks[project.PathWithNamespace] != project.DefaultCommit {
+			return Check{Name: "lock/module/gitlink agreement", Status: StatusFail, Detail: fmt.Sprintf("project %d gitlink does not match its locked commit", project.ID), Fix: fix}
+		}
+		dest := filepath.Join(root, filepath.FromSlash(project.PathWithNamespace))
+		if _, statErr := os.Lstat(dest); errors.Is(statErr, os.ErrNotExist) {
+			return Check{Name: "lock/module/gitlink agreement", Status: StatusFail, Detail: fmt.Sprintf("project %d submodule is not materialized", project.ID), Fix: "run `git submodule update --init` only after confirming the committed lock and .gitmodules agree"}
+		} else if statErr != nil {
+			return Check{Name: "lock/module/gitlink agreement", Status: StatusFail, Detail: fmt.Sprintf("project %d submodule cannot be inspected", project.ID), Fix: fix}
+		}
+		marker, statErr := os.Lstat(filepath.Join(dest, ".git"))
+		if statErr != nil || !(marker.IsDir() || marker.Mode().IsRegular()) {
+			return Check{Name: "lock/module/gitlink agreement", Status: StatusFail, Detail: fmt.Sprintf("project %d has no Git repository marker", project.ID), Fix: fix}
+		}
+		head, runErr := r.RunEnv(ctx, gitEnv, "git", "-C", dest, "rev-parse", "--verify", "HEAD")
+		if runErr != nil || !head.Ok() || !strings.EqualFold(strings.TrimSpace(string(head.Stdout)), project.DefaultCommit) {
+			return Check{Name: "lock/module/gitlink agreement", Status: StatusFail, Detail: fmt.Sprintf("project %d work tree HEAD does not match its locked commit", project.ID), Fix: fix}
+		}
+	}
+	return Check{Name: "lock/module/gitlink agreement", Status: StatusOK, Detail: fmt.Sprintf("%d submodule snapshot(s) agree", len(lock.Projects))}
+}
+
+func equalStringMap(left, right map[string]string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for key, value := range left {
+		if right[key] != value {
+			return false
+		}
+	}
+	return true
+}
+
+func parseGitlinks(data []byte) map[string]string {
+	out := map[string]string{}
+	for _, record := range strings.Split(string(data), "\x00") {
+		metadata, path, ok := strings.Cut(record, "\t")
+		if !ok {
+			continue
+		}
+		fields := strings.Fields(metadata)
+		if len(fields) == 3 && fields[0] == "160000" && fields[1] == "commit" {
+			out[path] = strings.ToLower(fields[2])
+		}
+	}
+	return out
 }
 
 // firstLine returns the first non-empty line of b, trimmed.

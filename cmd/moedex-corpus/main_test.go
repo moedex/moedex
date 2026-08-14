@@ -1,11 +1,73 @@
 package main
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"moedex/internal/corpus"
 )
+
+func TestUsageAndManagedCommandParsing(t *testing.T) {
+	for _, command := range []struct {
+		name string
+		run  func([]string) error
+	}{
+		{name: "init", run: runInit},
+		{name: "sync", run: runSync},
+		{name: "doctor", run: runDoctor},
+	} {
+		t.Run(command.name, func(t *testing.T) {
+			if err := command.run([]string{"-definitely-not-a-real-flag"}); err == nil {
+				t.Fatal("unknown flag was accepted")
+			}
+		})
+	}
+}
+
+func TestRunManagedSyncDryRunDoesNotMutate(t *testing.T) {
+	root := t.TempDir()
+	cfg := corpus.Config{Host: corpus.DefaultHost, Root: root, Groups: []string{"g"}, Concurrency: 1}
+	catalog, err := corpus.NewCatalog(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := corpus.WriteCatalog(root, catalog); err != nil {
+		t.Fatal(err)
+	}
+	commit := strings.Repeat("a", 40)
+	lock, err := corpus.NewLock(corpus.DefaultHost, true, []corpus.LockedProject{{
+		ID: 1, PathWithNamespace: "g/old", CloneURL: "git@" + corpus.DefaultHost + ":g/old.git",
+		DefaultBranch: "main", DefaultCommit: commit, Status: corpus.LockStatusCurrent,
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := corpus.WriteLock(root, corpus.DefaultHost, lock); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(corpus.LockPath(root))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	projects := []corpus.Project{{ID: 1, PathWithNamespace: "g/new", SSHURL: "git@" + corpus.DefaultHost + ":g/new.git", DefaultBranch: "main"}}
+	if err := runManagedSync(context.Background(), corpus.ExecRunner{}, cfg, projects, false, true, reindexFlags{}); err != nil {
+		t.Fatalf("runManagedSync dry-run: %v", err)
+	}
+	after, err := os.ReadFile(corpus.LockPath(root))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(before) {
+		t.Fatal("managed dry-run mutated the lock")
+	}
+	if _, err := os.Stat(filepath.Join(root, ".git")); !os.IsNotExist(err) {
+		t.Fatalf("managed dry-run created a Git superproject: %v", err)
+	}
+}
 
 // Both runClone and runSync must reject a malformed -reindex flag triple
 // (-reindex without -cas-dir and -shard-dir) before doing any clone/sync work,

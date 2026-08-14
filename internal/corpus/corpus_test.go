@@ -235,6 +235,115 @@ func TestDoctor_NotAuthed(t *testing.T) {
 	}
 }
 
+func TestDoctorDistinguishesAuthReachabilityAndGitTransport(t *testing.T) {
+	projectsJSON := `[{"id":1,"path_with_namespace":"g/repo","ssh_url_to_repo":"git@` + DefaultHost + `:g/repo.git","default_branch":"main"}]`
+
+	t.Run("authenticated but VPN unreachable", func(t *testing.T) {
+		r := fakeRunner{
+			paths: map[string]string{"glab": "/usr/bin/glab", "git": "/usr/bin/git"},
+			respond: func(cmd string) (Result, bool) {
+				switch {
+				case strings.HasPrefix(cmd, "glab auth status"):
+					return Result{}, true
+				case strings.Contains(cmd, "glab api") && strings.HasSuffix(cmd, " /version"):
+					return Result{Code: 1, Stderr: []byte("dial https://user:secret@" + DefaultHost + "/?private_token=glpat-secret: timeout")}, true
+				}
+				return Result{}, false
+			},
+		}
+		rep := Doctor(t.Context(), r, Config{Host: DefaultHost, Root: t.TempDir()})
+		auth := findDoctorCheck(t, rep, "authenticated to "+DefaultHost)
+		reach := findDoctorCheck(t, rep, "GitLab host/VPN reachable")
+		transport := findDoctorCheck(t, rep, "Git clone/fetch transport")
+		if auth.Status != StatusOK || reach.Status != StatusFail || transport.Status != StatusSkipped {
+			t.Fatalf("unexpected layered status: auth=%v reach=%v transport=%v", auth.Status, reach.Status, transport.Status)
+		}
+		for _, check := range rep.Checks {
+			if strings.Contains(check.Detail, "secret") || strings.Contains(check.Detail, "user:") {
+				t.Fatalf("credential leaked in doctor detail: %q", check.Detail)
+			}
+		}
+	})
+
+	t.Run("reachable API but Git transport fails", func(t *testing.T) {
+		r := fakeRunner{
+			paths: map[string]string{"glab": "/usr/bin/glab", "git": "/usr/bin/git"},
+			respond: func(cmd string) (Result, bool) {
+				switch {
+				case strings.HasPrefix(cmd, "glab auth status"):
+					return Result{}, true
+				case strings.Contains(cmd, "glab api") && strings.HasSuffix(cmd, " /version"):
+					return Result{Stdout: []byte(`{"version":"1"}`)}, true
+				case strings.Contains(cmd, "glab api") && strings.Contains(cmd, "projects?"):
+					return Result{Stdout: []byte(projectsJSON)}, true
+				case strings.HasPrefix(cmd, "git ls-remote"):
+					return Result{Code: 128, Stderr: []byte("Permission denied (publickey)")}, true
+				}
+				return Result{}, false
+			},
+		}
+		rep := Doctor(t.Context(), r, Config{Host: DefaultHost, Root: t.TempDir()})
+		if got := findDoctorCheck(t, rep, "GitLab host/VPN reachable"); got.Status != StatusOK {
+			t.Fatalf("reachability = %v, want OK", got.Status)
+		}
+		if got := findDoctorCheck(t, rep, "Git clone/fetch transport"); got.Status != StatusFail || !strings.Contains(got.Detail, "Permission denied") {
+			t.Fatalf("transport = %+v, want distinct failure", got)
+		}
+	})
+}
+
+func TestDoctorManagedAgreementAndRecoveryInstruction(t *testing.T) {
+	fixture := newManagedGitFixture(t)
+	root := filepath.Join(t.TempDir(), "managed")
+	cfg := Config{Host: DefaultHost, Root: root, Groups: []string{"g"}, Concurrency: 1}
+	if _, err := InitManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}); err != nil {
+		t.Fatalf("InitManaged: %v", err)
+	}
+
+	checks := doctorManagedRoot(t.Context(), ExecRunner{}, cfg)
+	if got := findCheck(t, checks, "lock/module/gitlink agreement"); got.Status != StatusOK {
+		t.Fatalf("managed agreement = %+v, want OK", got)
+	}
+
+	modules := filepath.Join(root, ".gitmodules")
+	data, err := os.ReadFile(modules)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data = []byte(strings.Replace(string(data), fixture.Project.PathWithNamespace, "g/wrong", 1))
+	if err := os.WriteFile(modules, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	catalog, err := LoadCatalog(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lock, err := LoadLock(root, catalog.Host)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := doctorManagedAgreement(t.Context(), ExecRunner{}, root, lock)
+	if got.Status != StatusFail || !strings.Contains(got.Fix, "do not repair by deleting") {
+		t.Fatalf("disagreement = %+v, want error with non-destructive recovery", got)
+	}
+}
+
+func findDoctorCheck(t *testing.T, rep Report, name string) Check {
+	t.Helper()
+	return findCheck(t, rep.Checks, name)
+}
+
+func findCheck(t *testing.T, checks []Check, name string) Check {
+	t.Helper()
+	for _, check := range checks {
+		if check.Name == name {
+			return check
+		}
+	}
+	t.Fatalf("doctor check %q not found in %+v", name, checks)
+	return Check{}
+}
+
 // ---------------------------------------------------------------------------
 // clone
 // ---------------------------------------------------------------------------

@@ -117,7 +117,7 @@ func Enumerate(ctx context.Context, r Runner, cfg Config) ([]Project, error) {
 		return nil, fmt.Errorf("run glab api projects: %w", err)
 	}
 	if !res.Ok() {
-		return nil, fmt.Errorf("glab api projects exited %d: %s", res.Code, strings.TrimSpace(string(res.Stderr)))
+		return nil, fmt.Errorf("glab api projects exited %d: %s", res.Code, redactDiagnostic(strings.TrimSpace(string(res.Stderr))))
 	}
 	projects, err := ParseProjects(bytes.NewReader(res.Stdout))
 	if err != nil {
