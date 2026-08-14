@@ -26,10 +26,12 @@ package blobstore
 // documented command at the bottom of this file.
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -41,6 +43,340 @@ import (
 	"moedex/internal/search"
 	"moedex/internal/server"
 )
+
+type managedParityHit struct {
+	Query     string
+	Namespace string
+	RelPath   string
+	Line      int
+	Text      string
+}
+
+func TestManagedDefaultParityAcrossDirectCASDedupedAndReload(t *testing.T) {
+	requireGit(t)
+
+	fixture := t.TempDir()
+	conventionalRoot := filepath.Join(fixture, "conventional")
+	managedRoot := filepath.Join(fixture, "managed")
+	first := filepath.Join(conventionalRoot, "group-a", "same")
+	second := filepath.Join(conventionalRoot, "group-b", "same")
+	shared := "ManagedParityShared appears in both namespaces\n"
+	commitGitRepo(t, first, map[string]string{
+		"same.txt":   shared,
+		"alpha.txt":  "ManagedParityAlpha belongs to group-a/same\n",
+		"bom.txt":    "\xef\xbb\xbfManagedParityBOM survives BOM normalization\n",
+		"binary.dat": "ManagedParityBinary must not be searchable\x00payload\n",
+	})
+	commitGitRepo(t, second, map[string]string{
+		"same.txt":  shared,
+		"bravo.txt": "ManagedParityBravo belongs to group-b/same\n",
+	})
+
+	if err := os.MkdirAll(managedRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	git(t, managedRoot, "init", "-q")
+	git(t, managedRoot, "-c", "protocol.file.allow=always", "submodule", "add", "-q", "--name", "project-101", first, "group-a/same")
+	git(t, managedRoot, "-c", "protocol.file.allow=always", "submodule", "add", "-q", "--name", "project-202", second, "group-b/same")
+	managedFirst := filepath.Join(managedRoot, "group-a", "same")
+	managedSecond := filepath.Join(managedRoot, "group-b", "same")
+	writeManagedCASLock(t, managedRoot, []struct {
+		id        int64
+		namespace string
+		dir       string
+	}{
+		{id: 202, namespace: "group-b/same", dir: managedSecond},
+		{id: 101, namespace: "group-a/same", dir: managedFirst},
+	})
+	gitCommitAll(t, managedRoot, "managed corpus snapshot")
+	for _, dir := range []string{managedFirst, managedSecond} {
+		info, err := os.Lstat(filepath.Join(dir, ".git"))
+		if err != nil {
+			t.Fatalf("stat submodule marker: %v", err)
+		}
+		if !info.Mode().IsRegular() {
+			t.Fatalf("%s .git mode = %v, want regular submodule gitfile", dir, info.Mode())
+		}
+	}
+
+	conventionalRepos := map[string]string{"group-a/same": first, "group-b/same": second}
+	managedRepos := map[string]string{"group-a/same": managedFirst, "group-b/same": managedSecond}
+	queries := []string{"ManagedParityShared", "ManagedParityAlpha", "ManagedParityBravo", "ManagedParityBOM"}
+
+	conventionalDirect := buildManagedParityDirect(t, conventionalRoot, filepath.Join(fixture, "direct-conventional"))
+	managedDirect := buildManagedParityDirect(t, managedRoot, filepath.Join(fixture, "direct-managed"))
+	conventionalCAS := filepath.Join(fixture, "cas-conventional")
+	managedCAS := filepath.Join(fixture, "cas-managed")
+	conventionalCASManifest, err := BuildCAS(conventionalRoot, conventionalCAS)
+	if err != nil {
+		t.Fatalf("BuildCAS conventional: %v", err)
+	}
+	managedCASManifest, err := BuildCAS(managedRoot, managedCAS)
+	if err != nil {
+		t.Fatalf("BuildCAS managed: %v", err)
+	}
+	assertManagedBlobMetadata(t, managedCASManifest)
+
+	conventionalExport := filepath.Join(fixture, "export-conventional")
+	managedExport := filepath.Join(fixture, "export-managed")
+	if _, err := ExportShardDir(conventionalCAS, conventionalExport, 64); err != nil {
+		t.Fatalf("ExportShardDir conventional: %v", err)
+	}
+	managedServedManifest, err := ExportShardDir(managedCAS, managedExport, 64)
+	if err != nil {
+		t.Fatalf("ExportShardDir managed: %v", err)
+	}
+	assertManagedServedMetadata(t, managedServedManifest)
+
+	conventionalDedup := filepath.Join(fixture, "dedup-conventional")
+	managedDedup := filepath.Join(fixture, "dedup-managed")
+	if _, _, err := ExportDedupedShardDir(conventionalCAS, conventionalDedup, 64); err != nil {
+		t.Fatalf("ExportDedupedShardDir conventional: %v", err)
+	}
+	managedDedupManifest, _, err := ExportDedupedShardDir(managedCAS, managedDedup, 64)
+	if err != nil {
+		t.Fatalf("ExportDedupedShardDir managed: %v", err)
+	}
+	assertManagedServedMetadata(t, managedDedupManifest)
+
+	baseline := managedParitySnapshot(t, conventionalDirect, conventionalRepos, false, queries)
+	assertManagedParitySnapshot(t, "managed direct", baseline, managedParitySnapshot(t, managedDirect, managedRepos, true, queries))
+	assertManagedParitySnapshot(t, "conventional CAS export", baseline, managedParitySnapshot(t, conventionalExport, conventionalRepos, false, queries))
+	assertManagedParitySnapshot(t, "managed CAS export", baseline, managedParitySnapshot(t, managedExport, managedRepos, true, queries))
+	assertManagedParitySnapshot(t, "conventional deduped export", baseline, managedParitySnapshot(t, conventionalDedup, conventionalRepos, false, queries))
+	assertManagedParitySnapshot(t, "managed deduped export", baseline, managedParitySnapshot(t, managedDedup, managedRepos, true, queries))
+	assertManagedParitySnapshot(t, "managed served reload", baseline, managedParitySnapshot(t, managedDedup, managedRepos, true, queries))
+	if hits := managedParitySnapshot(t, managedDedup, managedRepos, true, []string{"ManagedParityBinary"}); len(hits) != 0 {
+		t.Fatalf("binary marker returned %d hits: %+v", len(hits), hits)
+	}
+
+	writeFiles(t, first, map[string]string{"advanced.txt": "ManagedParityAdvanced is the new default tip\n"})
+	gitCommitAll(t, first, "advance default tip")
+	advancedHead, err := ingest.Head(first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	git(t, managedFirst, "-c", "protocol.file.allow=always", "fetch", "-q", "origin")
+	git(t, managedFirst, "checkout", "-q", "--detach", advancedHead)
+	catalog, err := corpus.LoadCatalog(managedRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lock, err := corpus.LoadLock(managedRoot, catalog.Host)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range lock.Projects {
+		if lock.Projects[i].ID == 101 {
+			lock.Projects[i].DefaultCommit = advancedHead
+		}
+	}
+	if err := corpus.WriteLock(managedRoot, catalog.Host, lock); err != nil {
+		t.Fatal(err)
+	}
+	gitCommitAll(t, managedRoot, "advance managed default tip")
+
+	conventionalDirect = buildManagedParityDirect(t, conventionalRoot, filepath.Join(fixture, "direct-conventional-advanced"))
+	managedDirect = buildManagedParityDirect(t, managedRoot, filepath.Join(fixture, "direct-managed-advanced"))
+	conventionalCASManifest, _, err = RefreshCAS(conventionalCASManifest, conventionalRoot, conventionalCAS)
+	if err != nil {
+		t.Fatalf("RefreshCAS conventional advance: %v", err)
+	}
+	managedCASManifest, _, err = RefreshCAS(managedCASManifest, managedRoot, managedCAS)
+	if err != nil {
+		t.Fatalf("RefreshCAS managed advance: %v", err)
+	}
+	assertManagedBlobMetadata(t, managedCASManifest)
+	conventionalExport = filepath.Join(fixture, "export-conventional-advanced")
+	managedExport = filepath.Join(fixture, "export-managed-advanced")
+	if _, err := ExportShardDir(conventionalCAS, conventionalExport, 64); err != nil {
+		t.Fatalf("ExportShardDir conventional advance: %v", err)
+	}
+	managedServedManifest, err = ExportShardDir(managedCAS, managedExport, 64)
+	if err != nil {
+		t.Fatalf("ExportShardDir managed advance: %v", err)
+	}
+	assertManagedServedMetadata(t, managedServedManifest)
+	if _, _, err := RefreshDedupedShardDir(conventionalCAS, conventionalDedup, 64); err != nil {
+		t.Fatalf("RefreshDedupedShardDir conventional advance: %v", err)
+	}
+	managedDedupManifest, managedDelta, err := RefreshDedupedShardDir(managedCAS, managedDedup, 64)
+	if err != nil {
+		t.Fatalf("RefreshDedupedShardDir managed advance: %v", err)
+	}
+	if len(managedDelta.ChangedRepos) != 1 || managedDelta.ChangedRepos[0] != managedFirst {
+		t.Fatalf("managed delta changed repos = %v, want [%s]", managedDelta.ChangedRepos, managedFirst)
+	}
+	assertManagedServedMetadata(t, managedDedupManifest)
+
+	advancedQueries := append(append([]string(nil), queries...), "ManagedParityAdvanced")
+	advanced := managedParitySnapshot(t, conventionalDirect, conventionalRepos, false, advancedQueries)
+	assertManagedParitySnapshot(t, "advanced managed direct", advanced, managedParitySnapshot(t, managedDirect, managedRepos, true, advancedQueries))
+	assertManagedParitySnapshot(t, "advanced conventional CAS export", advanced, managedParitySnapshot(t, conventionalExport, conventionalRepos, false, advancedQueries))
+	assertManagedParitySnapshot(t, "advanced managed CAS export", advanced, managedParitySnapshot(t, managedExport, managedRepos, true, advancedQueries))
+	assertManagedParitySnapshot(t, "advanced conventional deduped refresh", advanced, managedParitySnapshot(t, conventionalDedup, conventionalRepos, false, advancedQueries))
+	assertManagedParitySnapshot(t, "advanced managed deduped refresh", advanced, managedParitySnapshot(t, managedDedup, managedRepos, true, advancedQueries))
+	assertManagedParitySnapshot(t, "advanced managed served reload", advanced, managedParitySnapshot(t, managedDedup, managedRepos, true, advancedQueries))
+
+	manifestPath := filepath.Join(managedCAS, BlobManifestName)
+	manifestBeforeFailure, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	missingPath := managedSecond + ".missing"
+	if err := os.Rename(managedSecond, missingPath); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := RefreshCAS(managedCASManifest, managedRoot, managedCAS); err == nil || !strings.Contains(err.Error(), "is not materialized") {
+		t.Fatalf("RefreshCAS missing locked submodule error = %v", err)
+	}
+	manifestAfterFailure, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(manifestAfterFailure, manifestBeforeFailure) {
+		t.Fatal("failed missing-source refresh published a new CAS manifest")
+	}
+	served, err := server.Open(managedDedup)
+	if err != nil {
+		t.Fatalf("open last good served snapshot: %v", err)
+	}
+	staleMatches, _, queryErr := served.Literal(context.Background(), "ManagedParityBravo")
+	closeErr := served.Close()
+	if queryErr != nil {
+		t.Fatalf("query last good served snapshot: %v", queryErr)
+	}
+	if closeErr != nil {
+		t.Fatalf("close last good served snapshot: %v", closeErr)
+	}
+	if len(staleMatches) != 1 || staleMatches[0].Repo != "group-b/same" || staleMatches[0].RelPath != "bravo.txt" {
+		t.Fatalf("last good served snapshot lost missing source: %+v", staleMatches)
+	}
+}
+
+func buildManagedParityDirect(t *testing.T, root, work string) string {
+	t.Helper()
+	built, err := parity.Build(parity.Config{Root: root, WorkDir: work, Seed: 17, ShardBytes: 64})
+	if err != nil {
+		t.Fatalf("parity.Build %s: %v", root, err)
+	}
+	if built.IngestedRepos != 2 {
+		t.Fatalf("parity.Build %s ingested %d repos, want 2", root, built.IngestedRepos)
+	}
+	return filepath.Join(work, "shards")
+}
+
+func managedParitySnapshot(t *testing.T, shardDir string, repos map[string]string, requireManagedLabel bool, queries []string) []managedParityHit {
+	t.Helper()
+	c, err := server.Open(shardDir)
+	if err != nil {
+		t.Fatalf("server.Open %s: %v", shardDir, err)
+	}
+	defer c.Close()
+	var hits []managedParityHit
+	for _, query := range queries {
+		matches, _, err := c.Literal(context.Background(), query)
+		if err != nil {
+			t.Fatalf("Literal(%q) from %s: %v", query, shardDir, err)
+		}
+		for _, match := range matches {
+			namespace := managedParityNamespace(t, match.AbsPath, repos)
+			if requireManagedLabel && match.Repo != namespace {
+				t.Fatalf("managed match label = %q, want namespace %q for %s", match.Repo, namespace, match.AbsPath)
+			}
+			hits = append(hits, managedParityHit{
+				Query: query, Namespace: namespace, RelPath: match.RelPath,
+				Line: match.Line, Text: managedParityLine(t, match.AbsPath, match.Line),
+			})
+		}
+	}
+	sort.Slice(hits, func(i, j int) bool {
+		left, right := hits[i], hits[j]
+		if left.Query != right.Query {
+			return left.Query < right.Query
+		}
+		if left.Namespace != right.Namespace {
+			return left.Namespace < right.Namespace
+		}
+		if left.RelPath != right.RelPath {
+			return left.RelPath < right.RelPath
+		}
+		if left.Line != right.Line {
+			return left.Line < right.Line
+		}
+		return left.Text < right.Text
+	})
+	return hits
+}
+
+func managedParityNamespace(t *testing.T, abs string, repos map[string]string) string {
+	t.Helper()
+	for namespace, dir := range repos {
+		rel, err := filepath.Rel(dir, abs)
+		if err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return namespace
+		}
+	}
+	t.Fatalf("match path %s is outside fixture repos", abs)
+	return ""
+}
+
+func managedParityLine(t *testing.T, path string, line int) string {
+	t.Helper()
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read match path %s: %v", path, err)
+	}
+	content = bytes.TrimPrefix(content, []byte{0xef, 0xbb, 0xbf})
+	lines := bytes.Split(content, []byte("\n"))
+	if line < 1 || line > len(lines) {
+		t.Fatalf("match line %d outside %s (%d lines)", line, path, len(lines))
+	}
+	return string(lines[line-1])
+}
+
+func assertManagedParitySnapshot(t *testing.T, name string, want, got []managedParityHit) {
+	t.Helper()
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("%s mismatch\nwant: %+v\n got: %+v", name, want, got)
+	}
+}
+
+func assertManagedBlobMetadata(t *testing.T, manifest *BlobManifest) {
+	t.Helper()
+	if len(manifest.Repos) != 2 {
+		t.Fatalf("managed CAS repo count = %d, want 2", len(manifest.Repos))
+	}
+	repos := append([]RepoBlobs(nil), manifest.Repos...)
+	sort.Slice(repos, func(i, j int) bool { return repos[i].ProjectID < repos[j].ProjectID })
+	for i, want := range []struct {
+		id        int64
+		namespace string
+	}{{101, "group-a/same"}, {202, "group-b/same"}} {
+		got := repos[i]
+		if !got.Managed || got.ProjectID != want.id || got.Label != want.namespace {
+			t.Fatalf("managed CAS repo[%d] = %+v, want id=%d namespace=%s", i, got, want.id, want.namespace)
+		}
+	}
+}
+
+func assertManagedServedMetadata(t *testing.T, manifest *parity.Manifest) {
+	t.Helper()
+	if len(manifest.Heads) != 2 {
+		t.Fatalf("managed served head count = %d, want 2", len(manifest.Heads))
+	}
+	heads := append([]parity.RepoHead(nil), manifest.Heads...)
+	sort.Slice(heads, func(i, j int) bool { return heads[i].ProjectID < heads[j].ProjectID })
+	for i, want := range []struct {
+		id        int64
+		namespace string
+	}{{101, "group-a/same"}, {202, "group-b/same"}} {
+		got := heads[i]
+		if !got.Managed || got.ProjectID != want.id || got.Label != want.namespace {
+			t.Fatalf("managed served head[%d] = %+v, want id=%d namespace=%s", i, got, want.id, want.namespace)
+		}
+	}
+}
 
 func TestManagedSourceIdentityFlowsThroughCASExportAndMismatchPreservesManifest(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
