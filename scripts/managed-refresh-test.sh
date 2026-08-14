@@ -45,6 +45,14 @@ assert_not_contains() {
   fi
 }
 
+assert_plist_value() {
+  file="$1"; key="$2"; expected="$3"
+  actual="$(/usr/libexec/PlistBuddy -c "Print:$key" "$file" 2>/dev/null)" ||
+    fail "cannot read $key from $file"
+  [ "$actual" = "$expected" ] ||
+    fail "$file $key = $actual, want $expected"
+}
+
 new_fixture() {
   case_dir="$1"
   mkdir -p "$case_dir/corpus/.moedex" "$case_dir/cas" "$case_dir/shards"
@@ -128,5 +136,34 @@ fi
 assert_contains "$install_log" "refusing to adopt populated unmarked corpus"
 assert_contains "$install_log" "$install_case/corpus-managed"
 assert_contains "$install_case/corpus/README.txt" "user-owned"
+
+# A real hermetic render proves the three sibling paths stay coherent across
+# the serving and scheduled-refresh agents. This catches a dangerous split-brain
+# configuration where launchd refreshes the managed corpus but serves legacy shards.
+render_case="$TMP/install-render"
+render_home="$render_case/home"
+render_corpus="$render_case/corpus-managed"
+render_cas="$render_case/cas-managed"
+render_shards="$render_case/shards-managed"
+mkdir -p "$render_home" "$render_corpus/.moedex" "$render_cas" "$render_shards"
+printf '{}\n' > "$render_corpus/.moedex/corpus.json"
+env HOME="$render_home" PATH="$BIN:$PATH" TRACE="$TRACE" \
+  BINDIR="$BIN" \
+  MOEDEX_INDEX_DIR="$render_case/index" \
+  MOEDEX_CORPUS="$render_corpus" \
+  MOEDEX_CAS_DIR="$render_cas" \
+  MOEDEX_SHARD_DIR="$render_shards" \
+  bash "$REPO/scripts/install-macos.sh" >/dev/null 2>&1
+serve_plist="$render_home/Library/LaunchAgents/com.moedex.serve.plist"
+refresh_plist="$render_home/Library/LaunchAgents/com.moedex.refresh.plist"
+serve_args="$(/usr/libexec/PlistBuddy -c 'Print:ProgramArguments:2' "$serve_plist")"
+case "$serve_args" in
+  *'-shard-dir "'"$render_shards"'"'*) : ;;
+  *) fail "serve plist does not use managed shard path" ;;
+esac
+assert_plist_value "$refresh_plist" 'EnvironmentVariables:MOEDEX_CORPUS' "$render_corpus"
+assert_plist_value "$refresh_plist" 'EnvironmentVariables:MOEDEX_CAS_DIR' "$render_cas"
+assert_plist_value "$refresh_plist" 'EnvironmentVariables:MOEDEX_SHARD_DIR' "$render_shards"
+assert_plist_value "$refresh_plist" 'StartCalendarInterval:Hour' '13'
 
 printf 'managed-refresh-test: PASS\n'

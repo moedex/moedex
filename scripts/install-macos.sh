@@ -21,7 +21,9 @@
 #   scripts/install-macos.sh --dry-run  # show what it WOULD do, change nothing
 #
 # Env overrides: BINDIR (default ~/.local/bin), MOEDEX_CORPUS (default ~/.moedex),
-# MOEDEX_INDEX_DIR (default ~/.moedex-index), ONNXRUNTIME_LIB_PATH.
+# MOEDEX_INDEX_DIR (default ~/.moedex-index), MOEDEX_CAS_DIR (default
+# $MOEDEX_INDEX_DIR/cas), MOEDEX_SHARD_DIR (default $MOEDEX_INDEX_DIR/shards),
+# ONNXRUNTIME_LIB_PATH.
 
 set -euo pipefail
 
@@ -32,6 +34,8 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 BINDIR="${BINDIR:-$HOME/.local/bin}"
 INDEX_DIR="${MOEDEX_INDEX_DIR:-$HOME/.moedex-index}"
 CORPUS="${MOEDEX_CORPUS:-$HOME/.moedex}"
+CAS_DIR="${MOEDEX_CAS_DIR:-$INDEX_DIR/cas}"
+SHARD_DIR="${MOEDEX_SHARD_DIR:-$INDEX_DIR/shards}"
 LAUNCH_AGENTS="$HOME/Library/LaunchAgents"
 TOKEN_FILE="$INDEX_DIR/auth-token"
 CORPUS_BIN="${MOEDEX_CORPUS_BIN:-$BINDIR/moedex-corpus}"
@@ -143,7 +147,9 @@ install_agent() {
   label="$1"; file="$2"
   src="$REPO/deploy/$file"; dst="$LAUNCH_AGENTS/$file"
   [ -f "$src" ] || die "missing template $src"
-  rendered="$(sed -e "s|@HOME@|$HOME|g" -e "s|@REPO@|$REPO|g" -e "s|@CORPUS@|$CORPUS|g" -e "s|@ONNX_LIB@|$ONNX_LIB|g" "$src")"
+  rendered="$(sed -e "s|@HOME@|$HOME|g" -e "s|@REPO@|$REPO|g" \
+    -e "s|@CORPUS@|$CORPUS|g" -e "s|@CAS_DIR@|$CAS_DIR|g" \
+    -e "s|@SHARD_DIR@|$SHARD_DIR|g" -e "s|@ONNX_LIB@|$ONNX_LIB|g" "$src")"
   domain="gui/$(id -u)"
   changed=1
   if [ -f "$dst" ] && [ "$(cat "$dst" 2>/dev/null)" = "$rendered" ]; then changed=0; fi
@@ -167,17 +173,17 @@ install_agent com.moedex.refresh com.moedex.refresh.plist
 
 # --- 6. data-presence hints (index is built/cut over separately) ---
 [ -f "$CORPUS/.moedex/corpus.json" ] || [ "$DRY_RUN" = 1 ] || warn "managed corpus marker missing at $CORPUS"
-if ! ls "$INDEX_DIR"/shards/*.idx >/dev/null 2>&1; then
-  warn "no shard index at $INDEX_DIR/shards — build it once:"
-  warn "  moedex-index build -corpus $CORPUS -shard-dir $INDEX_DIR/shards"
-  warn "  ONNXRUNTIME_LIB_PATH=$ONNX_LIB moedex-serve -build-embeddings -shard-dir $INDEX_DIR/shards -embed onnx -onnx-runtime $ONNX_LIB"
+if ! ls "$SHARD_DIR"/*.idx >/dev/null 2>&1; then
+  warn "no shard index at $SHARD_DIR — build it once:"
+  warn "  moedex-index build -corpus $CORPUS -shard-dir $SHARD_DIR"
+  warn "  ONNXRUNTIME_LIB_PATH=$ONNX_LIB moedex-serve -build-embeddings -shard-dir $SHARD_DIR -embed onnx -onnx-runtime $ONNX_LIB"
 fi
 
 # --- verify ---
 echo
 if [ -x "$BINDIR/moedex-index" ]; then
-  "$BINDIR/moedex-index" doctor || true
+  "$BINDIR/moedex-index" doctor -shard-dir "$SHARD_DIR" || true
 elif have moedex-index; then
-  moedex-index doctor || true
+  moedex-index doctor -shard-dir "$SHARD_DIR" || true
 fi
 log "done."

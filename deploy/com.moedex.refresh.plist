@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   TEMPLATE — do NOT `cp` this directly. The @PLACEHOLDER@ tokens are filled in by
-  scripts/install-macos.sh (or substitute @HOME@/@REPO@/@CORPUS@ yourself).
+  scripts/install-macos.sh (or substitute @HOME@/@REPO@/@CORPUS@/@CAS_DIR@/
+  @SHARD_DIR@ yourself).
 
   Periodic corpus refresh (macOS analog of deploy/moedex-refresh.timer). Runs
   scripts/refresh-corpus.sh daily: sync corpus -> doctor preflight -> rebuild
@@ -34,6 +35,10 @@
     <string>1</string>
     <key>MOEDEX_CORPUS</key>
     <string>@CORPUS@</string>
+    <key>MOEDEX_CAS_DIR</key>
+    <string>@CAS_DIR@</string>
+    <key>MOEDEX_SHARD_DIR</key>
+    <string>@SHARD_DIR@</string>
   </dict>
 
   <!-- Daily at 13:00 local time. RunAtLoad is false so installing it never kicks a heavy

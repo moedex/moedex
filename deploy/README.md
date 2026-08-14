@@ -14,6 +14,15 @@
 > path; index build and live cutover remain explicit sibling-rollout steps.
 > Verify anytime with `moedex-index doctor`. The rest of this file is the manual /
 > Linux (Docker + systemd) path.
+>
+> For a validated sibling cutover, pass all three paths together; the installer
+> renders the serve and refresh agents from the same values:
+> ```sh
+> MOEDEX_CORPUS="$HOME/.moedex-managed" \
+> MOEDEX_CAS_DIR="$HOME/.moedex-index/cas-managed" \
+> MOEDEX_SHARD_DIR="$HOME/.moedex-index/shards-managed" \
+> ./scripts/install-macos.sh
+> ```
 
 Operational guide for running the moedex retrieval daemon (`moedex-serve`) and
 the offline shard tool (`moedex-index`). Two deployment shapes are covered:
@@ -137,9 +146,11 @@ make parity MOEDEX_CORPUS=/srv/moedex/corpus-managed
 
 Only after health, freshness, exact-result parity, and rollback rehearsal pass:
 
-1. Change the service environment to the three `*-managed` sibling paths.
-2. Send SIGHUP (`launchctl kill -HUP gui/$(id -u)/com.moedex.serve` on macOS,
-   `systemctl reload moedex-serve` on Linux).
+1. Change the service environment to the three `*-managed` sibling paths. On
+   macOS, rerun `install-macos.sh` with `MOEDEX_CORPUS`, `MOEDEX_CAS_DIR`, and
+   `MOEDEX_SHARD_DIR` set together; it renders and reboots only changed agents.
+2. Send SIGHUP if the service process itself did not restart (`launchctl kill -HUP
+   gui/$(id -u)/com.moedex.serve` on macOS, `systemctl reload moedex-serve` on Linux).
 3. Confirm health and the new shard fingerprint, then begin the recorded soak.
 4. Retain the old corpus, CAS, and shards throughout the soak. Rollback is a
    configuration-path restore plus another warm reload; no rebuild is required.
