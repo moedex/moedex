@@ -8,7 +8,7 @@ verification contract for one delivery gate.
 
 | Phase | Execution plan | ADR | Wave | Depends on | Status |
 |---|---|---|---:|---|---|
-| 1 | [Managed corpus foundation](./phases/01-managed-corpus-foundation/PLAN.md) | [0019](../adr/0019-moedex-managed-submodule-corpus.md) | 1 | — | Proposed |
+| 1 | [Managed corpus foundation](./phases/01-managed-corpus-foundation/PLAN.md) | [0019](../adr/0019-moedex-managed-submodule-corpus.md) | 1 | — | [Complete](./phases/01-managed-corpus-foundation/SUMMARY.md) |
 | 2 | [Managed corpus integration and rollout](./phases/02-managed-corpus-integration/PLAN.md) | [0019](../adr/0019-moedex-managed-submodule-corpus.md) | 2 | Phase 1 | Proposed |
 | 3 | [Branch acquisition and exact Git-tree ingestion](./phases/03-branch-acquisition/PLAN.md) | [0020](../adr/0020-branch-aware-indexing.md) | 3 | Phase 2 | Proposed |
 | 4 | [Branch-aware CAS and delta refresh](./phases/04-branch-aware-cas/PLAN.md) | [0020](../adr/0020-branch-aware-indexing.md) | 4 | Phase 3 | Proposed |
@@ -52,6 +52,6 @@ Every phase must preserve these contracts:
 
 The six phase files follow Moe's executable-plan shape: frontmatter dependencies, goal-backward
 `must_haves`, explicit files, ordered tasks, `read_first`, acceptance criteria, verification, and
-phase-produced artifacts. This repository does not currently have a `.planning/` project, so these
-repo-native plans are not registered in a Moe `ROADMAP.md` or independently certified by the Moe
-plan-checker.
+phase-produced artifacts. Phase 1 has been executed and its evidence is captured in its summary.
+This repository does not currently have a `.planning/` project, so these repo-native plans are not
+registered in a Moe `ROADMAP.md` or independently certified by the Moe plan-checker.
