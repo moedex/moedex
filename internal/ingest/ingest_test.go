@@ -1,6 +1,7 @@
 package ingest
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -261,6 +262,115 @@ func TestCorpusAIPrivacyPoliciesParse(t *testing.T) {
 		t.Fatal("corpus contains no .ai-privacy.yml files")
 	}
 	t.Logf("validated %d .ai-privacy.yml files", policyCount)
+}
+
+func TestCorpusAIPrivacyPublicationAudit(t *testing.T) {
+	root := os.Getenv("MOEDEX_PRIVACY_CORPUS")
+	casPath := os.Getenv("MOEDEX_PRIVACY_CAS_MANIFEST")
+	servedPath := os.Getenv("MOEDEX_PRIVACY_SERVED_MANIFEST")
+	if root == "" || casPath == "" || servedPath == "" {
+		t.Skip("set MOEDEX_PRIVACY_CORPUS, MOEDEX_PRIVACY_CAS_MANIFEST, and MOEDEX_PRIVACY_SERVED_MANIFEST to audit a real publication")
+	}
+
+	type manifestRepo struct {
+		ProjectID int64  `json:"project_id"`
+		AIPrivacy string `json:"ai_privacy"`
+		Files     []struct {
+			Rel string `json:"rel"`
+		} `json:"files"`
+	}
+	var cas struct {
+		Repos []manifestRepo `json:"repos"`
+	}
+	casData, err := os.ReadFile(casPath)
+	if err != nil {
+		t.Fatalf("read CAS manifest: %v", err)
+	}
+	if err := json.Unmarshal(casData, &cas); err != nil {
+		t.Fatalf("decode CAS manifest: %v", err)
+	}
+
+	var served struct {
+		Heads []manifestRepo `json:"heads"`
+	}
+	servedData, err := os.ReadFile(servedPath)
+	if err != nil {
+		t.Fatalf("read served manifest: %v", err)
+	}
+	if err := json.Unmarshal(servedData, &served); err != nil {
+		t.Fatalf("decode served manifest: %v", err)
+	}
+
+	byProjectID := func(entries []manifestRepo) map[int64]manifestRepo {
+		out := make(map[int64]manifestRepo, len(entries))
+		for _, entry := range entries {
+			out[entry.ProjectID] = entry
+		}
+		return out
+	}
+	casByProjectID := byProjectID(cas.Repos)
+	servedByProjectID := byProjectID(served.Heads)
+	sources, err := DiscoverSources(root)
+	if err != nil {
+		t.Fatalf("discover corpus repositories: %v", err)
+	}
+
+	var policyCount, globalRestricted, restrictedOverrides, eligibleFileRefs int
+	var missingCAS, missingServed, fingerprintMismatches, restrictedFileRefs int
+	for _, source := range sources {
+		if !source.Managed || source.ProjectID <= 0 {
+			t.Fatal("publication privacy audit requires a managed corpus with stable project IDs")
+		}
+		repo := source.Dir
+		policyPath := filepath.Join(repo, AIPrivacyFileName)
+		if _, err := os.Lstat(policyPath); err == nil {
+			policyCount++
+		} else if !os.IsNotExist(err) {
+			t.Fatalf("inspect privacy policy: %v", err)
+		}
+		policy, err := loadPrivacyPolicy(repo)
+		if err != nil {
+			t.Fatalf("validate privacy policy: %v", err)
+		}
+		if policy.globalLevel == restrictedAILevel {
+			globalRestricted++
+		}
+		for _, override := range policy.overrides {
+			if override.level == restrictedAILevel {
+				restrictedOverrides++
+			}
+		}
+		fingerprint := privacyPolicyFingerprint(policy)
+
+		casRepo, ok := casByProjectID[source.ProjectID]
+		if !ok {
+			missingCAS++
+		} else {
+			if casRepo.AIPrivacy != fingerprint {
+				fingerprintMismatches++
+			}
+			for _, file := range casRepo.Files {
+				if policy.restricted(file.Rel) {
+					restrictedFileRefs++
+				} else {
+					eligibleFileRefs++
+				}
+			}
+		}
+		servedRepo, ok := servedByProjectID[source.ProjectID]
+		if !ok {
+			missingServed++
+		} else if servedRepo.AIPrivacy != fingerprint {
+			fingerprintMismatches++
+		}
+	}
+
+	if missingCAS != 0 || missingServed != 0 || fingerprintMismatches != 0 || restrictedFileRefs != 0 {
+		t.Fatalf("publication privacy audit failed: missing_cas=%d missing_served=%d fingerprint_mismatches=%d restricted_file_refs=%d",
+			missingCAS, missingServed, fingerprintMismatches, restrictedFileRefs)
+	}
+	t.Logf("audited repos=%d policies=%d global_level1=%d level1_overrides=%d eligible_file_refs=%d restricted_file_refs=%d",
+		len(sources), policyCount, globalRestricted, restrictedOverrides, eligibleFileRefs, restrictedFileRefs)
 }
 
 func TestRepoStripsBOM(t *testing.T) {
