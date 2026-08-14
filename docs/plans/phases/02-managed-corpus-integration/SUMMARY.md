@@ -15,7 +15,7 @@ affects: [03-branch-acquisition, 04-branch-aware-cas, deployment, indexing]
 
 actuals:
   tasks: 5
-  implementation_commits: 12
+  implementation_commits: 13
 
 tech-stack:
   added: []
@@ -42,19 +42,19 @@ key-decisions:
   - "Managed locks, not filesystem discovery, are authoritative for indexing."
   - "Missing policies default to level 3; effective level 1 is excluded before content reads."
   - "Root OS metadata is ignored without mutation, but managed metadata and submodule work fail closed."
-  - "Production cutover remains a blocking human checkpoint."
+  - "The operator-owned 24-hour production soak gates Phase 3."
 
 requirements-completed: []
 
 duration: 3h23m
 completed: null
-status: ready-for-cutover
+status: soaking
 ---
 
 # Phase 2: Managed Corpus Integration and Rollout Summary
 
-**All candidate automation gates pass, and the 359-to-491 scope expansion is approved. Production
-cutover is waiting on a named soak owner/window and explicit approval of the launchd rebootstrap.**
+**The managed snapshot is live, all immediate production checks pass, and the operator-owned
+24-hour soak runs through 2026-08-15T13:53:44-06:00.**
 
 ## Accomplishments
 
@@ -69,6 +69,8 @@ cutover is waiting on a named soak owner/window and explicit approval of the lau
   and a tested warm-reload path.
 - Proved the post-refresh candidate against ripgrep over 63,225 eligible files and 1,046 queries
   with zero under-approximations, over-approximations, or oracle errors.
+- Switched both launchd agents coherently to the managed corpus/CAS/shards, retained the legacy
+  rollback set, and verified health, authenticated MCP, representative search, and the 13:00 job.
 
 ## Implementation Commits
 
@@ -84,6 +86,7 @@ cutover is waiting on a named soak owner/window and explicit approval of the lau
 10. `15084f0` — audit published privacy references
 11. `ddde968` — report restricted policy counts
 12. `ccf271e` — keep managed launchd paths coherent
+13. `23b22bc` — retry transient launchd bootstrap
 
 ## Automated Evidence
 
@@ -100,6 +103,9 @@ cutover is waiting on a named soak owner/window and explicit approval of the lau
 - Test daemon — health, exact query, SIGHUP reload, and graceful shutdown pass
 - Dense sidecar — v2/incremental-ready, 942,718 chunks, fingerprint fresh; 852,492 vectors reused
 - Legacy service after token rotation — health pass and authenticated MCP `200`
+- Managed production service — 55,080 blobs, 27,833 symbol blobs, 942,718 dense chunks; health,
+  authenticated MCP, and redacted representative search pass
+- Production refresh agent — all three managed paths, loaded but idle as expected, scheduled 13:00
 
 See [ROLLOUT.md](./ROLLOUT.md) and the root [PARITY-REPORT.md](../../../../PARITY-REPORT.md) for
 redacted aggregate evidence and the generated full-corpus report.
@@ -124,23 +130,22 @@ redacted aggregate evidence and the generated full-corpus report.
 6. **The initial candidate dense run had no reuse seed.** It was stopped before publication, then
    restarted from the retained v2 store. The incremental run reused 852,492 vectors and embedded
    only 90,226 new chunks.
+7. **launchd briefly rejected the first production bootstrap while unloading the old KeepAlive
+   job.** The exact managed plist succeeded on retry after about 83 seconds of startup downtime.
+   The installer now performs a bounded retry, covered by a forced-failure shell test.
 
-## Open Human Checkpoint
+## Active Soak Checkpoint
 
 The retained live index has 359 manifest heads and 48,300 served blobs. The managed candidate has
 491 heads and 55,080 served blobs. Hermetic same-commit conventional/managed parity passes, and the
 candidate equals ripgrep, but literal live/candidate equality is impossible because the live scope
 is stale and smaller.
 
-The operator approved the 359 → 491 scope expansion. The remaining checkpoint requires:
-
-1. a named cutover/soak owner and soak window;
-2. explicit approval to rebootstrap both launchd agents onto the three managed paths while
-   retaining the legacy paths for rollback; and
-3. the `approved` resume signal with the rollout-report path, as required by checkpoint 2.6.
-
-Until then, the live daemon/configuration is unchanged and Phase 3 remains blocked.
+The operator approved the scope expansion and production switch and owns the 24-hour soak from
+`2026-08-14T13:53:44-06:00` through `2026-08-15T13:53:44-06:00`. The managed daemon is live; the
+legacy corpus and shards remain untouched for rollback. Phase 3 stays blocked until the production
+13:00 refresh is observed and the operator accepts the final soak outcome.
 
 ---
 *Phase: 02-managed-corpus-integration*
-*Status: ready for cutover*
+*Status: soaking*

@@ -1,10 +1,10 @@
 ---
-status: ready-for-cutover
+status: soaking
 phase: 02-managed-corpus-integration
-owner: "<soak owner pending>"
+owner: "operator (user)"
 started: "2026-08-14T09:29:00-06:00"
-updated: "2026-08-14T13:48:46-06:00"
-soak_until: "<pending operator-selected soak window>"
+updated: "2026-08-14T13:56:10-06:00"
+soak_until: "2026-08-15T13:53:44-06:00"
 ---
 
 # Managed Corpus Sibling Rollout
@@ -85,6 +85,12 @@ post-refresh CAS: unique_blobs=53205 file_refs=63225 stored_bytes=782771828
 post-refresh parity:
   repos=491 files=63225 content=962.5 MB shards=6 queries=1046
   under_approximations=0 over_approximations=0 rg_errors=0 moedex_errors=0
+post-cutover production:
+  doctor=21 ok / 2 optional-LSP warnings / 0 critical
+  served_blobs=55080 symbol_blobs=27833 dense_chunks=942718
+  health=PASS authenticated_MCP=200 representative_search=PASS
+  refresh_paths=managed corpus/CAS/shards; schedule=13:00 local; loaded=PASS
+  legacy_corpus_and_shards_retained=PASS
 ```
 
 ## Preflight deviations
@@ -107,16 +113,22 @@ post-refresh parity:
 - The first dense candidate build was stopped before publication after confirming it had no reuse
   seed. Copying the retained v2 store into the sibling enabled content-key reuse; the incremental
   run completed in 11 minutes with 852,492 reused and 90,226 new chunks.
+- The first production serve bootstrap returned launchd error 5 while the previous KeepAlive job
+  was still unloading. The validated managed plist succeeded on exact retry, producing about 83
+  seconds of startup downtime. The installer now retries that bounded transient and its hermetic
+  test forces a first-bootstrap failure.
 
 ## Configuration switch
 
 - Scope expansion approved by: **operator, 2026-08-14**
-- Production configuration switch approved by: **pending explicit approval with soak owner/window**
-- Configuration changed: **none; live launchd configuration remains untouched**
+- Production configuration switch approved by: **operator, 2026-08-14; 24-hour operator-owned soak**
+- Configuration changed: **serve and refresh launchd agents now use the managed sibling corpus,
+  CAS, and shard paths; refresh remains scheduled at 13:00 local**
 - Previous configured paths retained at: retained live paths; local values redacted
 - Token rotation: completed; the legacy-path daemon was restarted and passed `/healthz` plus an
   authenticated MCP request with the rotated token
-- Health immediately after SIGHUP: isolated test daemon passed; production switch not attempted
+- Health immediately after switch: pass; production serves 55,080 blobs, 27,833 symbol blobs, and
+  942,718 dense chunks; authenticated MCP and a redacted representative search pass
 
 ## Rollback
 
@@ -128,21 +140,23 @@ Trigger conditions: failed health, parity regression, missing source, stale lock
 4. Preserve the failed sibling paths for diagnosis; do not delete or adopt them in place.
 
 Rollback exercised by: hermetic forced-export-failure test at
-`2026-08-14T12:28:00-06:00` — outcome: pass; live rollback remains pending because no switch occurred
+`2026-08-14T12:28:00-06:00` — outcome: pass. A live rollback was not required; the previous corpus
+and shard manifest were confirmed retained after the production switch.
 
 ## Soak outcome
 
-- Soak owner: pending
-- Soak window: pending
-- Scheduled refreshes observed: 1 isolated scheduled-equivalent refresh
+- Soak owner: operator (user)
+- Soak window: `2026-08-14T13:53:44-06:00` through `2026-08-15T13:53:44-06:00`
+- Scheduled refreshes observed: 1 isolated scheduled-equivalent refresh before cutover; 0 production
+  runs after cutover; the next 13:00 run falls inside the soak window
 - VPN/glab/Git transport failures: 0
-- Freshness/health/parity incidents: 0 after the documented auto-fixed defects above
-- Final outcome: ready for cutover; legacy service remains healthy
-- Approval: scope expansion approved; production rebootstrap pending named soak owner/window
+- Freshness/health/parity incidents: 0; one transient launchd bootstrap incident recovered as
+  documented above
+- Final outcome: production switch healthy; 24-hour soak in progress
+- Approval: scope expansion and production rebootstrap approved by operator
 
 ## Open checkpoint
 
-The candidate itself is green, and the operator approved the 359 → 491 served-project scope
-expansion. Production cutover and ADR 0020 Phase 3 remain blocked until the operator names the soak
-owner and window and explicitly approves rebootstrap of both launchd agents onto the three managed
-paths. The incomplete approval was not applied; the legacy configuration remains live and healthy.
+The managed snapshot is live and healthy. ADR 0020 Phase 3 remains blocked until the 24-hour soak
+ends, the production 13:00 refresh is observed, and the operator accepts the final outcome. The
+legacy corpus and shards remain the rollback set throughout the soak.
