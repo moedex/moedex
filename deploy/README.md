@@ -8,7 +8,7 @@
 > It builds and installs every binary to `~/.local/bin` (removing stale `~/go/bin`
 > shadows), writes a 0600 auth token, adds the env block to `~/.zshrc`, and renders
 > + bootstraps the `com.moedex.serve` (warm daemon) and `com.moedex.refresh` (daily
-> 13:00 local time) launchd agents from the `deploy/*.plist` templates. For a new
+> 14:10 local time) launchd agents from the `deploy/*.plist` templates. For a new
 > or empty corpus path it initializes the managed submodule corpus after the
 > VPN, `glab`, and Git transport checks pass. It refuses a populated unmarked
 > path; index build and live cutover remain explicit sibling-rollout steps.
@@ -77,7 +77,7 @@ into it, so the zero-dependency posture of the daemon is preserved.
 
 Prereqs: active TC VPN, the [`glab`](https://gitlab.com/gitlab-org/cli) CLI, and
 `git`. The VPN session times out after 12 hours, so the macOS refresh runs at
-13:00 local time when an operator is more likely to be connected. `doctor` never
+14:10 local time when an operator is more likely to be connected. `doctor` never
 changes anything and reports the external layers separately:
 
 ```sh
@@ -155,7 +155,7 @@ Only after health, freshness, exact-result parity, and rollback rehearsal pass:
 4. Retain the old corpus, CAS, and shards throughout the soak. Rollback is a
    configuration-path restore plus another warm reload; no rebuild is required.
 
-Before relying on the 13:00 macOS run, check each prerequisite independently:
+Before relying on the 14:10 macOS run, check each prerequisite independently:
 
 ```sh
 glab auth status --hostname gitlab.tcdevops.com  # credential only

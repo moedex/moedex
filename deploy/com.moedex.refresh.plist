@@ -41,14 +41,14 @@
     <string>@SHARD_DIR@</string>
   </dict>
 
-  <!-- Daily at 13:00 local time. RunAtLoad is false so installing it never kicks a heavy
+  <!-- Daily at 14:10 local time. RunAtLoad is false so installing it never kicks a heavy
        rebuild immediately; use `launchctl kickstart -p` to run on demand. -->
   <key>StartCalendarInterval</key>
   <dict>
     <key>Hour</key>
-    <integer>13</integer>
+    <integer>14</integer>
     <key>Minute</key>
-    <integer>0</integer>
+    <integer>10</integer>
   </dict>
   <key>RunAtLoad</key>
   <false/>

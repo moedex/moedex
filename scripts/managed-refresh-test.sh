@@ -165,7 +165,8 @@ esac
 assert_plist_value "$refresh_plist" 'EnvironmentVariables:MOEDEX_CORPUS' "$render_corpus"
 assert_plist_value "$refresh_plist" 'EnvironmentVariables:MOEDEX_CAS_DIR' "$render_cas"
 assert_plist_value "$refresh_plist" 'EnvironmentVariables:MOEDEX_SHARD_DIR' "$render_shards"
-assert_plist_value "$refresh_plist" 'StartCalendarInterval:Hour' '13'
+assert_plist_value "$refresh_plist" 'StartCalendarInterval:Hour' '14'
+assert_plist_value "$refresh_plist" 'StartCalendarInterval:Minute' '10'
 assert_contains "$render_case/install.log" 'bootstrap failed while the prior job may still be unloading; retrying for up to 10 seconds'
 [ "$(grep -c '^launchctl bootstrap ' "$TRACE")" -ge 3 ] ||
   fail "installer did not retry the transient launchd bootstrap failure"
