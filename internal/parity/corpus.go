@@ -158,6 +158,17 @@ func Build(cfg Config) (*Built, error) {
 	if cfg.MaxRepos > 0 && cfg.MaxRepos < len(sources) {
 		sources = sources[:cfg.MaxRepos]
 	}
+	privacyFingerprints := make(map[string]string, len(sources))
+	for _, source := range sources {
+		if err := ingest.VerifySource(source); err != nil {
+			return nil, err
+		}
+		fingerprint, err := ingest.AIPrivacyFingerprint(source.Dir)
+		if err != nil {
+			return nil, fmt.Errorf("privacy preflight: %w", err)
+		}
+		privacyFingerprints[source.Dir] = fingerprint
+	}
 	repos := make([]string, len(sources))
 	for i, source := range sources {
 		repos[i] = source.Dir
@@ -222,17 +233,27 @@ func Build(cfg Config) (*Built, error) {
 	}
 
 	for _, source := range sources {
-		if err := ingest.VerifySource(source); err != nil {
-			return nil, err
-		}
 		repo := source.Dir
 		files, err := ingest.Repo(source.Namespace, repo)
 		if err != nil {
+			if ingest.IsPrivacyPolicyError(err) {
+				return nil, fmt.Errorf("privacy preflight: %w", err)
+			}
 			b.Skipped = append(b.Skipped, SkippedRepo{Dir: repo, Reason: err.Error()})
 			continue
 		}
+		currentPrivacyFingerprint, err := ingest.AIPrivacyFingerprint(repo)
+		if err != nil {
+			return nil, fmt.Errorf("privacy preflight: %w", err)
+		}
+		if currentPrivacyFingerprint != privacyFingerprints[repo] {
+			return nil, &ingest.PrivacyPolicyError{
+				Path: filepath.Join(repo, ingest.AIPrivacyFileName),
+				Err:  fmt.Errorf("policy changed during ingest"),
+			}
+		}
 		b.IngestedRepos++
-		mb.recordHead(source)
+		mb.recordHead(source, currentPrivacyFingerprint)
 		for _, f := range files {
 			id, isNew := b.FT.add(f.Repo, f.RelPath, f.AbsPath)
 			if !isNew {

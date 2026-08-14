@@ -8,6 +8,7 @@ package ingest
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -65,6 +66,17 @@ func Head(dir string) (string, error) {
 // repoName. Binary files (those containing a NUL byte, as ripgrep detects them)
 // are skipped.
 func Repo(repoName, dir string) ([]File, error) {
+	privacy, err := loadPrivacyPolicy(dir)
+	if err != nil {
+		return nil, err
+	}
+	privacyFingerprint := privacyPolicyFingerprint(privacy)
+	// The policy file is the only bootstrap read allowed for a globally
+	// Restricted repository. Do not enumerate or read any tracked content.
+	if privacy.globalLevel == restrictedAILevel {
+		return nil, nil
+	}
+
 	// -s gives "<mode> <sha> <stage>\t<path>"; -z makes entries NUL-separated.
 	out, err := exec.Command("git", "-C", dir, "ls-files", "-s", "-z").Output()
 	if err != nil {
@@ -84,8 +96,19 @@ func Repo(repoName, dir string) ([]File, error) {
 		if len(fields) < 3 {
 			continue
 		}
+		// Only ordinary tracked files are content. In particular, never follow a
+		// tracked symlink from an allowed path into a Restricted path (or outside
+		// the repository), and do not try to read gitlink entries as files.
+		if fields[0] != "100644" && fields[0] != "100755" {
+			continue
+		}
 		sha := fields[1]
 		rel := string(entry[tab+1:])
+		// The root policy itself was read only to bootstrap enforcement. It is not
+		// searchable content, and an effective level-1 path is never opened.
+		if rel == AIPrivacyFileName || privacy.restricted(rel) {
+			continue
+		}
 		if isVCSInternalPath(rel) {
 			continue // VCS-internal metadata committed into the tree — never search context
 		}
@@ -102,6 +125,13 @@ func Repo(repoName, dir string) ([]File, error) {
 		// not content, and indexing it would desync line/match boundaries.
 		content = bytes.TrimPrefix(content, []byte{0xEF, 0xBB, 0xBF})
 		files = append(files, File{Repo: repoName, RelPath: rel, AbsPath: abs, SHA: sha, Content: content})
+	}
+	currentFingerprint, err := AIPrivacyFingerprint(dir)
+	if err != nil {
+		return nil, err
+	}
+	if currentFingerprint != privacyFingerprint {
+		return nil, privacyError(filepath.Join(dir, AIPrivacyFileName), fmt.Errorf("policy changed during ingest"))
 	}
 	return files, nil
 }

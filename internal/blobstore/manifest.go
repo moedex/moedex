@@ -35,15 +35,17 @@ type FileEntry struct {
 }
 
 // RepoBlobs is a repo's recorded blob set at ingest: its directory, label, git
-// HEAD (the freshness key, "" if unreadable — same convention as ingest.Head),
-// and its ordered file entries.
+// HEAD and AI-privacy fingerprint (the freshness keys), plus its ordered file
+// entries. The fingerprint closes the gap where an uncommitted policy change
+// would otherwise leave HEAD unchanged and stale searchable references intact.
 type RepoBlobs struct {
-	Dir       string      `json:"dir"`
-	Label     string      `json:"label"`
-	Head      string      `json:"head"`
-	ProjectID int64       `json:"project_id,omitempty"`
-	Managed   bool        `json:"managed,omitempty"`
-	Files     []FileEntry `json:"files"`
+	Dir                string      `json:"dir"`
+	Label              string      `json:"label"`
+	Head               string      `json:"head"`
+	PrivacyFingerprint string      `json:"ai_privacy,omitempty"`
+	ProjectID          int64       `json:"project_id,omitempty"`
+	Managed            bool        `json:"managed,omitempty"`
+	Files              []FileEntry `json:"files"`
 }
 
 // blobSet returns the deduplicated, sorted set of blob SHAs this repo references.

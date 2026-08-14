@@ -360,6 +360,107 @@ func TestRebuildOnlyAffectedShard(t *testing.T) {
 	}
 }
 
+func TestDetectChangesAIPrivacyWithoutHEADChange(t *testing.T) {
+	requireGit(t)
+	corpus := t.TempDir()
+	repo := filepath.Join(corpus, "repo")
+	commitGitRepo(t, repo, map[string]string{"content.txt": "PrivacyFreshnessMarker\n"})
+
+	work := t.TempDir()
+	if _, err := Build(Config{Root: corpus, WorkDir: work, Seed: 1, ShardBytes: 1 << 30}); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	manifest, err := LoadManifest(filepath.Join(work, "shards", ManifestName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	headBefore, err := ingest.Head(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFiles(t, repo, map[string]string{ingest.AIPrivacyFileName: "global_privacy_level: 1\n"})
+	headAfter, err := ingest.Head(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if headAfter != headBefore {
+		t.Fatal("test premise: uncommitted privacy policy changed HEAD")
+	}
+
+	changes, err := DetectChanges(manifest, corpus, ingest.DiscoverRepos, ingest.Head)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(changes.Changed) != 1 || changes.Changed[0] != repo {
+		t.Fatalf("Changed = %v, want privacy-only change for %s", changes.Changed, repo)
+	}
+}
+
+func TestRebuildPreservesRestrictedHeadAndReindexesPolicyRelaxation(t *testing.T) {
+	requireGit(t)
+	corpus := t.TempDir()
+	restricted := filepath.Join(corpus, "restricted")
+	allowed := filepath.Join(corpus, "allowed")
+	commitGitRepo(t, restricted, map[string]string{
+		ingest.AIPrivacyFileName: "global_privacy_level: 1\n",
+		"content.txt":            "PrivacyRelaxationMarker\n",
+	})
+	commitGitRepo(t, allowed, map[string]string{"allowed.txt": "AllowedRebuildMarker\n"})
+
+	work := t.TempDir()
+	if _, err := Build(Config{Root: corpus, WorkDir: work, Seed: 1, ShardBytes: 1 << 30}); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	old, err := LoadManifest(filepath.Join(work, "shards", ManifestName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := old.HeadOf(restricted); !ok {
+		t.Fatal("globally Restricted repository is missing from freshness manifest")
+	}
+	if shardFinds(t, filepath.Join(work, "shards"), "PrivacyRelaxationMarker") {
+		t.Fatal("globally Restricted content was indexed")
+	}
+
+	writeFiles(t, allowed, map[string]string{"allowed.txt": "AllowedRebuildMarker changed\n"})
+	gitCommitAll(t, allowed, "change allowed repo")
+	changes, err := DetectChanges(old, corpus, ingest.DiscoverRepos, ingest.Head)
+	if err != nil {
+		t.Fatal(err)
+	}
+	intermediateDir := filepath.Join(work, "shards2")
+	intermediate, err := Rebuild(old, changes, intermediateDir, time.Now(), ingest.Head)
+	if err != nil {
+		t.Fatalf("Rebuild unrelated change: %v", err)
+	}
+	if _, ok := intermediate.HeadOf(restricted); !ok {
+		t.Fatal("unrelated rebuild dropped Restricted repository freshness identity")
+	}
+	steady, err := DetectChanges(intermediate, corpus, ingest.DiscoverRepos, ingest.Head)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if steady.Any() {
+		t.Fatalf("Restricted repository became a perpetual freshness change: %+v", steady)
+	}
+
+	writeFiles(t, restricted, map[string]string{ingest.AIPrivacyFileName: "global_privacy_level: 3\n"})
+	relaxed, err := DetectChanges(intermediate, corpus, ingest.DiscoverRepos, ingest.Head)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(relaxed.Changed) != 1 || relaxed.Changed[0] != restricted {
+		t.Fatalf("Changed = %v, want relaxed Restricted repository", relaxed.Changed)
+	}
+	finalDir := filepath.Join(work, "shards3")
+	if _, err := Rebuild(intermediate, relaxed, finalDir, time.Now(), ingest.Head); err != nil {
+		t.Fatalf("Rebuild relaxed policy: %v", err)
+	}
+	if !shardFinds(t, finalDir, "PrivacyRelaxationMarker") {
+		t.Fatal("policy relaxation did not re-index the previously Restricted repository")
+	}
+}
+
 func requireGit(t *testing.T) {
 	t.Helper()
 	if _, err := exec.LookPath("git"); err != nil {

@@ -129,6 +129,9 @@ func buildCASSources(root, casDir string, discover sourceDiscoverFn, ingestRepo 
 			return nil, err
 		}
 	}
+	if _, err := preflightSourcePrivacy(sources); err != nil {
+		return nil, err
+	}
 	store, err := Open(casDir)
 	if err != nil {
 		return nil, err
@@ -139,6 +142,9 @@ func buildCASSources(root, casDir string, discover sourceDiscoverFn, ingestRepo 
 	for _, source := range sources {
 		rb, raw, refs, _, err := ingestSourceBlobs(store, source, ingestRepo, head)
 		if err != nil {
+			if ingest.IsPrivacyPolicyError(err) {
+				return nil, fmt.Errorf("blobstore: privacy preflight: %w", err)
+			}
 			// A repo that fails to ingest is skipped (not fatal), matching parity.Build.
 			continue
 		}
@@ -173,12 +179,30 @@ func ingestSourceBlobs(store *Store, source ingest.RepoSource, ingestRepo ingest
 	if err := ingest.VerifySource(source); err != nil {
 		return RepoBlobs{}, 0, 0, 0, err
 	}
+	privacyFingerprint, err := ingest.AIPrivacyFingerprint(source.Dir)
+	if err != nil {
+		return RepoBlobs{}, 0, 0, 0, err
+	}
 	files, err := ingestRepo(source.Namespace, source.Dir)
 	if err != nil {
 		return RepoBlobs{}, 0, 0, 0, err
 	}
+	currentPrivacyFingerprint, err := ingest.AIPrivacyFingerprint(source.Dir)
+	if err != nil {
+		return RepoBlobs{}, 0, 0, 0, err
+	}
+	if currentPrivacyFingerprint != privacyFingerprint {
+		return RepoBlobs{}, 0, 0, 0, &ingest.PrivacyPolicyError{
+			Path: filepath.Join(source.Dir, ingest.AIPrivacyFileName),
+			Err:  fmt.Errorf("policy changed during ingest"),
+		}
+	}
 	h, _ := head(source.Dir) // "" if unreadable; recorded as-is (commitless-repo stable)
-	rb := RepoBlobs{Dir: source.Dir, Label: source.Namespace, Head: h, ProjectID: source.ProjectID, Managed: source.Managed}
+	rb := RepoBlobs{
+		Dir: source.Dir, Label: source.Namespace, Head: h,
+		PrivacyFingerprint: currentPrivacyFingerprint,
+		ProjectID:          source.ProjectID, Managed: source.Managed,
+	}
 
 	var raw int64
 	var skipped int
@@ -208,7 +232,8 @@ func ingestSourceBlobs(store *Store, source ingest.RepoSource, ingestRepo ingest
 // RefreshCAS performs a per-blob delta refresh against an existing CAS. Given the
 // prior manifest, it re-discovers repos under root and:
 //
-//   - for a CHANGED repo (HEAD differs from the recorded one) or an ADDED repo
+//   - for a CHANGED repo (HEAD or AI-privacy fingerprint differs from the
+//     recorded one) or an ADDED repo
 //     (absent from the manifest), it re-ingests ONLY that repo and Puts its files;
 //     idempotent Put means only the repo's net-new blob SHAs are physically added,
 //     and — crucially — its co-resident repos are NOT re-ingested (the win over
@@ -228,7 +253,9 @@ func ingestSourceBlobs(store *Store, source ingest.RepoSource, ingestRepo ingest
 //
 // HEAD comparison matches parity.DetectChanges: an unreadable current HEAD is
 // normalized to "" and compared against the recorded "", so a commitless repo is
-// stable across refreshes (not a perpetual change trigger).
+// stable across refreshes (not a perpetual change trigger). Every policy is
+// validated before the CAS is opened, and the persisted privacy fingerprint
+// makes an uncommitted policy change a refresh trigger.
 //
 // It rewrites the manifest and returns the new manifest plus DeltaStats proving
 // the delta was minimal. root defaults to old.Root when empty.
@@ -252,6 +279,10 @@ func refreshCASSources(old *BlobManifest, root, casDir string, discover sourceDi
 		if err := ingest.VerifySource(source); err != nil {
 			return nil, DeltaStats{}, err
 		}
+	}
+	privacyFingerprints, err := preflightSourcePrivacy(current)
+	if err != nil {
+		return nil, DeltaStats{}, err
 	}
 	currentSet := map[string]bool{}
 	for _, source := range current {
@@ -281,6 +312,9 @@ func refreshCASSources(old *BlobManifest, root, casDir string, discover sourceDi
 			ds.AddedRepos = append(ds.AddedRepos, dir)
 			rb, raw, refs, _, err := ingestSourceBlobs(store, source, ingestRepo, head)
 			if err != nil {
+				if ingest.IsPrivacyPolicyError(err) {
+					return nil, DeltaStats{}, fmt.Errorf("blobstore: privacy preflight: %w", err)
+				}
 				ds.FailedRepos = append(ds.FailedRepos, dir)
 				continue
 			}
@@ -293,7 +327,9 @@ func refreshCASSources(old *BlobManifest, root, casDir string, discover sourceDi
 		if err != nil {
 			now = "" // normalize unreadable HEAD (commitless-repo stable)
 		}
-		if now == oldRepo.Head && sourceMatchesRepo(source, oldRepo) {
+		if now == oldRepo.Head &&
+			privacyFingerprints[dir] == oldRepo.PrivacyFingerprint &&
+			sourceMatchesRepo(source, oldRepo) {
 			// Unchanged: carry the recorded blob set forward verbatim; zero Puts.
 			m.Repos = append(m.Repos, oldRepo)
 			m.Stats.RawBytes += rawBytesOf(store, oldRepo)
@@ -304,6 +340,9 @@ func refreshCASSources(old *BlobManifest, root, casDir string, discover sourceDi
 		ds.ChangedRepos = append(ds.ChangedRepos, dir)
 		rb, raw, refs, skipped, err := ingestSourceBlobs(store, source, ingestRepo, head)
 		if err != nil {
+			if ingest.IsPrivacyPolicyError(err) {
+				return nil, DeltaStats{}, fmt.Errorf("blobstore: privacy preflight: %w", err)
+			}
 			// Re-ingest FAILED for a repo that is STILL ON DISK (discover found it):
 			// this is a transient git/read error, NOT a removal. Dropping it here
 			// would silently lose all of this repo's previously searchable content
@@ -359,6 +398,18 @@ func refreshCASSources(old *BlobManifest, root, casDir string, discover sourceDi
 		return nil, DeltaStats{}, err
 	}
 	return m, ds, nil
+}
+
+func preflightSourcePrivacy(sources []ingest.RepoSource) (map[string]string, error) {
+	fingerprints := make(map[string]string, len(sources))
+	for _, source := range sources {
+		fingerprint, err := ingest.AIPrivacyFingerprint(source.Dir)
+		if err != nil {
+			return nil, fmt.Errorf("blobstore: privacy preflight: %w", err)
+		}
+		fingerprints[source.Dir] = fingerprint
+	}
+	return fingerprints, nil
 }
 
 func legacySourceDiscover(discover discoverFn, head headFn) sourceDiscoverFn {

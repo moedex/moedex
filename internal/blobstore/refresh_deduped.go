@@ -248,16 +248,13 @@ func RefreshDedupedShardDir(casDir, outShardDir string, shardBytes int64) (*pari
 		shardBytes = parity.DefaultShardBytes
 	}
 
-	// --- 1. Classify repos by HEAD: served-manifest HEAD vs current CAS HEAD. -----
-	// A repo present in the CAS but absent/different-HEAD in the served manifest is
-	// changed/added; a repo in the served manifest absent from the CAS is removed.
-	// This mirrors parity.DetectChanges, keyed on the freshness HEAD both manifests
-	// record per repo.
-	servedHead := map[string]string{}
+	// --- 1. Classify repos by freshness identity: served manifest vs current CAS. -
+	// A repo present in the CAS but absent or different by HEAD/privacy policy in
+	// the served manifest is changed/added; a repo in the served manifest absent
+	// from the CAS is removed.
 	servedKnown := map[string]bool{}
 	servedMeta := map[string]parity.RepoHead{}
 	for _, h := range oldServed.Heads {
-		servedHead[h.Dir] = h.Head
 		servedKnown[h.Dir] = true
 		servedMeta[h.Dir] = h
 	}
@@ -265,13 +262,13 @@ func RefreshDedupedShardDir(casDir, outShardDir string, shardBytes int64) (*pari
 	affected := map[string]bool{} // repo dir -> changed/added/removed
 	for _, r := range cas.Repos {
 		casByDir[r.Dir] = r
-		old, known := servedHead[r.Dir], servedKnown[r.Dir]
+		old, known := servedMeta[r.Dir], servedKnown[r.Dir]
 		if !known {
 			ds.AddedRepos = append(ds.AddedRepos, r.Dir)
 			affected[r.Dir] = true
 			continue
 		}
-		if r.Head != old {
+		if r.Head != old.Head || r.PrivacyFingerprint != old.PrivacyFingerprint {
 			ds.ChangedRepos = append(ds.ChangedRepos, r.Dir)
 			affected[r.Dir] = true
 		}
@@ -322,6 +319,11 @@ func RefreshDedupedShardDir(casDir, outShardDir string, shardBytes int64) (*pari
 	}
 	// Newly-added repos (never in any prior shard) are always re-packed.
 	for _, dir := range ds.AddedRepos {
+		addReexport(dir)
+	}
+	// A changed repo may have had no prior shard because it was empty or globally
+	// Restricted. Re-pack it explicitly so newly eligible content is not missed.
+	for _, dir := range ds.ChangedRepos {
 		addReexport(dir)
 	}
 
@@ -431,7 +433,6 @@ func RefreshDedupedShardDir(casDir, outShardDir string, shardBytes int64) (*pari
 
 	var (
 		shards   []parity.ShardManifest
-		heads    []parity.RepoHead
 		shardIdx int
 	)
 	// nextShard returns the PHYSICAL write path (in tmpDir) and the FINAL recorded
@@ -453,11 +454,6 @@ func RefreshDedupedShardDir(casDir, outShardDir string, shardBytes int64) (*pari
 		}
 		shards = append(shards, parity.ShardManifest{Path: rec, Repos: cs.repos, ContentBytes: cs.bytes})
 		ds.ShardsCarried++
-		for _, r := range cs.repos {
-			head := servedMeta[r]
-			head.Head = headForServed(servedHead, casByDir, r)
-			heads = append(heads, head)
-		}
 	}
 
 	// Re-packed (rewritten) shards, written in MOEDEX05 against the SAME appender so
@@ -470,10 +466,18 @@ func RefreshDedupedShardDir(casDir, outShardDir string, shardBytes int64) (*pari
 		}
 		shards = append(shards, parity.ShardManifest{Path: rec, Repos: st.repos, ContentBytes: st.bytes})
 		ds.ShardsRewritten++
-		for _, r := range st.repos {
-			repo := casByDir[r]
-			heads = append(heads, parity.RepoHead{Dir: r, Label: repo.Label, Head: repo.Head, ProjectID: repo.ProjectID, Managed: repo.Managed})
-		}
+	}
+
+	// Freshness identity is independent of shard membership. In particular, a
+	// globally Restricted repo contributes zero blobs but must remain represented
+	// so policy relaxation is detected and steady-state refreshes stay stable.
+	heads := make([]parity.RepoHead, 0, len(cas.Repos))
+	for _, repo := range cas.Repos {
+		heads = append(heads, parity.RepoHead{
+			Dir: repo.Dir, Label: repo.Label, Head: repo.Head,
+			PrivacyFingerprint: repo.PrivacyFingerprint,
+			ProjectID:          repo.ProjectID, Managed: repo.Managed,
+		})
 	}
 
 	// The extended content store was already written into tmpDir above, so the temp
@@ -553,17 +557,6 @@ func fsyncDirFiles(dir string) error {
 		_ = d.Close()
 	}
 	return nil
-}
-
-// headForServed returns the HEAD to record for a carried-forward repo: prefer the
-// current CAS HEAD (the freshest known), else the prior served HEAD. A carried repo
-// is by construction unchanged, so these agree; the fallback covers the (impossible
-// for carried) case of a repo absent from the CAS.
-func headForServed(servedHead map[string]string, casByDir map[string]RepoBlobs, dir string) string {
-	if r, ok := casByDir[dir]; ok {
-		return r.Head
-	}
-	return servedHead[dir]
 }
 
 // copyFile copies src to dst byte-for-byte (mirrors parity.copyFile; duplicated to

@@ -10,8 +10,9 @@ package parity
 //
 //   1. Build() records a Manifest alongside the shards: for each shard, which
 //      repos contributed blobs to it; for each repo, its git HEAD at ingest.
-//   2. DetectChanges() compares each repo's current `git rev-parse HEAD` against
-//      the manifest to find changed / added / removed repos.
+//   2. DetectChanges() compares each repo's current `git rev-parse HEAD` and
+//      AI-privacy fingerprint against the manifest to find changed / added /
+//      removed repos.
 //   3. Rebuild() rebuilds ONLY the shards whose repo set intersects the changed
 //      repos (re-ingesting every repo that shared those shards), copies the
 //      untouched shards forward byte-for-byte, and writes a fresh manifest.
@@ -67,6 +68,9 @@ type RepoHead struct {
 	Label string `json:"label"`
 	// Head is `git rev-parse HEAD` at ingest time; "" if it could not be read.
 	Head string `json:"head"`
+	// PrivacyFingerprint records the effective .ai-privacy.yml rules applied at
+	// ingest time, so an uncommitted policy edit still invalidates freshness.
+	PrivacyFingerprint string `json:"ai_privacy,omitempty"`
 	// ProjectID and Managed preserve stable source identity for managed corpora.
 	ProjectID int64 `json:"project_id,omitempty"`
 	Managed   bool  `json:"managed,omitempty"`
@@ -187,10 +191,11 @@ func newManifestBuilder(root, shardDir string) *manifestBuilder {
 }
 
 // recordHead notes a repo's HEAD at ingest. Call once per repo as it's ingested.
-func (mb *manifestBuilder) recordHead(source ingest.RepoSource) {
+func (mb *manifestBuilder) recordHead(source ingest.RepoSource, privacyFingerprint string) {
 	mb.heads = append(mb.heads, RepoHead{
 		Dir: source.Dir, Label: source.Namespace, Head: source.LockedCommit,
-		ProjectID: source.ProjectID, Managed: source.Managed,
+		PrivacyFingerprint: privacyFingerprint,
+		ProjectID:          source.ProjectID, Managed: source.Managed,
 	})
 }
 
@@ -268,10 +273,11 @@ func (c Changes) affectedRepoSet() map[string]bool {
 }
 
 // DetectChanges compares a prior manifest against the live corpus under root and
-// classifies every repo. headFn reads a repo's current HEAD (inject for tests;
-// pass ingest.Head in production). discoverFn lists current repo dirs (inject
-// ingest.DiscoverRepos in production). A repo whose HEAD cannot be read is
-// treated as changed (conservative: rebuild rather than serve stale).
+// classifies every repo. It validates and fingerprints every privacy policy
+// before checking HEAD, so malformed policies abort and uncommitted policy edits
+// trigger a rebuild. headFn reads a repo's current HEAD (inject for tests; pass
+// ingest.Head in production). discoverFn lists current repo dirs (inject
+// ingest.DiscoverRepos in production).
 func DetectChanges(m *Manifest, root string,
 	discoverFn func(string) ([]string, error),
 	headFn func(string) (string, error)) (Changes, error) {
@@ -284,14 +290,18 @@ func DetectChanges(m *Manifest, root string,
 	for _, d := range current {
 		currentSet[d] = true
 	}
-	manifestSet := map[string]bool{}
+	manifestByDir := map[string]RepoHead{}
 	for _, h := range m.Heads {
-		manifestSet[h.Dir] = true
+		manifestByDir[h.Dir] = h
 	}
 
 	var ch Changes
 	for _, dir := range current {
-		old, known := m.HeadOf(dir)
+		privacyFingerprint, err := ingest.AIPrivacyFingerprint(dir)
+		if err != nil {
+			return Changes{}, fmt.Errorf("privacy preflight: %w", err)
+		}
+		oldRepo, known := manifestByDir[dir]
 		if !known {
 			ch.Added = append(ch.Added, dir)
 			continue
@@ -307,7 +317,7 @@ func DetectChanges(m *Manifest, root string,
 			// (conservatively) flagged changed.
 			now = ""
 		}
-		if now != old {
+		if now != oldRepo.Head || privacyFingerprint != oldRepo.PrivacyFingerprint {
 			ch.Changed = append(ch.Changed, dir)
 		}
 	}
@@ -353,8 +363,14 @@ func Rebuild(old *Manifest, ch Changes, newShardDir string, builtAt time.Time,
 		return nil, fmt.Errorf("discover rebuild sources: %w", err)
 	}
 	sourceByDir := make(map[string]ingest.RepoSource, len(sources))
+	privacyFingerprints := make(map[string]string, len(sources))
 	for _, source := range sources {
 		sourceByDir[source.Dir] = source
+		fingerprint, err := ingest.AIPrivacyFingerprint(source.Dir)
+		if err != nil {
+			return nil, fmt.Errorf("privacy preflight: %w", err)
+		}
+		privacyFingerprints[source.Dir] = fingerprint
 	}
 
 	// Partition old shards into carry-forward vs rebuild, and collect the repo
@@ -392,6 +408,12 @@ func Rebuild(old *Manifest, ch Changes, newShardDir string, builtAt time.Time,
 	for _, r := range ch.Added {
 		addReingest(r)
 	}
+	// A previously empty or globally Restricted repo has no shard membership;
+	// include changed repos explicitly so a policy relaxation or newly-added file
+	// can make them searchable again.
+	for _, r := range ch.Changed {
+		addReingest(r)
+	}
 
 	m := &Manifest{
 		Version:  ManifestVersion,
@@ -413,6 +435,14 @@ func Rebuild(old *Manifest, ch Changes, newShardDir string, builtAt time.Time,
 	for _, h := range old.Heads {
 		headByDir[h.Dir] = h
 	}
+	emittedHead := map[string]bool{}
+	appendHead := func(h RepoHead) {
+		if emittedHead[h.Dir] {
+			return
+		}
+		emittedHead[h.Dir] = true
+		m.Heads = append(m.Heads, h)
+	}
 	for _, sm := range carry {
 		dst := nextShardPath()
 		if err := copyFile(sm.Path, dst); err != nil {
@@ -421,7 +451,7 @@ func Rebuild(old *Manifest, ch Changes, newShardDir string, builtAt time.Time,
 		m.Shards = append(m.Shards, ShardManifest{Path: dst, Repos: sm.Repos, ContentBytes: sm.ContentBytes})
 		for _, r := range sm.Repos {
 			if !contains(ch.Removed, r) {
-				m.Heads = append(m.Heads, headByDir[r])
+				appendHead(headByDir[r])
 			}
 		}
 	}
@@ -439,8 +469,12 @@ func Rebuild(old *Manifest, ch Changes, newShardDir string, builtAt time.Time,
 		if err := ingest.VerifySource(source); err != nil {
 			return nil, err
 		}
+		privacyFingerprint := privacyFingerprints[dir]
 		files, err := ingest.Repo(source.Namespace, dir)
 		if err != nil {
+			if ingest.IsPrivacyPolicyError(err) {
+				return nil, fmt.Errorf("privacy preflight: %w", err)
+			}
 			// Repo vanished or unreadable: skip it (treated as removed).
 			continue
 		}
@@ -455,16 +489,43 @@ func Rebuild(old *Manifest, ch Changes, newShardDir string, builtAt time.Time,
 			ix.AddFile(f.Repo, f.RelPath, f.AbsPath, f.SHA, f.Content)
 			bytes += int64(len(f.Content))
 		}
+		head, _ := headFn(dir)
+		currentPrivacyFingerprint, err := ingest.AIPrivacyFingerprint(dir)
+		if err != nil {
+			return nil, fmt.Errorf("privacy preflight: %w", err)
+		}
+		if currentPrivacyFingerprint != privacyFingerprint {
+			return nil, &ingest.PrivacyPolicyError{
+				Path: filepath.Join(dir, ingest.AIPrivacyFileName),
+				Err:  fmt.Errorf("policy changed during ingest"),
+			}
+		}
+		repoHead := RepoHead{
+			Dir: dir, Label: source.Namespace, Head: head,
+			PrivacyFingerprint: currentPrivacyFingerprint,
+			ProjectID:          source.ProjectID, Managed: source.Managed,
+		}
 		if ix.NumBlobs() == 0 {
+			// A globally Restricted repository intentionally contributes no shard,
+			// but its HEAD remains recorded so freshness does not classify it as a
+			// perpetually-added source on every refresh.
+			appendHead(repoHead)
 			continue
 		}
 		dst := nextShardPath()
 		if err := diskstore.Save(ix, dst); err != nil {
 			return nil, fmt.Errorf("save rebuilt shard for %s: %w", dir, err)
 		}
-		head, _ := headFn(dir)
 		m.Shards = append(m.Shards, ShardManifest{Path: dst, Repos: []string{dir}, ContentBytes: bytes})
-		m.Heads = append(m.Heads, RepoHead{Dir: dir, Label: source.Namespace, Head: head, ProjectID: source.ProjectID, Managed: source.Managed})
+		appendHead(repoHead)
+	}
+
+	// Preserve repositories that intentionally had no shard (for example a
+	// globally Restricted repository) when an unrelated repo triggered Rebuild.
+	for _, h := range old.Heads {
+		if !contains(ch.Removed, h.Dir) && !affected[h.Dir] {
+			appendHead(h)
+		}
 	}
 
 	if err := WriteManifest(filepath.Join(newShardDir, ManifestName), m); err != nil {

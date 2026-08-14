@@ -234,6 +234,17 @@ func buildShards(root, shardDir string, shardBytes int64, sel index.GramSelector
 	if err != nil {
 		return nil, 0, 0, fmt.Errorf("discover sources: %w", err)
 	}
+	privacyFingerprints := make(map[string]string, len(sources))
+	for _, source := range sources {
+		if err := ingest.VerifySource(source); err != nil {
+			return nil, 0, 0, err
+		}
+		fingerprint, err := ingest.AIPrivacyFingerprint(source.Dir)
+		if err != nil {
+			return nil, 0, 0, fmt.Errorf("privacy preflight: %w", err)
+		}
+		privacyFingerprints[source.Dir] = fingerprint
+	}
 	logf("discovered %d repos under %s", len(sources), root)
 
 	var (
@@ -267,17 +278,31 @@ func buildShards(root, shardDir string, shardBytes int64, sel index.GramSelector
 	}
 
 	for _, source := range sources {
-		if err := ingest.VerifySource(source); err != nil {
-			return nil, 0, 0, err
-		}
 		repo := source.Dir
 		files, err := ingest.Repo(source.Namespace, repo)
 		if err != nil {
+			if ingest.IsPrivacyPolicyError(err) {
+				return nil, 0, 0, fmt.Errorf("privacy preflight: %w", err)
+			}
 			logf("  skip %s: %v", repo, err)
 			continue
 		}
+		currentPrivacyFingerprint, err := ingest.AIPrivacyFingerprint(repo)
+		if err != nil {
+			return nil, 0, 0, fmt.Errorf("privacy preflight: %w", err)
+		}
+		if currentPrivacyFingerprint != privacyFingerprints[repo] {
+			return nil, 0, 0, &ingest.PrivacyPolicyError{
+				Path: filepath.Join(repo, ingest.AIPrivacyFileName),
+				Err:  fmt.Errorf("policy changed during ingest"),
+			}
+		}
 		head, _ := ingest.Head(repo) // "" if unreadable; recorded as-is
-		heads = append(heads, parity.RepoHead{Dir: repo, Label: source.Namespace, Head: head, ProjectID: source.ProjectID, Managed: source.Managed})
+		heads = append(heads, parity.RepoHead{
+			Dir: repo, Label: source.Namespace, Head: head,
+			PrivacyFingerprint: currentPrivacyFingerprint,
+			ProjectID:          source.ProjectID, Managed: source.Managed,
+		})
 
 		contributed := false
 		seen := map[string]bool{}

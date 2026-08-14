@@ -63,7 +63,11 @@ func exportShards(m *BlobManifest, store *Store, outShardDir string, shardBytes 
 	}
 
 	for _, r := range m.Repos {
-		heads = append(heads, parity.RepoHead{Dir: r.Dir, Label: r.Label, Head: r.Head, ProjectID: r.ProjectID, Managed: r.Managed})
+		heads = append(heads, parity.RepoHead{
+			Dir: r.Dir, Label: r.Label, Head: r.Head,
+			PrivacyFingerprint: r.PrivacyFingerprint,
+			ProjectID:          r.ProjectID, Managed: r.Managed,
+		})
 		contributed := false
 		seen := map[string]bool{}
 		for _, f := range r.Files {

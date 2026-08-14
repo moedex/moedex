@@ -2,6 +2,7 @@ package blobstore
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,6 +13,7 @@ import (
 
 	"moedex/internal/diskstore"
 	"moedex/internal/ingest"
+	"moedex/internal/server"
 )
 
 // --- git fixture helpers (adapted from internal/parity/manifest_test.go) ----
@@ -360,6 +362,136 @@ func TestDeltaRefreshReusedBlobAddsZeroBytes(t *testing.T) {
 	}
 	if !hasCopy {
 		t.Error("repoB manifest missing copy.go after refresh")
+	}
+}
+
+func TestCASAIPrivacyRestrictedRepoHasNoFileReferences(t *testing.T) {
+	requireGit(t)
+	corpusRoot := t.TempDir()
+	allowed := filepath.Join(corpusRoot, "allowed")
+	restricted := filepath.Join(corpusRoot, "restricted")
+	commitGitRepo(t, allowed, map[string]string{"allowed.txt": "CASPrivacyAllowedMarker\n"})
+	commitGitRepo(t, restricted, map[string]string{
+		ingest.AIPrivacyFileName: "global_privacy_level: 1\n",
+		"restricted.txt":         "CASPrivacyRestrictedMarker\n",
+	})
+
+	casDir := t.TempDir()
+	manifest, err := BuildCAS(corpusRoot, casDir)
+	if err != nil {
+		t.Fatalf("BuildCAS: %v", err)
+	}
+	if len(manifest.Repos) != 2 {
+		t.Fatalf("manifest repo count = %d, want 2", len(manifest.Repos))
+	}
+	restrictedRepo, ok := manifest.RepoOf(restricted)
+	if !ok {
+		t.Fatal("Restricted repository must remain represented for freshness")
+	}
+	if len(restrictedRepo.Files) != 0 {
+		t.Fatalf("Restricted repository has %d file refs, want 0", len(restrictedRepo.Files))
+	}
+
+	servedDir := filepath.Join(t.TempDir(), "served")
+	if _, err := ExportShardDir(casDir, servedDir, 64); err != nil {
+		t.Fatalf("ExportShardDir: %v", err)
+	}
+	if !shardDirFinds(t, servedDir, "CASPrivacyAllowedMarker") {
+		t.Fatal("allowed content is not searchable")
+	}
+	if shardDirFinds(t, servedDir, "CASPrivacyRestrictedMarker") {
+		t.Fatal("Restricted content became searchable")
+	}
+}
+
+func TestRefreshCASAIPrivacyFailsClosedAndPreservesManifest(t *testing.T) {
+	requireGit(t)
+	corpusRoot := t.TempDir()
+	repo := filepath.Join(corpusRoot, "repo")
+	commitGitRepo(t, repo, map[string]string{"content.txt": "CASPrivacyPriorSnapshot\n"})
+
+	casDir := t.TempDir()
+	manifest, err := BuildCAS(corpusRoot, casDir)
+	if err != nil {
+		t.Fatalf("BuildCAS: %v", err)
+	}
+	manifestPath := filepath.Join(casDir, BlobManifestName)
+	before, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFiles(t, repo, map[string]string{
+		ingest.AIPrivacyFileName: "global_privacy_level: 3\nunknown_field: true\n",
+	})
+	// Leave the policy uncommitted: privacy freshness must not depend on HEAD.
+
+	if _, _, err := RefreshCAS(manifest, corpusRoot, casDir); err == nil || !ingest.IsPrivacyPolicyError(err) {
+		t.Fatalf("RefreshCAS error = %v, want PrivacyPolicyError", err)
+	}
+	after, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(after, before) {
+		t.Fatal("invalid privacy policy published a replacement CAS manifest")
+	}
+}
+
+func TestRefreshCASAIPrivacyRestrictionRemovesSearchableRefs(t *testing.T) {
+	requireGit(t)
+	corpusRoot := t.TempDir()
+	allowed := filepath.Join(corpusRoot, "allowed")
+	repo := filepath.Join(corpusRoot, "repo")
+	commitGitRepo(t, allowed, map[string]string{"allowed.txt": "CASPrivacyStillAllowed\n"})
+	commitGitRepo(t, repo, map[string]string{"content.txt": "CASPrivacyBecomesRestricted\n"})
+
+	casDir := t.TempDir()
+	manifest, err := BuildCAS(corpusRoot, casDir)
+	if err != nil {
+		t.Fatalf("BuildCAS: %v", err)
+	}
+	servedDir := filepath.Join(t.TempDir(), "served")
+	if _, _, err := ExportDedupedShardDir(casDir, servedDir, 64); err != nil {
+		t.Fatalf("ExportDedupedShardDir: %v", err)
+	}
+	if !servedDirFinds(t, servedDir, "CASPrivacyBecomesRestricted") {
+		t.Fatal("baseline content is not searchable")
+	}
+
+	writeFiles(t, repo, map[string]string{ingest.AIPrivacyFileName: "global_privacy_level: 1\n"})
+	// Leave the policy uncommitted so HEAD stays unchanged. The privacy
+	// fingerprint must still force re-ingest and remove the old references.
+	refreshed, _, err := RefreshCAS(manifest, corpusRoot, casDir)
+	if err != nil {
+		t.Fatalf("RefreshCAS: %v", err)
+	}
+	restrictedRepo, ok := refreshed.RepoOf(repo)
+	if !ok || len(restrictedRepo.Files) != 0 {
+		t.Fatalf("restricted refreshed repo = %+v, present=%v; want present with zero refs", restrictedRepo, ok)
+	}
+	if _, _, err := RefreshDedupedShardDir(casDir, servedDir, 64); err != nil {
+		t.Fatalf("RefreshDedupedShardDir: %v", err)
+	}
+	if servedDirFinds(t, servedDir, "CASPrivacyBecomesRestricted") {
+		t.Fatal("content remained searchable after repository became Restricted")
+	}
+	if !servedDirFinds(t, servedDir, "CASPrivacyStillAllowed") {
+		t.Fatal("unrelated allowed content vanished during privacy refresh")
+	}
+
+	writeFiles(t, repo, map[string]string{ingest.AIPrivacyFileName: "global_privacy_level: 3\n"})
+	relaxed, _, err := RefreshCAS(refreshed, corpusRoot, casDir)
+	if err != nil {
+		t.Fatalf("RefreshCAS relaxed policy: %v", err)
+	}
+	if _, _, err := RefreshDedupedShardDir(casDir, servedDir, 64); err != nil {
+		t.Fatalf("RefreshDedupedShardDir relaxed policy: %v", err)
+	}
+	if !servedDirFinds(t, servedDir, "CASPrivacyBecomesRestricted") {
+		t.Fatal("policy relaxation did not re-export the previously Restricted content")
+	}
+	if relaxedRepo, ok := relaxed.RepoOf(repo); !ok || len(relaxedRepo.Files) == 0 {
+		t.Fatalf("relaxed repo = %+v, present=%v; want restored file refs", relaxedRepo, ok)
 	}
 }
 
@@ -1185,6 +1317,26 @@ func shardDirFinds(t *testing.T, shardDir, needle string) bool {
 		}
 	}
 	return false
+}
+
+// servedDirFinds queries a served shard directory through the production
+// loader. Unlike shardDirFinds, it supports both inlined and deduped shards.
+func servedDirFinds(t *testing.T, shardDir, needle string) bool {
+	t.Helper()
+	corpus, err := server.Open(shardDir)
+	if err != nil {
+		t.Fatalf("open served shard dir: %v", err)
+	}
+	defer func() {
+		if err := corpus.Close(); err != nil {
+			t.Errorf("close served shard dir: %v", err)
+		}
+	}()
+	matches, _, err := corpus.Literal(context.Background(), needle)
+	if err != nil {
+		t.Fatalf("literal %q: %v", needle, err)
+	}
+	return len(matches) != 0
 }
 
 // totalShardBlobs sums distinct blobs across all exported shards.

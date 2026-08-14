@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -109,6 +110,12 @@ func CorpusRoot() (string, bool) {
 // a partial corpus still yields a usable index; callers should check counts and
 // skip when the union is empty.
 func BuildPooledIndex(root string, repos []CorpusRepo) (*index.Index, int, map[string]int, error) {
+	for _, repo := range repos {
+		dir := filepath.Join(root, repo.RelDir)
+		if _, err := ingest.AIPrivacyFingerprint(dir); err != nil {
+			return nil, 0, nil, fmt.Errorf("privacy preflight: %w", err)
+		}
+	}
 	ix := index.New()
 	perRepo := make(map[string]int, len(repos))
 	total := 0
@@ -116,6 +123,9 @@ func BuildPooledIndex(root string, repos []CorpusRepo) (*index.Index, int, map[s
 		dir := filepath.Join(root, r.RelDir)
 		files, err := ingest.Repo(r.Repo, dir)
 		if err != nil {
+			if ingest.IsPrivacyPolicyError(err) {
+				return nil, 0, nil, fmt.Errorf("privacy preflight: %w", err)
+			}
 			perRepo[r.Repo] = 0
 			continue
 		}

@@ -72,6 +72,11 @@ func run(root, sample string) error {
 	if err != nil {
 		return fmt.Errorf("discover repos under %s: %w", root, err)
 	}
+	for _, repo := range repos {
+		if _, err := ingest.AIPrivacyFingerprint(repo); err != nil {
+			return fmt.Errorf("privacy preflight: %w", err)
+		}
+	}
 	fmt.Printf("found %d git repos under %s\n", len(repos), root)
 
 	sb := index.NewBuildTarget(sel)
@@ -81,6 +86,9 @@ func run(root, sample string) error {
 	for _, r := range repos {
 		files, err := ingest.Repo(filepath.Base(r), r)
 		if err != nil {
+			if ingest.IsPrivacyPolicyError(err) {
+				return fmt.Errorf("privacy preflight: %w", err)
+			}
 			fmt.Fprintf(os.Stderr, "  skip %s: %v\n", r, err)
 			continue
 		}

@@ -104,6 +104,165 @@ func TestRepoSkipsBinary(t *testing.T) {
 	}
 }
 
+func TestRepoAIPrivacyGlobalRestrictedReadsNoContent(t *testing.T) {
+	dir := gitRepo(t, map[string][]byte{
+		AIPrivacyFileName: []byte("global_privacy_level: 1\n"),
+		"secret.txt":      []byte("never expose this marker\n"),
+	})
+
+	files, err := Repo("restricted", dir)
+	if err != nil {
+		t.Fatalf("Repo: %v", err)
+	}
+	if len(files) != 0 {
+		t.Fatalf("globally Restricted repo returned %d files: %v", len(files), files)
+	}
+}
+
+func TestRepoAIPrivacyFiltersRestrictedOverridesBeforeRead(t *testing.T) {
+	dir := gitRepo(t, map[string][]byte{
+		AIPrivacyFileName: []byte(`global_privacy_level: 3
+privacy_levels:
+  - path: /secrets/
+    privacy_level: 1
+  - path: /exact.txt
+    privacy_level: 1
+`),
+		"public.txt":          []byte("searchable\n"),
+		"exact.txt":           []byte("restricted exact file\n"),
+		"secrets/token.txt":   []byte("restricted child\n"),
+		"secrets-named.txt":   []byte("not beneath restricted folder\n"),
+		"nested/ordinary.txt": []byte("also searchable\n"),
+	})
+
+	files, err := Repo("mixed", dir)
+	if err != nil {
+		t.Fatalf("Repo: %v", err)
+	}
+	m := byRel(files)
+	for _, restricted := range []string{AIPrivacyFileName, "exact.txt", "secrets/token.txt"} {
+		if _, ok := m[restricted]; ok {
+			t.Errorf("Restricted/bootstrap path should not be indexed: %s", restricted)
+		}
+	}
+	for _, allowed := range []string{"public.txt", "secrets-named.txt", "nested/ordinary.txt"} {
+		if _, ok := m[allowed]; !ok {
+			t.Errorf("allowed path should be indexed: %s", allowed)
+		}
+	}
+}
+
+func TestRepoAIPrivacyMalformedPolicyFailsClosed(t *testing.T) {
+	cases := map[string]string{
+		"unknown field": `global_privacy_level: 3
+unexpected: true
+`,
+		"more permissive global override": `global_privacy_level: 2
+privacy_levels:
+  - path: /public/
+    privacy_level: 3
+`,
+		"more permissive ancestor override": `global_privacy_level: 3
+privacy_levels:
+  - path: /internal/
+    privacy_level: 1
+  - path: /internal/child/
+    privacy_level: 2
+`,
+		"unsafe path": `global_privacy_level: 3
+privacy_levels:
+  - path: /safe/../escape/
+    privacy_level: 1
+`,
+	}
+	for name, policy := range cases {
+		t.Run(name, func(t *testing.T) {
+			dir := gitRepo(t, map[string][]byte{
+				AIPrivacyFileName: []byte(policy),
+				"content.txt":     []byte("must not be read after a bad policy\n"),
+			})
+			if _, err := Repo("bad-policy", dir); err == nil || !IsPrivacyPolicyError(err) {
+				t.Fatalf("Repo error = %v, want PrivacyPolicyError", err)
+			}
+		})
+	}
+}
+
+func TestRepoAIPrivacyMissingOrEmptyDefaultsInternal(t *testing.T) {
+	for name, files := range map[string]map[string][]byte{
+		"missing": {"content.txt": []byte("default internal\n")},
+		"empty":   {AIPrivacyFileName: nil, "content.txt": []byte("default internal\n")},
+	} {
+		t.Run(name, func(t *testing.T) {
+			dir := gitRepo(t, files)
+			got, err := Repo("default", dir)
+			if err != nil {
+				t.Fatalf("Repo: %v", err)
+			}
+			m := byRel(got)
+			if _, ok := m["content.txt"]; !ok {
+				t.Fatalf("missing/empty policy did not default to level 3: %v", got)
+			}
+			if _, ok := m[AIPrivacyFileName]; ok {
+				t.Fatal("bootstrap policy file must not become searchable content")
+			}
+		})
+	}
+}
+
+func TestRepoSkipsTrackedSymlinkContent(t *testing.T) {
+	dir := gitRepo(t, map[string][]byte{"target.txt": []byte("ordinary content\n")})
+	if err := os.Symlink("target.txt", filepath.Join(dir, "alias.txt")); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("git", "-C", dir, "add", "alias.txt")
+	cmd.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git add symlink: %v\n%s", err, out)
+	}
+
+	files, err := Repo("symlink", dir)
+	if err != nil {
+		t.Fatalf("Repo: %v", err)
+	}
+	m := byRel(files)
+	if _, ok := m["alias.txt"]; ok {
+		t.Fatal("tracked symlink must not be followed into searchable content")
+	}
+	if _, ok := m["target.txt"]; !ok {
+		t.Fatal("ordinary tracked target should remain searchable")
+	}
+}
+
+func TestCorpusAIPrivacyPoliciesParse(t *testing.T) {
+	root := os.Getenv("MOEDEX_PRIVACY_CORPUS")
+	if root == "" {
+		t.Skip("set MOEDEX_PRIVACY_CORPUS to validate a real corpus without reading repository content")
+	}
+	repos, err := DiscoverRepos(root)
+	if err != nil {
+		t.Fatalf("discover corpus repositories: %v", err)
+	}
+	policyCount := 0
+	for _, repo := range repos {
+		policyPath := filepath.Join(repo, AIPrivacyFileName)
+		if _, err := os.Lstat(policyPath); err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			t.Fatalf("inspect privacy policy: %v", err)
+		}
+		policyCount++
+		if _, err := loadPrivacyPolicy(repo); err != nil {
+			t.Fatalf("validate privacy policy: %v", err)
+		}
+	}
+	if policyCount == 0 {
+		t.Fatal("corpus contains no .ai-privacy.yml files")
+	}
+	t.Logf("validated %d .ai-privacy.yml files", policyCount)
+}
+
 func TestRepoStripsBOM(t *testing.T) {
 	bom := []byte{0xEF, 0xBB, 0xBF}
 	body := []byte("package main\n")
