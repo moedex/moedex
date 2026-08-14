@@ -1,9 +1,9 @@
 ---
-status: awaiting-operator-approval
+status: ready-for-cutover
 phase: 02-managed-corpus-integration
-owner: "<operator approval pending>"
+owner: "<soak owner pending>"
 started: "2026-08-14T09:29:00-06:00"
-updated: "2026-08-14T12:51:55-06:00"
+updated: "2026-08-14T13:48:46-06:00"
 soak_until: "<pending operator-selected soak window>"
 ---
 
@@ -20,6 +20,7 @@ usernames, or other corpus membership details.
 | Corpus snapshot / lock digest | No managed lock | `5030891ff8b5e530785683fecd80503962c3b61e` / `sha256:a9a9be4a753e2757bf43783cbc057c267e5ea457f5501bf5cf397b1a7d45053a` |
 | CAS directory / manifest digest | No legacy CAS manifest | Isolated sibling / `sha256:0b8c7b0c737be38f8a5e08b7f226968d99d0f5ffb316de326dbd06a6d813dc9d` |
 | Served shard directory / fingerprint | Retained live / `sha256:7f1cfa10e4f95463835056a57ef62aabdc6f023a7639244e828b9149d2edd54c` | Isolated sibling / `sha256:9d2d165f652d40c1ee98d08292f7e8bd9246f8d8bc5ef89aa3c5942817076c11` |
+| Dense sidecar | Retained v2, fingerprint-fresh | v2, fingerprint-fresh / meta `sha256:9608916becd6e31038eb5abc5302a5c68b46e8d39815a0aa0a98821218a114f8` |
 
 ## Redacted counts
 
@@ -32,6 +33,7 @@ usernames, or other corpus membership details.
 | Level-1 path overrides | 1 | 1 | candidate contributes zero indexed file references |
 | Privacy-eligible indexed files | unavailable in legacy manifest | 63,225 | candidate equals its ripgrep oracle scope |
 | Served blobs | 48,300 | 55,080 | explained by scope expansion and four-repo refresh |
+| Dense chunks | 930,725 | 942,718 | 852,492 reused; 90,226 new |
 | CAS unique blobs | n/a | 53,205 | 1.23x raw/stored dedup ratio |
 | Privacy-eligible file references | unavailable in legacy manifest | 63,225 | restricted references = 0 |
 
@@ -41,6 +43,8 @@ usernames, or other corpus membership details.
       VPN/API reachability, and Git transport checks.
 - [x] `moedex-index doctor -shard-dir <new-shards>` passes with zero critical findings.
 - [x] `moedex-index check -shard-dir <new-shards> -corpus <new-corpus>` reports no changes.
+- [x] Dense sidecar is v2/incremental-ready, contains 942,718 chunks, and its fingerprint matches
+      the managed shard snapshot.
 - [x] Policy-only audit validates every canonical `.ai-privacy.yml` without reading repository
       content; the current conventional-corpus baseline is 114 policies and zero `.yaml` aliases.
 - [x] CAS and served manifests contain privacy fingerprints for every repository; every global or
@@ -49,8 +53,9 @@ usernames, or other corpus membership details.
 - [x] Hermetic conventional-clone versus managed-submodule comparison passes for
       `(path_with_namespace, relative_path, line, matched_text)` across direct, CAS, deduped,
       refresh, and ripgrep paths.
-- [ ] Previous-live versus candidate equality is not satisfiable because the retained live index
-      has 359 heads and the managed candidate has 491. Operator must approve this scope expansion.
+- [x] Previous-live versus candidate equality is not satisfiable because the retained live index
+      has 359 heads and the managed candidate has 491. The operator approved this intentional
+      scope expansion on 2026-08-14; archived GitLab projects contribute zero candidate-only paths.
 - [x] One scheduled-equivalent refresh completes in the order managed sync → CAS refresh →
       deduped export → sidecars → warm reload.
 - [x] A forced pre-export failure leaves the previous served snapshot searchable.
@@ -96,12 +101,21 @@ post-refresh parity:
   submodule worktree continue to fail closed on local changes.
 - The scheduled-equivalent refresh advanced four repositories by 13 net-new blobs. All privacy,
   freshness, health, and full-corpus parity gates were rerun against the resulting lock.
+- The macOS serve and refresh templates initially could have refreshed the managed corpus while
+  continuing to serve legacy shards. The three corpus/CAS/shard paths now render together, and a
+  hermetic installed-plist test prevents that split-brain configuration.
+- The first dense candidate build was stopped before publication after confirming it had no reuse
+  seed. Copying the retained v2 store into the sibling enabled content-key reuse; the incremental
+  run completed in 11 minutes with 852,492 reused and 90,226 new chunks.
 
 ## Configuration switch
 
-- Switch approved by: **pending**
+- Scope expansion approved by: **operator, 2026-08-14**
+- Production configuration switch approved by: **pending explicit approval with soak owner/window**
 - Configuration changed: **none; live launchd configuration remains untouched**
 - Previous configured paths retained at: retained live paths; local values redacted
+- Token rotation: completed; the legacy-path daemon was restarted and passed `/healthz` plus an
+  authenticated MCP request with the rotated token
 - Health immediately after SIGHUP: isolated test daemon passed; production switch not attempted
 
 ## Rollback
@@ -123,11 +137,12 @@ Rollback exercised by: hermetic forced-export-failure test at
 - Scheduled refreshes observed: 1 isolated scheduled-equivalent refresh
 - VPN/glab/Git transport failures: 0
 - Freshness/health/parity incidents: 0 after the documented auto-fixed defects above
-- Final outcome: awaiting operator approval
-- Approval: pending
+- Final outcome: ready for cutover; legacy service remains healthy
+- Approval: scope expansion approved; production rebootstrap pending named soak owner/window
 
 ## Open checkpoint
 
-The candidate itself is green. Production cutover and ADR 0020 Phase 3 remain blocked until an
-operator explicitly approves the 359 → 491 served-project scope expansion, names the soak owner
-and window, and supplies the `approved` resume signal required by the phase plan.
+The candidate itself is green, and the operator approved the 359 → 491 served-project scope
+expansion. Production cutover and ADR 0020 Phase 3 remain blocked until the operator names the soak
+owner and window and explicitly approves rebootstrap of both launchd agents onto the three managed
+paths. The incomplete approval was not applied; the legacy configuration remains live and healthy.

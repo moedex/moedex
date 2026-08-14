@@ -9,7 +9,7 @@ verification contract for one delivery gate.
 | Phase | Execution plan | ADR | Wave | Depends on | Status |
 |---|---|---|---:|---|---|
 | 1 | [Managed corpus foundation](./phases/01-managed-corpus-foundation/PLAN.md) | [0019](../adr/0019-moedex-managed-submodule-corpus.md) | 1 | — | [Complete](./phases/01-managed-corpus-foundation/SUMMARY.md) |
-| 2 | [Managed corpus integration and rollout](./phases/02-managed-corpus-integration/PLAN.md) | [0019](../adr/0019-moedex-managed-submodule-corpus.md) | 2 | Phase 1 | [Awaiting operator approval](./phases/02-managed-corpus-integration/ROLLOUT.md) |
+| 2 | [Managed corpus integration and rollout](./phases/02-managed-corpus-integration/PLAN.md) | [0019](../adr/0019-moedex-managed-submodule-corpus.md) | 2 | Phase 1 | [Ready for cutover](./phases/02-managed-corpus-integration/ROLLOUT.md) |
 | 3 | [Branch acquisition and exact Git-tree ingestion](./phases/03-branch-acquisition/PLAN.md) | [0020](../adr/0020-branch-aware-indexing.md) | 3 | Phase 2 | Proposed |
 | 4 | [Branch-aware CAS and delta refresh](./phases/04-branch-aware-cas/PLAN.md) | [0020](../adr/0020-branch-aware-indexing.md) | 4 | Phase 3 | Proposed |
 | 5 | [Source provenance and MOEDEX06](./phases/05-source-provenance-format/PLAN.md) | [0020](../adr/0020-branch-aware-indexing.md) | 5 | Phase 4 | Proposed |
@@ -55,7 +55,8 @@ The six phase files follow Moe's executable-plan shape: frontmatter dependencies
 phase-produced artifacts. Phases 1 and 2 have been executed through Phase 2's blocking production
 checkpoint. Phase 2's automated evidence is captured in its
 [summary](./phases/02-managed-corpus-integration/SUMMARY.md) and
-[rollout report](./phases/02-managed-corpus-integration/ROLLOUT.md); production cutover and Phase 3
-remain blocked on explicit operator approval of the recorded scope expansion. This repository does
+[rollout report](./phases/02-managed-corpus-integration/ROLLOUT.md). The scope expansion is
+approved; production cutover and Phase 3 remain blocked on a named soak owner/window and explicit
+approval of the launchd rebootstrap. This repository does
 not currently have a `.planning/` project, so these repo-native plans are not registered in a Moe
 `ROADMAP.md` or independently certified by the Moe plan-checker.

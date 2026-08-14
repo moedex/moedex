@@ -15,7 +15,7 @@ affects: [03-branch-acquisition, 04-branch-aware-cas, deployment, indexing]
 
 actuals:
   tasks: 5
-  implementation_commits: 11
+  implementation_commits: 12
 
 tech-stack:
   added: []
@@ -48,13 +48,13 @@ requirements-completed: []
 
 duration: 3h23m
 completed: null
-status: awaiting-operator-approval
+status: ready-for-cutover
 ---
 
 # Phase 2: Managed Corpus Integration and Rollout Summary
 
-**All candidate automation gates pass; production cutover is waiting on explicit approval of the
-359-to-491 served-project scope expansion and a named soak window.**
+**All candidate automation gates pass, and the 359-to-491 scope expansion is approved. Production
+cutover is waiting on a named soak owner/window and explicit approval of the launchd rebootstrap.**
 
 ## Accomplishments
 
@@ -65,7 +65,8 @@ status: awaiting-operator-approval
 - Added strict privacy parsing and fail-closed enforcement before tracked content reads. Policy
   fingerprints now invalidate stale CAS, served, parity, and sidecar publications.
 - Built an isolated real sibling containing 491 locked repositories, a 53,205-blob CAS, six
-  MOEDEX05 served shards, token/symbol sidecars, and a tested warm-reload path.
+  MOEDEX05 served shards, token/symbol sidecars, a fingerprint-fresh 942,718-chunk dense sidecar,
+  and a tested warm-reload path.
 - Proved the post-refresh candidate against ripgrep over 63,225 eligible files and 1,046 queries
   with zero under-approximations, over-approximations, or oracle errors.
 
@@ -82,6 +83,7 @@ status: awaiting-operator-approval
 9. `dbb5f04` — ignore unmanaged root noise safely
 10. `15084f0` — audit published privacy references
 11. `ddde968` — report restricted policy counts
+12. `ccf271e` — keep managed launchd paths coherent
 
 ## Automated Evidence
 
@@ -96,6 +98,8 @@ status: awaiting-operator-approval
   mismatches or missing CAS/served identities
 - Full parity — 491/491 repos, 63,225 files, 1,046 queries, zero real divergences and zero errors
 - Test daemon — health, exact query, SIGHUP reload, and graceful shutdown pass
+- Dense sidecar — v2/incremental-ready, 942,718 chunks, fingerprint fresh; 852,492 vectors reused
+- Legacy service after token rotation — health pass and authenticated MCP `200`
 
 See [ROLLOUT.md](./ROLLOUT.md) and the root [PARITY-REPORT.md](../../../../PARITY-REPORT.md) for
 redacted aggregate evidence and the generated full-corpus report.
@@ -114,6 +118,12 @@ redacted aggregate evidence and the generated full-corpus report.
 4. **The scheduled refresh advanced four repos.** CAS added 13 blobs, rewrote four shards, carried
    two, and warm-reloaded the test daemon. Privacy, freshness, health, and full parity were rerun
    against the resulting lock.
+5. **The macOS templates did not carry all three cutover paths together.** Serve could have stayed
+   on legacy shards while refresh advanced the managed corpus. The installer now renders corpus,
+   CAS, and shard paths coherently, with a hermetic installed-plist regression test.
+6. **The initial candidate dense run had no reuse seed.** It was stopped before publication, then
+   restarted from the retained v2 store. The incremental run reused 852,492 vectors and embedded
+   only 90,226 new chunks.
 
 ## Open Human Checkpoint
 
@@ -122,15 +132,15 @@ The retained live index has 359 manifest heads and 48,300 served blobs. The mana
 candidate equals ripgrep, but literal live/candidate equality is impossible because the live scope
 is stale and smaller.
 
-The operator must:
+The operator approved the 359 → 491 scope expansion. The remaining checkpoint requires:
 
-1. approve or reject the 359 → 491 scope expansion;
-2. name the cutover/soak owner and soak window;
-3. approve the configuration switch while retaining the legacy paths for rollback; and
-4. return `approved` with the rollout-report path, as required by checkpoint 2.6.
+1. a named cutover/soak owner and soak window;
+2. explicit approval to rebootstrap both launchd agents onto the three managed paths while
+   retaining the legacy paths for rollback; and
+3. the `approved` resume signal with the rollout-report path, as required by checkpoint 2.6.
 
 Until then, the live daemon/configuration is unchanged and Phase 3 remains blocked.
 
 ---
 *Phase: 02-managed-corpus-integration*
-*Status: awaiting operator approval*
+*Status: ready for cutover*
