@@ -202,6 +202,173 @@ func TestManagedFixtureUsesLocalBareRemote(t *testing.T) {
 	}
 }
 
+func TestInitManagedCreatesCommittedSuperproject(t *testing.T) {
+	fixture := newManagedGitFixture(t)
+	root := filepath.Join(t.TempDir(), "managed corpus")
+	cfg := Config{
+		Host:        DefaultHost,
+		Root:        root,
+		Groups:      []string{"g"},
+		Concurrency: 1,
+	}
+
+	result, err := InitManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project})
+	if err != nil {
+		t.Fatalf("InitManaged: %v", err)
+	}
+	if result.Root != root || !validGitObjectID(result.SuperprojectCommit) {
+		t.Fatalf("unexpected init result: %+v", result)
+	}
+	for _, path := range []string{
+		filepath.Join(root, ".git"),
+		filepath.Join(root, ".gitmodules"),
+		CatalogPath(root),
+		LockPath(root),
+		filepath.Join(root, "g", "repo", ".git"),
+	} {
+		if _, err := os.Stat(path); err != nil {
+			t.Errorf("expected managed snapshot path %q: %v", path, err)
+		}
+	}
+
+	catalog, err := LoadCatalog(root)
+	if err != nil {
+		t.Fatalf("LoadCatalog: %v", err)
+	}
+	if catalog.Host != DefaultHost || len(catalog.GroupPolicy.TopLevelGroups) != 1 {
+		t.Fatalf("unexpected catalog: %+v", catalog)
+	}
+	lock, err := LoadLock(root, DefaultHost)
+	if err != nil {
+		t.Fatalf("LoadLock: %v", err)
+	}
+	if len(lock.Projects) != 1 || lock.Projects[0].ID != fixture.Project.ID ||
+		lock.Projects[0].DefaultCommit != fixture.Commit {
+		t.Fatalf("unexpected initial lock: %+v", lock)
+	}
+
+	if got := strings.TrimSpace(runFixtureGit(t, "-C", root, "rev-list", "--count", "HEAD")); got != "1" {
+		t.Fatalf("initialization created %s commits, want exactly one", got)
+	}
+	gitlink := runFixtureGit(t, "-C", root, "ls-tree", "HEAD", "--", fixture.Project.PathWithNamespace)
+	if !strings.Contains(gitlink, "160000 commit "+fixture.Commit) {
+		t.Fatalf("initial commit does not pin expected gitlink: %q", gitlink)
+	}
+	modulePath := strings.TrimSpace(runFixtureGit(t, "-C", root, "config", "-f", ".gitmodules", "--get", "submodule.project-101.path"))
+	if modulePath != fixture.Project.PathWithNamespace {
+		t.Fatalf("stable-ID submodule section path = %q", modulePath)
+	}
+	committedLock := runFixtureGit(t, "-C", root, "show", "HEAD:.moedex/corpus.lock.json")
+	workingLock, err := os.ReadFile(LockPath(root))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if committedLock != string(workingLock) {
+		t.Fatal("committed lock differs from working-tree lock")
+	}
+	if status := runFixtureGit(t, "-C", root, "status", "--porcelain"); status != "" {
+		t.Fatalf("initialized superproject is dirty: %q", status)
+	}
+
+	cmd := exec.Command("git", "-C", root, "config", "--local", "--get", "user.name")
+	if output, err := cmd.CombinedOutput(); err == nil || strings.TrimSpace(string(output)) != "" {
+		t.Fatalf("InitManaged persisted a repository identity: err=%v output=%q", err, output)
+	}
+}
+
+func TestInitManagedRejectsUserOwnedAndUnsafeDestinations(t *testing.T) {
+	validProject := Project{
+		ID:                9,
+		PathWithNamespace: "g/repo",
+		SSHURL:            "git@" + DefaultHost + ":g/repo.git",
+		DefaultBranch:     "main",
+	}
+
+	t.Run("non-empty directory", func(t *testing.T) {
+		root := t.TempDir()
+		sentinel := filepath.Join(root, "must-survive")
+		if err := os.WriteFile(sentinel, []byte("user data"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		var calls []call
+		_, err := InitManaged(t.Context(), fakeRunner{calls: &calls}, Config{Host: DefaultHost, Root: root}, []Project{validProject})
+		if err == nil || !strings.Contains(err.Error(), "refusing non-empty") {
+			t.Fatalf("non-empty destination error = %v", err)
+		}
+		if data, readErr := os.ReadFile(sentinel); readErr != nil || string(data) != "user data" {
+			t.Fatalf("user content changed: data=%q err=%v", data, readErr)
+		}
+		if len(calls) != 0 {
+			t.Fatalf("Git ran before non-empty destination rejection: %+v", calls)
+		}
+	})
+
+	t.Run("unmarked Git repository", func(t *testing.T) {
+		root := t.TempDir()
+		if err := os.Mkdir(filepath.Join(root, ".git"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		_, err := InitManaged(t.Context(), fakeRunner{}, Config{Host: DefaultHost, Root: root}, []Project{validProject})
+		if err == nil || !strings.Contains(err.Error(), "unmarked") {
+			t.Fatalf("unmarked repository error = %v", err)
+		}
+		if _, statErr := os.Stat(filepath.Join(root, ".git")); statErr != nil {
+			t.Fatalf("unmarked repository was modified: %v", statErr)
+		}
+	})
+
+	tests := []struct {
+		name   string
+		mutate func(*Project)
+	}{
+		{name: "parent traversal", mutate: func(p *Project) { p.PathWithNamespace = "../repo" }},
+		{name: "absolute path", mutate: func(p *Project) { p.PathWithNamespace = "/g/repo" }},
+		{name: "marker collision", mutate: func(p *Project) { p.PathWithNamespace = ".moedex/repo" }},
+		{name: "host mismatch", mutate: func(p *Project) { p.SSHURL = "git@evil.example:g/repo.git" }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := filepath.Join(t.TempDir(), "must-not-exist")
+			project := validProject
+			test.mutate(&project)
+			var calls []call
+			_, err := InitManaged(t.Context(), fakeRunner{calls: &calls}, Config{Host: DefaultHost, Root: root}, []Project{project})
+			if err == nil {
+				t.Fatalf("unsafe project was accepted: %+v", project)
+			}
+			if _, statErr := os.Stat(root); !errors.Is(statErr, os.ErrNotExist) {
+				t.Fatalf("unsafe preflight created destination: %v", statErr)
+			}
+			if len(calls) != 0 {
+				t.Fatalf("Git ran before project validation: %+v", calls)
+			}
+		})
+	}
+}
+
+func TestInitManagedFailureLeavesMarkedRecoverableRoot(t *testing.T) {
+	fixture := newManagedGitFixture(t)
+	root := filepath.Join(t.TempDir(), "interrupted")
+	missing := fixture.Project
+	missing.ID = 404
+	missing.PathWithNamespace = "g/missing"
+	missing.SSHURL = "git@" + DefaultHost + ":g/missing.git"
+
+	_, err := InitManaged(t.Context(), ExecRunner{}, Config{Host: DefaultHost, Root: root, Groups: []string{"g"}}, []Project{missing})
+	if err == nil || !strings.Contains(err.Error(), root) || !strings.Contains(err.Error(), "interrupted") {
+		t.Fatalf("interrupted initialization did not report exact marked root: %v", err)
+	}
+	if _, err := LoadCatalog(root); err != nil {
+		t.Fatalf("interrupted root is not recognizably marked: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".git")); err != nil {
+		t.Fatalf("interrupted root lost its superproject: %v", err)
+	}
+	if _, err := InitManaged(t.Context(), ExecRunner{}, Config{Host: DefaultHost, Root: root}, []Project{fixture.Project}); err == nil || !strings.Contains(err.Error(), "non-empty") {
+		t.Fatalf("rerun should not implicitly clean or adopt interrupted root: %v", err)
+	}
+}
+
 type managedGitFixture struct {
 	Project Project
 	Commit  string

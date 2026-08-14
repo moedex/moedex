@@ -147,7 +147,11 @@ func validateManagedPath(value string) error {
 		strings.Contains(value, "\\") || strings.ContainsFunc(value, unicode.IsControl) {
 		return fmt.Errorf("unsafe managed corpus path %q", value)
 	}
-	for _, part := range strings.Split(value, "/") {
+	parts := strings.Split(value, "/")
+	if len(parts) < 2 || parts[0] == ManagedDirName || parts[0] == ".git" {
+		return fmt.Errorf("unsafe managed corpus path %q", value)
+	}
+	for _, part := range parts {
 		if part == "" || part == "." || part == ".." {
 			return fmt.Errorf("unsafe managed corpus path %q", value)
 		}
