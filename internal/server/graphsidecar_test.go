@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"moedex/internal/diskstore"
+	"moedex/internal/graph"
 	"moedex/internal/graph/diskgraph"
-	"moedex/internal/graph/verify"
 	"moedex/internal/index"
 )
 
@@ -15,14 +15,16 @@ func TestBuildGraphSidecarPersistsVerifiedAdjacency(t *testing.T) {
 	dir := t.TempDir()
 	targetContent := []byte("package target\n\nfunc Target() {}\n")
 	callerContent := []byte("package caller\n\nfunc Caller() { Target() }\n")
+	targetSHA := diskstore.GitBlobSHA1(targetContent)
+	callerSHA := diskstore.GitBlobSHA1(callerContent)
 
 	target := index.New()
-	target.AddFile("target", "target.go", "/target/target.go", "target-sha", targetContent)
+	target.AddFile("target", "target.go", "/target/target.go", targetSHA, targetContent)
 	if err := diskstore.Save(target, filepath.Join(dir, "shard-0000.idx")); err != nil {
 		t.Fatal(err)
 	}
 	caller := index.New()
-	caller.AddFile("caller", "caller.go", "/caller/caller.go", "caller-sha", callerContent)
+	caller.AddFile("caller", "caller.go", "/caller/caller.go", callerSHA, callerContent)
 	if err := diskstore.Save(caller, filepath.Join(dir, "shard-0001.idx")); err != nil {
 		t.Fatal(err)
 	}
@@ -43,19 +45,27 @@ func TestBuildGraphSidecarPersistsVerifiedAdjacency(t *testing.T) {
 	callerOffset := uint64(strings.Index(string(callerContent), "Caller"))
 	evidenceOffset := uint64(strings.LastIndex(string(callerContent), "Target"))
 	targetOffset := uint64(strings.Index(string(targetContent), "Target"))
-	edges := g.Load("caller-sha", callerOffset)
+	edges := g.Load(callerSHA, callerOffset)
 	if len(edges) != 1 {
 		t.Fatalf("Caller adjacency = %#v, want one edge", edges)
 	}
 	want := diskgraph.Edge{
-		Type:           diskgraph.EdgeCalls,
-		TargetBlob:     "target-sha",
-		TargetOffset:   targetOffset,
-		Confidence:     verify.PatternConfidence,
-		EvidenceOffset: evidenceOffset,
+		Type:         diskgraph.EdgeCalls,
+		TargetBlob:   targetSHA,
+		TargetOffset: targetOffset,
+		Confidence:   graph.Pattern,
+		Evidence: graph.Evidence{
+			BlobSHA:    callerSHA,
+			ByteOffset: evidenceOffset,
+			ByteLength: uint64(len("Target")),
+		},
 	}
 	if edges[0] != want {
 		t.Fatalf("edge = %#v, want %#v", edges[0], want)
+	}
+	line, ok := edges[0].Evidence.SourceLine(callerContent)
+	if !ok || string(line) != "func Caller() { Target() }" {
+		t.Fatalf("evidence dereference = %q, %v, want caller source line", line, ok)
 	}
 }
 

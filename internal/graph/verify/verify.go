@@ -15,37 +15,19 @@ import (
 	"regexp"
 	"strings"
 
+	"moedex/internal/graph"
 	"moedex/internal/graph/candidates"
 	"moedex/internal/index"
 )
 
-// Tier names the verification strength assigned to an edge.
-type Tier uint8
+// Tier is the shared graph confidence enum.
+type Tier = graph.ConfidenceTier
 
 const (
-	// Candidate is recall-only evidence: phase 3 found the name, but this regex
-	// pass could not confirm that the occurrence is a language-level reference.
-	Candidate Tier = iota
-	// Pattern is a language-aware regex confirmation.
-	Pattern
-)
-
-// String renders a Tier for diagnostics and persisted formats added later.
-func (t Tier) String() string {
-	switch t {
-	case Pattern:
-		return "Pattern"
-	default:
-		return "Candidate"
-	}
-}
-
-// Confidence values are intentionally coarse. They leave room above Pattern for
-// later type-resolved/LSP and proven-manifest tiers while preserving weak
-// candidates below it.
-const (
-	CandidateConfidence = 0.3
-	PatternConfidence   = 0.6
+	Candidate = graph.Candidate
+	Pattern   = graph.Pattern
+	Verified  = graph.Verified
+	Proven    = graph.Proven
 )
 
 // ReferenceKind records which cheap pattern promoted an edge. It is evidence
@@ -84,9 +66,7 @@ func (k ReferenceKind) String() string {
 // candidate preserves its source/target identity and evidence type verbatim.
 type Edge struct {
 	candidates.Edge
-	Tier       Tier
-	Confidence float64
-	Kind       ReferenceKind
+	Kind ReferenceKind
 }
 
 // ScoredEdge is the descriptive name for Edge at API boundaries.
@@ -127,11 +107,10 @@ func Verify(input []candidates.Edge) []Edge {
 	patterns := make(map[patternKey]patternSet)
 	for i, candidate := range input {
 		out[i] = Edge{
-			Edge:       candidate,
-			Tier:       Candidate,
-			Confidence: CandidateConfidence,
-			Kind:       Unverified,
+			Edge: candidate,
+			Kind: Unverified,
 		}
+		out[i].Confidence = graph.Candidate
 		blob := candidate.EvidenceBlob()
 		if blob == nil || candidate.Type == candidates.SiblingDefinition || !validSite(candidate, blob.Content) {
 			continue
@@ -148,8 +127,7 @@ func Verify(input []candidates.Edge) []Edge {
 			if kind == Unverified {
 				continue
 			}
-			out[i].Tier = Pattern
-			out[i].Confidence = PatternConfidence
+			out[i].Confidence = graph.Pattern
 			out[i].Kind = kind
 			break
 		}

@@ -99,6 +99,8 @@ install: install-bins
 ## (ADR 0017). Running it needs the ONNX Runtime dylib at ONNXRUNTIME_LIB_PATH and
 ## the language servers on PATH (gopls, csharp-ls, …) — see deploy/com.moedex.serve.plist.
 install-dense: install-bins
+	@echo '=== moedex-index (-tags "onnx lsp") -> $(BINDIR) ==='
+	@go build -tags "onnx lsp" -o "$(BINDIR)/moedex-index" ./cmd/moedex-index
 	@echo '=== moedex-serve (-tags "onnx lsp") -> $(BINDIR) ==='
 	@go build -tags "onnx lsp" -o "$(BINDIR)/moedex-serve" ./cmd/moedex-serve
 	@$(MAKE) --no-print-directory install-finish
@@ -122,20 +124,25 @@ install-finish:
 	fi
 	@echo "installed moedex binaries into $(BINDIR) -- verify with: moedex-index doctor"
 
-## build-dense: build moedex-serve with the in-process ONNX embedder (-tags onnx).
+## build-dense: build moedex-index and moedex-serve with the in-process ONNX embedder (-tags onnx).
 ## Embeds the st-codesearch-distilroberta code model (int8, ~78MB) into the binary.
 ## The default build stays pure-Go with zero ML deps; only this target pulls them
 ## in. Run requires the ONNX Runtime shared library at run time (ONNXRUNTIME_LIB_PATH).
 build-dense:
+	@echo "=== go build -tags onnx ./cmd/moedex-index ==="
+	go build -tags onnx -o moedex-index-dense ./cmd/moedex-index
 	@echo "=== go build -tags onnx ./cmd/moedex-serve ==="
 	go build -tags onnx -o moedex-serve-dense ./cmd/moedex-serve
-	@echo "built ./moedex-serve-dense (run with -mcp -embed onnx; set ONNXRUNTIME_LIB_PATH)"
+	@echo "built ./moedex-index-dense and ./moedex-serve-dense (set ONNXRUNTIME_LIB_PATH)"
 
-## test-dense: run the onnx-tagged embedder test. Skips if the runtime lib is
-## absent. Set ONNXRUNTIME_LIB_PATH to the libonnxruntime shared library.
+## test-dense: run the onnx-tagged embedder, semantic-graph, and indexer tests.
+## Real model tests skip if the runtime lib is absent. The indexer suite disables
+## its automatic semantic pass because package tests build many fixture corpora;
+## server tests exercise that pass directly. Set ONNXRUNTIME_LIB_PATH to run the
+## bundled-model assertions.
 test-dense:
-	@echo "=== go test -tags onnx ./internal/embed/ ==="
-	go test -tags onnx ./internal/embed/ -count=1
+	@echo "=== go test -tags onnx (dense + semantic graph) ==="
+	MOEDEX_GRAPH_SIMILAR_TOP_K=0 go test -tags onnx ./internal/embed/ ./internal/server/ ./cmd/moedex-index/ -count=1
 
 ## build-simd: cross-build the whole tree with the optional native AVX2 set-ops
 ## kernel (internal/setops). amd64-only — the kernel uses the experimental
@@ -156,32 +163,33 @@ vet-simd:
 	GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 go test -tags moedex_simd -c -o /dev/null ./internal/setops/
 	@echo "SIMD kernel + differential test compile OK (amd64)."
 
-## build-lsp: build the experimental LSP-precise navigation arm (-tags lsp) and
-## its demo CLI moedex-nav. This is the ADR 0017 Condition-1 spike: type-resolved
-## go-to-def / find-references / find-implementations driven by a real language
-## server (gopls) out of process. It pulls NO new go.mod deps (the JSON-RPC client
-## is pure stdlib); gopls is an external binary supplied on PATH. The default
-## `make build` stays pure-Go and does not compile this arm.
+## build-lsp: build the experimental LSP-precise navigation arm (-tags lsp),
+## its demo CLI, and the indexer whose graph-sidecar pass systematically runs
+## find-references. The client is pure stdlib; language servers are external
+## binaries supplied on PATH. The default build stays pure-Go and does not
+## compile or launch this arm.
 build-lsp:
 	@echo "=== go build -tags lsp ./cmd/moedex-nav ==="
 	go build -tags lsp -o moedex-nav ./cmd/moedex-nav
-	@echo "built ./moedex-nav (needs gopls on PATH; try: ./moedex-nav -verb refs FILE:LINE:COL)"
+	@echo "=== go build -tags lsp ./cmd/moedex-index ==="
+	go build -tags lsp -o moedex-index-lsp ./cmd/moedex-index
+	@echo "built ./moedex-nav and ./moedex-index-lsp (language servers required at run time)"
 
 ## test-lsp: run the lsp-tagged navigation tests under the race detector. They
 ## drive a real gopls against self-contained throwaway Go modules (no corpus, no
 ## network) and skip if gopls is not on PATH. -race is load-bearing here: the
 ## Pool concurrency tests (ADR 0017 Condition 2) prove parallel-lane safety.
-## cmd/moedex-serve carries the ADR 0018 find_symbol/symbols_overview MCP-tool
-## tests (nav_lsp_test.go), also gopls-gated.
+## internal/server also proves the Phase 9 systematic, rate-limited graph pass,
+## including a real gopls interface-dispatch edge when gopls is available.
 test-lsp:
-	@echo "=== go test -tags lsp -race ./internal/navigate/ ./cmd/moedex-serve/ ==="
-	go test -tags lsp -race ./internal/navigate/ ./cmd/moedex-serve/ -count=1
+	@echo "=== go test -tags lsp -race ./internal/navigate/ ./internal/server/ ./cmd/moedex-serve/ ==="
+	go test -tags lsp -race ./internal/navigate/ ./internal/server/ ./cmd/moedex-serve/ -count=1
 
 ## vet-lsp: type-check the lsp-tagged navigation arm + cmd without running gopls.
 vet-lsp:
-	@echo "=== go vet -tags lsp ./internal/navigate/ ./cmd/moedex-nav/ ./cmd/moedex-serve/ ==="
-	go vet -tags lsp ./internal/navigate/ ./cmd/moedex-nav/ ./cmd/moedex-serve/
-	@echo "LSP navigation arm + moedex-nav compile OK."
+	@echo "=== go vet -tags lsp ./internal/navigate/ ./internal/server/ ./cmd/moedex-nav/ ./cmd/moedex-index/ ./cmd/moedex-serve/ ==="
+	go vet -tags lsp ./internal/navigate/ ./internal/server/ ./cmd/moedex-nav/ ./cmd/moedex-index/ ./cmd/moedex-serve/
+	@echo "LSP navigation and systematic graph arms compile OK."
 
 ## bench-setops: pure-Go set-ops benchmarks on the host arch (the always-built
 ## baseline the amd64 SIMD kernel is compared against).

@@ -78,6 +78,11 @@ type Server struct {
 	// -tags lsp). order preserves tools/list ordering; byName dispatches calls.
 	extraOrder []ToolHandler
 	byName     map[string]ToolHandler
+
+	// graph, when wired via WithGraphAnnotator, fuses the graph layer into
+	// search_context: each returned block is annotated with its graph
+	// neighborhood. Nil leaves search_context un-annotated.
+	graph GraphAnnotator
 }
 
 // ToolHandler is an additional MCP tool plugged into the server. It owns its
@@ -113,6 +118,20 @@ func WithTools(tools ...ToolHandler) Option {
 // tool-level failure (not a transport error). Exported so ToolHandler
 // implementations in other packages can produce results in the standard shape.
 func TextResult(text string, isError bool) map[string]interface{} { return textResult(text, isError) }
+
+// StructuredResult builds an MCP tools/call result with a short text fallback
+// and a typed machine-readable payload. Graph tools use this path so confidence
+// tiers and evidence links remain structured instead of being flattened into
+// presentation text.
+func StructuredResult(text string, structured any, isError bool) map[string]interface{} {
+	return map[string]interface{}{
+		"content": []interface{}{
+			map[string]interface{}{"type": "text", "text": text},
+		},
+		"structuredContent": structured,
+		"isError":           isError,
+	}
+}
 
 // Option configures a Server. All options are safe to omit; NewServer applies
 // sane defaults so existing callers keep working unchanged.
@@ -431,7 +450,7 @@ func (s *Server) handle(ctx context.Context, req *request) (response, bool) {
 func toolDescriptor() map[string]interface{} {
 	return map[string]interface{}{
 		"name":        "search_context",
-		"description": "Search the indexed code corpus and return ranked, deduplicated, token-budgeted context blocks for an LLM agent.",
+		"description": "Search the indexed code corpus and return ranked, deduplicated, token-budgeted context blocks for an LLM agent, each annotated with its code-graph neighborhood (callers, callees, consumers, publishers, dependencies, semantic siblings).",
 		"inputSchema": map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -439,6 +458,12 @@ func toolDescriptor() map[string]interface{} {
 				"token_budget": map[string]interface{}{"type": "integer", "description": "Maximum tokens for the returned context (optional)."},
 				"top_k":        map[string]interface{}{"type": "integer", "description": "Maximum number of ranked results to draw blocks from (optional)."},
 				"format":       map[string]interface{}{"type": "string", "enum": []string{"text", "structured"}, "description": "Output format (optional): \"text\" (default) renders agent-readable blocks; \"structured\" returns a typed JSON payload in structuredContent with per-block provenance (blob id, fused score, BM25 and dense components) for machine consumers."},
+				"graph_depth": map[string]interface{}{
+					"type":        "integer",
+					"minimum":     0,
+					"maximum":     MaxGraphDepth,
+					"description": fmt.Sprintf("Graph annotation radius in hops (optional, default %d). Each result block carries a \"neighbors\" field with the callers, callees, consumers, publishers, dependencies, and semantic siblings of the symbols it contains — no second graph tool call needed. 0 disables the annotation.", DefaultGraphDepth),
+				},
 			},
 			"required": []string{"query"},
 		},
@@ -452,6 +477,9 @@ type callParams struct {
 		TokenBudget int    `json:"token_budget"`
 		TopK        int    `json:"top_k"`
 		Format      string `json:"format"`
+		// GraphDepth is a pointer so an omitted argument (DefaultGraphDepth) is
+		// distinguishable from an explicit 0 (annotation off).
+		GraphDepth *int `json:"graph_depth"`
 	} `json:"arguments"`
 }
 
@@ -486,15 +514,60 @@ func (s *Server) callTool(ctx context.Context, raw json.RawMessage) (map[string]
 	default:
 		return textResult(fmt.Sprintf("unknown format: %q (want \"text\" or \"structured\")", p.Arguments.Format), true), nil
 	}
+	depth := DefaultGraphDepth
+	if p.Arguments.GraphDepth != nil {
+		depth = *p.Arguments.GraphDepth
+	}
+	if depth < 0 || depth > MaxGraphDepth {
+		return textResult(fmt.Sprintf("graph_depth must be between 0 and %d", MaxGraphDepth), true), nil
+	}
 
 	win, err := s.searcher.SearchContext(ctx, p.Arguments.Query, p.Arguments.TokenBudget, p.Arguments.TopK)
 	if err != nil {
 		return nil, err
 	}
-	if p.Arguments.Format == "structured" {
-		return structuredResult(win, s.corpusRoot), nil
+	neighbors, err := s.annotate(ctx, win.Blocks, depth)
+	if err != nil {
+		return nil, err
 	}
-	return textResult(formatWindow(win), false), nil
+	if p.Arguments.Format == "structured" {
+		return structuredResult(win, s.corpusRoot, neighbors), nil
+	}
+	return textResult(formatWindow(win, neighbors), false), nil
+}
+
+// annotate resolves the graph neighborhood of win's blocks, index-aligned with
+// them. It returns nil — meaning "leave the response un-annotated" — when no
+// annotator is wired, when the caller passed graph_depth=0, when there are no
+// blocks, or when the annotator reports that no graph is available.
+//
+// A length mismatch is a contract violation in the annotator, not a partial
+// result, so it surfaces as an error rather than silently mis-attributing one
+// block's neighborhood to another.
+func (s *Server) annotate(ctx context.Context, blocks []contextwin.ContextBlock, depth int) ([]BlockNeighbors, error) {
+	if s.graph == nil || depth <= 0 || len(blocks) == 0 {
+		return nil, nil
+	}
+	neighbors, err := s.graph.Neighbors(ctx, blocks, depth)
+	if err != nil {
+		return nil, fmt.Errorf("graph annotation: %w", err)
+	}
+	if neighbors == nil {
+		return nil, nil
+	}
+	if len(neighbors) != len(blocks) {
+		return nil, fmt.Errorf("graph annotation: %d neighbor set(s) for %d block(s)", len(neighbors), len(blocks))
+	}
+	return neighbors, nil
+}
+
+// neighborsAt returns the annotation for block i, or nil when the response is
+// un-annotated.
+func neighborsAt(neighbors []BlockNeighbors, i int) *BlockNeighbors {
+	if i < 0 || i >= len(neighbors) {
+		return nil
+	}
+	return &neighbors[i]
 }
 
 func textResult(text string, isError bool) map[string]interface{} {
@@ -507,8 +580,11 @@ func textResult(text string, isError bool) map[string]interface{} {
 }
 
 // formatWindow renders a ContextWindow as agent-readable text: a summary line
-// followed by each block under a "path:start-end (score)" header.
-func formatWindow(win contextwin.ContextWindow) string {
+// followed by each block under a "path:start-end (score)" header. When the block
+// carries a graph annotation with at least one neighbor, a single "[graph] ..."
+// line sits between the header and the code; a block with no neighbors (or an
+// un-annotated response) renders exactly as it did before graph fusion.
+func formatWindow(win contextwin.ContextWindow, neighbors []BlockNeighbors) string {
 	if len(win.Blocks) == 0 {
 		return "No matching context found."
 	}
@@ -518,8 +594,12 @@ func formatWindow(win contextwin.ContextWindow) string {
 		b.WriteString(" (truncated to fit budget)")
 	}
 	b.WriteString("\n")
-	for _, blk := range win.Blocks {
+	for i, blk := range win.Blocks {
 		fmt.Fprintf(&b, "\n--- %s:%d-%d (score %.4f) ---\n", blk.RelPath, blk.StartLine, blk.EndLine, blk.Score)
+		if line := renderNeighbors(neighborsAt(neighbors, i)); line != "" {
+			b.WriteString(line)
+			b.WriteString("\n")
+		}
 		b.WriteString(blk.Text)
 	}
 	return b.String()
@@ -557,6 +637,11 @@ type structuredBlock struct {
 	Lexical           float64 `json:"lexical"`
 	Dense             float64 `json:"dense"` // 0 when the dense arm did not fire (treat as "arm absent")
 	Text              string  `json:"text"`
+	// Neighbors is the block's graph neighborhood (phase 14). It is nil — and the
+	// field omitted — when the response is un-annotated (no graph wired or
+	// graph_depth=0); a block whose symbols have no edges carries a PRESENT
+	// annotation with empty buckets, so "off" and "nothing found" stay distinct.
+	Neighbors *BlockNeighbors `json:"neighbors,omitempty"`
 }
 
 // deriveNamespace recovers a repo's full path_with_namespace from a block's
@@ -585,7 +670,7 @@ func deriveNamespace(abs, rel, root string) string {
 	return strings.TrimPrefix(repoDir, prefix)
 }
 
-func newStructuredWindow(win contextwin.ContextWindow, corpusRoot string) structuredWindow {
+func newStructuredWindow(win contextwin.ContextWindow, corpusRoot string, neighbors []BlockNeighbors) structuredWindow {
 	sw := structuredWindow{
 		Summary: structuredSummary{
 			Blocks:        len(win.Blocks),
@@ -594,7 +679,7 @@ func newStructuredWindow(win contextwin.ContextWindow, corpusRoot string) struct
 		},
 		Blocks: make([]structuredBlock, 0, len(win.Blocks)),
 	}
-	for _, blk := range win.Blocks {
+	for i, blk := range win.Blocks {
 		sw.Blocks = append(sw.Blocks, structuredBlock{
 			Blob:              blk.Blob,
 			Repo:              blk.Repo,
@@ -607,6 +692,7 @@ func newStructuredWindow(win contextwin.ContextWindow, corpusRoot string) struct
 			Lexical:           blk.Lexical,
 			Dense:             blk.Dense,
 			Text:              blk.Text,
+			Neighbors:         neighborsAt(neighbors, i),
 		})
 	}
 	return sw
@@ -616,18 +702,24 @@ func newStructuredWindow(win contextwin.ContextWindow, corpusRoot string) struct
 // short text fallback (content) and the typed payload (structuredContent), per
 // ADR 0015. structuredContent is the machine channel; the text content keeps MCP
 // clients that ignore structuredContent functional.
-func structuredResult(win contextwin.ContextWindow, corpusRoot string) map[string]interface{} {
+func structuredResult(win contextwin.ContextWindow, corpusRoot string, neighbors []BlockNeighbors) map[string]interface{} {
 	summary := fmt.Sprintf("%d context block(s), ~%d tokens", len(win.Blocks), win.TokenEstimate)
 	if win.Truncated {
 		summary += " (truncated to fit budget)"
 	}
-	return map[string]interface{}{
-		"content": []interface{}{
-			map[string]interface{}{"type": "text", "text": summary},
-		},
-		"structuredContent": newStructuredWindow(win, corpusRoot),
-		"isError":           false,
+	if n := totalNeighbors(neighbors); n > 0 {
+		summary += fmt.Sprintf(", %d graph neighbor(s)", n)
 	}
+	return StructuredResult(summary, newStructuredWindow(win, corpusRoot, neighbors), false)
+}
+
+// totalNeighbors counts every annotated neighbor across every block.
+func totalNeighbors(neighbors []BlockNeighbors) int {
+	total := 0
+	for i := range neighbors {
+		total += neighbors[i].Total()
+	}
+	return total
 }
 
 // IndexSearcher adapts a Ranker + index into a ContextSearcher by assembling the

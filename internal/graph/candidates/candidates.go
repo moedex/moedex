@@ -60,6 +60,7 @@ import (
 	"fmt"
 	"sort"
 
+	"moedex/internal/graph"
 	"moedex/internal/index"
 	"moedex/internal/symbol"
 )
@@ -139,10 +140,12 @@ type Site struct {
 // ends are occurrences of it, which is the whole basis of the pairing and the
 // reason the pairing is a candidate rather than a fact.
 type Edge struct {
-	Name   string
-	Source Site
-	Target Site
-	Type   Type
+	Name       string
+	Source     Site
+	Target     Site
+	Type       Type
+	Confidence graph.ConfidenceTier
+	Evidence   graph.Evidence
 
 	// sourceBlob keeps the evidence bytes attached to the work item without
 	// copying them. It is deliberately private: Source remains the stable graph
@@ -296,6 +299,15 @@ func GenerateCandidates(c *Corpus, name string) []Edge {
 
 	edges := make([]Edge, 0, len(srcs)*len(defs))
 	for _, src := range srcs {
+		sourceBlob := c.Blob(src.site)
+		var evidence graph.Evidence
+		if sourceBlob != nil && src.site.Start >= 0 && src.site.End > src.site.Start {
+			evidence = graph.Evidence{
+				BlobSHA:    sourceBlob.SHA,
+				ByteOffset: uint64(src.site.Start),
+				ByteLength: uint64(src.site.End - src.site.Start),
+			}
+		}
 		for _, d := range defs {
 			target := Site{Shard: d.Shard, Blob: d.Blob, Start: d.Start, End: d.End}
 			if samePosition(src.site, target) {
@@ -306,7 +318,9 @@ func GenerateCandidates(c *Corpus, name string) []Edge {
 				Source:     src.site,
 				Target:     target,
 				Type:       src.typ,
-				sourceBlob: c.Blob(src.site),
+				Confidence: graph.Candidate,
+				Evidence:   evidence,
+				sourceBlob: sourceBlob,
 			})
 		}
 	}

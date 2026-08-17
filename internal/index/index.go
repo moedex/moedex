@@ -154,6 +154,18 @@ func (ix *Index) Selective() bool {
 // sharing a SHA are deduplicated: the content is indexed once and the new
 // FileRef is appended to the existing blob.
 func (ix *Index) AddFile(repo, rel, abs, sha string, content []byte) {
+	ix.addFile(repo, rel, abs, sha, content, true)
+}
+
+// AddFileUnindexed stores a content-addressed blob and its file reference
+// without building trigram postings. It is for derived offline passes that need
+// Index's blob iteration contract (for example embed.BuildStore) but will never
+// query the temporary index. Normal searchable indices must use AddFile.
+func (ix *Index) AddFileUnindexed(repo, rel, abs, sha string, content []byte) {
+	ix.addFile(repo, rel, abs, sha, content, false)
+}
+
+func (ix *Index) addFile(repo, rel, abs, sha string, content []byte, postings bool) {
 	ref := FileRef{Repo: repo, RelPath: rel, AbsPath: abs}
 	if id, ok := ix.bySHA[sha]; ok {
 		ix.blobs[id].Files = append(ix.blobs[id].Files, ref)
@@ -172,6 +184,10 @@ func (ix *Index) AddFile(repo, rel, abs, sha string, content []byte) {
 	}
 	ix.blobs = append(ix.blobs, b)
 	ix.bySHA[sha] = id
+
+	if !postings {
+		return
+	}
 
 	// Positional byte-trigrams. Because blobs are added in increasing ID order
 	// and a blob's trigrams are emitted in increasing offset order, each posting

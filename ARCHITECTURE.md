@@ -72,13 +72,14 @@ All library code lives under `internal/`; executables under `cmd/`.
 | contextwin | [`internal/contextwin`](internal/contextwin) | Assemble ranked results into token-budgeted blocks | `ContextBlock`, `ContextWindow`, `Options`; `Assemble(ix, results, opts) ContextWindow` |
 | symbol | [`internal/symbol`](internal/symbol) | Polyglot syntactic symbol layer for block scoping + the symbol-name arm, plus the cross-shard (corpus-wide) name lookup and the architectural-kind promotion seam | `Symbol`, `Kind` (syntactic `Func`/`Method`/`Type`/`Const`/`Var`, architectural `Route`/`Event`/`Queue`/`Table`/`Service`), `Role`, `Occurrence`, `Ref`, `Index`, `NewIndex`, `Enclosing`, `EnclosingBytesFunc`, `(*Index) References/Definitions/Promote`; `Shard`, `ShardRef`, `Corpus`, `NewCorpus`, `Merge`, `(*Corpus) AddShard/References/Definitions/DefiningShards/ReferencingShards/Symbols/Enclosing/EachName/NumShards/NumNames/ShardName/ShardIndex`; `const ExtractorsVersion`, `Extractor`, `GoExtractor`, `CSharpExtractor`, `TSExtractor`, `SQLExtractor`, `CFExtractor`, `ExtractorForPath`, `Build`, `BuildMulti`; `Save`, `Load` |
 | classify | [`internal/classify`](internal/classify) | Graph layer phase 2: promote generic symbol kinds to **architectural** ones (Route/Event/Queue/Table/Service) from C# framework conventions — trigram-query a literal framework marker, then confirm with a regexp over only those blobs, with comments/strings masked out | `Match`, `Report`, `(Report) Promoted`, `Summary`; `ClassifyAll`, `ClassifyRoutes`, `ClassifyEvents`, `ClassifyQueues`, `ClassifyTables`, `ClassifyServices` |
+| graph | [`internal/graph`](internal/graph) | Shared graph edge contract: four provenance-backed confidence tiers with derived scores and dereferenceable source evidence spans | `ConfidenceTier` (`Proven`, `Verified`, `Pattern`, `Candidate`), `Confidence`, `ConfidenceOf`; `Evidence`, `(Evidence) Valid/End/Bytes/SourceLine` |
 | graph/candidates | [`internal/graph/candidates`](internal/graph/candidates) | Graph layer phase 3: recall-complete cross-shard edge **candidates** — trigram fan-out over every shard unioned with the symbol layer's classified references, paired with every same-name definition, held in memory for the verification pass | `Site`, `Edge`, `(Edge) CrossShard/EvidenceBlob`; `Type` (`SymbolReference`, `TextOccurrence`, `SiblingDefinition`), `(Type) String`; `Corpus`, `NewCorpus`, `(*Corpus) NumShards/ShardName/Scanning/Symbols/Blob/Text`; `GenerateCandidates(c, name) []Edge`; `Options`, `Exported`, `GenerateAll(c, opts) *Set`; `Set`, `NewSet`, `Sweep`, `(*Set) Add/Len/Edges/Names/ForName/Sweep` |
-| graph/verify | [`internal/graph/verify`](internal/graph/verify) | Graph layer phase 4 regex tier: language-aware call/import/type/identifier verification with comment and string masking; preserves every candidate while assigning Pattern (`0.6`) or Candidate (`0.3`) confidence | `Edge`/`ScoredEdge`, `Verify(candidates) []Edge`; `Tier` (`Pattern`, `Candidate`), `PatternConfidence`, `CandidateConfidence`; `ReferenceKind` (`Call`, `Import`, `TypeReference`, `IdentifierMatch`, `Unverified`) |
-| graph/diskgraph | [`internal/graph/diskgraph`](internal/graph/diskgraph) | Graph layer phase 5: offline-built, mmap-served adjacency keyed by git blob SHA + symbol byte offset; fixed-width node/edge records with exact confidence and evidence offsets | `Key`/`Node`, `Edge`, `EdgeType`; `Builder`, `NewBuilder`, `(*Builder) Add/AddEdge/AddEdges/Save`; `Save`, `Open`, `Load`; `Graph`, `(*Graph) Load/Edges/Keys/NumNodes/NumEdges/Close` |
+| graph/verify | [`internal/graph/verify`](internal/graph/verify) | Graph layer phase 4 regex tier: language-aware call/import/type/identifier verification with comment and string masking; preserves every candidate while promoting its shared confidence enum from Candidate (`0.3`) to Pattern (`0.6`) | `Edge`/`ScoredEdge`, `Verify(candidates) []Edge`; `Tier` aliases the shared four-tier enum; `ReferenceKind` (`Call`, `Import`, `TypeReference`, `IdentifierMatch`, `Unverified`) |
+| graph/diskgraph | [`internal/graph/diskgraph`](internal/graph/diskgraph) | Graph layer phases 5/9/11/13: offline-built, mmap-served adjacency keyed by git blob SHA + symbol byte offset; v2 fixed-width edge records persist a tier enum plus evidence blob SHA/offset/length, with a separate cosine similarity metric for semantic edges; stronger semantic confirmation upgrades an identical weaker relationship in place | `Key`/`Node`, `Edge`, `EdgeType`; `Builder`, `NewBuilder`, `(*Builder) AddNode/Add/AddEdge/AddOrUpgradeEdge/AddEdges/Save`; `Save`, `Open`, `Load`; `Graph`, `(*Graph) Load/Edges/Keys/EachEdge/NumNodes/NumEdges/Close` |
 | eval | [`internal/eval`](internal/eval) | IR-metrics + ranker evaluation harness | `GoldQuery`, `NewBinaryGold`; `RecallAtK`, `PrecisionAtK`, `MRR`, `NDCGAtK`; `Runner`, `NewRunner`, `Evaluate`, `Report`, `QueryReport`; `BuildIndexFromCorpus`, `BuildIndexFromFiles` |
 | parity | [`internal/parity`](internal/parity) | Full-corpus exact-match retrieval parity harness + shard-level freshness | `Config`, `RunConfig`, `Run`; `Build`, `Built`, `FileTable`, `DefaultShardBytes`; `Generate`, `Battery`, `Query`, `Bucket`; `QueryResult`, `Verdict`; `WriteReport`, `ReportMeta`; `Manifest`, `ShardManifest`, `RepoHead`, `WriteManifest`, `LoadManifest`, `DetectChanges`, `Changes`, `Rebuild` |
-| server | [`internal/server`](internal/server) | Warm multi-shard serving spine: mmap'd retrieval + ranked agent context + corpus-wide symbol lookup; offline graph-sidecar bridge | `Corpus`, `Open`, `(*Corpus) Regex/Literal/NumShards/NumBlobs/Close`; `RankCorpus`, `RankConfig`, `OpenRank`, `(*RankCorpus) SearchContext`; `BuildSidecars`, `BuildGraphSidecar`, `GraphSidecarName`, `GraphSidecarPath`; `SymbolCorpus`, `SymbolSite`, `OpenSymbols`, `(*SymbolCorpus) References/Definitions/DefiningRepos/ReferencingRepos/Locate/Merged/NumShards/NumNames/Close` |
-| mcp | [`internal/mcp`](internal/mcp) | Serve `search_context` over MCP (JSON-RPC/stdio) | `ContextSearcher`; `Server`, `NewServer`, `Serve`; `IndexSearcher`, `NewIndexSearcher`, `SetEnclosingBytes`, `SearchContext` |
+| server | [`internal/server`](internal/server) | Warm multi-shard serving spine: mmap'd retrieval + ranked agent context + corpus-wide symbol lookup; online graph query/annotation layer; offline graph-sidecar bridge, including `lsp`-tagged Proven CALLS and `onnx`-tagged similarity passes | `Corpus`, `Open`, `(*Corpus) Regex/Literal/NumShards/NumBlobs/Close`; `RankCorpus`, `RankConfig`, `OpenRank`, `(*RankCorpus) SearchContext`; `BuildSidecars`, `BuildGraphSidecar`, `BuildGraphSidecarWithOptions`, `GraphBuildOptions`, `LSPGraphStats`, `GraphSidecarName`, `GraphSidecarPath`; `GraphToolset`, `OpenGraphTools`, `(*GraphToolset) Tools/Neighbors/Reload/Close`; `GraphNode`, `GraphEdge`, `GraphLocation`, `GraphQueryResult`; `SymbolCorpus`, `SymbolSite`, `OpenSymbols`, `(*SymbolCorpus) References/Definitions/DefiningRepos/ReferencingRepos/Locate/Merged/NumShards/NumNames/Close` |
+| mcp | [`internal/mcp`](internal/mcp) | Serve `search_context` over MCP (JSON-RPC/stdio), each result block fused with its graph neighborhood | `ContextSearcher`; `Server`, `NewServer`, `Serve`; `IndexSearcher`, `NewIndexSearcher`, `SetEnclosingBytes`, `SearchContext`; `GraphAnnotator`, `WithGraphAnnotator`, `Neighbor`, `BlockNeighbors`, `NewBlockNeighbors`, `SortNeighbors`, `TrimNeighbors`, `DefaultGraphDepth`, `MaxGraphDepth`, `MaxNeighborsPerBucket` |
 | corpus | [`internal/corpus`](internal/corpus) | Corpus acquisition + freshness over glab/git (the only package that shells out to them; **not imported by the engine**) | `Runner`, `ExecRunner`; `Config`, `DefaultGroups`; `Project`, `Enumerate`; `Doctor`, `Report`; `CloneArgs`, `CloneProjects`; `Reconcile`, `PlanSync`, `SyncProjects`; `Reindex` |
 | navigate | [`internal/navigate`](internal/navigate) | Experimental LSP-precise navigation arm (ADR 0017, `-tags lsp`): type-resolved go-to-def / find-refs / find-impls via an out-of-process language server over a hand-written stdlib JSON-RPC client; multi-language registry sized to the real corpus (csharp ~60% via `csharp-ls`; typescript/js; css/scss via vscode-css-language-server; cfml via `cflsp`; html; sql; go; python; ready-but-unused rust/cpp) — partial-capability servers degrade gracefully (a `-32601` unimplemented method → empty, not error), C#'s `DOTNET_ROOT` is resolved per-launch via `LangSpec.ResolveEnv`, and a shared per-(root,language) server pool with idle-TTL eviction + restart backoff, incremental `didChange` sync, and live-buffer overlays; no new go.mod dep (mirrors the dense arm's build-tag boundary). ADR 0018 adds name-based navigation on top: `workspace/symbol` (root-routed, merges every already-live language server for a polyglot root when no language is pinned) and `textDocument/documentSymbol` (file-routed, flattens the hierarchical `DocumentSymbol` shape and prefers `selectionRange` over the whole declaration range) — both return the named `Symbol` type, not a bare `Location` | `Pos`, `Location`, `Symbol`, `Navigator`; `Config`; `LSP`, `NewLSP`, `(*LSP) Definition/References/Implementations/WorkspaceSymbol/DocumentSymbol/SetOverlay/DropOverlay/NotifyChanged/Alive/Close`; `Pool`, `NewPool`, `(*Pool) Navigator/NavigatorFor/Definition/References/Implementations/WorkspaceSymbol/DocumentSymbol/SetOverlay/DropOverlay/NotifyChanged/Stats/Sweep/Close`; `Stats`; `LangSpec`, `LanguageForPath`, `SpecForLanguage`, `SpecForPath`; `ErrServerDead`; `const LSPCompiled` |
 | moedex | [`cmd/moedex`](cmd/moedex) | CLI: index one repo, run a literal/regex query | — |
@@ -155,6 +156,11 @@ MCP tools/call search_context
                  │    (symbol.Index.Enclosing when wired, else brace/indent heuristic)
                  ├─ merge overlapping/adjacent blocks per file
                  └─ emit best-first under a token budget ──▶ ContextWindow
+                        └─▶ GraphToolset.Neighbors     (internal/server/graphneighbors.go)
+                               ├─ anchor each block to graph nodes by path + line range
+                               ├─ walk callers/callees/consumers/publishers/depends_on/similar_to
+                               │    (one shared reverse sweep of the mmap per hop)
+                               └─ attach as the block's `neighbors` ──▶ annotated ContextWindow
 ```
 
 The single-repo call chain is wired in
@@ -367,8 +373,45 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
   byte-for-byte); embeddings are a serve-time concern and are not built there.
   The same indexer pass calls `BuildGraphSidecar`, producing
   `corpus-graph.graph`: an mmap-ready adjacency keyed by `(blob SHA, enclosing
-  symbol name offset)`, with target SHA/offset, relationship type, exact
-  confidence, and source evidence offset in each fixed-width edge record.
+  symbol name offset)`, with target SHA/offset, relationship type, confidence
+  tier, and a source evidence `{blob_sha, byte_offset, byte_length}` in each v2
+  fixed-width edge record. Confidence scores are derived from the tier at API
+  boundaries; `SIMILAR_TO` additionally persists its exact cosine as a separate
+  similarity metric. In an
+  `onnx`-tagged `moedex-index`, the graph pass additionally embeds every unique
+  symbol definition through `embed.BuildStore` and emits each definition's
+  top-K `SIMILAR_TO` neighbors whose cosine clears the configured threshold.
+  `MOEDEX_GRAPH_SIMILAR_TOP_K` (default 5, zero disables) and
+  `MOEDEX_GRAPH_SIMILAR_THRESHOLD` (default 0.60) tune that offline pass; the
+  default pure-Go indexer cannot emit semantic edges.
+- **Graph-fused search** ([`internal/server/graphneighbors.go`](internal/server/graphneighbors.go),
+  [`internal/mcp/neighbors.go`](internal/mcp/neighbors.go) —
+  [`docs/GRAPH-LAYER-PLAN.md`](docs/GRAPH-LAYER-PLAN.md) phase 14). `search_context`
+  answers with the graph neighborhood attached, so an agent that found a symbol does
+  not need a second tool call to learn what calls it, what it depends on, or who
+  publishes the event it handles. `GraphToolset` implements `mcp.GraphAnnotator`;
+  `moedex-serve` wires it with `mcp.WithGraphAnnotator`, and the `graph_depth`
+  argument (default 1, `0` disables, max 10) is the per-call control.
+  The join is **positional**: a context block knows a path and a 1-based line range,
+  the node catalog knows where every graph node lives, so `anchorsFor` resolves one
+  to the other through a path→nodes index built once per graph generation (absolute,
+  repo-qualified, and bare spellings, most specific first, so a bare relative path can
+  never pull in a same-named file from another repo). From those anchors, six lanes —
+  `callers` (incoming CALLS), `callees` (outgoing CALLS), `consumers` (incoming
+  CONSUMES), `publishers` (incoming PUBLISHES), `depends_on` (outgoing
+  IMPORTS/USES_TYPE/REFERENCES/CANDIDATE/PUBLISHES/CONSUMES), and `similar_to` (either
+  direction) — each traverse in **one fixed direction**, which is what makes
+  `graph_depth > 1` mean "callers of callers" rather than an undirected blob. Scope is
+  stated rather than implied: incoming reference/import edges are deliberately NOT
+  annotated (the highest-volume edge class in the graph — `impact_analysis` owns that
+  question), each bucket is capped at `MaxNeighborsPerBucket` with a `truncated` flag
+  rather than silently trimmed, and a block whose symbols have no edges gets a
+  **present, empty** annotation so "graph off" and "nothing found" stay distinguishable.
+  Cost: the sidecar stores only forward adjacency, so every incoming lane of every
+  block shares **one** reverse sweep per hop via `diskgraph.EachEdge` — a linear,
+  allocation-free pass over the node directory and edge section, rather than the
+  binary-search-and-allocate-per-node shape `Keys()`+`Edges()` would cost on what is
+  now a default-on path.
 - **Freshness** ([`internal/parity/manifest.go`](internal/parity/manifest.go)).
   `moedex-index build` writes a `manifest.json` recording, per shard, which repos
   contributed blobs, and per repo its git HEAD plus privacy fingerprint at ingest.
@@ -518,7 +561,7 @@ tool's voice (the parallel clones are his tentacles).
   half of the graph layer's two-phase construction. `GenerateCandidates(c, name)`
   unions the corpus-wide `byName` index's classified references with a **trigram
   fan-out over every shard**, then pairs each occurrence with each definition of the
-  name, returning `Edge{Name, Source, Target, Type}` where both ends are
+  name, returning `Edge{Name, Source, Target, Type, Confidence, Evidence}` where both ends are
   `(shard, blob, byte offset)` — byte-anchored, because a line is not enough to point
   a verifier at a call site. It resolves nothing on purpose: name-based lookup cannot
   say which same-named definition a use targets, so **every** definition is a
@@ -545,6 +588,20 @@ tool's voice (the parallel clones are his tentacles).
   widened to their enclosing source symbol for adjacency, identical cross-shard
   content is deduplicated by SHA, and `moedex-index` rebuilds the mmap sidecar with
   the token and symbol sidecars after build/refresh/export.
+- **Systematic LSP call graphs** (`internal/server/graphcalls_lsp.go`, `-tags lsp`
+  — graph phase 9): sidecar construction first enumerates every indexed source
+  file with `textDocument/documentSymbol`, then calls `find_references` for each
+  exported symbol. Names already present in Phase 3 cross-shard candidates sort
+  ahead of the remainder. One global sequential pacer caps request starts at five
+  per second by default, every request has a 30-second default timeout, and all
+  repository privacy policies are preflighted before the first language server
+  starts (any level-1 path rejects the whole unsanitized workspace). Returned
+  references are mapped back to content-addressed blobs, restricted to the same
+  repository, checked for call syntax, and widened to the enclosing caller.
+  Persisted edges are `CALLS` at Proven (`1.0`) with the exact call-name evidence
+  span; `Builder.AddOrUpgradeEdge` replaces an identical Pattern edge rather than
+  storing a duplicate. The default build compiles only a no-op twin and never
+  launches an LSP.
 - An IR-metrics evaluation harness (recall@k, precision@k, MRR, nDCG@k).
 - A full-corpus exact-match retrieval parity harness (`internal/parity`,
   `cmd/moedex-parity`): sharded whole-corpus build, seeded ≥1000-query battery,
@@ -785,6 +842,15 @@ The `-http` server exposes `GET /search?q=&regex=&limit=`, plus `/healthz`,
 `/metrics`, and `/stats`. SIGHUP hot-reloads the shard dir without dropping requests.
 The dense arm applies to `-mcp` only; with `-embed onnx` (and a `-tags onnx` build)
 the embeddings are computed in-process and persisted next to the shards.
+
+The MCP surface (`-mcp` stdio and `-mcp-http`) serves `search_context` alongside the
+graph tools `trace_calls`, `trace_consumers`, `impact_analysis`, and `list_clusters`,
+all backed by the same hot-swappable mmap'd `corpus-graph.graph` generation (SIGHUP
+reloads it with the ranker). `search_context` results are **graph-fused**: each block
+carries a `neighbors` field with its callers, callees, consumers, publishers,
+dependencies, and semantic siblings, controlled per call by `graph_depth` (default 1,
+`0` disables). Both the `text` and `structured` output formats carry it — text as one
+`[graph] ...` line under each block header, `structured` as a typed per-block object.
 
 ### `scale` — corpus sizing tool
 

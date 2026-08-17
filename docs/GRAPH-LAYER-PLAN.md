@@ -63,7 +63,7 @@ Not yet wired to an MCP tool — that is phase 6's surface. `moedex-serve` is un
 The recall-complete half of the two-phase construction below, in
 [`internal/graph/candidates`](../internal/graph/candidates).
 
-- `GenerateCandidates(corpus, name)` returns `Edge{Name, Source, Target, Type}` with
+- `GenerateCandidates(corpus, name)` returns `Edge{Name, Source, Target, Type, Confidence, Evidence}` with
   both ends a `(shard, blob, byte offset)` `Site`. Byte offsets, not lines: a verifier
   has to be pointed at the call site, and the graph sidecar is keyed by blob + offset.
 - **Sources are the union of two arms.** The phase-1 `byName` index supplies
@@ -132,24 +132,61 @@ Scope, honestly: **C# only**. Ansible/Terraform/ColdFusion/TypeScript framework 
 
 [`internal/graph/diskgraph`](../internal/graph/diskgraph) stores the verified
 work list as a content-addressed adjacency sidecar:
-`(blob_sha, symbol_offset) → [{edge_type, target_blob, target_offset, confidence, evidence_offset}]`.
+`(blob_sha, symbol_offset) → [{edge_type, target_blob, target_offset, confidence_tier, evidence_blob, evidence_offset, evidence_length, semantic_similarity}]`.
 
 - `Builder` is the offline write path. It interns blob SHAs once, sorts the node
   directory, and writes each node's edges contiguously as fixed-width records.
 - `Open` / `Load` mmap the file. A lookup resolves the source SHA, binary-searches
   the node directory, and decodes only that adjacency range; the complete graph is
   never materialized on the Go heap.
-- Confidence is persisted by exact `float64` bits, byte offsets remain 64-bit, and
-  the loader validates every section, blob ID, sorted key, and adjacency range
-  before serving a lookup.
+- Confidence is persisted as the four-value tier enum; `SIMILAR_TO` additionally
+  stores its exact cosine as a separate similarity metric. Byte offsets and
+  lengths remain 64-bit, and the loader validates every tier, semantic score,
+  evidence link, section, blob ID, sorted key, and adjacency range before serving
+  a lookup.
 - The offline bridge widens a call-site source to its innermost enclosing symbol
-  for the adjacency key while keeping the call-site itself as `evidence_offset`.
+  for the adjacency key while keeping the call-site itself as a complete
+  `{blob_sha, byte_offset, byte_length}` evidence link.
   Identical content repeated across shards folds to one SHA-keyed edge.
 - `moedex-index build`, `refresh`, and the CAS export paths now write
   `corpus-graph.graph` beside `corpus-tokens.tki` and `corpus-symbols.sym`.
 
-### Graph query MCP tools
-New MCP tools on `moedex-serve`: `trace_calls`, `trace_consumers`, `impact_analysis`, `list_clusters`. Codegraph equivalents of `graph_trace` and `graph_cluster`, served from Moedex's own graph store.
+### Graph query MCP tools — **delivered (phase 6)**
+
+`moedex-serve` serves `trace_calls`, `trace_consumers`, `impact_analysis`, and
+`list_clusters` on both the stdio and HTTP MCP surfaces — the Codegraph equivalents of
+`graph_trace` and `graph_cluster`, answered from Moedex's own graph store. All four
+share one hot-swappable mmap'd generation ([`internal/server/graphtools.go`](../internal/server/graphtools.go)):
+a compact symbol/location catalog for rendering, with the adjacency itself left in the
+sidecar mmap and reverse traversals scanned on demand. The phase's remaining piece,
+annotated `search_context`, landed with phase 14 below.
+
+### Confidence tiers + evidence linking — **delivered (phase 11)**
+
+Every generated and persisted edge carries one shared confidence enum and an
+exact source span. **Proven** (`1.0`) is reserved for LSP-confirmed or manifest
+relationships, **Verified** (`0.85`) for AST/attribute matches, **Pattern**
+(`0.6`) for regex convention matches, and **Candidate** (`0.3`) for unverified
+name candidates. Scores are derived from the enum and cannot drift from it;
+semantic similarity edges retain Candidate provenance while exposing their
+exact cosine in a separate `similarity` field. The v2 mmap sidecar interns the
+evidence blob SHA and stores its 64-bit byte offset and length; graph MCP results
+render confidence as `{tier, score}` and evidence as
+`{blob_sha, byte_offset, byte_length}`.
+
+### Service clustering — **delivered (phase 7)**
+
+[`internal/graph/cluster`](../internal/graph/cluster) applies deterministic
+Louvain modularity-gain moves to a weighted, undirected view of the persisted
+edge graph. Parallel relationships add weight, tier scores (or the separate
+cosine metric for `SIMILAR_TO`) supply edge weight, and definitions with no usable relationship remain singleton
+communities. Stable cluster ordering and dominant repository/namespace labels
+make repeated responses reproducible.
+
+`moedex-serve` exposes the result as `list_clusters` on both stdio and HTTP MCP
+surfaces. It returns `[{cluster_id, label, member_count, members}]`, including
+symbol and source metadata for each member, and caches the computation per
+hot-reloadable graph generation.
 
 ## Bridge architecture: trigram-accelerated graph construction
 
@@ -168,7 +205,7 @@ The core insight: Moedex builds edges **faster than Codegraph** using its trigra
 3. Verify candidates (targeted precision)
    Language-specific verifier per candidate: call site, import, type reference, or string match?
    Regex patterns (cheap, ~Codegraph-level confidence) → LSP find_references (expensive, type-resolved).
-   Assign trustScore per edge based on verification method.
+   Assign the shared confidence tier per edge based on verification method.
 
 4. Persist graph sidecar
    Mmap'd adjacency list keyed by blob SHA + symbol offset.
@@ -190,8 +227,8 @@ The core insight: Moedex builds edges **faster than Codegraph** using its trigra
 | 3 | ✅ **Edge candidate generation** — trigram fan-out for each definition, cross-shard (`graph/candidates`) | Phase 1 | Low |
 | 4 | ✅ **Edge verification** — language-specific call/import/type confirmation with lossless Pattern/Candidate scoring (regex tier delivered; LSP tier later) | Phase 3 | Medium–High |
 | 5 | ✅ **Graph sidecar persistence** — mmap'd SHA+offset adjacency list (`graph/diskgraph`), built by `moedex-index` alongside the ranking sidecars | Phase 4 | Medium |
-| 6 | **Graph query MCP tools** — trace_calls, trace_consumers, impact_analysis, annotated search_context | Phase 5 | Medium |
-| 7 | **Service clustering** — community detection over the edge graph (modularity-based) | Phase 5 | Low |
+| 6 | ✅ **Graph query MCP tools** — trace_calls, trace_consumers, impact_analysis, list_clusters, and (with phase 14) annotated search_context | Phase 5 | Medium |
+| 7 | ✅ **Service clustering** — deterministic Louvain modularity optimization (`graph/cluster`) and `list_clusters` MCP output | Phase 5 | Low |
 
 Phases 2 and 3 can run in parallel. The regex-tier verifier in phase 4 reaches Codegraph parity — Codegraph's own call edges are sparse and convention-based. LSP-tier verification is a quality improvement beyond Codegraph, not a prerequisite for replacement.
 
@@ -201,16 +238,75 @@ These are capabilities I *assumed* Codegraph had before investigating. It doesn'
 
 | Phase | Delivers | Depends on | Effort |
 |-------|----------|------------|--------|
-| 8 | **Package manifest parsing** — cross-repo `DEPENDS_ON` edges from .csproj, go.mod, package.json. Confidence 1.0, no inference. | Phases 1, 5 | Medium |
-| 9 | **LSP-at-scale intra-repo call graphs** — systematic find_references for all exported symbols, prioritized by cross-repo relevance | Phases 5, 8 | High |
+| 8 | **Package manifest parsing** — cross-repo `DEPENDS_ON` edges from .csproj, go.mod, package.json. Proven tier, no inference. | Phases 1, 5 | Medium |
+| 9 | ✅ **LSP-at-scale intra-repo call graphs** — systematic find_references for all exported symbols, prioritized by cross-repo relevance | Phases 5, 8 | High |
 | 10 | **Cross-service HTTP tracing** — match client call URLs to handler route patterns across C#, Go, TypeScript, Python | Phases 2, 5 | Medium |
-| 11 | **Confidence tiers + evidence linking** — replace flat trustScore with Proven/Verified/Pattern/Candidate tiers, each carrying blob SHA + offset of evidence | Phase 5 | Low |
+| 11 | ✅ **Confidence tiers + evidence linking** — replace flat trustScore with Proven/Verified/Pattern/Candidate tiers, each carrying blob SHA + byte offset + byte length evidence | Phase 5 | Low |
 | 12 | **Incremental graph refresh** — CAS-aware delta recompute for changed blobs only, git-based edge timestamps | Phase 5 | Medium |
-| 13 | **Semantic similarity edges** — ONNX embedder `SIMILAR_TO` edge type for near-duplicate and pattern-match discovery across repos | Phases 5, dense build | Medium |
-| 14 | **Graph-fused search** — `search_context` results annotated with graph neighborhood automatically, no second tool call | Phases 5, 6 | Low |
+| 13 | ✅ **Semantic similarity edges** — ONNX embedder `SIMILAR_TO` edge type for near-duplicate and pattern-match discovery across repos | Phases 5, dense build | Medium |
+| 14 | ✅ **Graph-fused search** — `search_context` results annotated with graph neighborhood automatically, no second tool call | Phases 5, 6 | Low |
+
+Phase 13 is implemented behind the existing `onnx` tag. The tagged indexer
+embeds one whole-definition chunk per content-addressed symbol, performs an
+exact corpus-wide cosine top-K pass, and persists directed `SIMILAR_TO` edges
+with Candidate provenance and confidence score equal to the exact cosine; the
+definition body is their evidence span. Top-K and threshold are configurable with
+`MOEDEX_GRAPH_SIMILAR_TOP_K` and `MOEDEX_GRAPH_SIMILAR_THRESHOLD`.
+
+Phase 9 is implemented behind the existing `lsp` tag. During graph-sidecar
+construction it enumerates indexed source files with LSP `documentSymbol`, then
+issues `find_references` for every exported symbol. Symbols whose Phase 3 work
+list contains a cross-shard edge are queried first. Request starts are globally
+paced (five per second by default), sequential, and individually timeout-bound;
+workspace privacy is validated before any language server launches. Only
+intra-repo references with call syntax and an enclosing caller become `CALLS`
+edges. They persist at Proven (`1.0`) with the exact call-site evidence span and
+upgrade a matching regex edge in place. Short exported names and nested
+interface methods therefore remain covered even when the trigram-length regex
+sweep cannot generate them.
 
 **Phase 8** (package manifests) is the highest-value stretch item — proven cross-repo edges with zero inference.
-**Phase 14** (graph-fused search) is the highest-impact UX item — the endgame of having search and graph in the same engine, something no existing tool offers.
+
+### Graph-fused search — **delivered (phase 14)**
+
+`search_context` now answers with the graph attached. Every ranked context block
+carries a `neighbors` field, so an agent that found a symbol never needs a second
+tool call to learn what calls it, what it depends on, or who publishes the event it
+handles — the endgame of having search and graph in the same engine.
+
+- **The seam.** [`mcp.GraphAnnotator`](../internal/mcp/neighbors.go) is the contract;
+  `GraphToolset` implements it in
+  [`internal/server/graphneighbors.go`](../internal/server/graphneighbors.go), and
+  `moedex-serve` wires the two with `mcp.WithGraphAnnotator` on both the stdio and
+  HTTP MCP surfaces. The `mcp` package owns the contract and the rendering only — the
+  mmap'd graph never leaves `internal/server`.
+- **`graph_depth`** (default 1, `0` disables, max 10) is the per-call control. It is a
+  *pointer* in the argument struct, so an omitted argument and an explicit `0` are
+  distinguishable rather than colliding on Go's zero value.
+- **The join is positional.** A context block knows a path and a 1-based line range;
+  the node catalog knows where every graph node lives. A path→nodes index built once
+  per graph generation resolves one to the other, trying the absolute path first, then
+  repo-qualified, then bare — so a bare relative path can never pull in a same-named
+  file from another repo once the absolute path has identified the real one.
+- **Six directed lanes.** `callers` (incoming CALLS), `callees` (outgoing CALLS),
+  `consumers` (incoming CONSUMES), `publishers` (incoming PUBLISHES), `depends_on`
+  (outgoing IMPORTS/USES_TYPE/REFERENCES/CANDIDATE/PUBLISHES/CONSUMES), `similar_to`
+  (either direction). Each traverses in one fixed direction, which is what makes
+  `graph_depth > 1` mean "callers of callers" rather than an undirected blob. A
+  manifest-derived `DEPENDS_ON` type (phase 8) joins the `depends_on` lane when it
+  lands.
+- **Stated scope, not silent scope.** Incoming reference/import edges are deliberately
+  not annotated — the highest-volume edge class in the graph, and `impact_analysis`
+  already owns that question. Buckets are capped with a `truncated` flag rather than
+  quietly trimmed. A block whose symbols have no edges gets a **present, empty**
+  annotation, so "graph off" and "nothing found" never look alike.
+- **One sweep per hop, not one per block.** The sidecar stores forward adjacency only,
+  so reverse lanes have to scan. `diskgraph.EachEdge` (new) makes that scan a linear,
+  allocation-free pass over the node directory and edge section, and every incoming
+  lane of every block shares a single sweep per hop. It replaced the
+  `Keys()`+`Edges()` shape inside `graphSnapshot.incoming`, which cost a binary search
+  and a slice allocation per node — acceptable for an explicit `trace_calls`, not for
+  something search now does by default. The existing graph tools get the speedup too.
 
 ## Out of scope
 

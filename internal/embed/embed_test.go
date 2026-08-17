@@ -233,6 +233,45 @@ func TestSearch_TopKZeroAndEmpty(t *testing.T) {
 	}
 }
 
+func TestSimilar_TopKThresholdAndSelfExclusion(t *testing.T) {
+	store := &Store{
+		dim: 2,
+		chunks: []Chunk{
+			{Blob: 10},
+			{Blob: 20},
+			{Blob: 30},
+		},
+		vectors: []Vector{
+			{1, 0},
+			{0.8, 0.6},
+			{-1, 0},
+		},
+	}
+
+	got, err := store.Similar(context.Background(), 1, 0.75)
+	if err != nil {
+		t.Fatalf("Similar: %v", err)
+	}
+	want := []Similarity{
+		{Source: Chunk{Blob: 10}, Target: Chunk{Blob: 20}, Score: 0.8},
+		{Source: Chunk{Blob: 20}, Target: Chunk{Blob: 10}, Score: 0.8},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("Similar = %#v, want %#v", got, want)
+	}
+}
+
+func TestSimilar_RejectsInvalidThreshold(t *testing.T) {
+	store := &Store{
+		dim:     1,
+		chunks:  []Chunk{{Blob: 1}, {Blob: 2}},
+		vectors: []Vector{{1}, {1}},
+	}
+	if _, err := store.Similar(context.Background(), 1, 1.01); err == nil {
+		t.Fatal("Similar threshold > 1: want error")
+	}
+}
+
 // TestSearch_MixedDimStore_ReturnsError guards against a corrupt/mixed-dim
 // store (e.g. an incremental rebuild that reused a vector from a store built
 // with a different embedder) silently scoring every chunk 0 via dot's

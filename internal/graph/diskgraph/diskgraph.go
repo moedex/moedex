@@ -4,26 +4,32 @@
 // contiguous range of fixed-width edge records, so Open can mmap the file and a
 // lookup only binary-searches the node table and decodes the requested range.
 // Blob SHAs are interned once in a variable-width table; node and edge records
-// refer to them by uint32 ID.
+// refer to them by uint32 ID. Format v2 edges are 48 bytes: relationship and
+// target identity, a confidence-tier ordinal, evidence blob ID/offset/length,
+// and an optional semantic-similarity metric. No flat confidence float is
+// persisted.
 package diskgraph
 
 import (
 	"bufio"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
 	"sort"
 	"syscall"
+
+	"moedex/internal/graph"
 )
 
 const (
 	magic         = "MDXGRF01"
-	formatVersion = 1
+	formatVersion = 2
 	headerSize    = 80
 	nodeSize      = 32
-	edgeSize      = 32
+	edgeSize      = 48
 )
 
 // EdgeType is the persisted relationship type. Values are deliberately a
@@ -39,7 +45,40 @@ const (
 	EdgeUsesType
 	EdgeReferences
 	EdgeSiblingDefinition
+	// EdgePublishes links a publisher method/type to the event or message it
+	// emits. EdgeConsumes links a consumer type to the event or message it
+	// handles. Both retain the graph's dependency -> definition direction.
+	EdgePublishes
+	EdgeConsumes
+	EdgeSimilarTo
 )
+
+// String renders an edge type using the stable names exposed by graph-query
+// APIs. Unknown future values remain representable instead of being collapsed.
+func (t EdgeType) String() string {
+	switch t {
+	case EdgeCandidate:
+		return "candidate"
+	case EdgeCalls:
+		return "calls"
+	case EdgeImports:
+		return "imports"
+	case EdgeUsesType:
+		return "uses_type"
+	case EdgeReferences:
+		return "references"
+	case EdgeSiblingDefinition:
+		return "sibling_definition"
+	case EdgePublishes:
+		return "publishes"
+	case EdgeConsumes:
+		return "consumes"
+	case EdgeSimilarTo:
+		return "similar_to"
+	default:
+		return fmt.Sprintf("edge_type_%d", uint32(t))
+	}
+}
 
 // Key is a graph node: a definition (or, when no enclosing definition exists,
 // an evidence occurrence) within content identified by its git blob SHA.
@@ -52,19 +91,67 @@ type Key struct {
 type Node = Key
 
 // Edge is one outgoing adjacency record. TargetBlob is a git blob SHA.
-// EvidenceOffset points at the source-side byte occurrence that justified the
-// relationship; it may differ from the source node's enclosing symbol offset.
+// Confidence is one of the four provenance-backed tiers. EdgeSimilarTo also
+// persists its cosine metric separately in Similarity; that metric does not
+// change the edge's Candidate provenance.
 type Edge struct {
-	Type           EdgeType
-	TargetBlob     string
-	TargetOffset   uint64
-	Confidence     float64
-	EvidenceOffset uint64
+	Type         EdgeType
+	TargetBlob   string
+	TargetOffset uint64
+	Confidence   graph.ConfidenceTier
+	Evidence     graph.Evidence
+	// Similarity is the exact cosine metric for EdgeSimilarTo. Other edge types
+	// leave this field zero.
+	Similarity float64
+}
+
+// Weight returns the relationship weight used by clustering. Confidence stays
+// tier-derived; semantic edges use their separate cosine metric as graph weight.
+func (e Edge) Weight() float64 {
+	if e.Type == EdgeSimilarTo {
+		return e.Similarity
+	}
+	return e.Confidence.Score()
+}
+
+func validateSimilarity(edge Edge) error {
+	if edge.Type != EdgeSimilarTo {
+		if edge.Similarity != 0 {
+			return fmt.Errorf("diskgraph: similarity metric on non-similar edge")
+		}
+		return nil
+	}
+	if math.IsNaN(edge.Similarity) || edge.Similarity < -1 || edge.Similarity > 1 {
+		return fmt.Errorf("diskgraph: invalid cosine similarity %g", edge.Similarity)
+	}
+	return nil
+}
+
+// MarshalJSON exposes the structured confidence and evidence contracts used by
+// MCP graph tools while keeping the compact tier enum in memory and on disk.
+
+func (e Edge) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Type         string           `json:"type"`
+		TargetBlob   string           `json:"target_blob"`
+		TargetOffset uint64           `json:"target_offset"`
+		Confidence   graph.Confidence `json:"confidence"`
+		Evidence     graph.Evidence   `json:"evidence"`
+		Similarity   float64          `json:"similarity,omitempty"`
+	}{
+		Type:         e.Type.String(),
+		TargetBlob:   e.TargetBlob,
+		TargetOffset: e.TargetOffset,
+		Confidence:   graph.ConfidenceOf(e.Confidence),
+		Evidence:     e.Evidence,
+		Similarity:   e.Similarity,
+	})
 }
 
 // Builder accumulates a graph offline before it is written in mmap-friendly
 // form. The zero value is ready to use. Edges retain insertion order within a
-// node; nodes and blob SHAs are sorted when saved for reproducible lookup.
+// node; nodes (including zero-degree nodes) and blob SHAs are sorted when saved
+// for reproducible lookup.
 type Builder struct {
 	adjacency map[Key][]Edge
 	edges     uint64
@@ -72,6 +159,24 @@ type Builder struct {
 
 // NewBuilder returns an empty offline graph builder.
 func NewBuilder() *Builder { return &Builder{adjacency: make(map[Key][]Edge)} }
+
+// AddNode retains key even when it has no outgoing edges. It is idempotent and
+// lets graph consumers distinguish an isolated definition from an absent node.
+func (b *Builder) AddNode(key Key) error {
+	if b == nil {
+		return fmt.Errorf("diskgraph: nil builder")
+	}
+	if key.BlobSHA == "" {
+		return fmt.Errorf("diskgraph: empty source blob SHA")
+	}
+	if b.adjacency == nil {
+		b.adjacency = make(map[Key][]Edge)
+	}
+	if _, exists := b.adjacency[key]; !exists {
+		b.adjacency[key] = nil
+	}
+	return nil
+}
 
 // Add appends one outgoing edge to the node identified by blobSHA and
 // symbolOffset.
@@ -81,24 +186,72 @@ func (b *Builder) Add(blobSHA string, symbolOffset uint64, edge Edge) error {
 
 // AddEdge appends one outgoing edge to key.
 func (b *Builder) AddEdge(key Key, edge Edge) error {
-	if b == nil {
-		return fmt.Errorf("diskgraph: nil builder")
+	if err := b.AddNode(key); err != nil {
+		return err
 	}
-	if key.BlobSHA == "" {
-		return fmt.Errorf("diskgraph: empty source blob SHA")
-	}
-	if edge.TargetBlob == "" {
-		return fmt.Errorf("diskgraph: empty target blob SHA")
+	if err := validateEdge(edge); err != nil {
+		return err
 	}
 	if b.edges == ^uint64(0) {
 		return fmt.Errorf("diskgraph: too many edges")
 	}
-	if b.adjacency == nil {
-		b.adjacency = make(map[Key][]Edge)
-	}
 	b.adjacency[key] = append(b.adjacency[key], edge)
 	b.edges++
 	return nil
+}
+
+// AddOrUpgradeEdge adds edge unless the same relationship and evidence already
+// exists at key. When it does exist, the stronger confidence tier replaces the
+// weaker one in place. This is the LSP verification seam: a Proven result must
+// upgrade the regex-tier CALLS edge it confirms, not leave two records for the
+// same call site. It reports whether a new record was appended.
+func (b *Builder) AddOrUpgradeEdge(key Key, edge Edge) (bool, error) {
+	if err := b.AddNode(key); err != nil {
+		return false, err
+	}
+	if err := validateEdge(edge); err != nil {
+		return false, err
+	}
+	for i := range b.adjacency[key] {
+		existing := &b.adjacency[key][i]
+		if !sameRelationship(*existing, edge) {
+			continue
+		}
+		if edge.Confidence > existing.Confidence {
+			*existing = edge
+		}
+		return false, nil
+	}
+	if b.edges == ^uint64(0) {
+		return false, fmt.Errorf("diskgraph: too many edges")
+	}
+	b.adjacency[key] = append(b.adjacency[key], edge)
+	b.edges++
+	return true, nil
+}
+
+func validateEdge(edge Edge) error {
+	if edge.TargetBlob == "" {
+		return fmt.Errorf("diskgraph: empty target blob SHA")
+	}
+	if !edge.Confidence.Valid() {
+		return fmt.Errorf("diskgraph: invalid confidence tier %d", uint8(edge.Confidence))
+	}
+	if !edge.Evidence.Valid() {
+		return fmt.Errorf("diskgraph: invalid evidence link %+v", edge.Evidence)
+	}
+	if err := validateSimilarity(edge); err != nil {
+		return err
+	}
+	return nil
+}
+
+func sameRelationship(a, b Edge) bool {
+	return a.Type == b.Type &&
+		a.TargetBlob == b.TargetBlob &&
+		a.TargetOffset == b.TargetOffset &&
+		a.Evidence == b.Evidence &&
+		a.Similarity == b.Similarity
 }
 
 // AddEdges appends all edges to key in order.
@@ -111,7 +264,7 @@ func (b *Builder) AddEdges(key Key, edges ...Edge) error {
 	return nil
 }
 
-// NumNodes reports how many source nodes have outgoing edges.
+// NumNodes reports how many nodes are retained, including zero-degree nodes.
 func (b *Builder) NumNodes() int {
 	if b == nil {
 		return 0
@@ -148,7 +301,17 @@ func Save(b *Builder, path string) error {
 			if edge.TargetBlob == "" {
 				return fmt.Errorf("diskgraph: empty target blob SHA")
 			}
+			if !edge.Confidence.Valid() {
+				return fmt.Errorf("diskgraph: invalid confidence tier %d", uint8(edge.Confidence))
+			}
+			if !edge.Evidence.Valid() {
+				return fmt.Errorf("diskgraph: invalid evidence link %+v", edge.Evidence)
+			}
+			if err := validateSimilarity(edge); err != nil {
+				return err
+			}
 			blobSet[edge.TargetBlob] = struct{}{}
+			blobSet[edge.Evidence.BlobSHA] = struct{}{}
 		}
 		if uint64(len(edges)) > ^uint64(0)-edgeCount {
 			return fmt.Errorf("diskgraph: too many edges")
@@ -238,7 +401,7 @@ func Save(b *Builder, path string) error {
 	if _, err := w.Write(hdr); err != nil {
 		return err
 	}
-	var scratch [32]byte
+	var scratch [48]byte
 	for _, sha := range blobs {
 		binary.LittleEndian.PutUint32(scratch[:4], uint32(len(sha)))
 		if _, err := w.Write(scratch[:4]); err != nil {
@@ -262,11 +425,15 @@ func Save(b *Builder, path string) error {
 	}
 	for _, key := range keys {
 		for _, edge := range b.adjacency[key] {
+			clear(scratch[:])
 			binary.LittleEndian.PutUint32(scratch[0:4], uint32(edge.Type))
 			binary.LittleEndian.PutUint32(scratch[4:8], blobIDs[edge.TargetBlob])
 			binary.LittleEndian.PutUint64(scratch[8:16], edge.TargetOffset)
-			binary.LittleEndian.PutUint64(scratch[16:24], math.Float64bits(edge.Confidence))
-			binary.LittleEndian.PutUint64(scratch[24:32], edge.EvidenceOffset)
+			binary.LittleEndian.PutUint32(scratch[16:20], uint32(edge.Confidence))
+			binary.LittleEndian.PutUint32(scratch[20:24], blobIDs[edge.Evidence.BlobSHA])
+			binary.LittleEndian.PutUint64(scratch[24:32], edge.Evidence.ByteOffset)
+			binary.LittleEndian.PutUint64(scratch[32:40], edge.Evidence.ByteLength)
+			binary.LittleEndian.PutUint64(scratch[40:48], math.Float64bits(edge.Similarity))
 			if _, err := w.Write(scratch[:edgeSize]); err != nil {
 				return err
 			}
@@ -433,6 +600,26 @@ func parse(data []byte) (*Graph, error) {
 		if binary.LittleEndian.Uint32(record[4:8]) >= uint32(len(g.blobs)) {
 			return nil, fmt.Errorf("diskgraph: edge %d has invalid target blob", i)
 		}
+		rawTier := binary.LittleEndian.Uint32(record[16:20])
+		if rawTier > uint32(graph.Proven) {
+			return nil, fmt.Errorf("diskgraph: edge %d has invalid confidence tier %d", i, rawTier)
+		}
+		if binary.LittleEndian.Uint32(record[20:24]) >= uint32(len(g.blobs)) {
+			return nil, fmt.Errorf("diskgraph: edge %d has invalid evidence blob", i)
+		}
+		evidence := graph.Evidence{
+			BlobSHA:    g.blobs[binary.LittleEndian.Uint32(record[20:24])],
+			ByteOffset: binary.LittleEndian.Uint64(record[24:32]),
+			ByteLength: binary.LittleEndian.Uint64(record[32:40]),
+		}
+		if !evidence.Valid() {
+			return nil, fmt.Errorf("diskgraph: edge %d has invalid evidence span", i)
+		}
+		typeID := EdgeType(binary.LittleEndian.Uint32(record[0:4]))
+		similarity := math.Float64frombits(binary.LittleEndian.Uint64(record[40:48]))
+		if err := validateSimilarity(Edge{Type: typeID, Similarity: similarity}); err != nil {
+			return nil, fmt.Errorf("diskgraph: edge %d: %w", i, err)
+		}
 	}
 	return g, nil
 }
@@ -470,17 +657,61 @@ func (g *Graph) Edges(key Key) []Edge {
 	out := make([]Edge, int(count))
 	for j := range out {
 		start := g.edgeOff + int(first+uint64(j))*edgeSize
-		edgeRecord := g.data[start : start+edgeSize]
-		targetID := binary.LittleEndian.Uint32(edgeRecord[4:8])
-		out[j] = Edge{
-			Type:           EdgeType(binary.LittleEndian.Uint32(edgeRecord[0:4])),
-			TargetBlob:     g.blobs[targetID],
-			TargetOffset:   binary.LittleEndian.Uint64(edgeRecord[8:16]),
-			Confidence:     math.Float64frombits(binary.LittleEndian.Uint64(edgeRecord[16:24])),
-			EvidenceOffset: binary.LittleEndian.Uint64(edgeRecord[24:32]),
-		}
+		out[j] = g.decodeEdge(g.data[start : start+edgeSize])
 	}
 	return out
+}
+
+// decodeEdge reads one fixed-width edge record. Blob SHAs come from the table
+// interned at Open, so the returned Edge borrows no mmap bytes and allocates
+// nothing.
+func (g *Graph) decodeEdge(record []byte) Edge {
+	return Edge{
+		Type:         EdgeType(binary.LittleEndian.Uint32(record[0:4])),
+		TargetBlob:   g.blobs[binary.LittleEndian.Uint32(record[4:8])],
+		TargetOffset: binary.LittleEndian.Uint64(record[8:16]),
+		Confidence:   graph.ConfidenceTier(binary.LittleEndian.Uint32(record[16:20])),
+		Evidence: graph.Evidence{
+			BlobSHA:    g.blobs[binary.LittleEndian.Uint32(record[20:24])],
+			ByteOffset: binary.LittleEndian.Uint64(record[24:32]),
+			ByteLength: binary.LittleEndian.Uint64(record[32:40]),
+		},
+		Similarity: math.Float64frombits(binary.LittleEndian.Uint64(record[40:48])),
+	}
+}
+
+// EachEdge visits every persisted edge in on-disk order, passing the source node
+// it belongs to. Returning false stops the walk.
+//
+// This is the REVERSE-traversal primitive. The sidecar stores only forward
+// adjacency, so answering "what points at X" means sweeping the edge set — and
+// doing that as Keys() + Edges(key) costs a fresh key slice, a binary search per
+// node, and an edge slice per node. EachEdge is the same sweep as one linear pass
+// over the node directory and edge section with no allocation at all, which is
+// what keeps a reverse query (and the graph annotation search_context does by
+// default) proportional to the graph rather than to the graph times log of it.
+func (g *Graph) EachEdge(fn func(source Key, edge Edge) bool) {
+	if g == nil || g.data == nil || fn == nil {
+		return
+	}
+	for i := 0; i < g.nodeCount; i++ {
+		record := g.data[g.nodeOff+i*nodeSize : g.nodeOff+(i+1)*nodeSize]
+		count := binary.LittleEndian.Uint64(record[24:32])
+		if count == 0 {
+			continue
+		}
+		source := Key{
+			BlobSHA:      g.blobs[binary.LittleEndian.Uint32(record[0:4])],
+			SymbolOffset: binary.LittleEndian.Uint64(record[8:16]),
+		}
+		first := binary.LittleEndian.Uint64(record[16:24])
+		for j := uint64(0); j < count; j++ {
+			start := g.edgeOff + int(first+j)*edgeSize
+			if !fn(source, g.decodeEdge(g.data[start:start+edgeSize])) {
+				return
+			}
+		}
+	}
 }
 
 // Keys returns all source nodes in on-disk order.
@@ -499,7 +730,7 @@ func (g *Graph) Keys() []Key {
 	return out
 }
 
-// NumNodes reports the number of source nodes with outgoing adjacency.
+// NumNodes reports the number of stored nodes, including zero-degree nodes.
 func (g *Graph) NumNodes() int {
 	if g == nil {
 		return 0

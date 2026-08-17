@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"moedex/internal/graph"
 )
 
 // fakeTool is a minimal ToolHandler for exercising the extra-tool registry
@@ -54,5 +56,32 @@ func TestWithTools_ReservedAndDuplicateIgnored(t *testing.T) {
 	}
 	if _, hijacked := s.byName["search_context"]; hijacked {
 		t.Error("search_context must not be overridable via WithTools")
+	}
+}
+
+func TestStructuredResultPreservesGraphConfidenceAndEvidence(t *testing.T) {
+	payload := struct {
+		Confidence graph.Confidence `json:"confidence"`
+		Evidence   graph.Evidence   `json:"evidence"`
+	}{
+		Confidence: graph.ConfidenceOf(graph.Pattern),
+		Evidence: graph.Evidence{
+			BlobSHA:    "0123456789abcdef",
+			ByteOffset: 41,
+			ByteLength: 12,
+		},
+	}
+	body, err := json.Marshal(StructuredResult("one edge", payload, false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(body)
+	for _, want := range []string{
+		`"confidence":{"tier":"Pattern","score":0.6}`,
+		`"evidence":{"blob_sha":"0123456789abcdef","byte_offset":41,"byte_length":12}`,
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("structured MCP result %s does not contain %s", text, want)
+		}
 	}
 }

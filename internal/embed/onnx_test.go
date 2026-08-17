@@ -57,3 +57,45 @@ func TestONNXEmbedderSemantics(t *testing.T) {
 	}
 	t.Logf("cos(cat,kitten)=%.3f  cos(cat,airplane)=%.3f", catKitten, catPlane)
 }
+
+func TestONNXEmbedderSimilarFunctions(t *testing.T) {
+	lib := os.Getenv("ONNXRUNTIME_LIB_PATH")
+	e, err := NewONNXEmbedder(lib)
+	if err != nil {
+		t.Skipf("onnx runtime unavailable (set ONNXRUNTIME_LIB_PATH): %v", err)
+	}
+	defer e.Close()
+
+	vecs, err := e.Embed(context.Background(), []string{
+		`func SumPositiveValues(values []int) int {
+			total := 0
+			for _, value := range values {
+				if value > 0 { total += value }
+			}
+			return total
+		}`,
+		`func AddPositiveNumbers(numbers []int) int {
+			sum := 0
+			for _, number := range numbers {
+				if number > 0 { sum += number }
+			}
+			return sum
+		}`,
+		`func ParseAuthorizationHeader(request *Request) (string, error) {
+			raw := request.Header.Get("Authorization")
+			parts := SplitN(raw, " ", 2)
+			if len(parts) != 2 { return "", ErrMalformedHeader }
+			return parts[1], nil
+		}`,
+	})
+	if err != nil {
+		t.Fatalf("Embed: %v", err)
+	}
+	similar := dot(vecs[0], vecs[1])
+	unrelatedA := dot(vecs[0], vecs[2])
+	unrelatedB := dot(vecs[1], vecs[2])
+	t.Logf("function cosine: similar=%.4f unrelatedA=%.4f unrelatedB=%.4f", similar, unrelatedA, unrelatedB)
+	if similar <= unrelatedA || similar <= unrelatedB {
+		t.Fatalf("similar functions must outrank unrelated: %.4f vs %.4f/%.4f", similar, unrelatedA, unrelatedB)
+	}
+}

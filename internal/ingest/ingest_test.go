@@ -211,6 +211,44 @@ func TestRepoAIPrivacyMissingOrEmptyDefaultsInternal(t *testing.T) {
 	}
 }
 
+func TestLSPWorkspaceAllowedRejectsAnyRestrictedScope(t *testing.T) {
+	for name, policy := range map[string]string{
+		"missing policy is allowed":           "",
+		"ordinary internal policy is allowed": "global_privacy_level: 3\n",
+		"global restriction":                  "global_privacy_level: 1\n",
+		"path restriction": `global_privacy_level: 3
+privacy_levels:
+  - path: /secrets/
+    privacy_level: 1
+`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			if policy != "" {
+				if err := os.WriteFile(filepath.Join(dir, AIPrivacyFileName), []byte(policy), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			allowed, err := LSPWorkspaceAllowed(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := name == "missing policy is allowed" || name == "ordinary internal policy is allowed"
+			if allowed != want {
+				t.Fatalf("LSPWorkspaceAllowed = %v, want %v", allowed, want)
+			}
+		})
+	}
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, AIPrivacyFileName), []byte("unsupported: true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if allowed, err := LSPWorkspaceAllowed(dir); err == nil || allowed {
+		t.Fatalf("malformed policy = allowed %v, err %v; want fail-closed error", allowed, err)
+	}
+}
+
 func TestRepoSkipsTrackedSymlinkContent(t *testing.T) {
 	dir := gitRepo(t, map[string][]byte{"target.txt": []byte("ordinary content\n")})
 	if err := os.Symlink("target.txt", filepath.Join(dir, "alias.txt")); err != nil {

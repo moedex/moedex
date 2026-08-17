@@ -273,6 +273,12 @@ func runMCP(shardDir string, topK int, embedKind, onnxRuntime string) error {
 	// reloads cheap, and a refreshed shard set re-embeds) without dropping a
 	// request. A failed reload keeps the current ranker.
 	holder := newRankHolder(rc)
+	graphTools, err := server.OpenGraphTools(shardDir)
+	if err != nil {
+		_ = rc.Close()
+		return err
+	}
+	defer graphTools.Close()
 	hup := make(chan os.Signal, 1)
 	signal.Notify(hup, syscall.SIGHUP)
 	go func() {
@@ -284,6 +290,9 @@ func runMCP(shardDir string, topK int, embedKind, onnxRuntime string) error {
 				fmt.Fprintf(os.Stderr, "moedex-serve: reload failed (%v); keeping current ranker\n", err)
 				continue
 			}
+			if err := graphTools.Reload(shardDir); err != nil {
+				fmt.Fprintf(os.Stderr, "moedex-serve: graph reload failed (%v); keeping current graph\n", err)
+			}
 			old := holder.swap(nrc)
 			go old.retire()
 			fmt.Fprintf(os.Stderr, "moedex-serve: reloaded ranker — %d blobs, %d symbol blobs, %d dense chunks (%s) in %s\n",
@@ -293,7 +302,15 @@ func runMCP(shardDir string, topK int, embedKind, onnxRuntime string) error {
 
 	navtools, navClose := navTools()
 	defer navClose()
-	srv := mcp.NewServer(holder, mcp.WithTools(navtools...), mcp.WithCorpusRoot(rc.CorpusRoot()))
+	tools := append(navtools, graphTools.Tools()...)
+	srv := mcp.NewServer(holder,
+		mcp.WithTools(tools...),
+		mcp.WithCorpusRoot(rc.CorpusRoot()),
+		// Graph-fused search: every search_context block carries its graph
+		// neighborhood, so an agent never needs a second tool call to learn what
+		// calls a hit or what it depends on. graph_depth=0 opts out per call.
+		mcp.WithGraphAnnotator(graphTools),
+	)
 	fmt.Fprintln(os.Stderr, "moedex-serve: MCP ready on stdio (SIGHUP to reload)")
 	return srv.Serve(ctx, os.Stdin, os.Stdout)
 }
@@ -336,6 +353,12 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 		return err
 	}
 	holder := newRankHolder(rc)
+	graphTools, err := server.OpenGraphTools(cfg.shardDir)
+	if err != nil {
+		_ = rc.Close()
+		return err
+	}
+	defer graphTools.Close()
 	m := newMetrics()
 
 	effAddr := resolveAddr(cfg.addr, cfg.token)
@@ -354,7 +377,12 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 	if len(navtools) > 0 {
 		slog.Info("lsp navigation tools enabled", "count", len(navtools))
 	}
-	mcpSrv := mcp.NewServer(holder, mcp.WithTools(navtools...), mcp.WithCorpusRoot(rc.CorpusRoot()))
+	tools := append(navtools, graphTools.Tools()...)
+	mcpSrv := mcp.NewServer(holder,
+		mcp.WithTools(tools...),
+		mcp.WithCorpusRoot(rc.CorpusRoot()),
+		mcp.WithGraphAnnotator(graphTools),
+	)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -395,6 +423,9 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 				m.incReload("fail")
 				slog.Error("reload failed; keeping current ranker", "err", err.Error())
 				continue
+			}
+			if err := graphTools.Reload(cfg.shardDir); err != nil {
+				slog.Error("graph reload failed; keeping current graph", "err", err.Error())
 			}
 			old := holder.swap(nrc)
 			go old.retire()

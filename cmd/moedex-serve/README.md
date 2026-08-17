@@ -7,7 +7,7 @@ and answers queries with zero cold-start, in one of five modes:
 |------|------|---------|----------------|
 | Retrieval daemon | `-http :8080` | HTTP JSON (`/search`, `/stats`, `/healthz`, `/metrics`) | line-granular literal/regex matches, parity-proven against ripgrep |
 | One-shot query | `-q PATTERN` | stdout (`repo/relpath:line`) | a single retrieval query, for validation/scripting |
-| Ranked agent context (stdio) | `-mcp` | MCP over stdio (`search_context` tool) | ranked, deduplicated, token-budgeted context blocks; spawns per agent session |
+| Ranked agent context (stdio) | `-mcp` | MCP over stdio (`search_context` + graph tools) | ranked, deduplicated, token-budgeted context blocks, each fused with its graph neighborhood; spawns per agent session |
 | Ranked agent context (HTTP) | `-mcp-http :8081` | MCP over Streamable HTTP at `/mcp` | the same `search_context` tool, loaded once and shared across sessions over the network |
 | Dense sidecar refresh | `-build-embeddings` | stdout/stderr, then exit | builds/refreshes the corpus embedding sidecar for `-shard-dir` out of band, so a warm daemon reload never re-embeds inline |
 
@@ -288,13 +288,50 @@ The boot line reports the shape, e.g.:
 ```json
 {
   "name": "search_context",
-  "arguments": {"query": "csr validation", "token_budget": 4000, "top_k": 10}
+  "arguments": {"query": "csr validation", "token_budget": 4000, "top_k": 10,
+                "format": "structured", "graph_depth": 1}
 }
 ```
 
-Only `query` is required; `token_budget` and `top_k` are optional (the latter
-defaults to `-top-k`). An empty query is reported as a tool-level error rather
-than a protocol error.
+Only `query` is required; `token_budget`, `top_k`, `format`, and `graph_depth` are
+optional (`top_k` defaults to `-top-k`). An empty query is reported as a tool-level
+error rather than a protocol error.
+
+### Graph-fused results
+
+Every returned block is annotated with its **graph neighborhood**, so an agent that
+found a symbol does not need a second tool call to learn what calls it or what it
+depends on:
+
+| Bucket | Contains |
+|---|---|
+| `callers` | symbols that call the block's symbols (incoming `calls`) |
+| `callees` | symbols the block's symbols call (outgoing `calls`) |
+| `consumers` | handlers that consume the block's event/message (incoming `consumes`) |
+| `publishers` | publishers of the block's event/message (incoming `publishes`) |
+| `depends_on` | outgoing `imports` / `uses_type` / `references` / `candidate` / `publishes` / `consumes` |
+| `similar_to` | semantic siblings (`similar_to`, either direction; needs an `onnx`-built graph) |
+
+Each neighbor carries its node `id` (usable directly with `trace_calls` /
+`impact_analysis`), symbol, kind, repo/path/line, the `edge` type and `direction`
+that reached it, the hop count, and the edge's confidence `{tier, score}`.
+
+`graph_depth` controls the radius: **1** by default (the direct neighborhood), up to
+10, and **0 turns the annotation off**. Each lane traverses in one fixed direction, so
+`graph_depth: 2` means "callers of callers", not an undirected blob. Both output
+formats carry it — `text` as one `[graph] ...` line under each block header,
+`structured` as a typed `neighbors` object per block.
+
+Two deliberate limits, so a short answer is never mistaken for a small neighborhood:
+buckets are capped (a trimmed block sets `truncated: true`), and incoming
+reference/import edges are not annotated at all — that is the highest-volume edge
+class in the graph, and `impact_analysis` is the tool for that question. A block whose
+symbols have no edges gets a present, empty annotation, so "annotation off" and
+"nothing found" stay distinguishable.
+
+The annotation needs the `corpus-graph.graph` sidecar that `moedex-index` writes
+beside the shards; without it (e.g. the single-repo `moedex-mcp`), `graph_depth` is
+accepted and inert.
 
 The MCP server applies hardening defaults: a 30 s per-call timeout, 8-way handler
 concurrency, a 1 MiB cap on a single JSON-RPC message, and an 8 KiB cap on the

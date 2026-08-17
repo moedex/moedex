@@ -69,6 +69,17 @@ func TestAddFileDedupBySHA(t *testing.T) {
 	}
 }
 
+func TestAddFileUnindexedStoresBlobWithoutPostings(t *testing.T) {
+	ix := New()
+	ix.AddFileUnindexed("repo", "symbol.go", "/symbol.go", "symbol-sha", []byte("func Similar() {}"))
+	if ix.NumBlobs() != 1 || string(ix.Blob(0).Content) != "func Similar() {}" {
+		t.Fatalf("unindexed blob = %#v", ix.Blob(0))
+	}
+	if got := ix.Postings(tg("fun")); got != nil {
+		t.Fatalf("unindexed blob produced postings %#v", got)
+	}
+}
+
 func TestAddFileDistinctSHAGetsNewID(t *testing.T) {
 	ix := New()
 	ix.AddFile("repo", "a.txt", "/abs/a.txt", "sha1", []byte("foo"))

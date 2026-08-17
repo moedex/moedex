@@ -6,6 +6,7 @@ import (
 	"sort"
 	"testing"
 
+	"moedex/internal/graph"
 	"moedex/internal/index"
 	"moedex/internal/symbol"
 )
@@ -160,6 +161,19 @@ func TestGenerateCandidates_FindsCrossShardReferences(t *testing.T) {
 		}
 		if e.Type == TypeUnknown {
 			t.Errorf("edge %+v: untyped candidate", e)
+		}
+		blob := c.Blob(e.Source)
+		if blob == nil {
+			t.Fatalf("edge %+v: source blob is missing", e)
+		}
+		if e.Confidence != graph.Candidate {
+			t.Errorf("edge %+v: confidence = %s, want Candidate", e, e.Confidence)
+		}
+		if e.Evidence.BlobSHA != blob.SHA || e.Evidence.ByteOffset != uint64(e.Source.Start) || e.Evidence.ByteLength != uint64(e.Source.End-e.Source.Start) {
+			t.Errorf("edge %+v: evidence = %+v, want source blob/span", e, e.Evidence)
+		}
+		if got, ok := e.Evidence.Bytes(blob.Content); !ok || string(got) != e.Name {
+			t.Errorf("edge %+v: evidence bytes = %q, %v, want %q", e, got, ok, e.Name)
 		}
 	}
 

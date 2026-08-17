@@ -75,7 +75,9 @@ func assertScores(t *testing.T, input []candidates.Edge, want map[string]struct 
 	}
 	seen := map[string]bool{}
 	for i, edge := range got {
-		if !reflect.DeepEqual(edge.Edge, input[i]) {
+		wantEdge := input[i]
+		wantEdge.Confidence = edge.Confidence
+		if !reflect.DeepEqual(edge.Edge, wantEdge) {
 			t.Errorf("edge %d changed candidate identity:\n got %+v\nwant %+v", i, edge.Edge, input[i])
 		}
 		line := edgeLine(input[i])
@@ -85,15 +87,11 @@ func assertScores(t *testing.T, input []candidates.Edge, want map[string]struct 
 			continue
 		}
 		seen[line] = true
-		if edge.Tier != expect.tier || edge.Kind != expect.kind {
-			t.Errorf("%q scored (%s, %s), want (%s, %s)", line, edge.Tier, edge.Kind, expect.tier, expect.kind)
+		if edge.Confidence != expect.tier || edge.Kind != expect.kind {
+			t.Errorf("%q scored (%s, %s), want (%s, %s)", line, edge.Confidence, edge.Kind, expect.tier, expect.kind)
 		}
-		wantConfidence := CandidateConfidence
-		if expect.tier == Pattern {
-			wantConfidence = PatternConfidence
-		}
-		if edge.Confidence != wantConfidence {
-			t.Errorf("%q confidence = %v, want %v", line, edge.Confidence, wantConfidence)
+		if edge.Confidence.Score() != expect.tier.Score() {
+			t.Errorf("%q score = %v, want %v", line, edge.Confidence.Score(), expect.tier.Score())
 		}
 	}
 	for line := range want {
@@ -196,7 +194,7 @@ func TestVerifyRetainsUnresolvableCandidates(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("Verify returned %d edges, want the unresolvable candidate retained", len(got))
 	}
-	if got[0].Tier != Candidate || got[0].Confidence != CandidateConfidence || got[0].Kind != Unverified {
-		t.Errorf("unresolvable candidate scored %+v, want Candidate/%v/Unverified", got[0], CandidateConfidence)
+	if got[0].Confidence != Candidate || got[0].Kind != Unverified {
+		t.Errorf("unresolvable candidate scored %+v, want Candidate/Unverified", got[0])
 	}
 }

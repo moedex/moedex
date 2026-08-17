@@ -527,6 +527,120 @@ type Hit struct {
 	Score float32
 }
 
+// Similarity is one directed nearest-neighbor relationship between two stored
+// chunks. Score is their cosine similarity. Source and Target never identify
+// the same stored chunk.
+type Similarity struct {
+	Source Chunk
+	Target Chunk
+	Score  float32
+}
+
+// Similar returns, for every stored chunk, its topK nearest OTHER chunks whose
+// cosine similarity is at least threshold. Results are grouped in store order
+// by source; each source's neighbors are ordered by score descending, with
+// store order breaking ties. The store's vectors are already unit-normalized,
+// so the corpus-wide comparison requires no additional embedding calls.
+//
+// This is an exact brute-force all-neighbors pass. It is intended for offline
+// builders (such as the graph sidecar), not request-time search.
+func (s *Store) Similar(ctx context.Context, topK int, threshold float32) ([]Similarity, error) {
+	if s == nil || topK <= 0 || len(s.chunks) < 2 {
+		return nil, nil
+	}
+	if math.IsNaN(float64(threshold)) || threshold < -1 || threshold > 1 {
+		return nil, fmt.Errorf("embed: similarity threshold %g is outside [-1,1]", threshold)
+	}
+	if len(s.vectors) != len(s.chunks) {
+		return nil, fmt.Errorf("embed: %d chunks have %d vectors", len(s.chunks), len(s.vectors))
+	}
+	for i, v := range s.vectors {
+		if len(v) != s.dim {
+			return nil, fmt.Errorf("embed: chunk %d vector dim %d != store dim %d", i, len(v), s.dim)
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	if topK >= len(s.chunks) {
+		topK = len(s.chunks) - 1
+	}
+	perSource := make([][]Similarity, len(s.chunks))
+	workers := runtime.GOMAXPROCS(0)
+	if workers > len(s.chunks) {
+		workers = len(s.chunks)
+	}
+	if workers < 1 {
+		workers = 1
+	}
+
+	jobs := make(chan int)
+	var wg sync.WaitGroup
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for source := range jobs {
+				if ctx.Err() != nil {
+					continue
+				}
+				h := make(scoreHeap, 0, topK)
+				for target, vector := range s.vectors {
+					if source == target {
+						continue
+					}
+					if target&255 == 0 && ctx.Err() != nil {
+						break
+					}
+					score := dot(s.vectors[source], vector)
+					if score < threshold {
+						continue
+					}
+					candidate := scored{idx: target, score: score}
+					if len(h) < topK {
+						heap.Push(&h, candidate)
+					} else if betterThan(candidate, h[0]) {
+						h[0] = candidate
+						heap.Fix(&h, 0)
+					}
+				}
+				if ctx.Err() != nil {
+					continue
+				}
+				scores := []scored(h)
+				sort.Slice(scores, func(i, j int) bool { return betterThan(scores[i], scores[j]) })
+				neighbors := make([]Similarity, len(scores))
+				for i, candidate := range scores {
+					neighbors[i] = Similarity{
+						Source: s.chunks[source],
+						Target: s.chunks[candidate.idx],
+						Score:  candidate.score,
+					}
+				}
+				perSource[source] = neighbors
+			}
+		}()
+	}
+	for i := range s.chunks {
+		if ctx.Err() != nil {
+			break
+		}
+		jobs <- i
+	}
+	close(jobs)
+	wg.Wait()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	var out []Similarity
+	for _, neighbors := range perSource {
+		out = append(out, neighbors...)
+	}
+	return out, nil
+}
+
 // Search embeds query via e and returns the topK most similar chunks, best
 // first. Ties break stably by chunk index (lower index first).
 func (s *Store) Search(ctx context.Context, e Embedder, query string, topK int) ([]Hit, error) {

@@ -1,32 +1,38 @@
 package diskgraph
 
 import (
-	"math"
+	"encoding/binary"
+	"encoding/json"
+	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
+
+	"moedex/internal/graph"
 )
 
 func TestRoundTripMmapRecoversEdgesExactly(t *testing.T) {
 	b := NewBuilder()
 	first := Key{BlobSHA: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", SymbolOffset: 17}
 	firstEdges := []Edge{
-		{Type: EdgeCalls, TargetBlob: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", TargetOffset: 91, Confidence: 0.6, EvidenceOffset: 43},
-		{Type: EdgeCandidate, TargetBlob: "cccccccccccccccccccccccccccccccccccccccc", TargetOffset: 1 << 40, Confidence: math.SmallestNonzeroFloat64, EvidenceOffset: 1<<39 + 7},
+		{Type: EdgeCalls, TargetBlob: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", TargetOffset: 91, Confidence: graph.Pattern, Evidence: graph.Evidence{BlobSHA: first.BlobSHA, ByteOffset: 43, ByteLength: 12}},
+		{Type: EdgeCandidate, TargetBlob: "cccccccccccccccccccccccccccccccccccccccc", TargetOffset: 1 << 40, Confidence: graph.Candidate, Evidence: graph.Evidence{BlobSHA: first.BlobSHA, ByteOffset: 1<<39 + 7, ByteLength: 3}},
+		{Type: EdgeSimilarTo, TargetBlob: "dddddddddddddddddddddddddddddddddddddddd", TargetOffset: 23, Confidence: graph.Candidate, Evidence: graph.Evidence{BlobSHA: first.BlobSHA, ByteOffset: 17, ByteLength: 8}, Similarity: 0.812345},
 	}
 	if err := b.AddEdges(first, firstEdges...); err != nil {
 		t.Fatal(err)
 	}
 	second := Key{BlobSHA: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", SymbolOffset: 2}
 	secondEdges := []Edge{
-		{Type: EdgeImports, TargetBlob: "dddddddddddddddddddddddddddddddddddddddd", TargetOffset: 0, Confidence: 1, EvidenceOffset: 2},
+		{Type: EdgeImports, TargetBlob: "dddddddddddddddddddddddddddddddddddddddd", TargetOffset: 0, Confidence: graph.Proven, Evidence: graph.Evidence{BlobSHA: second.BlobSHA, ByteOffset: 2, ByteLength: 8}},
 	}
 	if err := b.AddEdge(second, secondEdges[0]); err != nil {
 		t.Fatal(err)
 	}
 	third := Key{BlobSHA: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", SymbolOffset: 0}
 	thirdEdges := []Edge{
-		{Type: EdgeType(1 << 20), TargetBlob: first.BlobSHA, TargetOffset: first.SymbolOffset, Confidence: math.Inf(1), EvidenceOffset: 0},
+		{Type: EdgeType(1 << 20), TargetBlob: first.BlobSHA, TargetOffset: first.SymbolOffset, Confidence: graph.Verified, Evidence: graph.Evidence{BlobSHA: third.BlobSHA, ByteOffset: 0, ByteLength: 1}},
 	}
 	if err := b.AddEdge(third, thirdEdges[0]); err != nil {
 		t.Fatal(err)
@@ -36,6 +42,13 @@ func TestRoundTripMmapRecoversEdgesExactly(t *testing.T) {
 	if err := b.Save(path); err != nil {
 		t.Fatalf("save: %v", err)
 	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := binary.LittleEndian.Uint32(raw[8:12]); got != 2 {
+		t.Fatalf("sidecar format version = %d, want 2", got)
+	}
 	g, err := Open(path)
 	if err != nil {
 		t.Fatalf("open mmap: %v", err)
@@ -43,7 +56,7 @@ func TestRoundTripMmapRecoversEdgesExactly(t *testing.T) {
 	if got, want := g.NumNodes(), 3; got != want {
 		t.Fatalf("NumNodes = %d, want %d", got, want)
 	}
-	if got, want := g.NumEdges(), 4; got != want {
+	if got, want := g.NumEdges(), 5; got != want {
 		t.Fatalf("NumEdges = %d, want %d", got, want)
 	}
 	gotFirst := g.Edges(first)
@@ -63,6 +76,41 @@ func TestRoundTripMmapRecoversEdgesExactly(t *testing.T) {
 	if got := g.Keys(); !reflect.DeepEqual(got, wantKeys) {
 		t.Fatalf("Keys = %#v, want %#v", got, wantKeys)
 	}
+
+	// EachEdge is the reverse-traversal sweep: it must visit exactly what
+	// Keys()+Edges() would, in the same order, without allocating per node.
+	type visit struct {
+		source Key
+		edge   Edge
+	}
+	var swept []visit
+	g.EachEdge(func(source Key, edge Edge) bool {
+		swept = append(swept, visit{source, edge})
+		return true
+	})
+	var want []visit
+	for _, key := range wantKeys {
+		for _, edge := range g.Edges(key) {
+			want = append(want, visit{key, edge})
+		}
+	}
+	if !reflect.DeepEqual(swept, want) {
+		t.Fatalf("EachEdge sweep:\n got  %#v\n want %#v", swept, want)
+	}
+	allocs := testing.AllocsPerRun(20, func() {
+		g.EachEdge(func(Key, Edge) bool { return true })
+	})
+	if allocs != 0 {
+		t.Errorf("EachEdge allocated %.1f time(s) per sweep, want 0", allocs)
+	}
+	var stopped int
+	g.EachEdge(func(Key, Edge) bool {
+		stopped++
+		return stopped < 2
+	})
+	if stopped != 2 {
+		t.Errorf("EachEdge visited %d edge(s) after the walker stopped at 2", stopped)
+	}
 	if err := g.Close(); err != nil {
 		t.Fatalf("close: %v", err)
 	}
@@ -81,6 +129,73 @@ func TestRoundTripMmapRecoversEdgesExactly(t *testing.T) {
 	defer loaded.Close()
 	if got := loaded.Edges(first); !reflect.DeepEqual(got, firstEdges) {
 		t.Fatalf("Load alias edges = %#v, want %#v", got, firstEdges)
+	}
+}
+
+func TestRoundTripRetainsIsolatedNode(t *testing.T) {
+	b := NewBuilder()
+	isolated := Key{BlobSHA: "isolated-sha", SymbolOffset: 17}
+	if err := b.AddNode(isolated); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.AddNode(isolated); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "isolated.graph")
+	if err := b.Save(path); err != nil {
+		t.Fatal(err)
+	}
+	g, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	if got := g.Keys(); !reflect.DeepEqual(got, []Key{isolated}) {
+		t.Fatalf("Keys = %#v, want isolated node", got)
+	}
+	if got := g.Edges(isolated); len(got) != 0 {
+		t.Errorf("isolated adjacency = %#v, want empty", got)
+	}
+	if g.NumNodes() != 1 || g.NumEdges() != 0 {
+		t.Errorf("counts = %d nodes, %d edges, want 1 and 0", g.NumNodes(), g.NumEdges())
+	}
+}
+
+func TestBuilderAddOrUpgradeEdgePromotesWithoutDuplicating(t *testing.T) {
+	b := NewBuilder()
+	source := Key{BlobSHA: "source", SymbolOffset: 7}
+	pattern := Edge{
+		Type:         EdgeCalls,
+		TargetBlob:   "target",
+		TargetOffset: 11,
+		Confidence:   graph.Pattern,
+		Evidence:     graph.Evidence{BlobSHA: "source", ByteOffset: 23, ByteLength: 2},
+	}
+	if err := b.AddEdge(source, pattern); err != nil {
+		t.Fatal(err)
+	}
+	proven := pattern
+	proven.Confidence = graph.Proven
+	added, err := b.AddOrUpgradeEdge(source, proven)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if added {
+		t.Fatal("confidence promotion appended a duplicate relationship")
+	}
+	if got := b.NumEdges(); got != 1 {
+		t.Fatalf("NumEdges = %d, want one upgraded record", got)
+	}
+	if got := b.adjacency[source]; !reflect.DeepEqual(got, []Edge{proven}) {
+		t.Fatalf("upgraded adjacency = %#v, want %#v", got, []Edge{proven})
+	}
+	weaker := pattern
+	weaker.Confidence = graph.Candidate
+	if added, err := b.AddOrUpgradeEdge(source, weaker); err != nil || added {
+		t.Fatalf("weaker duplicate = added %v, err %v", added, err)
+	}
+	if got := b.adjacency[source][0].Confidence; got != graph.Proven {
+		t.Fatalf("weaker duplicate demoted confidence to %s", got)
 	}
 }
 
@@ -106,5 +221,57 @@ func TestBuilderRejectsMissingBlobIdentity(t *testing.T) {
 	}
 	if err := b.Add("source", 0, Edge{}); err == nil {
 		t.Fatal("empty target SHA accepted")
+	}
+	validEvidence := graph.Evidence{BlobSHA: "source", ByteLength: 1}
+	if err := b.Add("source", 0, Edge{TargetBlob: "target", Confidence: graph.ConfidenceTier(99), Evidence: validEvidence}); err == nil {
+		t.Fatal("invalid confidence tier accepted")
+	}
+	if err := b.Add("source", 0, Edge{TargetBlob: "target", Confidence: graph.Pattern}); err == nil {
+		t.Fatal("missing evidence accepted")
+	}
+}
+
+func TestEdgeJSONUsesStructuredConfidenceAndEvidence(t *testing.T) {
+	edge := Edge{
+		Type:         EdgeCalls,
+		TargetBlob:   "target-sha",
+		TargetOffset: 7,
+		Confidence:   graph.Verified,
+		Evidence:     graph.Evidence{BlobSHA: "source-sha", ByteOffset: 11, ByteLength: 5},
+	}
+	body, err := json.Marshal(edge)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`"confidence":{"tier":"Verified","score":0.85}`,
+		`"evidence":{"blob_sha":"source-sha","byte_offset":11,"byte_length":5}`,
+	} {
+		if !strings.Contains(string(body), want) {
+			t.Errorf("edge JSON %s does not contain %s", body, want)
+		}
+	}
+}
+
+func TestSimilarEdgeJSONKeepsTierAndCosineSeparate(t *testing.T) {
+	edge := Edge{
+		Type:         EdgeSimilarTo,
+		TargetBlob:   "target-sha",
+		TargetOffset: 7,
+		Confidence:   graph.Candidate,
+		Evidence:     graph.Evidence{BlobSHA: "source-sha", ByteOffset: 11, ByteLength: 5},
+		Similarity:   0.6671,
+	}
+	body, err := json.Marshal(edge)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`"confidence":{"tier":"Candidate","score":0.3}`,
+		`"similarity":0.6671`,
+	} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("similar edge JSON %s does not contain %s", body, want)
+		}
 	}
 }

@@ -105,6 +105,27 @@ func AIPrivacyFingerprint(repoDir string) (string, error) {
 	return privacyPolicyFingerprint(policy), nil
 }
 
+// LSPWorkspaceAllowed reports whether an external language server may safely
+// open repoDir. Unlike ingestion, an LSP can scan the entire workspace after a
+// single allowed-file query, so any level-1 path makes the whole working tree
+// ineligible unless a separately sanitized workspace is supplied. Policy parse
+// and validation failures are returned so callers fail closed before launch.
+func LSPWorkspaceAllowed(repoDir string) (bool, error) {
+	policy, err := loadPrivacyPolicy(repoDir)
+	if err != nil {
+		return false, err
+	}
+	if policy.globalLevel == restrictedAILevel {
+		return false, nil
+	}
+	for _, override := range policy.overrides {
+		if override.level == restrictedAILevel {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func privacyPolicyFingerprint(policy privacyPolicy) string {
 	overrides := append([]privacyOverride(nil), policy.overrides...)
 	sort.Slice(overrides, func(i, j int) bool {

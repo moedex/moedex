@@ -216,7 +216,7 @@ func buildSidecars(dir string) string {
 	} else {
 		built = append(built, "token", "symbol")
 	}
-	if _, err := server.BuildGraphSidecar(dir); err != nil {
+	if _, err := buildGraphSidecar(dir); err != nil {
 		fmt.Fprintf(os.Stderr, "moedex-index: warning: build graph sidecar: %v\n", err)
 	} else {
 		built = append(built, "graph")
