@@ -72,7 +72,8 @@ func isSimilarEdge(t diskgraph.EdgeType) bool   { return t == diskgraph.EdgeSimi
 func isDependencyEdge(t diskgraph.EdgeType) bool {
 	switch t {
 	case diskgraph.EdgeImports, diskgraph.EdgeUsesType, diskgraph.EdgeReferences,
-		diskgraph.EdgeCandidate, diskgraph.EdgePublishes, diskgraph.EdgeConsumes:
+		diskgraph.EdgeCandidate, diskgraph.EdgePublishes, diskgraph.EdgeConsumes,
+		diskgraph.EdgeInjects, diskgraph.EdgeQueries, diskgraph.EdgeRenders:
 		return true
 	}
 	return false

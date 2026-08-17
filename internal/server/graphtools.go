@@ -329,6 +329,8 @@ func (g *GraphToolset) Tools() []mcp.ToolHandler {
 		&graphTool{owner: g, name: "trace_calls"},
 		&graphTool{owner: g, name: "trace_consumers"},
 		&graphTool{owner: g, name: "trace_hierarchy"},
+		&graphTool{owner: g, name: "trace_queries"},
+		&graphTool{owner: g, name: "trace_renders"},
 		&graphTool{owner: g, name: "impact_analysis"},
 		g.ClusterTool(),
 	}
@@ -413,9 +415,23 @@ func (t *graphTool) Descriptor() map[string]interface{} {
 		}
 		schema["required"] = []string{"name"}
 	case "trace_hierarchy":
-		description = "Return the type hierarchy for a type symbol: supertypes (extends/implements), subtypes, and contained methods."
+		description = "Return the type hierarchy for a type symbol: supertypes (extends/implements), subtypes, contained methods, and DI injection bindings."
 		schema["properties"] = map[string]interface{}{
 			"symbol": map[string]interface{}{"type": "string", "minLength": 1, "description": "Exact type name to trace."},
+			"hops":   depth,
+		}
+		schema["required"] = []string{"symbol"}
+	case "trace_queries":
+		description = "Return the EF/database query relationships for a symbol: what entities a method queries and what code touches an entity."
+		schema["properties"] = map[string]interface{}{
+			"symbol": map[string]interface{}{"type": "string", "minLength": 1, "description": "Exact symbol name (method or entity type) to trace."},
+			"hops":   depth,
+		}
+		schema["required"] = []string{"symbol"}
+	case "trace_renders":
+		description = "Return the component rendering relationships for a symbol: what child components a parent renders and what parents render a child."
+		schema["properties"] = map[string]interface{}{
+			"symbol": map[string]interface{}{"type": "string", "minLength": 1, "description": "Exact component name to trace."},
 			"hops":   depth,
 		}
 		schema["required"] = []string{"symbol"}
@@ -502,6 +518,46 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 			return invalidGraphArgs(err), nil
 		}
 		result, err = snap.traceHierarchy(ctx, args.Symbol, hops)
+	case "trace_queries":
+		var args struct {
+			Symbol string `json:"symbol"`
+			Hops   *int   `json:"hops"`
+		}
+		if err := decodeGraphArgs(raw, &args); err != nil {
+			return invalidGraphArgs(err), nil
+		}
+		args.Symbol = strings.TrimSpace(args.Symbol)
+		if err := validateGraphString("symbol", args.Symbol); err != nil {
+			return invalidGraphArgs(err), nil
+		}
+		hops := defaultTraceDepth
+		if args.Hops != nil {
+			hops = *args.Hops
+		}
+		if err := validateDepth("hops", hops); err != nil {
+			return invalidGraphArgs(err), nil
+		}
+		result, err = snap.traceQueries(ctx, args.Symbol, hops)
+	case "trace_renders":
+		var args struct {
+			Symbol string `json:"symbol"`
+			Hops   *int   `json:"hops"`
+		}
+		if err := decodeGraphArgs(raw, &args); err != nil {
+			return invalidGraphArgs(err), nil
+		}
+		args.Symbol = strings.TrimSpace(args.Symbol)
+		if err := validateGraphString("symbol", args.Symbol); err != nil {
+			return invalidGraphArgs(err), nil
+		}
+		hops := defaultTraceDepth
+		if args.Hops != nil {
+			hops = *args.Hops
+		}
+		if err := validateDepth("hops", hops); err != nil {
+			return invalidGraphArgs(err), nil
+		}
+		result, err = snap.traceRenders(ctx, args.Symbol, hops)
 	case "impact_analysis":
 		var args struct {
 			File   *string `json:"file"`
@@ -626,7 +682,21 @@ func (s *graphSnapshot) traceConsumers(ctx context.Context, name string) (GraphQ
 func (s *graphSnapshot) traceHierarchy(ctx context.Context, symbol string, hops int) (GraphQueryResult, error) {
 	roots := append([]diskgraph.Key(nil), s.bySymbol[symbol]...)
 	return s.traverse(ctx, "trace_hierarchy", symbol, roots, hops, true, func(t diskgraph.EdgeType) bool {
-		return t == diskgraph.EdgeExtends || t == diskgraph.EdgeImplements || t == diskgraph.EdgeContainsMethod
+		return t == diskgraph.EdgeExtends || t == diskgraph.EdgeImplements || t == diskgraph.EdgeContainsMethod || t == diskgraph.EdgeInjects
+	})
+}
+
+func (s *graphSnapshot) traceQueries(ctx context.Context, symbol string, hops int) (GraphQueryResult, error) {
+	roots := append([]diskgraph.Key(nil), s.bySymbol[symbol]...)
+	return s.traverse(ctx, "trace_queries", symbol, roots, hops, true, func(t diskgraph.EdgeType) bool {
+		return t == diskgraph.EdgeQueries
+	})
+}
+
+func (s *graphSnapshot) traceRenders(ctx context.Context, symbol string, hops int) (GraphQueryResult, error) {
+	roots := append([]diskgraph.Key(nil), s.bySymbol[symbol]...)
+	return s.traverse(ctx, "trace_renders", symbol, roots, hops, true, func(t diskgraph.EdgeType) bool {
+		return t == diskgraph.EdgeRenders
 	})
 }
 

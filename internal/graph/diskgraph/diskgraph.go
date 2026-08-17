@@ -82,6 +82,16 @@ const (
 	// EdgeContainsMethod links a type to a method defined within its body. Source
 	// is the type, target is the method. Both share the same blob SHA.
 	EdgeContainsMethod
+	// EdgeInjects links a DI registration site to the service type it registers.
+	// For two-argument registrations (AddScoped<IFoo, Foo>), a companion
+	// EdgeImplements may also be emitted when the hierarchy pass missed it.
+	EdgeInjects
+	// EdgeQueries links a method that accesses an EF DbSet to the entity type
+	// it queries. Source is the querying method, target is the entity definition.
+	EdgeQueries
+	// EdgeRenders links a parent component to a child component it renders in
+	// its template. Source is the parent, target is the child.
+	EdgeRenders
 )
 
 // String renders an edge type using the stable names exposed by graph-query
@@ -116,6 +126,12 @@ func (t EdgeType) String() string {
 		return "implements"
 	case EdgeContainsMethod:
 		return "contains_method"
+	case EdgeInjects:
+		return "injects"
+	case EdgeQueries:
+		return "queries"
+	case EdgeRenders:
+		return "renders"
 	default:
 		return fmt.Sprintf("edge_type_%d", uint32(t))
 	}

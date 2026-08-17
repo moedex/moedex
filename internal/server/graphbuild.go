@@ -98,6 +98,9 @@ type GraphBuildReport struct {
 	HTTP      httproute.Report
 	Manifest  manifest.Report
 	Hierarchy HierarchyReport
+	Injection InjectionReport
+	Queries   QueriesReport
+	Renders   RenderReport
 }
 
 // BuildGraph generates, verifies, and persists the graph for every exported
@@ -207,12 +210,30 @@ func BuildGraphWithOptions(dir string, opts GraphBuildOptions) (path string, rep
 		return "", report, err
 	}
 
+	injectionReport, err := addInjectionEdges(builder, sweep, emit.seen)
+	if err != nil {
+		return "", report, err
+	}
+
+	queriesReport, err := addQueryEdges(builder, sweep, emit.seen)
+	if err != nil {
+		return "", report, err
+	}
+
+	renderReport, err := addRenderEdges(builder, sweep, emit.seen)
+	if err != nil {
+		return "", report, err
+	}
+
 	report = GraphBuildReport{
 		Nodes:     builder.NumNodes(),
 		Edges:     builder.NumEdges(),
 		HTTP:      httpReport,
 		Manifest:  manifestReport,
 		Hierarchy: hierarchyReport,
+		Injection: injectionReport,
+		Queries:   queriesReport,
+		Renders:   renderReport,
 	}
 
 	path, err = saveGraph(builder, dir)
