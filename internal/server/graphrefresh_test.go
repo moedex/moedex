@@ -29,7 +29,7 @@ type graphFile struct {
 
 // writeGraphShards writes files into dir as shard-NNNN.idx, perShard blobs each,
 // replacing any shards already there. Sidecars in dir are deliberately left
-// alone: a refresh has to find the previous graph sidecar next to the new shards.
+// alone: a refresh has to find the previous graph next to the new shards.
 func writeGraphShards(t *testing.T, dir string, files []graphFile, perShard int) {
 	t.Helper()
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -58,7 +58,7 @@ func writeGraphShards(t *testing.T, dir string, files []graphFile, perShard int)
 }
 
 // copyShards clones just the shard files of src into a fresh dir, so a full
-// rebuild can be run over identical content without disturbing src's sidecar.
+// rebuild can be run over identical content without disturbing src's graph.
 func copyShards(t *testing.T, src string) string {
 	t.Helper()
 	dst := t.TempDir()
@@ -112,7 +112,7 @@ type graphRecord struct {
 	edge diskgraph.Edge
 }
 
-// readGraph returns every record of the sidecar at path in on-disk order.
+// readGraph returns every record of the graph at path in on-disk order.
 func readGraph(t *testing.T, path string) []graphRecord {
 	t.Helper()
 	g, err := diskgraph.Open(path)
@@ -164,14 +164,14 @@ func requireSameGraph(t *testing.T, what string, got, want []graphRecord) {
 // tests
 // ---------------------------------------------------------------------------
 
-// TestRefreshGraphSidecarEqualsFullRebuild is the exactness gate. An incremental
+// TestRefreshGraphEqualsFullRebuild is the exactness gate. An incremental
 // refresh is only allowed to be cheaper, never different: carrying edges forward
 // must reproduce the full sweep record for record, in the same order.
-func TestRefreshGraphSidecarEqualsFullRebuild(t *testing.T) {
+func TestRefreshGraphEqualsFullRebuild(t *testing.T) {
 	dir := t.TempDir()
 	files := synthGraphCorpus(40)
 	writeGraphShards(t, dir, files, 8)
-	if _, _, err := BuildGraphSidecar(dir); err != nil {
+	if _, _, err := BuildGraph(dir); err != nil {
 		t.Fatalf("initial build: %v", err)
 	}
 
@@ -187,12 +187,12 @@ func TestRefreshGraphSidecarEqualsFullRebuild(t *testing.T) {
 	writeGraphShards(t, dir, files, 8)
 
 	full := copyShards(t, dir)
-	fullPath, _, err := BuildGraphSidecar(full)
+	fullPath, _, err := BuildGraph(full)
 	if err != nil {
 		t.Fatalf("full rebuild: %v", err)
 	}
 
-	deltaPath, stats, err := RefreshGraphSidecar(dir)
+	deltaPath, stats, err := RefreshGraph(dir)
 	if err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
@@ -207,15 +207,15 @@ func TestRefreshGraphSidecarEqualsFullRebuild(t *testing.T) {
 		withoutGenerations(readGraph(t, fullPath)))
 }
 
-// TestRefreshGraphSidecarRecomputesOnlyChangedBlobNames is the phase's headline
+// TestRefreshGraphRecomputesOnlyChangedBlobNames is the phase's headline
 // claim: one edited file re-sweeps only the names that file's content mentions,
 // every other name's edges are copied forward, and the unchanged files' edge
 // counts come out identical.
-func TestRefreshGraphSidecarRecomputesOnlyChangedBlobNames(t *testing.T) {
+func TestRefreshGraphRecomputesOnlyChangedBlobNames(t *testing.T) {
 	dir := t.TempDir()
 	files := synthGraphCorpus(60)
 	writeGraphShards(t, dir, files, 10)
-	path, _, err := BuildGraphSidecar(dir)
+	path, _, err := BuildGraph(dir)
 	if err != nil {
 		t.Fatalf("initial build: %v", err)
 	}
@@ -228,7 +228,7 @@ func TestRefreshGraphSidecarRecomputesOnlyChangedBlobNames(t *testing.T) {
 	afterSHA := diskstore.GitBlobSHA1([]byte(files[0].content))
 	writeGraphShards(t, dir, files, 10)
 
-	path, stats, err := RefreshGraphSidecar(dir)
+	path, stats, err := RefreshGraph(dir)
 	if err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
@@ -305,12 +305,12 @@ func TestRefreshGraphSidecarRecomputesOnlyChangedBlobNames(t *testing.T) {
 	}
 }
 
-// TestRefreshGraphSidecarLinksNewDefinitionFromUnchangedCaller pins the reason
+// TestRefreshGraphLinksNewDefinitionFromUnchangedCaller pins the reason
 // the delta unit is a name and not a blob. The caller blob never changes and
 // starts with no edges at all, so a blob-keyed carry-forward would keep its empty
 // adjacency forever; only recomputing the NAME finds the definition that arrived
 // in a different file.
-func TestRefreshGraphSidecarLinksNewDefinitionFromUnchangedCaller(t *testing.T) {
+func TestRefreshGraphLinksNewDefinitionFromUnchangedCaller(t *testing.T) {
 	dir := t.TempDir()
 	callerContent := "package caller\n\nfunc Caller() { Lonesome() }\n"
 	files := []graphFile{
@@ -318,7 +318,7 @@ func TestRefreshGraphSidecarLinksNewDefinitionFromUnchangedCaller(t *testing.T) 
 		{repo: "other", path: "other.go", content: "package other\n\nfunc Other() {}\n"},
 	}
 	writeGraphShards(t, dir, files, 1)
-	path, _, err := BuildGraphSidecar(dir)
+	path, _, err := BuildGraph(dir)
 	if err != nil {
 		t.Fatalf("initial build: %v", err)
 	}
@@ -334,7 +334,7 @@ func TestRefreshGraphSidecarLinksNewDefinitionFromUnchangedCaller(t *testing.T) 
 	files = append(files, graphFile{repo: "def", path: "def.go", content: defContent})
 	writeGraphShards(t, dir, files, 1)
 
-	path, stats, err := RefreshGraphSidecar(dir)
+	path, stats, err := RefreshGraph(dir)
 	if err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
@@ -355,7 +355,7 @@ func TestRefreshGraphSidecarLinksNewDefinitionFromUnchangedCaller(t *testing.T) 
 	// And it agrees with a full rebuild, which is the only way to be sure the
 	// delta found everything rather than merely something.
 	full := copyShards(t, dir)
-	fullPath, _, err := BuildGraphSidecar(full)
+	fullPath, _, err := BuildGraph(full)
 	if err != nil {
 		t.Fatalf("full rebuild: %v", err)
 	}
@@ -364,13 +364,13 @@ func TestRefreshGraphSidecarLinksNewDefinitionFromUnchangedCaller(t *testing.T) 
 		withoutGenerations(readGraph(t, fullPath)))
 }
 
-// TestRefreshGraphSidecarNoticesRefiledContent guards the case a plain blob-SHA
+// TestRefreshGraphNoticesRefiledContent guards the case a plain blob-SHA
 // roster would miss. Symbol extraction picks its extractor from the blob's first
 // file ref and verification tries languages in file-ref order, so the SAME bytes
 // graph differently depending on the extension they are filed under. Renaming a
 // file without editing it leaves the content SHA untouched, so the roster has to
 // carry the path context or the refresh would carry stale edges forward.
-func TestRefreshGraphSidecarNoticesRefiledContent(t *testing.T) {
+func TestRefreshGraphNoticesRefiledContent(t *testing.T) {
 	dir := t.TempDir()
 	callerBody := "package caller\n\nfunc Caller() { Target() }\n"
 	files := []graphFile{
@@ -378,7 +378,7 @@ func TestRefreshGraphSidecarNoticesRefiledContent(t *testing.T) {
 		{repo: "caller", path: "caller.txt", content: callerBody},
 	}
 	writeGraphShards(t, dir, files, 1)
-	path, _, err := BuildGraphSidecar(dir)
+	path, _, err := BuildGraph(dir)
 	if err != nil {
 		t.Fatalf("initial build: %v", err)
 	}
@@ -393,7 +393,7 @@ func TestRefreshGraphSidecarNoticesRefiledContent(t *testing.T) {
 	files[1].path = "caller.go"
 	writeGraphShards(t, dir, files, 1)
 
-	path, stats, err := RefreshGraphSidecar(dir)
+	path, stats, err := RefreshGraph(dir)
 	if err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
@@ -406,7 +406,7 @@ func TestRefreshGraphSidecarNoticesRefiledContent(t *testing.T) {
 	}
 
 	full := copyShards(t, dir)
-	fullPath, _, err := BuildGraphSidecar(full)
+	fullPath, _, err := BuildGraph(full)
 	if err != nil {
 		t.Fatalf("full rebuild: %v", err)
 	}
@@ -426,14 +426,14 @@ func edgesFrom(records []graphRecord, sha string) []graphRecord {
 	return out
 }
 
-// TestRefreshGraphSidecarUnchangedCorpusRewritesNothing checks the cheapest
+// TestRefreshGraphUnchangedCorpusRewritesNothing checks the cheapest
 // case: identical content means an identical graph, so the file on disk is
 // already the answer and must not be churned (which would reset every edge's
 // staleness stamp).
-func TestRefreshGraphSidecarUnchangedCorpusRewritesNothing(t *testing.T) {
+func TestRefreshGraphUnchangedCorpusRewritesNothing(t *testing.T) {
 	dir := t.TempDir()
 	writeGraphShards(t, dir, synthGraphCorpus(12), 4)
-	path, _, err := BuildGraphSidecar(dir)
+	path, _, err := BuildGraph(dir)
 	if err != nil {
 		t.Fatalf("initial build: %v", err)
 	}
@@ -443,7 +443,7 @@ func TestRefreshGraphSidecarUnchangedCorpusRewritesNothing(t *testing.T) {
 	}
 	beforeRecords := readGraph(t, path)
 
-	_, stats, err := RefreshGraphSidecar(dir)
+	_, stats, err := RefreshGraph(dir)
 	if err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
@@ -461,29 +461,29 @@ func TestRefreshGraphSidecarUnchangedCorpusRewritesNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !after.ModTime().Equal(before.ModTime()) {
-		t.Fatal("sidecar was rewritten despite identical corpus content")
+		t.Fatal("graph was rewritten despite identical corpus content")
 	}
-	requireSameGraph(t, "untouched sidecar", readGraph(t, path), beforeRecords)
+	requireSameGraph(t, "untouched graph", readGraph(t, path), beforeRecords)
 }
 
-// TestRefreshGraphSidecarFallsBackToFullRebuild covers the two ways a refresh
+// TestRefreshGraphFallsBackToFullRebuild covers the two ways a refresh
 // can lose its seed. Both must produce a correct graph and say what happened;
-// the sidecar is a derived cache, so an unreadable one is never fatal.
-func TestRefreshGraphSidecarFallsBackToFullRebuild(t *testing.T) {
+// the graph is a derived cache, so an unreadable one is never fatal.
+func TestRefreshGraphFallsBackToFullRebuild(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
 		seed    func(t *testing.T, dir string)
 		wantMsg string
 	}{
 		{
-			name:    "no previous sidecar",
+			name:    "no previous graph",
 			seed:    func(*testing.T, string) {},
-			wantMsg: "no previous graph sidecar",
+			wantMsg: "no previous graph",
 		},
 		{
-			name: "corrupt previous sidecar",
+			name: "corrupt previous graph",
 			seed: func(t *testing.T, dir string) {
-				if err := os.WriteFile(GraphSidecarPath(dir), []byte("not a graph"), 0o644); err != nil {
+				if err := os.WriteFile(GraphPath(dir), []byte("not a graph"), 0o644); err != nil {
 					t.Fatal(err)
 				}
 			},
@@ -495,7 +495,7 @@ func TestRefreshGraphSidecarFallsBackToFullRebuild(t *testing.T) {
 			writeGraphShards(t, dir, synthGraphCorpus(10), 5)
 			tc.seed(t, dir)
 
-			path, stats, err := RefreshGraphSidecar(dir)
+			path, stats, err := RefreshGraph(dir)
 			if err != nil {
 				t.Fatalf("refresh: %v", err)
 			}
@@ -509,7 +509,7 @@ func TestRefreshGraphSidecarFallsBackToFullRebuild(t *testing.T) {
 				t.Fatalf("generation = %d, want %d", stats.Generation, diskgraph.FirstGeneration)
 			}
 			full := copyShards(t, dir)
-			fullPath, _, err := BuildGraphSidecar(full)
+			fullPath, _, err := BuildGraph(full)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -518,18 +518,18 @@ func TestRefreshGraphSidecarFallsBackToFullRebuild(t *testing.T) {
 	}
 }
 
-// TestRefreshGraphSidecarIsFasterThanFullRebuild measures the point of the
+// TestRefreshGraphIsFasterThanFullRebuild measures the point of the
 // phase. The deterministic half is the work ratio; the wall-clock half is
 // compared against the BEST of two full rebuilds so a warm-cache full run is the
 // bar the delta has to beat.
-func TestRefreshGraphSidecarIsFasterThanFullRebuild(t *testing.T) {
+func TestRefreshGraphIsFasterThanFullRebuild(t *testing.T) {
 	if testing.Short() {
 		t.Skip("timing comparison needs the larger synthetic corpus")
 	}
 	dir := t.TempDir()
 	files := synthGraphCorpus(320)
 	writeGraphShards(t, dir, files, 20)
-	if _, _, err := BuildGraphSidecar(dir); err != nil {
+	if _, _, err := BuildGraph(dir); err != nil {
 		t.Fatalf("initial build: %v", err)
 	}
 
@@ -540,14 +540,14 @@ func TestRefreshGraphSidecarIsFasterThanFullRebuild(t *testing.T) {
 	fullTime := time.Duration(1<<63 - 1)
 	for i := 0; i < 2; i++ {
 		start := time.Now()
-		if _, _, err := BuildGraphSidecar(full); err != nil {
+		if _, _, err := BuildGraph(full); err != nil {
 			t.Fatalf("full rebuild: %v", err)
 		}
 		fullTime = min(fullTime, time.Since(start))
 	}
 
 	start := time.Now()
-	_, stats, err := RefreshGraphSidecar(dir)
+	_, stats, err := RefreshGraph(dir)
 	if err != nil {
 		t.Fatalf("refresh: %v", err)
 	}

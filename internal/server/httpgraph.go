@@ -1,9 +1,9 @@
 package server
 
 // httpgraph.go extends the offline graph bridge with phase 10's cross-service
-// HTTP edges. It runs beside the name-based sweep in graphsidecar.go and writes
-// into the same builder, so a shard set gets ONE adjacency sidecar containing
-// both kinds of relationship.
+// HTTP edges. It runs beside the name-based sweep in graphbuild.go and writes
+// into the same builder, so a shard set gets ONE adjacency file containing both
+// kinds of relationship.
 
 import (
 	"fmt"

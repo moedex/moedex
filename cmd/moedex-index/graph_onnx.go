@@ -12,7 +12,7 @@ import (
 	"moedex/internal/server"
 )
 
-func buildGraphSidecar(dir string) (path string, stats server.GraphRefreshStats, err error) {
+func buildGraph(dir string) (path string, stats server.GraphRefreshStats, err error) {
 	topK, err := graphIntEnv("MOEDEX_GRAPH_SIMILAR_TOP_K", server.DefaultSimilarTopK)
 	if err != nil {
 		return "", stats, err
@@ -22,7 +22,7 @@ func buildGraphSidecar(dir string) (path string, stats server.GraphRefreshStats,
 		return "", stats, err
 	}
 	if topK == 0 {
-		return server.RefreshGraphSidecar(dir)
+		return server.RefreshGraph(dir)
 	}
 
 	embedder, err := embed.NewONNXEmbedder(os.Getenv("ONNXRUNTIME_LIB_PATH"))
@@ -34,7 +34,7 @@ func buildGraphSidecar(dir string) (path string, stats server.GraphRefreshStats,
 			err = fmt.Errorf("close graph ONNX embedder: %w", closeErr)
 		}
 	}()
-	path, _, err = server.BuildGraphSidecarWithOptions(dir, server.GraphBuildOptions{
+	path, _, err = server.BuildGraphWithOptions(dir, server.GraphBuildOptions{
 		SimilarTopK:      topK,
 		SimilarThreshold: threshold,
 		Embedder:         embedder,

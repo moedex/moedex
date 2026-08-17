@@ -1,7 +1,7 @@
 // Package cluster groups graph nodes into tightly connected communities.
 //
 // Detect applies the local-moving phase of the Louvain algorithm to a weighted,
-// undirected view of the input edges. The graph sidecar stores directed code
+// undirected view of the input edges. The graph stores directed code
 // relationships, but service affinity is symmetric: a call from A to B is
 // evidence that A and B belong together regardless of traversal direction.
 package cluster

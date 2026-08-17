@@ -105,8 +105,8 @@ func newGraphFixture(t *testing.T) graphFixture {
 			t.Fatal(err)
 		}
 	}
-	if err := b.Save(GraphSidecarPath(dir)); err != nil {
-		t.Fatalf("save graph fixture sidecar: %v", err)
+	if err := b.Save(GraphPath(dir)); err != nil {
+		t.Fatalf("save graph fixture: %v", err)
 	}
 
 	tools, err := OpenGraphTools(dir)

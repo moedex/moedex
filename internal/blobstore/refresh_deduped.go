@@ -57,7 +57,7 @@ const (
 	dedupBakSuffix        = ".dedup-bak-"     // sibling holding the prior live dir moved aside
 	denseStoreName        = "corpus-embeddings.store"
 	denseStoreMetaName    = denseStoreName + ".meta"
-	graphSidecarName      = "corpus-graph.graph"
+	graphFileName         = "corpus-graph.graph"
 )
 
 // DedupedDeltaStats reports what a RefreshDedupedShardDir actually did, for honest
@@ -487,7 +487,7 @@ func RefreshDedupedShardDir(casDir, outShardDir string, shardBytes int64) (*pari
 	// multi-gigabyte store. Carry the pair only when both are regular files; a missing,
 	// partial, or unsupported seed safely falls back to a full rebuild later.
 	ds.DenseSeedCarried = carryDenseEmbeddingSeed(outShardDir, tmpDir)
-	ds.GraphSeedCarried = carryGraphSidecarSeed(outShardDir, tmpDir)
+	ds.GraphSeedCarried = carryGraphSeed(outShardDir, tmpDir)
 
 	// Freshness identity is independent of shard membership. In particular, a
 	// globally Restricted repo contributes zero blobs but must remain represented
@@ -599,8 +599,8 @@ func carryDenseEmbeddingSeed(srcDir, dstDir string) bool {
 	return carrySeedFiles(srcDir, dstDir, denseStoreName, denseStoreMetaName)
 }
 
-func carryGraphSidecarSeed(srcDir, dstDir string) bool {
-	return carrySeedFiles(srcDir, dstDir, graphSidecarName)
+func carryGraphSeed(srcDir, dstDir string) bool {
+	return carrySeedFiles(srcDir, dstDir, graphFileName)
 }
 
 func carrySeedFiles(srcDir, dstDir string, names ...string) bool {

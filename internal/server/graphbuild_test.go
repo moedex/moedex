@@ -11,7 +11,7 @@ import (
 	"moedex/internal/index"
 )
 
-func TestBuildGraphSidecarPersistsVerifiedAdjacency(t *testing.T) {
+func TestBuildGraphPersistsVerifiedAdjacency(t *testing.T) {
 	dir := t.TempDir()
 	targetContent := []byte("package target\n\nfunc Target() {}\n")
 	callerContent := []byte("package caller\n\nfunc Caller() { Target() }\n")
@@ -29,12 +29,12 @@ func TestBuildGraphSidecarPersistsVerifiedAdjacency(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path, _, err := BuildGraphSidecar(dir)
+	path, _, err := BuildGraph(dir)
 	if err != nil {
-		t.Fatalf("BuildGraphSidecar: %v", err)
+		t.Fatalf("BuildGraph: %v", err)
 	}
-	if path != GraphSidecarPath(dir) {
-		t.Fatalf("path = %q, want %q", path, GraphSidecarPath(dir))
+	if path != GraphPath(dir) {
+		t.Fatalf("path = %q, want %q", path, GraphPath(dir))
 	}
 	g, err := diskgraph.Open(path)
 	if err != nil {
@@ -77,7 +77,7 @@ func TestBuildGraphSidecarPersistsVerifiedAdjacency(t *testing.T) {
 	}
 }
 
-func TestBuildGraphSidecarFromDedupedShards(t *testing.T) {
+func TestBuildGraphFromDedupedShards(t *testing.T) {
 	dir := t.TempDir()
 	targetContent := []byte("package target\n\nfunc Target() {}\n")
 	callerContent := []byte("package caller\n\nfunc Caller() { Target() }\n")
@@ -103,9 +103,9 @@ func TestBuildGraphSidecarFromDedupedShards(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path, _, err := BuildGraphSidecar(dir)
+	path, _, err := BuildGraph(dir)
 	if err != nil {
-		t.Fatalf("BuildGraphSidecar deduped: %v", err)
+		t.Fatalf("BuildGraph deduped: %v", err)
 	}
 	g, err := diskgraph.Open(path)
 	if err != nil {

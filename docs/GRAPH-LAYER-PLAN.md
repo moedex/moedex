@@ -65,7 +65,7 @@ The recall-complete half of the two-phase construction below, in
 
 - `GenerateCandidates(corpus, name)` returns `Edge{Name, Source, Target, Type, Confidence, Evidence}` with
   both ends a `(shard, blob, byte offset)` `Site`. Byte offsets, not lines: a verifier
-  has to be pointed at the call site, and the graph sidecar is keyed by blob + offset.
+  has to be pointed at the call site, and the graph adjacency file is keyed by blob + offset.
 - **Sources are the union of two arms.** The phase-1 `byName` index supplies
   extractor-classified references (precise, but only for languages with a
   RefExtractor); a **trigram fan-out over every shard** supplies every remaining byte
@@ -207,7 +207,7 @@ The core insight: Moedex builds edges **faster than Codegraph** using its trigra
    Regex patterns (cheap, ~Codegraph-level confidence) → LSP find_references (expensive, type-resolved).
    Assign the shared confidence tier per edge based on verification method.
 
-4. Persist graph sidecar
+4. Persist graph adjacency file
    Mmap'd adjacency list keyed by blob SHA + symbol offset.
    Built alongside search index — moedex-index refresh rebuilds postings, symbols, and graph together.
 
@@ -253,7 +253,7 @@ with Candidate provenance and confidence score equal to the exact cosine; the
 definition body is their evidence span. Top-K and threshold are configurable with
 `MOEDEX_GRAPH_SIMILAR_TOP_K` and `MOEDEX_GRAPH_SIMILAR_THRESHOLD`.
 
-Phase 9 is implemented behind the existing `lsp` tag. During graph-sidecar
+Phase 9 is implemented behind the existing `lsp` tag. During graph
 construction it enumerates indexed source files with LSP `documentSymbol`, then
 issues `find_references` for every exported symbol. Symbols whose Phase 3 work
 list contains a cross-shard edge are queried first. Request starts are globally
@@ -324,5 +324,5 @@ These are Codegraph integrations that share its MCP server but are not code-grap
 
 - **The default build stays pure Go.** Graph construction and serving use only the standard library. LSP-tier verification is behind the existing `lsp` build tag. Semantic similarity edges are behind the existing `onnx` build tag.
 - **Trigram-first, verify-second.** Every edge discovery starts with a cheap trigram candidate query, then applies the cheapest verifier that reaches the desired confidence tier.
-- **Mmap'd like postings.** The graph sidecar follows the existing `diskstore` pattern — built offline, served via mmap, never enters the Go heap.
+- **Mmap'd like postings.** The graph adjacency file follows the existing `diskstore` pattern — built offline, served via mmap, never enters the Go heap.
 - **Rebuild with the index.** `moedex-index refresh` rebuilds postings, symbols, tokens, and graph together. No separate graph build pipeline.

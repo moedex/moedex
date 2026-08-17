@@ -176,7 +176,7 @@ privacy_levels:
 	}
 }
 
-func TestBuildGraphSidecarLSPPersistsProvenInterfaceDispatch(t *testing.T) {
+func TestBuildGraphLSPPersistsProvenInterfaceDispatch(t *testing.T) {
 	if _, err := exec.LookPath("gopls"); err != nil {
 		t.Skip("gopls not on PATH; skipping real LSP call-graph integration test")
 	}
@@ -191,7 +191,7 @@ func TestBuildGraphSidecarLSPPersistsProvenInterfaceDispatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	var stats LSPGraphStats
-	path, _, err := BuildGraphSidecarWithOptions(shardDir, GraphBuildOptions{
+	path, _, err := BuildGraphWithOptions(shardDir, GraphBuildOptions{
 		LSPRequestsPerSecond: 1000,
 		LSPRequestTimeout:    30 * time.Second,
 		LSPStats:             &stats,

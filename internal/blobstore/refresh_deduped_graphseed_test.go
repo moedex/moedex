@@ -8,20 +8,20 @@ import (
 	"moedex/internal/server"
 )
 
-// TestDedupedDeltaCarriesGraphSidecarSeed covers the served-side half of the
+// TestDedupedDeltaCarriesGraphSeed covers the served-side half of the
 // incremental graph refresh. The delta re-export builds a new dir and swaps it
-// in, so without an explicit carry the graph sidecar disappears with the old dir
-// and every refresh silently degrades to a full corpus-wide rebuild — correct,
-// but the whole cost the incremental path exists to avoid. The seed is what
-// makes the swap survivable, and the generation stamp is how we can tell.
-func TestDedupedDeltaCarriesGraphSidecarSeed(t *testing.T) {
+// in, so without an explicit carry the graph disappears with the old dir and
+// every refresh silently degrades to a full corpus-wide rebuild — correct, but
+// the whole cost the incremental path exists to avoid. The seed is what makes
+// the swap survivable, and the generation stamp is how we can tell.
+func TestDedupedDeltaCarriesGraphSeed(t *testing.T) {
 	requireGit(t)
 	liveDir, casDir, _, _ := buildBaselineAndStagedDelta(t)
 
-	if _, _, err := server.BuildGraphSidecar(liveDir); err != nil {
-		t.Fatalf("build baseline graph sidecar: %v", err)
+	if _, _, err := server.BuildGraph(liveDir); err != nil {
+		t.Fatalf("build baseline graph: %v", err)
 	}
-	baseline, err := diskgraph.Open(server.GraphSidecarPath(liveDir))
+	baseline, err := diskgraph.Open(server.GraphPath(liveDir))
 	if err != nil {
 		t.Fatalf("open baseline graph: %v", err)
 	}
@@ -42,15 +42,15 @@ func TestDedupedDeltaCarriesGraphSidecarSeed(t *testing.T) {
 		t.Fatal("fixture produced no repo delta; the swap under test never happened")
 	}
 	if !ds.GraphSeedCarried {
-		t.Fatal("GraphSeedCarried = false; the prior graph sidecar was lost in the swap")
+		t.Fatal("GraphSeedCarried = false; the prior graph was lost in the swap")
 	}
-	if _, err := os.Stat(server.GraphSidecarPath(liveDir)); err != nil {
-		t.Fatalf("graph sidecar missing from the swapped-in dir: %v", err)
+	if _, err := os.Stat(server.GraphPath(liveDir)); err != nil {
+		t.Fatalf("graph missing from the swapped-in dir: %v", err)
 	}
 
 	// The carry is verbatim — the swap does not recompute anything — so the
 	// generation only advances once the graph refresh actually runs over it.
-	carried, err := diskgraph.Open(server.GraphSidecarPath(liveDir))
+	carried, err := diskgraph.Open(server.GraphPath(liveDir))
 	if err != nil {
 		t.Fatalf("open carried graph: %v", err)
 	}
@@ -61,9 +61,9 @@ func TestDedupedDeltaCarriesGraphSidecarSeed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, stats, err := server.RefreshGraphSidecar(liveDir)
+	_, stats, err := server.RefreshGraph(liveDir)
 	if err != nil {
-		t.Fatalf("RefreshGraphSidecar over the swapped dir: %v", err)
+		t.Fatalf("RefreshGraph over the swapped dir: %v", err)
 	}
 	if stats.FullRebuild {
 		t.Fatalf("refresh over the carried seed fell back to a full rebuild: %s", stats.Reason)

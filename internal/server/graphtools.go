@@ -123,7 +123,7 @@ func (r graphRelation) weight() float64 {
 	return r.Confidence.Score()
 }
 
-// OpenGraphTools opens dir's graph sidecar with mmap and its symbol/location
+// OpenGraphTools opens dir's graph adjacency file with mmap and its symbol/location
 // resolver. The caller must Close the returned toolset after the MCP server has
 // stopped accepting calls.
 func OpenGraphTools(dir string) (*GraphToolset, error) {
@@ -135,9 +135,9 @@ func OpenGraphTools(dir string) (*GraphToolset, error) {
 }
 
 func openGraphSnapshot(dir string) (*graphSnapshot, error) {
-	g, err := diskgraph.Open(GraphSidecarPath(dir))
+	g, err := diskgraph.Open(GraphPath(dir))
 	if err != nil {
-		return nil, fmt.Errorf("server: open graph sidecar: %w", err)
+		return nil, fmt.Errorf("server: open graph: %w", err)
 	}
 	syms, err := OpenSymbols(dir)
 	if err != nil {
@@ -399,14 +399,14 @@ func (t *graphTool) Descriptor() map[string]interface{} {
 	description := ""
 	switch t.name {
 	case "trace_calls":
-		description = "Trace callers and callees of a symbol through confidence-scored call edges from the mmap graph sidecar."
+		description = "Trace callers and callees of a symbol through confidence-scored call edges from the mmap graph."
 		schema["properties"] = map[string]interface{}{
 			"symbol": map[string]interface{}{"type": "string", "minLength": 1, "description": "Exact symbol name to trace."},
 			"hops":   depth,
 		}
 		schema["required"] = []string{"symbol"}
 	case "trace_consumers":
-		description = "Return every publisher and consumer connected to an event or queue name in the mmap graph sidecar."
+		description = "Return every publisher and consumer connected to an event or queue name in the mmap graph."
 		schema["properties"] = map[string]interface{}{
 			"name": map[string]interface{}{"type": "string", "minLength": 1, "description": "Exact event or queue symbol name."},
 		}

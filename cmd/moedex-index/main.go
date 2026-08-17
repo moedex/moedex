@@ -198,9 +198,9 @@ func runBuild(args []string) error {
 	if err := parity.WriteManifest(filepath.Join(*shardDir, parity.ManifestName), m); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}
-	// Build the token, symbol, and graph sidecars so the daemon finds the ranking
+	// Build the token, symbol, and graph files so the daemon finds the ranking
 	// indexes warm and the mmap graph ready on its next boot. Best-effort: a
-	// sidecar failure must not fail an otherwise-good search-index build.
+	// build failure must not fail an otherwise-good search-index build.
 	sidecars := buildSidecars(*shardDir)
 	fmt.Printf("built %d shard(s), %d file(s) from %d repo(s) into %s%s\n", nShards, nFiles, len(m.Heads), *shardDir, sidecars)
 	return nil
@@ -216,11 +216,11 @@ func buildSidecars(dir string) string {
 	} else {
 		built = append(built, "token", "symbol")
 	}
-	if _, stats, err := buildGraphSidecar(dir); err != nil {
-		fmt.Fprintf(os.Stderr, "moedex-index: warning: build graph sidecar: %v\n", err)
+	if _, stats, err := buildGraph(dir); err != nil {
+		fmt.Fprintf(os.Stderr, "moedex-index: warning: build graph: %v\n", err)
 	} else {
 		built = append(built, "graph")
-		printGraphSidecarStats(stats)
+		printGraphStats(stats)
 	}
 	if len(built) == 0 {
 		return ""
@@ -228,10 +228,10 @@ func buildSidecars(dir string) string {
 	return " (+" + strings.Join(built, "/") + " sidecars)"
 }
 
-func printGraphSidecarStats(stats server.GraphRefreshStats) {
+func printGraphStats(stats server.GraphRefreshStats) {
 	switch {
 	case stats.Unchanged:
-		fmt.Printf("  graph: corpus content unchanged (%d blob(s)); sidecar kept at generation %d\n",
+		fmt.Printf("  graph: corpus content unchanged (%d blob(s)); graph kept at generation %d\n",
 			stats.CorpusBlobs, stats.Generation)
 	case stats.FullRebuild:
 		fmt.Printf("  graph: FULL rebuild (%s): %d name(s) swept, %d edge(s), generation %d\n",
@@ -469,12 +469,12 @@ func runRefresh(args []string) error {
 		return fmt.Errorf("fix up manifest paths: %w", err)
 	}
 
-	if server.CarryGraphSidecarSeed(bak, dir) {
-		logf("carried previous graph sidecar forward as the incremental refresh seed")
+	if server.CarryGraphSeed(bak, dir) {
+		logf("carried previous graph forward as the incremental refresh seed")
 	}
 
-	// Rebuild the token/symbol/graph sidecars on the LIVE dir (the shard set
-	// changed, so any prior sidecars are now stale). Best-effort, as in build.
+	// Rebuild the token/symbol/graph files on the LIVE dir (the shard set
+	// changed, so any prior files are now stale). Best-effort, as in build.
 	sidecars := buildSidecars(dir)
 
 	if *keepBackup {
@@ -632,7 +632,7 @@ func runCASExport(args []string) error {
 				len(m.Shards), len(m.Heads))
 			return nil
 		}
-		// The shard set changed, so the ranking and graph sidecars in the dir are
+		// The shard set changed, so the ranking and graph files in the dir are
 		// stale; rebuild them (best-effort, as build/refresh do).
 		sidecars := buildSidecars(out)
 		fmt.Printf("cas-export (deduped, DELTA): changed=%d added=%d removed=%d; shards rewritten=%d carried=%d\n",
@@ -657,7 +657,7 @@ func runCASExport(args []string) error {
 		if err != nil {
 			return err
 		}
-		// Build the ranking and graph sidecars so the exported dir is immediately
+		// Build the ranking and graph files so the exported dir is immediately
 		// warm (both builders read the shared content store transparently).
 		sidecars := buildSidecars(out)
 		fmt.Printf("cas-export (deduped): %d shard(s) from %d repo(s) into %s; shared content store %d bytes%s\n",
@@ -668,7 +668,7 @@ func runCASExport(args []string) error {
 	if err != nil {
 		return err
 	}
-	// Build the ranking and graph sidecars so the exported dir is immediately
+	// Build the ranking and graph files so the exported dir is immediately
 	// servable warm, mirroring build. Best-effort.
 	sidecars := buildSidecars(out)
 	fmt.Printf("cas-export: %d shard(s) from %d repo(s) into %s%s\n", len(m.Shards), len(m.Heads), out, sidecars)
@@ -715,7 +715,7 @@ func runCASCompact(args []string) error {
 			return err
 		}
 		// The content store changed (dead content dropped), but the shards and their
-		// (file,line) match set did not; ranking and graph sidecars stay valid. We do
+		// (file,line) match set did not; ranking and graph files stay valid. We do
 		// NOT rebuild them — the live shard/content identities are unchanged.
 		fmt.Printf("cas-compact (deduped served): kept %d live blob(s) / %.1f MB; reclaimed %d dead blob(s) / %.1f MB across %d shard(s)\n",
 			st.LiveBlobs, float64(st.LiveBytes)/1e6, st.DeadBlobs, float64(st.DeadBytes)/1e6, st.Shards)

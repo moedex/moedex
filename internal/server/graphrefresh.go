@@ -1,7 +1,7 @@
 package server
 
 // graphrefresh.go is phase 12 of docs/GRAPH-LAYER-PLAN.md: a CAS-aware
-// incremental rebuild of the graph sidecar.
+// incremental rebuild of the graph adjacency file.
 //
 // # Why the delta unit is a NAME, not a blob
 //
@@ -19,7 +19,7 @@ package server
 //   - ADDED blobs are scanned for their maximal identifier runs
 //     (candidates.EachIdentifier) plus the names the symbol extractors recorded.
 //   - REMOVED blobs no longer have content to scan, so their names come from the
-//     PREVIOUS sidecar: every edge whose source or target was that blob.
+//     PREVIOUS graph: every edge whose source or target was that blob.
 //
 // # Generations
 //
@@ -62,14 +62,14 @@ type GraphRefreshStats struct {
 	EdgesDropped    int
 }
 
-// RefreshGraphSidecar rebuilds dir's graph sidecar incrementally against the
-// sidecar already there, recomputing only the names the content delta made
-// stale. It falls back to a full build — and says so in the returned stats —
-// whenever there is no usable prior sidecar.
+// RefreshGraph rebuilds dir's graph incrementally against the graph already
+// there, recomputing only the names the content delta made stale. It falls back
+// to a full build — and says so in the returned stats — whenever there is no
+// usable prior graph.
 //
-// The result is identical to BuildGraphSidecar's for the same shard set, edge
-// for edge and in the same order; only the per-edge generation stamps differ.
-func RefreshGraphSidecar(dir string) (path string, stats GraphRefreshStats, err error) {
+// The result is identical to BuildGraph's for the same shard set, edge for edge
+// and in the same order; only the per-edge generation stamps differ.
+func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) {
 	sweep, err := openGraphSweep(dir)
 	if err != nil {
 		return "", stats, err
@@ -104,7 +104,7 @@ func RefreshGraphSidecar(dir string) (path string, stats GraphRefreshStats, err 
 		stats.Generation = previous.Generation()
 		stats.NamesCarried = len(sweep.names)
 		stats.EdgesCarried = previous.NumEdges()
-		return GraphSidecarPath(dir), stats, nil
+		return GraphPath(dir), stats, nil
 	}
 
 	dirty := sweep.dirtyNames(previous, added, removed)
@@ -165,11 +165,11 @@ func RefreshGraphSidecar(dir string) (path string, stats GraphRefreshStats, err 
 		for _, c := range carried[name] {
 			key, _, _, ok := previous.NodeAt(int(c.node))
 			if !ok {
-				return "", stats, fmt.Errorf("server: graph refresh lost node %d of the previous sidecar", c.node)
+				return "", stats, fmt.Errorf("server: graph refresh lost node %d of the previous graph", c.node)
 			}
 			edge, ok := previous.EdgeAt(int(c.edge))
 			if !ok {
-				return "", stats, fmt.Errorf("server: graph refresh lost edge %d of the previous sidecar", c.edge)
+				return "", stats, fmt.Errorf("server: graph refresh lost edge %d of the previous graph", c.edge)
 			}
 			if err := builder.AddEdge(key, edge); err != nil {
 				return "", stats, err
@@ -178,7 +178,7 @@ func RefreshGraphSidecar(dir string) (path string, stats GraphRefreshStats, err 
 		}
 	}
 
-	path, err = saveGraphSidecar(builder, dir)
+	path, err = saveGraph(builder, dir)
 	return path, stats, err
 }
 
@@ -187,29 +187,29 @@ type carriedGraphEdge struct {
 	edge uint32
 }
 
-// CarryGraphSidecarSeed hard-links srcDir's graph sidecar into dstDir so a
-// refresh that rebuilt the shard dir from scratch still has a previous
-// generation to diff against.
-func CarryGraphSidecarSeed(srcDir, dstDir string) bool {
-	src := GraphSidecarPath(srcDir)
+// CarryGraphSeed hard-links srcDir's graph into dstDir so a refresh that
+// rebuilt the shard dir from scratch still has a previous generation to diff
+// against.
+func CarryGraphSeed(srcDir, dstDir string) bool {
+	src := GraphPath(srcDir)
 	info, err := os.Lstat(src)
 	if err != nil || !info.Mode().IsRegular() {
 		return false
 	}
-	return os.Link(src, GraphSidecarPath(dstDir)) == nil
+	return os.Link(src, GraphPath(dstDir)) == nil
 }
 
 func openPreviousGraph(dir string) (*diskgraph.Graph, string) {
-	path := GraphSidecarPath(dir)
+	path := GraphPath(dir)
 	g, err := diskgraph.Open(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil, "no previous graph sidecar"
+			return nil, "no previous graph"
 		}
-		return nil, fmt.Sprintf("previous graph sidecar unusable: %v", err)
+		return nil, fmt.Sprintf("previous graph unusable: %v", err)
 	}
 	if g.NumNodes() > math.MaxUint32 || g.NumEdges() > math.MaxUint32 {
-		reason := fmt.Sprintf("previous graph sidecar too large to carry forward (%d nodes, %d edges)", g.NumNodes(), g.NumEdges())
+		reason := fmt.Sprintf("previous graph too large to carry forward (%d nodes, %d edges)", g.NumNodes(), g.NumEdges())
 		_ = g.Close()
 		return nil, reason
 	}
@@ -238,7 +238,7 @@ func (s *graphSweep) rebuildAll(dir string, stats *GraphRefreshStats) (string, e
 	stats.NamesRecomputed = len(s.names)
 	stats.EdgesRecomputed = int(builder.NumEdges())
 	stats.BlobsAdded = len(s.identity)
-	return saveGraphSidecar(builder, dir)
+	return saveGraph(builder, dir)
 }
 
 // computeEdgesParallel fans out computeEdgesForName across GOMAXPROCS workers.

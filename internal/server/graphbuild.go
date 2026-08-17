@@ -1,6 +1,6 @@
 package server
 
-// graphsidecar.go is the offline bridge from the graph candidate/verification
+// graphbuild.go is the offline bridge from the graph candidate/verification
 // pipeline to the mmap-backed adjacency format. It intentionally builds from
 // the per-shard indices (rather than loadUnified): candidate sites carry
 // shard-local blob IDs until they are folded to content identity by blob SHA.
@@ -33,9 +33,9 @@ import (
 	"moedex/internal/trigram"
 )
 
-// GraphSidecarName is the default graph adjacency sidecar written next to the
-// corpus token and symbol sidecars.
-const GraphSidecarName = "corpus-graph.graph"
+// GraphFileName is the graph adjacency file written next to the corpus token
+// and symbol files.
+const GraphFileName = "corpus-graph.graph"
 
 const (
 	// DefaultSimilarTopK bounds each definition's semantic neighborhood.
@@ -87,33 +87,33 @@ type LSPGraphStats struct {
 	CallEdges            int
 }
 
-// GraphSidecarPath returns the default graph sidecar path under dir.
-func GraphSidecarPath(dir string) string { return filepath.Join(dir, GraphSidecarName) }
+// GraphPath returns the graph adjacency file path under dir.
+func GraphPath(dir string) string { return filepath.Join(dir, GraphFileName) }
 
-// GraphSidecarReport accounts for one graph sidecar build, so a small sidecar is
-// never mistaken for a small corpus.
-type GraphSidecarReport struct {
+// GraphBuildReport accounts for one graph build, so a small graph is never
+// mistaken for a small corpus.
+type GraphBuildReport struct {
 	Nodes    int
 	Edges    uint64
 	HTTP     httproute.Report
 	Manifest manifest.Report
 }
 
-// BuildGraphSidecar generates, verifies, and persists the graph for every
-// exported trigram-length symbol name in dir's shard set, plus proven DEPENDS_ON
-// edges from package manifests. Posting lists and, for deduped shards, content
-// stay mmap-backed during the offline sweep.
+// BuildGraph generates, verifies, and persists the graph for every exported
+// trigram-length symbol name in dir's shard set, plus proven DEPENDS_ON edges
+// from package manifests. Posting lists and, for deduped shards, content stay
+// mmap-backed during the offline sweep.
 //
 // This is the unconditional full build, stamped diskgraph.FirstGeneration. A dir
-// that already holds a sidecar should usually go through RefreshGraphSidecar,
-// which recomputes only the names the content delta invalidated.
-func BuildGraphSidecar(dir string) (path string, report GraphSidecarReport, err error) {
-	return BuildGraphSidecarWithOptions(dir, GraphBuildOptions{})
+// that already holds a graph should usually go through RefreshGraph, which
+// recomputes only the names the content delta invalidated.
+func BuildGraph(dir string) (path string, report GraphBuildReport, err error) {
+	return BuildGraphWithOptions(dir, GraphBuildOptions{})
 }
 
-// BuildGraphSidecarWithOptions is BuildGraphSidecar plus optional tagged graph
-// passes such as ONNX-backed semantic similarity.
-func BuildGraphSidecarWithOptions(dir string, opts GraphBuildOptions) (path string, report GraphSidecarReport, err error) {
+// BuildGraphWithOptions is BuildGraph plus optional tagged graph passes such as
+// ONNX-backed semantic similarity.
+func BuildGraphWithOptions(dir string, opts GraphBuildOptions) (path string, report GraphBuildReport, err error) {
 	if opts.SimilarTopK < 0 {
 		return "", report, fmt.Errorf("server: graph similar top-K must be non-negative")
 	}
@@ -193,9 +193,9 @@ func BuildGraphSidecarWithOptions(dir string, opts GraphBuildOptions) (path stri
 	if err != nil {
 		return "", report, err
 	}
-	report = GraphSidecarReport{Nodes: builder.NumNodes(), Edges: builder.NumEdges(), HTTP: httpReport, Manifest: manifestReport}
+	report = GraphBuildReport{Nodes: builder.NumNodes(), Edges: builder.NumEdges(), HTTP: httpReport, Manifest: manifestReport}
 
-	path, err = saveGraphSidecar(builder, dir)
+	path, err = saveGraph(builder, dir)
 	return path, report, err
 }
 
@@ -224,7 +224,7 @@ type graphSweep struct {
 
 	// sites maps every blob SHA in the shard set to every shard copy of it.
 	sites map[string][]blobSite
-	// identity maps each blob SHA to the roster token persisted in the sidecar.
+	// identity maps each blob SHA to the roster token persisted in the graph.
 	identity map[string]string
 
 	closers []io.Closer
@@ -364,11 +364,11 @@ func rosterSHA(token string) string {
 	return token
 }
 
-// saveGraphSidecar persists builder as dir's graph sidecar.
-func saveGraphSidecar(builder *diskgraph.Builder, dir string) (string, error) {
-	path := GraphSidecarPath(dir)
+// saveGraph persists builder as dir's graph adjacency file.
+func saveGraph(builder *diskgraph.Builder, dir string) (string, error) {
+	path := GraphPath(dir)
 	if err := builder.Save(path); err != nil {
-		return "", fmt.Errorf("server: persist graph sidecar: %w", err)
+		return "", fmt.Errorf("server: persist graph: %w", err)
 	}
 	return path, nil
 }
@@ -474,7 +474,7 @@ func (e *graphEmitter) Add(key diskgraph.Key, edge diskgraph.Edge) error {
 }
 
 // ---------------------------------------------------------------------------
-// openGraphShards — low-level shard opener used by manifestsidecar.go
+// openGraphShards — low-level shard opener used by manifest edges
 // ---------------------------------------------------------------------------
 
 // openGraphShards opens every shard under dir for an offline graph pass, sharing

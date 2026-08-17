@@ -74,16 +74,16 @@ func (e *graphFixtureEmbedder) Embed(_ context.Context, texts []string) ([]embed
 	return out, nil
 }
 
-func TestBuildGraphSidecarSimilarToEdges(t *testing.T) {
+func TestBuildGraphSimilarToEdges(t *testing.T) {
 	dir, shas := writeSimilarityFixture(t)
 	embedder := &graphFixtureEmbedder{}
-	path, _, err := BuildGraphSidecarWithOptions(dir, GraphBuildOptions{
+	path, _, err := BuildGraphWithOptions(dir, GraphBuildOptions{
 		SimilarTopK:      1,
 		SimilarThreshold: 0.90,
 		Embedder:         embedder,
 	})
 	if err != nil {
-		t.Fatalf("BuildGraphSidecarWithOptions: %v", err)
+		t.Fatalf("BuildGraphWithOptions: %v", err)
 	}
 	graph, err := diskgraph.Open(path)
 	if err != nil {
@@ -105,10 +105,10 @@ func TestBuildGraphSidecarSimilarToEdges(t *testing.T) {
 	assertNoSimilarEdges(t, graph, shas[2], "ParseAuthorizationHeader", unrelatedFunction)
 }
 
-// TestBuildGraphSidecarSimilarToEdgesONNX proves the same contract with the
-// bundled code model. It skips cleanly when ONNX Runtime is not installed, just
-// like the embed package's model-level test.
-func TestBuildGraphSidecarSimilarToEdgesONNX(t *testing.T) {
+// TestBuildGraphSimilarToEdgesONNX proves the same contract with the bundled
+// code model. It skips cleanly when ONNX Runtime is not installed, just like
+// the embed package's model-level test.
+func TestBuildGraphSimilarToEdgesONNX(t *testing.T) {
 	embedder, err := embed.NewONNXEmbedder(os.Getenv("ONNXRUNTIME_LIB_PATH"))
 	if err != nil {
 		t.Skipf("onnx runtime unavailable (set ONNXRUNTIME_LIB_PATH): %v", err)
@@ -116,13 +116,13 @@ func TestBuildGraphSidecarSimilarToEdgesONNX(t *testing.T) {
 	defer embedder.Close()
 
 	dir, shas := writeSimilarityFixture(t)
-	path, _, err := BuildGraphSidecarWithOptions(dir, GraphBuildOptions{
+	path, _, err := BuildGraphWithOptions(dir, GraphBuildOptions{
 		SimilarTopK:      1,
 		SimilarThreshold: DefaultSimilarThreshold,
 		Embedder:         embedder,
 	})
 	if err != nil {
-		t.Fatalf("BuildGraphSidecarWithOptions: %v", err)
+		t.Fatalf("BuildGraphWithOptions: %v", err)
 	}
 	graph, err := diskgraph.Open(path)
 	if err != nil {

@@ -11,11 +11,11 @@ import (
 	"moedex/internal/index"
 )
 
-// TestBuildGraphSidecarPersistsHTTPCallEdges is the phase-10 end-to-end proof at
-// the persistence layer: two shards that share no symbol at all — a C# client
-// and a Go route table — produce a served HTTP_CALLS edge because one's URL
-// matches the other's route template.
-func TestBuildGraphSidecarPersistsHTTPCallEdges(t *testing.T) {
+// TestBuildGraphPersistsHTTPCallEdges is the phase-10 end-to-end proof at the
+// persistence layer: two shards that share no symbol at all — a C# client and a
+// Go route table — produce a served HTTP_CALLS edge because one's URL matches
+// the other's route template.
+func TestBuildGraphPersistsHTTPCallEdges(t *testing.T) {
 	dir := t.TempDir()
 
 	handlerContent := []byte(`package api
@@ -56,9 +56,9 @@ public class OrderClient
 		t.Fatal(err)
 	}
 
-	path, _, err := BuildGraphSidecar(dir)
+	path, _, err := BuildGraph(dir)
 	if err != nil {
-		t.Fatalf("BuildGraphSidecar: %v", err)
+		t.Fatalf("BuildGraph: %v", err)
 	}
 	g, err := diskgraph.Open(path)
 	if err != nil {

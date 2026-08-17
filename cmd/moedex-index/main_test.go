@@ -198,10 +198,10 @@ func TestBuildCheckRefresh(t *testing.T) {
 }
 
 // TestMoedexIndexBuildProducesSidecars proves the offline indexer writes the
-// token+symbol ranking sidecars plus the mmap graph sidecar. A fresh OpenRank
-// over the built dir LOADS both ranking indexes from cache (no rebuild), while
+// token+symbol ranking sidecars plus the mmap graph. A fresh OpenRank over the
+// built dir LOADS both ranking indexes from cache (no rebuild), while
 // diskgraph.Open serves the offline graph. It also covers refresh: after a
-// mutate+refresh, the live dir carries valid replacements for every sidecar.
+// mutate+refresh, the live dir carries valid replacements for every artifact.
 func TestMoedexIndexBuildProducesSidecars(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
@@ -216,12 +216,12 @@ func TestMoedexIndexBuildProducesSidecars(t *testing.T) {
 	if err := runBuild([]string{"-corpus", root, "-shard-dir", shardDir}); err != nil {
 		t.Fatalf("build: %v", err)
 	}
-	for _, name := range []string{"corpus-tokens.tki", "corpus-tokens.tki.meta", "corpus-symbols.sym", "corpus-symbols.sym.meta", server.GraphSidecarName} {
+	for _, name := range []string{"corpus-tokens.tki", "corpus-tokens.tki.meta", "corpus-symbols.sym", "corpus-symbols.sym.meta", server.GraphFileName} {
 		if _, err := os.Stat(filepath.Join(shardDir, name)); err != nil {
 			t.Fatalf("sidecar %s not written by build: %v", name, err)
 		}
 	}
-	graph, err := diskgraph.Open(server.GraphSidecarPath(shardDir))
+	graph, err := diskgraph.Open(server.GraphPath(shardDir))
 	if err != nil {
 		t.Fatalf("open graph after build: %v", err)
 	}
@@ -248,12 +248,12 @@ func TestMoedexIndexBuildProducesSidecars(t *testing.T) {
 	if err := runRefresh([]string{"-shard-dir", shardDir}); err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
-	for _, name := range []string{"corpus-tokens.tki", "corpus-tokens.tki.meta", "corpus-symbols.sym", "corpus-symbols.sym.meta", server.GraphSidecarName} {
+	for _, name := range []string{"corpus-tokens.tki", "corpus-tokens.tki.meta", "corpus-symbols.sym", "corpus-symbols.sym.meta", server.GraphFileName} {
 		if _, err := os.Stat(filepath.Join(shardDir, name)); err != nil {
 			t.Fatalf("sidecar %s missing on live dir after refresh: %v", name, err)
 		}
 	}
-	graph2, err := diskgraph.Open(server.GraphSidecarPath(shardDir))
+	graph2, err := diskgraph.Open(server.GraphPath(shardDir))
 	if err != nil {
 		t.Fatalf("open graph after refresh: %v", err)
 	}
@@ -261,7 +261,7 @@ func TestMoedexIndexBuildProducesSidecars(t *testing.T) {
 		t.Error("refreshed graph lost existing AlphaUniqueToken call edge")
 	}
 	if got, want := graph2.Generation(), diskgraph.FirstGeneration+1; got != want {
-		t.Errorf("graph generation after refresh = %d, want %d (prior sidecar not carried across the dir swap)", got, want)
+		t.Errorf("graph generation after refresh = %d, want %d (prior graph not carried across the dir swap)", got, want)
 	}
 	var carried int
 	graph2.EachEdge(func(_ diskgraph.Key, edge diskgraph.Edge) bool {

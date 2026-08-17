@@ -10,7 +10,7 @@ import (
 	"moedex/internal/index"
 )
 
-func TestBuildGraphSidecarTypesPublishersAndConsumers(t *testing.T) {
+func TestBuildGraphTypesPublishersAndConsumers(t *testing.T) {
 	dir := t.TempDir()
 	eventContent := "public record OrderSubmitted(int Id);\n"
 	consumerContent := "public class OrderConsumer : IConsumer<OrderSubmitted>\n{\n}\n"
@@ -23,9 +23,9 @@ func TestBuildGraphSidecarTypesPublishersAndConsumers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path, _, err := BuildGraphSidecar(dir)
+	path, _, err := BuildGraph(dir)
 	if err != nil {
-		t.Fatalf("BuildGraphSidecar: %v", err)
+		t.Fatalf("BuildGraph: %v", err)
 	}
 	g, err := diskgraph.Open(path)
 	if err != nil {
@@ -49,7 +49,7 @@ func TestBuildGraphSidecarTypesPublishersAndConsumers(t *testing.T) {
 	}
 	for edgeType, found := range want {
 		if !found {
-			t.Errorf("graph sidecar lacks %s edge to OrderSubmitted", edgeType)
+			t.Errorf("graph lacks %s edge to OrderSubmitted", edgeType)
 		}
 	}
 }

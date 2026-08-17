@@ -42,7 +42,7 @@ func TestListClustersToolReturnsCommunitiesAndSingletons(t *testing.T) {
 	if err := builder.AddNode(isolated); err != nil {
 		t.Fatal(err)
 	}
-	if err := builder.Save(GraphSidecarPath(dir)); err != nil {
+	if err := builder.Save(GraphPath(dir)); err != nil {
 		t.Fatal(err)
 	}
 

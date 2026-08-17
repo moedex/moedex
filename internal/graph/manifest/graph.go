@@ -5,7 +5,7 @@ import "sort"
 // Graph is the repo-level view of a resolved edge set: which repos depend on
 // which, and on the strength of which declarations.
 //
-// It is a small in-memory index, not a persisted one. The graph sidecar stores
+// It is a small in-memory index, not a persisted one. The graph adjacency file stores
 // these edges content-addressed by blob SHA, which is the right key for a corpus
 // where identical manifests are one piece of content; the repo-level rollup is
 // derived, cheap to rebuild, and is what an operator or an MCP tool actually asks

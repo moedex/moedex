@@ -543,7 +543,7 @@ type Similarity struct {
 // so the corpus-wide comparison requires no additional embedding calls.
 //
 // This is an exact brute-force all-neighbors pass. It is intended for offline
-// builders (such as the graph sidecar), not request-time search.
+// builders (such as the graph), not request-time search.
 func (s *Store) Similar(ctx context.Context, topK int, threshold float32) ([]Similarity, error) {
 	if s == nil || topK <= 0 || len(s.chunks) < 2 {
 		return nil, nil

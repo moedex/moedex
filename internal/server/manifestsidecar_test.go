@@ -52,11 +52,11 @@ func writeManifestShards(t *testing.T) string {
 	return dir
 }
 
-func TestBuildGraphSidecarPersistsProvenPackageDependency(t *testing.T) {
+func TestBuildGraphPersistsProvenPackageDependency(t *testing.T) {
 	dir := writeManifestShards(t)
-	path, _, err := BuildGraphSidecar(dir)
+	path, _, err := BuildGraph(dir)
 	if err != nil {
-		t.Fatalf("BuildGraphSidecar: %v", err)
+		t.Fatalf("BuildGraph: %v", err)
 	}
 	g, err := diskgraph.Open(path)
 	if err != nil {
@@ -87,11 +87,11 @@ func TestBuildGraphSidecarPersistsProvenPackageDependency(t *testing.T) {
 	}
 }
 
-func TestBuildGraphSidecarPersistsGoModuleDependency(t *testing.T) {
+func TestBuildGraphPersistsGoModuleDependency(t *testing.T) {
 	dir := writeManifestShards(t)
-	path, _, err := BuildGraphSidecar(dir)
+	path, _, err := BuildGraph(dir)
 	if err != nil {
-		t.Fatalf("BuildGraphSidecar: %v", err)
+		t.Fatalf("BuildGraph: %v", err)
 	}
 	g, err := diskgraph.Open(path)
 	if err != nil {
@@ -156,9 +156,9 @@ func TestManifestEdgesSkipsExternalPackagesWithoutError(t *testing.T) {
 		t.Errorf("report = %+v, want all 3 declarations unresolved", report)
 	}
 
-	path, _, err := BuildGraphSidecar(dir)
+	path, _, err := BuildGraph(dir)
 	if err != nil {
-		t.Fatalf("BuildGraphSidecar with only external dependencies: %v", err)
+		t.Fatalf("BuildGraph with only external dependencies: %v", err)
 	}
 	g, err := diskgraph.Open(path)
 	if err != nil {
@@ -192,7 +192,7 @@ func TestManifestEdgesFoldsDedupedContentToOneRecord(t *testing.T) {
 		t.Fatalf("Dependents(platform/core) = %v, want both consumers", got)
 	}
 
-	path, _, err := BuildGraphSidecar(dir)
+	path, _, err := BuildGraph(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,9 +231,9 @@ func TestManifestEdgesFromDedupedShards(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path, _, err := BuildGraphSidecar(dir)
+	path, _, err := BuildGraph(dir)
 	if err != nil {
-		t.Fatalf("BuildGraphSidecar deduped: %v", err)
+		t.Fatalf("BuildGraph deduped: %v", err)
 	}
 	g, err := diskgraph.Open(path)
 	if err != nil {
@@ -254,8 +254,8 @@ func TestManifestEdgesReportsAnEmptyShardDir(t *testing.T) {
 	if _, _, err := ManifestEdges(dir); err == nil {
 		t.Fatal("ManifestEdges on an empty shard dir returned no error")
 	}
-	if _, _, err := BuildGraphSidecar(dir); err == nil {
-		t.Fatal("BuildGraphSidecar on an empty shard dir returned no error")
+	if _, _, err := BuildGraph(dir); err == nil {
+		t.Fatal("BuildGraph on an empty shard dir returned no error")
 	}
 }
 

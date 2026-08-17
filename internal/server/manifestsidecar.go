@@ -1,8 +1,8 @@
 package server
 
-// manifestsidecar.go is the offline bridge from package manifests to the graph
-// sidecar's DEPENDS_ON adjacency. It is the phase-8 counterpart of
-// graphsidecar.go: same shard set, same sidecar, a different and much stronger
+// manifestsidecar.go is the offline bridge from package manifests to the graph's
+// DEPENDS_ON adjacency. It is the phase-8 counterpart of graphbuild.go: same
+// shard set, same graph, a different and much stronger
 // kind of evidence. Where a symbol-derived edge is a name occurrence a regex tier
 // scored, a manifest edge is two declarations joined, so it is persisted at
 // Proven confidence.

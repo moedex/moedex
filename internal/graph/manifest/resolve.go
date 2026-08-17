@@ -23,7 +23,7 @@ const (
 // Site is one place a manifest occurs, with the byte offset of the declaration or
 // identity it contributed. Repo is the corpus repo label and Path is repo-relative;
 // Blob is the git blob SHA of the manifest content, which is what the graph
-// sidecar keys on.
+// graph keys on.
 type Site struct {
 	Repo   string
 	Path   string
