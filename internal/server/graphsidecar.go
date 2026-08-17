@@ -373,39 +373,62 @@ func saveGraphSidecar(builder *diskgraph.Builder, dir string) (string, error) {
 	return path, nil
 }
 
+// graphKeyEdge is a resolved key/edge pair ready for the emitter.
+type graphKeyEdge struct {
+	Key  diskgraph.Key
+	Edge diskgraph.Edge
+}
+
+// computeEdgesForName runs the expensive generate→verify→resolve pipeline for
+// one name and returns the resolved key/edge pairs. It is read-only against the
+// corpus and symbol index, so multiple names can be computed concurrently.
+func (s *graphSweep) computeEdgesForName(name string, generation uint64) ([]graphKeyEdge, error) {
+	scored := graphverify.Verify(candidates.GenerateCandidates(s.corpus, name))
+	out := make([]graphKeyEdge, 0, len(scored))
+	for _, sc := range scored {
+		sourceBlob := s.corpus.Blob(sc.Source)
+		targetBlob := s.corpus.Blob(sc.Target)
+		if sourceBlob == nil || targetBlob == nil {
+			return nil, fmt.Errorf("server: graph edge %q references an unknown blob", name)
+		}
+		if sc.Source.Start < 0 || sc.Target.Start < 0 {
+			return nil, fmt.Errorf("server: graph edge %q has a negative byte offset", name)
+		}
+
+		sourceOffset := uint64(sc.Source.Start)
+		if enclosing, ok := s.merged.Enclosing(sc.Source.Shard, sc.Source.Blob, sc.Source.Start); ok {
+			if enclosing.NameStart < 0 {
+				return nil, fmt.Errorf("server: enclosing symbol %q has a negative byte offset", enclosing.Name)
+			}
+			sourceOffset = uint64(enclosing.NameStart)
+		}
+		out = append(out, graphKeyEdge{
+			Key: diskgraph.Key{BlobSHA: sourceBlob.SHA, SymbolOffset: sourceOffset},
+			Edge: diskgraph.Edge{
+				Type:         graphEdgeType(sc, sourceBlob.Content),
+				TargetBlob:   targetBlob.SHA,
+				TargetOffset: uint64(sc.Target.Start),
+				Confidence:   sc.Confidence,
+				Evidence:     sc.Evidence,
+				Name:         name,
+				Generation:   generation,
+			},
+		})
+	}
+	return out, nil
+}
+
 // emit generates, verifies, and hands every edge for name to add, stamped with
 // generation. It is the one place a candidate becomes a persisted record, so a
 // full build and an incremental recompute produce byte-identical output for the
 // same name.
 func (s *graphSweep) emit(name string, generation uint64, add *graphEmitter) error {
-	for _, scored := range graphverify.Verify(candidates.GenerateCandidates(s.corpus, name)) {
-		sourceBlob := s.corpus.Blob(scored.Source)
-		targetBlob := s.corpus.Blob(scored.Target)
-		if sourceBlob == nil || targetBlob == nil {
-			return fmt.Errorf("server: graph edge %q references an unknown blob", name)
-		}
-		if scored.Source.Start < 0 || scored.Target.Start < 0 {
-			return fmt.Errorf("server: graph edge %q has a negative byte offset", name)
-		}
-
-		sourceOffset := uint64(scored.Source.Start)
-		if enclosing, ok := s.merged.Enclosing(scored.Source.Shard, scored.Source.Blob, scored.Source.Start); ok {
-			if enclosing.NameStart < 0 {
-				return fmt.Errorf("server: enclosing symbol %q has a negative byte offset", enclosing.Name)
-			}
-			sourceOffset = uint64(enclosing.NameStart)
-		}
-		key := diskgraph.Key{BlobSHA: sourceBlob.SHA, SymbolOffset: sourceOffset}
-		edge := diskgraph.Edge{
-			Type:         graphEdgeType(scored, sourceBlob.Content),
-			TargetBlob:   targetBlob.SHA,
-			TargetOffset: uint64(scored.Target.Start),
-			Confidence:   scored.Confidence,
-			Evidence:     scored.Evidence,
-			Name:         name,
-			Generation:   generation,
-		}
-		if err := add.Add(key, edge); err != nil {
+	edges, err := s.computeEdgesForName(name, generation)
+	if err != nil {
+		return err
+	}
+	for i := range edges {
+		if err := add.Add(edges[i].Key, edges[i].Edge); err != nil {
 			return err
 		}
 	}

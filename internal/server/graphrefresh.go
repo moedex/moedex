@@ -33,6 +33,8 @@ import (
 	"io/fs"
 	"math"
 	"os"
+	"runtime"
+	"sync"
 
 	"moedex/internal/graph/candidates"
 	"moedex/internal/graph/diskgraph"
@@ -127,16 +129,34 @@ func RefreshGraphSidecar(dir string) (path string, stats GraphRefreshStats, err 
 		}
 	}
 
+	var dirtyNames []string
+	for _, name := range sweep.names {
+		if _, stale := dirty[name]; stale {
+			dirtyNames = append(dirtyNames, name)
+		}
+	}
+
+	recomputed, err := sweep.computeEdgesParallel(dirtyNames, stats.Generation)
+	if err != nil {
+		return "", stats, err
+	}
+	recomputedByName := make(map[string][]graphKeyEdge, len(dirtyNames))
+	for i, name := range dirtyNames {
+		recomputedByName[name] = recomputed[i]
+	}
+
 	builder := diskgraph.NewBuilder()
 	builder.SetGeneration(stats.Generation)
 	sweep.recordCorpusRoster(builder)
 	emit := newGraphEmitter(builder)
 	for _, name := range sweep.names {
-		if _, stale := dirty[name]; stale {
+		if edges, stale := recomputedByName[name]; stale {
 			stats.NamesRecomputed++
 			before := builder.NumEdges()
-			if err := sweep.emit(name, stats.Generation, emit); err != nil {
-				return "", stats, err
+			for i := range edges {
+				if err := emit.Add(edges[i].Key, edges[i].Edge); err != nil {
+					return "", stats, err
+				}
 			}
 			stats.EdgesRecomputed += int(builder.NumEdges() - before)
 			continue
@@ -200,16 +220,67 @@ func (s *graphSweep) rebuildAll(dir string, stats *GraphRefreshStats) (string, e
 	builder := diskgraph.NewBuilder()
 	builder.SetGeneration(stats.Generation)
 	s.recordCorpusRoster(builder)
+
+	results, err := s.computeEdgesParallel(s.names, stats.Generation)
+	if err != nil {
+		return "", err
+	}
+
 	emit := newGraphEmitter(builder)
-	for _, name := range s.names {
-		if err := s.emit(name, stats.Generation, emit); err != nil {
-			return "", err
+	for _, batch := range results {
+		for i := range batch {
+			if err := emit.Add(batch[i].Key, batch[i].Edge); err != nil {
+				return "", err
+			}
 		}
 	}
+
 	stats.NamesRecomputed = len(s.names)
 	stats.EdgesRecomputed = int(builder.NumEdges())
 	stats.BlobsAdded = len(s.identity)
 	return saveGraphSidecar(builder, dir)
+}
+
+// computeEdgesParallel fans out computeEdgesForName across GOMAXPROCS workers.
+// Results are returned in the same order as names for deterministic output.
+func (s *graphSweep) computeEdgesParallel(names []string, generation uint64) ([][]graphKeyEdge, error) {
+	n := len(names)
+	if n == 0 {
+		return nil, nil
+	}
+
+	workers := runtime.GOMAXPROCS(0)
+	if workers > n {
+		workers = n
+	}
+
+	results := make([][]graphKeyEdge, n)
+	errs := make([]error, n)
+
+	work := make(chan int, n)
+	for i := range n {
+		work <- i
+	}
+	close(work)
+
+	var wg sync.WaitGroup
+	wg.Add(workers)
+	for range workers {
+		go func() {
+			defer wg.Done()
+			for i := range work {
+				results[i], errs[i] = s.computeEdgesForName(names[i], generation)
+			}
+		}()
+	}
+	wg.Wait()
+
+	for _, err := range errs {
+		if err != nil {
+			return nil, err
+		}
+	}
+	return results, nil
 }
 
 func (s *graphSweep) contentDelta(previous *diskgraph.Graph) (added []string, removed map[string]struct{}) {
