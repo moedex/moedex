@@ -33,7 +33,9 @@ package symbol
 
 import "sort"
 
-// Kind classifies a symbol's syntactic role.
+// Kind classifies a symbol's syntactic or architectural role. Extractors emit
+// the generic syntactic kinds; framework-aware post-passes may promote those
+// kinds to one of the architectural kinds below.
 type Kind uint8
 
 const (
@@ -49,6 +51,19 @@ const (
 	Const
 	// Var is a variable declaration.
 	Var
+	// Route is an HTTP route/controller definition recognized from framework
+	// attributes (for example ASP.NET Route/HttpGet attributes).
+	Route
+	// Event is an event/message or consumer definition recognized from an event
+	// framework convention (for example MassTransit IConsumer<T>).
+	Event
+	// Queue is a queue publisher definition recognized from a messaging API.
+	Queue
+	// Table is a database table/entity definition recognized from an ORM API.
+	Table
+	// Service is a dependency-injection service definition recognized from a
+	// framework registration.
+	Service
 )
 
 // String renders a Kind for diagnostics and tests.
@@ -64,6 +79,16 @@ func (k Kind) String() string {
 		return "Const"
 	case Var:
 		return "Var"
+	case Route:
+		return "Route"
+	case Event:
+		return "Event"
+	case Queue:
+		return "Queue"
+	case Table:
+		return "Table"
+	case Service:
+		return "Service"
 	default:
 		return "Unknown"
 	}
@@ -249,6 +274,40 @@ func (ix *Index) rebuildName(blob uint64) {
 // Symbols returns the symbols for blob (sorted by BodyStart), or nil.
 func (ix *Index) Symbols(blob uint64) []Symbol {
 	return ix.byBlob[blob]
+}
+
+// Promote changes the generic syntactic kind of the symbol identified by blob
+// and nameStart to an architectural kind. It reports the previous kind and
+// whether the symbol exists and is eligible for the promotion. Repeating the
+// same promotion is successful and idempotent; an existing, different
+// architectural classification is left unchanged.
+//
+// nameStart, rather than name, identifies the definition because overloads and
+// same-named nested declarations can legitimately share a blob.
+func (ix *Index) Promote(blob uint64, nameStart int, kind Kind) (Kind, bool) {
+	if !kind.architectural() {
+		return KindUnknown, false
+	}
+	syms := ix.byBlob[blob]
+	for i := range syms {
+		if syms[i].NameStart != nameStart {
+			continue
+		}
+		previous := syms[i].Kind
+		if previous == kind {
+			return previous, true
+		}
+		if previous.architectural() {
+			return previous, false
+		}
+		syms[i].Kind = kind
+		return previous, true
+	}
+	return KindUnknown, false
+}
+
+func (k Kind) architectural() bool {
+	return k >= Route && k <= Service
 }
 
 // Refs returns the reference occurrences for blob (sorted by Start), or nil.

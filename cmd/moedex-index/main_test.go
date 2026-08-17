@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"moedex/internal/corpus"
+	"moedex/internal/graph/diskgraph"
 	"moedex/internal/ingest"
 	"moedex/internal/parity"
 	"moedex/internal/server"
@@ -197,27 +198,38 @@ func TestBuildCheckRefresh(t *testing.T) {
 }
 
 // TestMoedexIndexBuildProducesSidecars proves the offline indexer writes the
-// token+symbol ranking sidecars so the daemon finds them warm: a fresh OpenRank
-// over the built dir LOADS both indexes from cache (no rebuild). It also covers
-// the refresh path: after a mutate+refresh, the live dir carries valid sidecars.
+// token+symbol ranking sidecars plus the mmap graph sidecar. A fresh OpenRank
+// over the built dir LOADS both ranking indexes from cache (no rebuild), while
+// diskgraph.Open serves the offline graph. It also covers refresh: after a
+// mutate+refresh, the live dir carries valid replacements for every sidecar.
 func TestMoedexIndexBuildProducesSidecars(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
 	root := t.TempDir()
 	repoA := initRepo(t, filepath.Join(root, "repoA"), map[string]string{
-		"alpha.go": "package a\n\nfunc AlphaUniqueToken() {}\n",
+		"alpha.go": "package a\n\nfunc AlphaUniqueToken() {}\nfunc UsesAlpha() { AlphaUniqueToken() }\n",
 	})
 	shardDir := filepath.Join(t.TempDir(), "shards")
 
-	// --- build writes the four sidecar files ---
+	// --- build writes the ranking files and graph ---
 	if err := runBuild([]string{"-corpus", root, "-shard-dir", shardDir}); err != nil {
 		t.Fatalf("build: %v", err)
 	}
-	for _, name := range []string{"corpus-tokens.tki", "corpus-tokens.tki.meta", "corpus-symbols.sym", "corpus-symbols.sym.meta"} {
+	for _, name := range []string{"corpus-tokens.tki", "corpus-tokens.tki.meta", "corpus-symbols.sym", "corpus-symbols.sym.meta", server.GraphSidecarName} {
 		if _, err := os.Stat(filepath.Join(shardDir, name)); err != nil {
 			t.Fatalf("sidecar %s not written by build: %v", name, err)
 		}
+	}
+	graph, err := diskgraph.Open(server.GraphSidecarPath(shardDir))
+	if err != nil {
+		t.Fatalf("open graph after build: %v", err)
+	}
+	if graph.NumEdges() == 0 {
+		t.Error("build graph contains no edges for AlphaUniqueToken call")
+	}
+	if err := graph.Close(); err != nil {
+		t.Fatalf("close graph after build: %v", err)
 	}
 
 	// A fresh daemon boot finds them warm (loads, does not rebuild).
@@ -236,10 +248,20 @@ func TestMoedexIndexBuildProducesSidecars(t *testing.T) {
 	if err := runRefresh([]string{"-shard-dir", shardDir}); err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
-	for _, name := range []string{"corpus-tokens.tki", "corpus-tokens.tki.meta", "corpus-symbols.sym", "corpus-symbols.sym.meta"} {
+	for _, name := range []string{"corpus-tokens.tki", "corpus-tokens.tki.meta", "corpus-symbols.sym", "corpus-symbols.sym.meta", server.GraphSidecarName} {
 		if _, err := os.Stat(filepath.Join(shardDir, name)); err != nil {
 			t.Fatalf("sidecar %s missing on live dir after refresh: %v", name, err)
 		}
+	}
+	graph2, err := diskgraph.Open(server.GraphSidecarPath(shardDir))
+	if err != nil {
+		t.Fatalf("open graph after refresh: %v", err)
+	}
+	if graph2.NumEdges() == 0 {
+		t.Error("refreshed graph lost existing AlphaUniqueToken call edge")
+	}
+	if err := graph2.Close(); err != nil {
+		t.Fatalf("close graph after refresh: %v", err)
 	}
 	rc2, err := server.OpenRank(context.Background(), shardDir, server.RankConfig{})
 	if err != nil {

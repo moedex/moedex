@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 
 	"moedex/internal/contextwin"
 	"moedex/internal/diskstore"
@@ -33,7 +32,8 @@ type RankConfig struct {
 	// The corpus chunk embeddings can come from three places, in order:
 	//   - Store: a prebuilt store, used as-is (skips all building/loading).
 	//   - StorePath: a persisted sidecar. If it exists and its .meta matches the
-	//     current corpus (shard fingerprint + model + blob count), it is loaded
+	//     current corpus (shard fingerprint + model + blob count + chunk geometry),
+	//     it is loaded
 	//     instantly; otherwise OpenRank builds the store and saves it there for
 	//     next boot. This is what makes the dense arm practical at full-corpus
 	//     scale — embed once, reuse across boots.
@@ -42,8 +42,8 @@ type RankConfig struct {
 	Store         *embed.Store
 	StorePath     string // persisted corpus-embedding sidecar (load-or-build-and-save)
 	EmbedModel    string // recorded in the sidecar meta; a model change invalidates it
-	LinesPerChunk int    // dense chunk window (default 40)
-	Overlap       int    // dense chunk overlap (default 10)
+	LinesPerChunk int    // dense chunk window (default 40); recorded in the meta, a change invalidates it
+	Overlap       int    // dense chunk overlap (default 10); recorded in the meta, a change invalidates it
 
 	// Token/symbol sidecars (load-or-build-and-save, mirroring StorePath). Both
 	// default to a path under dir when empty, so the feature is on by default; a
@@ -140,7 +140,7 @@ func OpenRank(ctx context.Context, dir string, cfg RankConfig) (*RankCorpus, err
 	cached := false
 	if store == nil && cfg.Emb != nil {
 		if cfg.StorePath != "" {
-			if st, ok := loadPersistedStore(cfg.StorePath, paths, ix.NumBlobs(), cfg.EmbedModel); ok {
+			if st, ok := loadPersistedStore(cfg.StorePath, paths, ix.NumBlobs(), cfg.EmbedModel, chunkSpecOf(cfg)); ok {
 				store, cached = st, true
 			}
 		}
@@ -150,7 +150,7 @@ func OpenRank(ctx context.Context, dir string, cfg RankConfig) (*RankCorpus, err
 				return nil, fmt.Errorf("server: build embeddings: %w", err)
 			}
 			if cfg.StorePath != "" {
-				if err := savePersistedStore(store, cfg.StorePath, paths, ix.NumBlobs(), cfg.EmbedModel); err != nil {
+				if err := savePersistedStore(store, cfg.StorePath, paths, ix.NumBlobs(), cfg.EmbedModel, chunkSpecOf(cfg)); err != nil {
 					// Persistence is best-effort: a failed cache write must not
 					// take down a working ranker.
 					fmt.Fprintf(os.Stderr, "server: persist embeddings (continuing): %v\n", err)
@@ -214,14 +214,10 @@ func loadCorpusRoot(shardDir string) string {
 // same repos, because the deduped export packs repos into shards identically — so
 // the corpus fingerprint and sidecar reuse semantics are unchanged.
 func loadUnified(dir string) (*index.Index, []string, *diskstore.ContentStore, error) {
-	paths, err := filepath.Glob(filepath.Join(dir, "*.idx"))
+	paths, err := globShards(dir)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("server: glob shards: %w", err)
+		return nil, nil, nil, err
 	}
-	if len(paths) == 0 {
-		return nil, nil, nil, fmt.Errorf("server: no *.idx shards under %s", dir)
-	}
-	sort.Strings(paths)
 
 	cs, err := openSharedContent(dir, paths)
 	if err != nil {
@@ -260,13 +256,67 @@ func cacheTag(cached bool) string {
 func defaultTokenPath(dir string) string  { return filepath.Join(dir, "corpus-tokens.tki") }
 func defaultSymbolPath(dir string) string { return filepath.Join(dir, "corpus-symbols.sym") }
 
+// Default dense-chunk geometry, applied by chunkLines/chunkOverlap when
+// RankConfig leaves them unset. They are named because storeMeta also needs them:
+// see chunkSpecFromMeta.
+const (
+	defaultChunkLines   = 40
+	defaultChunkOverlap = 10
+)
+
+// chunkSpec is the RESOLVED dense-chunk geometry a store was built with —
+// resolved meaning defaults already applied, so an unset RankConfig and one that
+// spells out the defaults compare equal instead of spuriously invalidating a
+// cache.
+type chunkSpec struct {
+	Lines   int
+	Overlap int
+}
+
+// chunkSpecOf returns cfg's resolved chunk geometry.
+func chunkSpecOf(cfg RankConfig) chunkSpec {
+	return chunkSpec{Lines: chunkLines(cfg), Overlap: chunkOverlap(cfg)}
+}
+
 // storeMeta validates a persisted corpus-embedding sidecar against the current
 // corpus. A mismatch on any field means the store was built from a different
-// shard set, model, or corpus size and must not be reused.
+// shard set, model, corpus size, or CHUNK GEOMETRY and must not be reused.
+//
+// Geometry belongs here for the same reason the model does: the vectors are a
+// function of the text that was embedded, and the chunk window/overlap decide
+// what that text is. Without it, changing LinesPerChunk from 40 to 80 silently
+// reuses vectors for 40-line chunks under an index that now chunks by 80 — every
+// dense score computed over text that no longer exists in that form.
 type storeMeta struct {
-	Fingerprint string `json:"fingerprint"` // shard set (sorted name+size)
-	Model       string `json:"model"`       // embedding model
-	NumBlobs    int    `json:"num_blobs"`   // unified-index blob count (global IDs)
+	Fingerprint   string `json:"fingerprint"`     // shard set (sorted name+size)
+	Model         string `json:"model"`           // embedding model
+	NumBlobs      int    `json:"num_blobs"`       // unified-index blob count (global IDs)
+	LinesPerChunk int    `json:"lines_per_chunk"` // resolved dense chunk window
+	Overlap       int    `json:"overlap"`         // resolved dense chunk overlap
+}
+
+// chunkSpecFromMeta reads m's geometry, treating an ABSENT field (0 — a .meta
+// written before these fields existed) as the default geometry rather than as a
+// mismatch.
+//
+// That is sound rather than lenient: nothing outside this package sets
+// RankConfig.LinesPerChunk/Overlap (no moedex-serve or moedex-index flag exposes
+// them), so every store persisted before this field existed was necessarily built
+// with the resolved defaults. Backfilling them is therefore what the file would
+// have said, and it matters because the two invalidation costs are wildly
+// asymmetric: a stale symbol sidecar rebuilds in seconds, whereas invalidating an
+// embedding store sends OpenRank through a full corpus re-embed (embed.BuildStore
+// has no reuse path — only RefreshEmbeddings does). A geometry change made through
+// this package's config still mismatches and still rebuilds, which is the point.
+func chunkSpecFromMeta(m storeMeta) chunkSpec {
+	spec := chunkSpec{Lines: m.LinesPerChunk, Overlap: m.Overlap}
+	if spec.Lines <= 0 {
+		spec.Lines = defaultChunkLines
+	}
+	if spec.Overlap <= 0 {
+		spec.Overlap = defaultChunkOverlap
+	}
+	return spec
 }
 
 // corpusFingerprint hashes the shard set (sorted basename + byte size) so any
@@ -314,8 +364,9 @@ func corpusFingerprint(shardPaths []string) string {
 }
 
 // loadPersistedStore loads storePath iff its sibling .meta matches the current
-// corpus. Any mismatch or read error returns ok=false so OpenRank rebuilds.
-func loadPersistedStore(storePath string, shardPaths []string, numBlobs int, model string) (*embed.Store, bool) {
+// corpus, embedding model, AND chunk geometry. Any mismatch or read error returns
+// ok=false so OpenRank rebuilds.
+func loadPersistedStore(storePath string, shardPaths []string, numBlobs int, model string, spec chunkSpec) (*embed.Store, bool) {
 	raw, err := os.ReadFile(storePath + ".meta")
 	if err != nil {
 		return nil, false
@@ -326,6 +377,9 @@ func loadPersistedStore(storePath string, shardPaths []string, numBlobs int, mod
 	}
 	if m.Fingerprint != corpusFingerprint(shardPaths) || m.Model != model || m.NumBlobs != numBlobs {
 		return nil, false
+	}
+	if chunkSpecFromMeta(m) != spec {
+		return nil, false // vectors are for differently-chunked text
 	}
 	st, err := embed.LoadStore(storePath)
 	if err != nil {
@@ -408,24 +462,30 @@ func RefreshEmbeddings(ctx context.Context, dir string, cfg RankConfig) (Embeddi
 		}
 	}
 
-	// Corpus unchanged (same shard fingerprint, model, blob count) and we have the
-	// matching store: either it is already up to date, or it is a legacy keyless
-	// store we can re-key for free.
-	if prev != nil && meta.Fingerprint == fp && meta.NumBlobs == numBlobs {
+	// Corpus unchanged (same shard fingerprint, model, blob count) AND the same chunk
+	// geometry, and we have the matching store: either it is already up to date, or it
+	// is a legacy keyless store we can re-key for free. Geometry has to gate this fast
+	// path too — a store chunked differently is not "up to date" no matter how well the
+	// corpus matches, and reporting UpToDate here would skip the rebuild entirely.
+	spec := chunkSpecOf(cfg)
+	if prev != nil && meta.Fingerprint == fp && meta.NumBlobs == numBlobs && chunkSpecFromMeta(meta) == spec {
 		if prev.HasKeys() {
 			return EmbeddingRefreshStats{TotalChunks: prev.Len(), Reused: prev.Len(), UpToDate: true}, nil
 		}
 		if err := prev.FillKeys(ix); err != nil {
 			return EmbeddingRefreshStats{}, fmt.Errorf("server: re-key embedding store: %w", err)
 		}
-		if err := savePersistedStore(prev, storePath, paths, numBlobs, cfg.EmbedModel); err != nil {
+		if err := savePersistedStore(prev, storePath, paths, numBlobs, cfg.EmbedModel, spec); err != nil {
 			return EmbeddingRefreshStats{}, fmt.Errorf("server: persist re-keyed store: %w", err)
 		}
 		return EmbeddingRefreshStats{TotalChunks: prev.Len(), Reused: prev.Len(), Migrated: true}, nil
 	}
 
 	// Changed (or missing/foreign) store: incremental build, reusing whatever the
-	// prior store can offer (nil/keyless -> a clean full embed).
+	// prior store can offer (nil/keyless -> a clean full embed). Reuse stays correct
+	// under a geometry change without any extra guard: a ChunkKey is sha256 of the
+	// chunk TEXT, so re-chunked text yields different keys and simply finds no match —
+	// except where the text is byte-identical anyway, where reuse is right.
 	var reuse map[embed.ChunkKey]embed.Vector
 	if prev != nil {
 		reuse = prev.KeyVectors()
@@ -434,21 +494,24 @@ func RefreshEmbeddings(ctx context.Context, dir string, cfg RankConfig) (Embeddi
 	if err != nil {
 		return EmbeddingRefreshStats{}, fmt.Errorf("server: build embeddings: %w", err)
 	}
-	if err := savePersistedStore(store, storePath, paths, numBlobs, cfg.EmbedModel); err != nil {
+	if err := savePersistedStore(store, storePath, paths, numBlobs, cfg.EmbedModel, spec); err != nil {
 		return EmbeddingRefreshStats{}, fmt.Errorf("server: persist embeddings: %w", err)
 	}
 	return EmbeddingRefreshStats{TotalChunks: st.Total, Reused: st.Reused, Embedded: st.Embedded}, nil
 }
 
-// savePersistedStore writes the store and its validating meta sidecar.
-func savePersistedStore(st *embed.Store, storePath string, shardPaths []string, numBlobs int, model string) error {
+// savePersistedStore writes the store and its validating meta sidecar, recording
+// the resolved chunk geometry the vectors were built with.
+func savePersistedStore(st *embed.Store, storePath string, shardPaths []string, numBlobs int, model string, spec chunkSpec) error {
 	if err := st.Save(storePath); err != nil {
 		return err
 	}
 	meta, err := json.Marshal(storeMeta{
-		Fingerprint: corpusFingerprint(shardPaths),
-		Model:       model,
-		NumBlobs:    numBlobs,
+		Fingerprint:   corpusFingerprint(shardPaths),
+		Model:         model,
+		NumBlobs:      numBlobs,
+		LinesPerChunk: spec.Lines,
+		Overlap:       spec.Overlap,
 	})
 	if err != nil {
 		return err
@@ -460,14 +523,28 @@ func savePersistedStore(st *embed.Store, storePath string, shardPaths []string, 
 // current corpus. Unlike storeMeta it has no Model field (token/symbol indexes
 // depend only on the shard set, not on an embedding model). It reuses
 // corpusFingerprint, so any add/remove/regrow of shards invalidates the cache.
+// Extractors versions the BUILDER, not the corpus: a sidecar is a cache of
+// derived output, so a change in the code that derives it invalidates the cache
+// even when the corpus is byte-identical. Only the symbol sidecar has a builder
+// worth versioning (the language extractors — see symbol.ExtractorsVersion); the
+// token index derives from tokenindex.Tokenize, which is frozen by contract, so
+// it records 0 and `omitempty` keeps its .meta byte-identical to before this
+// field existed.
+//
+// Forward-compat caveat: an OLDER binary reading a NEWER .meta ignores unknown
+// fields, so it would reuse a sidecar this check would reject. That is inherent
+// to adding a field; it only matters if an old and new binary share a shard dir.
 type sidecarMeta struct {
 	Fingerprint string `json:"fingerprint"` // shard set (sorted name+size)
 	NumBlobs    int    `json:"num_blobs"`   // unified-index blob count (global IDs)
+	Extractors  int    `json:"extractors,omitempty"`
 }
 
 // sidecarMetaMatches reports whether path's sibling .meta matches the current
-// corpus. Any missing/corrupt/mismatched meta returns false so OpenRank rebuilds.
-func sidecarMetaMatches(path string, shardPaths []string, numBlobs int) bool {
+// corpus AND was produced by the expected builder version (extractors; 0 for a
+// sidecar with no extractor dependency). Any missing/corrupt/mismatched meta
+// returns false so OpenRank rebuilds.
+func sidecarMetaMatches(path string, shardPaths []string, numBlobs, extractors int) bool {
 	raw, err := os.ReadFile(path + ".meta")
 	if err != nil {
 		return false
@@ -476,14 +553,21 @@ func sidecarMetaMatches(path string, shardPaths []string, numBlobs int) bool {
 	if err := json.Unmarshal(raw, &m); err != nil {
 		return false
 	}
+	if m.Extractors != extractors {
+		// Same corpus, different extractor output: the cache is stale even though
+		// the fingerprint still matches. A pre-versioning sidecar lands here too
+		// (its absent field reads as 0).
+		return false
+	}
 	return m.Fingerprint == corpusFingerprint(shardPaths) && m.NumBlobs == numBlobs
 }
 
 // writeSidecarMeta writes the validating .meta sibling for a token/symbol sidecar.
-func writeSidecarMeta(path string, shardPaths []string, numBlobs int) error {
+func writeSidecarMeta(path string, shardPaths []string, numBlobs, extractors int) error {
 	meta, err := json.Marshal(sidecarMeta{
 		Fingerprint: corpusFingerprint(shardPaths),
 		NumBlobs:    numBlobs,
+		Extractors:  extractors,
 	})
 	if err != nil {
 		return err
@@ -494,7 +578,8 @@ func writeSidecarMeta(path string, shardPaths []string, numBlobs int) error {
 // loadPersistedTokens loads tokenPath iff its sibling .meta matches the current
 // corpus. Returns (nil,false) on any missing/corrupt/mismatch so OpenRank rebuilds.
 func loadPersistedTokens(tokenPath string, shardPaths []string, numBlobs int) (*tokenindex.TokenIndex, bool) {
-	if !sidecarMetaMatches(tokenPath, shardPaths, numBlobs) {
+	// extractors=0: the token index has no extractor dependency (see sidecarMeta).
+	if !sidecarMetaMatches(tokenPath, shardPaths, numBlobs, 0) {
 		return nil, false
 	}
 	ti, err := tokenindex.Load(tokenPath)
@@ -509,13 +594,13 @@ func savePersistedTokens(ti *tokenindex.TokenIndex, tokenPath string, shardPaths
 	if err := tokenindex.Save(ti, tokenPath); err != nil {
 		return err
 	}
-	return writeSidecarMeta(tokenPath, shardPaths, numBlobs)
+	return writeSidecarMeta(tokenPath, shardPaths, numBlobs, 0)
 }
 
 // loadPersistedSymbols loads symbolPath iff its sibling .meta matches the current
 // corpus. Returns (nil,false) on any missing/corrupt/mismatch so OpenRank rebuilds.
 func loadPersistedSymbols(symbolPath string, shardPaths []string, numBlobs int) (*symbol.Index, bool) {
-	if !sidecarMetaMatches(symbolPath, shardPaths, numBlobs) {
+	if !sidecarMetaMatches(symbolPath, shardPaths, numBlobs, symbol.ExtractorsVersion) {
 		return nil, false
 	}
 	syms, err := symbol.Load(symbolPath)
@@ -530,7 +615,7 @@ func savePersistedSymbols(syms *symbol.Index, symbolPath string, shardPaths []st
 	if err := symbol.Save(syms, symbolPath); err != nil {
 		return err
 	}
-	return writeSidecarMeta(symbolPath, shardPaths, numBlobs)
+	return writeSidecarMeta(symbolPath, shardPaths, numBlobs, symbol.ExtractorsVersion)
 }
 
 // BuildSidecars builds and persists the token and symbol sidecars for the shard
@@ -564,14 +649,14 @@ func BuildSidecars(dir string) (tokenPath, symbolPath string, err error) {
 
 func chunkLines(cfg RankConfig) int {
 	if cfg.LinesPerChunk <= 0 {
-		return 40
+		return defaultChunkLines
 	}
 	return cfg.LinesPerChunk
 }
 
 func chunkOverlap(cfg RankConfig) int {
 	if cfg.Overlap <= 0 {
-		return 10
+		return defaultChunkOverlap
 	}
 	return cfg.Overlap
 }

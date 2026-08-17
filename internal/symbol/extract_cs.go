@@ -47,6 +47,94 @@ var csControlKeywords = map[string]bool{
 	"typeof": true, "sizeof": true, "default": true, "new": true,
 }
 
+// csStatementKeywords are tokens that can appear in a STATEMENT but never
+// anywhere in a member declaration's PREFIX (its modifiers plus return type).
+// They filter the mirror-image false positive of csControlKeywords: that map
+// rejects a keyword captured as the method NAME (`if (` reading as `Name(`),
+// while this one rejects a statement whose head was mistaken for a return type.
+//
+// The return-type character class must admit a space — `Dictionary<string, int>
+// Foo(` is a real declaration — and `\s+` matches newlines, so the slot happily
+// swallows a multi-token statement head:
+//
+//	throw new ArgumentException("x");     -> type "throw new",       name ArgumentException
+//	return new Widget(1);                -> type "return new",      name Widget
+//	yield return new Thing(2);           -> type "yield return new", name Thing
+//	await SendAsync(x);                  -> type "await",           name SendAsync
+//	id ?? throw new ArgumentException(   -> type "id ?? throw new", name ArgumentException
+//
+// Each emitted a bogus Method definition AND suppressed the real reference
+// (csReferencesFromDefs skips offsets a definition claimed). Measured on the
+// TurnCommerce corpus (491 repos), the shapes above accounted for 72,255
+// spurious definitions — 29% of every definition in the corpus. Examples:
+// ArgumentException reported 785 "definitions" across 88 repos (now 0, all 900
+// occurrences being references), and a single generated file of
+// `new WhoIsBatchCriteria(...)` lines reported 49,286 (now 2: the real class and
+// its constructor).
+//
+// Every reserved word here is illegal as a C# identifier, so it can never be a
+// real type name and rejecting it in any prefix position is safe; `await`,
+// `var`, and `yield` are contextual rather than reserved, but none of them can
+// appear in a declaration prefix either. `new` is deliberately NOT in this set —
+// it is a legal modifier (member hiding: `public new void M()`) — and is handled
+// positionally by csDeclPrefixOK.
+var csStatementKeywords = map[string]bool{
+	"throw": true, "return": true, "await": true, "yield": true, "var": true,
+	"if": true, "else": true, "for": true, "foreach": true, "while": true,
+	"do": true, "switch": true, "case": true, "lock": true, "using": true,
+	"fixed": true, "try": true, "catch": true, "finally": true, "goto": true,
+	"break": true, "continue": true, "base": true, "this": true,
+	"checked": true, "unchecked": true, "typeof": true, "nameof": true,
+	"sizeof": true, "default": true, "is": true, "as": true, "in": true,
+	"out": true, "stackalloc": true,
+}
+
+// csDeclPrefixOK reports whether the bytes in [from, to) — everything a
+// csMethodRe match consumed before the captured name, i.e. the modifiers and
+// return type — read like a real declaration prefix rather than the head of a
+// statement. It walks the identifier tokens and rejects on two grounds:
+//
+//   - any token is a statement keyword (see csStatementKeywords). Scanning EVERY
+//     token, not just the first, is what catches a continuation line such as
+//     `subjectId ?? throw new ArgumentException(`, where the statement keyword
+//     sits mid-prefix behind an ordinary identifier.
+//   - the LAST token is `new`, which means `new Name(` — an object creation.
+//     `new` is a legal modifier, but it can never be the return TYPE, so a
+//     prefix ending in it is never a declaration. `public new void M()` keeps
+//     `void` as its last token and is unaffected. This also independently covers
+//     every `... new Name(` shape above.
+//
+// A prefix whose tokens are all modifiers is accepted: that is how a constructor
+// (`public Foo(int x)`, where `public` lands in the return-type slot) matches.
+func csDeclPrefixOK(content []byte, from, to int) bool {
+	if from < 0 || to > len(content) {
+		return true // defensive: never drop a symbol over a bad offset
+	}
+	last := ""
+	for i := from; i < to; {
+		if !csIdentByte(content[i]) {
+			i++
+			continue
+		}
+		start := i
+		for i < to && csIdentByte(content[i]) {
+			i++
+		}
+		tok := string(content[start:i])
+		if csStatementKeywords[tok] {
+			return false
+		}
+		last = tok
+	}
+	return last != "new"
+}
+
+// csIdentByte reports whether b can appear in a C# identifier (ASCII subset —
+// enough for keyword recognition, which is all csLeadingToken needs).
+func csIdentByte(b byte) bool {
+	return b == '_' || (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9')
+}
+
 // Extract scans C# content for type and method definitions. Always returns nil
 // error.
 func (CSharpExtractor) Extract(content []byte) ([]Symbol, error) {
@@ -91,6 +179,12 @@ func (CSharpExtractor) Extract(content []byte) ([]Symbol, error) {
 		}
 		name := string(content[ns:ne])
 		if csControlKeywords[name] || typeNameStart[ns] {
+			continue
+		}
+		// A statement, not a declaration: what this matched as a "return type" is
+		// really a statement head (`throw new` / `return new` / `await` / a bare
+		// `new`). See csStatementKeywords and csDeclPrefixOK.
+		if !csDeclPrefixOK(content, m[0], ns) {
 			continue
 		}
 		be := bodyRange(content, m[1])

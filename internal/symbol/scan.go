@@ -29,6 +29,28 @@ package symbol
 // content[open] is assumed to be '{'; if it is not, matchBlock still works by
 // counting from depth 0 at open.
 func matchBlock(content []byte, open int) int {
+	return matchDelims(content, open, '{', '}')
+}
+
+// matchParen is matchBlock for a parenthesized run: given the offset of a '(' it
+// returns the offset just past its matching ')', or -1 if unbalanced. It shares
+// matchBlock's lexer, so parens inside strings, template literals, and comments
+// are not counted — which matters for a TS call whose arguments are an arrow
+// function containing further parens, e.g. `it('x', () => { f(); })`.
+func matchParen(content []byte, open int) int {
+	return matchDelims(content, open, '(', ')')
+}
+
+// matchDelims returns the byte offset just past the closeCh that matches the
+// openCh at content[open], counting nesting depth and skipping string/char/
+// template literals and line/block comments. It returns -1 when the delimiter is
+// never balanced (truncated or garbled content), so callers can decline to guess
+// rather than fabricate a range.
+//
+// Known limitation (pre-existing, shared with every caller): the lexer does not
+// recognize JS/TS regex literals, so an unbalanced delimiter inside one — `/\(/`
+// — can throw off the depth count for that file.
+func matchDelims(content []byte, open int, openCh, closeCh byte) int {
 	n := len(content)
 	if open < 0 || open >= n {
 		return -1
@@ -37,8 +59,8 @@ func matchBlock(content []byte, open int) int {
 	i := open
 	for i < n {
 		c := content[i]
-		switch c {
-		case '/':
+		switch {
+		case c == '/':
 			if i+1 < n && content[i+1] == '/' {
 				// Line comment: skip to end of line.
 				i += 2
@@ -57,12 +79,12 @@ func matchBlock(content []byte, open int) int {
 				continue
 			}
 			i++
-		case '"', '\'', '`':
+		case c == '"' || c == '\'' || c == '`':
 			i = skipString(content, i, c)
-		case '{':
+		case c == openCh:
 			depth++
 			i++
-		case '}':
+		case c == closeCh:
 			depth--
 			i++
 			if depth == 0 {
@@ -73,6 +95,39 @@ func matchBlock(content []byte, open int) int {
 		}
 	}
 	return -1
+}
+
+// skipSpaceAndComments returns the offset of the first byte at or after from
+// that is neither whitespace nor part of a line/block comment, or len(content)
+// if the rest is all whitespace/comments. It lets a caller ask "what actually
+// follows this construct?" across newlines and interposed comments.
+func skipSpaceAndComments(content []byte, from int) int {
+	n := len(content)
+	i := from
+	if i < 0 {
+		i = 0
+	}
+	for i < n {
+		c := content[i]
+		switch {
+		case c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '\f' || c == '\v':
+			i++
+		case c == '/' && i+1 < n && content[i+1] == '/':
+			i += 2
+			for i < n && content[i] != '\n' {
+				i++
+			}
+		case c == '/' && i+1 < n && content[i+1] == '*':
+			i += 2
+			for i+1 < n && !(content[i] == '*' && content[i+1] == '/') {
+				i++
+			}
+			i += 2
+		default:
+			return i
+		}
+	}
+	return n
 }
 
 // skipString returns the byte offset just past the closing quote of a string

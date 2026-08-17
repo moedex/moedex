@@ -70,10 +70,14 @@ All library code lives under `internal/`; executables under `cmd/`.
 | embed | [`internal/embed`](internal/embed) | Dense arm: chunk → vector → cosine search | `Vector`, `Embedder`; `HTTPEmbedder`, `NewHTTPEmbedder`; `ONNXEmbedder`, `NewONNXEmbedder`, `NewONNXEmbedderFromFiles` (real only under `-tags onnx`; a no-op stub otherwise); `Chunk`, `ChunkBlob`; `Store`, `BuildStore`, `Hit`, `(*Store) Search/Save/Len/Dim`; `LoadStore` |
 | rank | [`internal/rank`](internal/rank) | Fuse lexical + dense + symbol + path arms via RRF | `RankedResult`, `LineSpan`; `Config`; `Ranker`, `New`, `(*Ranker) Rank/SetSymbols/SetDense/UseTokenCandidates` |
 | contextwin | [`internal/contextwin`](internal/contextwin) | Assemble ranked results into token-budgeted blocks | `ContextBlock`, `ContextWindow`, `Options`; `Assemble(ix, results, opts) ContextWindow` |
-| symbol | [`internal/symbol`](internal/symbol) | Polyglot syntactic symbol layer for block scoping + the symbol-name arm | `Symbol`, `Kind`, `Role`, `Occurrence`, `Ref`, `Index`, `NewIndex`, `Enclosing`, `EnclosingBytesFunc`, `(*Index) References/Definitions`; `Extractor`, `GoExtractor`, `CSharpExtractor`, `TSExtractor`, `SQLExtractor`, `CFExtractor`, `ExtractorForPath`, `Build`, `BuildMulti`; `Save`, `Load` |
+| symbol | [`internal/symbol`](internal/symbol) | Polyglot syntactic symbol layer for block scoping + the symbol-name arm, plus the cross-shard (corpus-wide) name lookup and the architectural-kind promotion seam | `Symbol`, `Kind` (syntactic `Func`/`Method`/`Type`/`Const`/`Var`, architectural `Route`/`Event`/`Queue`/`Table`/`Service`), `Role`, `Occurrence`, `Ref`, `Index`, `NewIndex`, `Enclosing`, `EnclosingBytesFunc`, `(*Index) References/Definitions/Promote`; `Shard`, `ShardRef`, `Corpus`, `NewCorpus`, `Merge`, `(*Corpus) AddShard/References/Definitions/DefiningShards/ReferencingShards/Symbols/Enclosing/EachName/NumShards/NumNames/ShardName/ShardIndex`; `const ExtractorsVersion`, `Extractor`, `GoExtractor`, `CSharpExtractor`, `TSExtractor`, `SQLExtractor`, `CFExtractor`, `ExtractorForPath`, `Build`, `BuildMulti`; `Save`, `Load` |
+| classify | [`internal/classify`](internal/classify) | Graph layer phase 2: promote generic symbol kinds to **architectural** ones (Route/Event/Queue/Table/Service) from C# framework conventions — trigram-query a literal framework marker, then confirm with a regexp over only those blobs, with comments/strings masked out | `Match`, `Report`, `(Report) Promoted`, `Summary`; `ClassifyAll`, `ClassifyRoutes`, `ClassifyEvents`, `ClassifyQueues`, `ClassifyTables`, `ClassifyServices` |
+| graph/candidates | [`internal/graph/candidates`](internal/graph/candidates) | Graph layer phase 3: recall-complete cross-shard edge **candidates** — trigram fan-out over every shard unioned with the symbol layer's classified references, paired with every same-name definition, held in memory for the verification pass | `Site`, `Edge`, `(Edge) CrossShard/EvidenceBlob`; `Type` (`SymbolReference`, `TextOccurrence`, `SiblingDefinition`), `(Type) String`; `Corpus`, `NewCorpus`, `(*Corpus) NumShards/ShardName/Scanning/Symbols/Blob/Text`; `GenerateCandidates(c, name) []Edge`; `Options`, `Exported`, `GenerateAll(c, opts) *Set`; `Set`, `NewSet`, `Sweep`, `(*Set) Add/Len/Edges/Names/ForName/Sweep` |
+| graph/verify | [`internal/graph/verify`](internal/graph/verify) | Graph layer phase 4 regex tier: language-aware call/import/type/identifier verification with comment and string masking; preserves every candidate while assigning Pattern (`0.6`) or Candidate (`0.3`) confidence | `Edge`/`ScoredEdge`, `Verify(candidates) []Edge`; `Tier` (`Pattern`, `Candidate`), `PatternConfidence`, `CandidateConfidence`; `ReferenceKind` (`Call`, `Import`, `TypeReference`, `IdentifierMatch`, `Unverified`) |
+| graph/diskgraph | [`internal/graph/diskgraph`](internal/graph/diskgraph) | Graph layer phase 5: offline-built, mmap-served adjacency keyed by git blob SHA + symbol byte offset; fixed-width node/edge records with exact confidence and evidence offsets | `Key`/`Node`, `Edge`, `EdgeType`; `Builder`, `NewBuilder`, `(*Builder) Add/AddEdge/AddEdges/Save`; `Save`, `Open`, `Load`; `Graph`, `(*Graph) Load/Edges/Keys/NumNodes/NumEdges/Close` |
 | eval | [`internal/eval`](internal/eval) | IR-metrics + ranker evaluation harness | `GoldQuery`, `NewBinaryGold`; `RecallAtK`, `PrecisionAtK`, `MRR`, `NDCGAtK`; `Runner`, `NewRunner`, `Evaluate`, `Report`, `QueryReport`; `BuildIndexFromCorpus`, `BuildIndexFromFiles` |
 | parity | [`internal/parity`](internal/parity) | Full-corpus exact-match retrieval parity harness + shard-level freshness | `Config`, `RunConfig`, `Run`; `Build`, `Built`, `FileTable`, `DefaultShardBytes`; `Generate`, `Battery`, `Query`, `Bucket`; `QueryResult`, `Verdict`; `WriteReport`, `ReportMeta`; `Manifest`, `ShardManifest`, `RepoHead`, `WriteManifest`, `LoadManifest`, `DetectChanges`, `Changes`, `Rebuild` |
-| server | [`internal/server`](internal/server) | Warm multi-shard serving spine: mmap'd retrieval + ranked agent context | `Corpus`, `Open`, `(*Corpus) Regex/Literal/NumShards/NumBlobs/Close`; `RankCorpus`, `RankConfig`, `OpenRank`, `(*RankCorpus) SearchContext`; `BuildSidecars` |
+| server | [`internal/server`](internal/server) | Warm multi-shard serving spine: mmap'd retrieval + ranked agent context + corpus-wide symbol lookup; offline graph-sidecar bridge | `Corpus`, `Open`, `(*Corpus) Regex/Literal/NumShards/NumBlobs/Close`; `RankCorpus`, `RankConfig`, `OpenRank`, `(*RankCorpus) SearchContext`; `BuildSidecars`, `BuildGraphSidecar`, `GraphSidecarName`, `GraphSidecarPath`; `SymbolCorpus`, `SymbolSite`, `OpenSymbols`, `(*SymbolCorpus) References/Definitions/DefiningRepos/ReferencingRepos/Locate/Merged/NumShards/NumNames/Close` |
 | mcp | [`internal/mcp`](internal/mcp) | Serve `search_context` over MCP (JSON-RPC/stdio) | `ContextSearcher`; `Server`, `NewServer`, `Serve`; `IndexSearcher`, `NewIndexSearcher`, `SetEnclosingBytes`, `SearchContext` |
 | corpus | [`internal/corpus`](internal/corpus) | Corpus acquisition + freshness over glab/git (the only package that shells out to them; **not imported by the engine**) | `Runner`, `ExecRunner`; `Config`, `DefaultGroups`; `Project`, `Enumerate`; `Doctor`, `Report`; `CloneArgs`, `CloneProjects`; `Reconcile`, `PlanSync`, `SyncProjects`; `Reindex` |
 | navigate | [`internal/navigate`](internal/navigate) | Experimental LSP-precise navigation arm (ADR 0017, `-tags lsp`): type-resolved go-to-def / find-refs / find-impls via an out-of-process language server over a hand-written stdlib JSON-RPC client; multi-language registry sized to the real corpus (csharp ~60% via `csharp-ls`; typescript/js; css/scss via vscode-css-language-server; cfml via `cflsp`; html; sql; go; python; ready-but-unused rust/cpp) — partial-capability servers degrade gracefully (a `-32601` unimplemented method → empty, not error), C#'s `DOTNET_ROOT` is resolved per-launch via `LangSpec.ResolveEnv`, and a shared per-(root,language) server pool with idle-TTL eviction + restart backoff, incremental `didChange` sync, and live-buffer overlays; no new go.mod dep (mirrors the dense arm's build-tag boundary). ADR 0018 adds name-based navigation on top: `workspace/symbol` (root-routed, merges every already-live language server for a polyglot root when no language is pinned) and `textDocument/documentSymbol` (file-routed, flattens the hierarchical `DocumentSymbol` shape and prefers `selectionRange` over the whole declaration range) — both return the named `Symbol` type, not a bare `Location` | `Pos`, `Location`, `Symbol`, `Navigator`; `Config`; `LSP`, `NewLSP`, `(*LSP) Definition/References/Implementations/WorkspaceSymbol/DocumentSymbol/SetOverlay/DropOverlay/NotifyChanged/Alive/Close`; `Pool`, `NewPool`, `(*Pool) Navigator/NavigatorFor/Definition/References/Implementations/WorkspaceSymbol/DocumentSymbol/SetOverlay/DropOverlay/NotifyChanged/Stats/Sweep/Close`; `Stats`; `LangSpec`, `LanguageForPath`, `SpecForLanguage`, `SpecForPath`; `ErrServerDead`; `const LSPCompiled` |
@@ -246,8 +250,9 @@ The serving layer adds two JSON sidecars that are not part of the index codecs: 
 freshness `manifest.json` (`internal/parity/manifest.go` — repo→shard membership +
 each repo's git HEAD and effective privacy-policy fingerprint) and per-cache `.meta` validators next to the corpus token,
 symbol, and embedding sidecars (`internal/server/rankcorpus.go` — a shard-set
-fingerprint + blob count, plus the embedding model for the embedding store, so a
-stale cache is detected and rebuilt rather than silently reused). The CAS adds a
+fingerprint + blob count, plus the embedding model AND chunk geometry for the
+embedding store and `symbol.ExtractorsVersion` for the symbol index, so a stale
+cache is detected and rebuilt rather than silently reused). The CAS adds a
 third JSON sidecar, `blobmanifest.json` (`internal/blobstore/manifest.go` —
 repo→{git HEAD, privacy fingerprint, ordered eligible file entries of `{sha, rel}`} plus global dedup stats),
 which records a repo's *blob set* so a per-repo refresh is a pure set-diff.
@@ -319,15 +324,51 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
   symbol index, fused by `rank.Ranker` (with `UseTokenCandidates(true)`). It
   implements `mcp.ContextSearcher`, so `moedex-serve -mcp` serves `search_context`
   over the whole corpus.
+- **Corpus-wide symbol lookup** ([`server.SymbolCorpus`](internal/server/symbolcorpus.go)).
+  A single `symbol.Index` is shard-local: its blob IDs are positions inside one
+  shard, so it answers "who defines this name" only for that shard's blobs.
+  `OpenSymbols` builds one symbol index **per shard** and merges them into a
+  `symbol.Corpus` — a corpus-wide `byName` lookup — then resolves each hit back to
+  repo/path/line as a `SymbolSite`. This is what answers *"every repo that defines
+  or references `AccountBillingContactChanged`"* (`DefiningRepos` /
+  `ReferencingRepos`), which the concatenated ranking index cannot: it flattens
+  shard identity into a global blob ID. The merge itself keeps only a
+  name → `[shard IDs]` posting list and resolves occurrences **on touch** from the
+  owning shard's `byName`, so it costs one map entry per distinct *name* rather
+  than one per occurrence — the same decode-on-touch discipline the postings
+  follow. Shard IDs are the positions of the sorted `*.idx` set (all three spines
+  share one enumeration helper), and a shard that yields no symbols still holds
+  its ID. Content dedup resolves to **every** shard carrying the content (a
+  vendored definition reports all its homes, with one shared blob SHA as the
+  content-identity cue). Consumed by the graph layer's later phases
+  ([`docs/GRAPH-LAYER-PLAN.md`](docs/GRAPH-LAYER-PLAN.md) phase 1).
 - **Sidecar persistence.** `OpenRank` is **load-or-build-and-save** for all three
   ranking sidecars: the BM25 token index (default `corpus-tokens.tki`, `TKI1`), the
   symbol index (default `corpus-symbols.sym`, `SYM2`), and (when an embedder is set)
   the embedding store (`corpus-embeddings.store`, `MDXE`). Each is reused only if its
   `.meta` validator matches the current corpus fingerprint; otherwise it is rebuilt
   and re-persisted (best-effort — a failed cache write never fails a boot).
+  A sidecar is a cache of DERIVED output, so corpus identity alone is not
+  sufficient: the symbol `.meta` also records
+  [`symbol.ExtractorsVersion`](internal/symbol/extract.go), and a mismatch rebuilds
+  it even when the corpus is byte-identical. Bump that constant whenever a change
+  could alter what the extractors emit — otherwise a fixed extractor keeps serving
+  pre-fix symbols until the corpus itself changes. (The token index derives from the
+  frozen `Tokenize` rule and records no version.) The embedding store is gated the
+  same way on the two inputs that decide what text was embedded: the **model** and
+  the resolved **chunk geometry** (`lines_per_chunk` + `overlap`) — changing the
+  window from 40 to 80 must not reuse vectors built for 40-line chunks. Geometry
+  absent from a `.meta` is read as the defaults rather than as a mismatch, which is
+  exact (nothing outside `internal/server` can set it) and matters because this is
+  the one sidecar whose invalidation costs a full corpus re-embed:
+  `embed.BuildStore` has no reuse path, only `RefreshEmbeddings` does.
   `BuildSidecars` lets the offline indexer pre-warm the token+symbol caches (it
   shares `loadUnified` with `OpenRank`, so blob IDs and the fingerprint match
   byte-for-byte); embeddings are a serve-time concern and are not built there.
+  The same indexer pass calls `BuildGraphSidecar`, producing
+  `corpus-graph.graph`: an mmap-ready adjacency keyed by `(blob SHA, enclosing
+  symbol name offset)`, with target SHA/offset, relationship type, exact
+  confidence, and source evidence offset in each fixed-width edge record.
 - **Freshness** ([`internal/parity/manifest.go`](internal/parity/manifest.go)).
   `moedex-index build` writes a `manifest.json` recording, per shard, which repos
   contributed blobs, and per repo its git HEAD plus privacy fingerprint at ingest.
@@ -403,7 +444,39 @@ tool's voice (the parallel clones are his tentacles).
 - Token-budgeted, deduplicated, block-scoped context-window assembly.
 - A **polyglot** syntactic symbol layer (`symbol.BuildMulti`) with extractors for Go
   (`go/parser`), C#, TypeScript, SQL, and ColdFusion — scopes context blocks to real
-  definition boundaries and feeds the symbol-name ranking arm.
+  definition boundaries and feeds the symbol-name ranking arm. The two regexp-based
+  extractors are guarded against the false positive their only structural cue (a
+  leading indent / a return-type slot) cannot rule out — **a statement read as a
+  declaration**: C# rejects a prefix containing a statement keyword or ending in `new`
+  (`csDeclPrefixOK`), and TypeScript requires a `{` or `:` after the parameter list
+  (`tsDeclFollowsParams`). Measured on the 491-repo corpus, the C# guard alone removed
+  72,255 spurious definitions — 29% of every definition in the corpus, e.g.
+  `ArgumentException` reported 785 "definitions" across 88 repos and now reports none
+  — and the TS guard removed the `expect(`/`it(` test-framework globals that were the
+  most-defined symbols anywhere. Fewer, right symbols: both extractors decline to
+  guess rather than fabricate a range.
+- **Framework-aware architectural kinds** (`internal/classify` —
+  [`docs/GRAPH-LAYER-PLAN.md`](docs/GRAPH-LAYER-PLAN.md) phase 2): `symbol.Kind` gains
+  `Route`/`Event`/`Queue`/`Table`/`Service` alongside the syntactic kinds, and
+  `(*symbol.Index).Promote(blob, nameStart, kind)` is the one mutation that installs
+  them — identified by name offset (overloads share a name), idempotent, and refusing
+  to overwrite a *different* architectural kind, so classifier order is the only
+  precedence rule. `classify.ClassifyAll` runs five C# classifiers in that order
+  (specific endpoint/data/messaging roles before the broad DI Service role): ASP.NET
+  `[Route]`/`[ApiController]`/`[HttpGet…]` → Route, MassTransit `IConsumer<T>` and the
+  `*Consumer` naming convention → Event, EF `DbSet<T>`/`IDbContextFactory<T>` → Table,
+  `IPublishEndpoint`/`IBus.Publish` (including a typed `IBus` field's call sites) →
+  Queue, DI `AddScoped/AddTransient/AddSingleton<…>` → Service. The pass is
+  **trigram-first**: a literal marker (`[Route`, `IConsumer`, `DbSet`, `AddScoped`, …)
+  goes through `query.FromRegexp` for a sound candidate blob set, and the framework
+  regexp — the precision gate — runs only over those blobs, restricted to `.cs` files
+  and with comments and string literals masked out, so `"[HttpDelete]"` in a const or
+  a commented-out `AddSingleton<>` cannot classify the next declaration. Every `Match`
+  carries its evidence text and the evidence's own blob + byte offset, which may be a
+  *different* blob from the promoted definition (DI/ORM/event markers routinely name a
+  type declared elsewhere), and `Report.CandidateBlobs` records the pre-confirmation
+  fan-out. Promotion is in-memory today: nothing in the build pipeline runs the pass
+  yet, and persisting architectural kinds is phase 5's sidecar work.
 - MCP `search_context` tool over stdio JSON-RPC (single-repo via `cmd/moedex-mcp`,
   whole-corpus via `moedex-serve -mcp`).
 - A **warm multi-shard serving spine** (`internal/server`, `cmd/moedex-serve`): an
@@ -440,6 +513,38 @@ tool's voice (the parallel clones are his tentacles).
   (its list of content-hash keys — `O(numBlobs)`, not `O(content bytes)`) so a
   content-store change invalidates stale token/symbol/embedding caches even when the
   shard files — and the store's total size and `MOECONT1` header — are unchanged.
+- **Cross-shard graph edge candidates** (`internal/graph/candidates` —
+  [`docs/GRAPH-LAYER-PLAN.md`](docs/GRAPH-LAYER-PLAN.md) phase 3): the recall-complete
+  half of the graph layer's two-phase construction. `GenerateCandidates(c, name)`
+  unions the corpus-wide `byName` index's classified references with a **trigram
+  fan-out over every shard**, then pairs each occurrence with each definition of the
+  name, returning `Edge{Name, Source, Target, Type}` where both ends are
+  `(shard, blob, byte offset)` — byte-anchored, because a line is not enough to point
+  a verifier at a call site. It resolves nothing on purpose: name-based lookup cannot
+  say which same-named definition a use targets, so **every** definition is a
+  candidate and evidence strength is recorded as a `Type` (`SymbolReference` from an
+  extractor, `TextOccurrence` from bytes alone, `SiblingDefinition` for a same-name
+  definition elsewhere) for phase 4 to score. The trigram arm is what reaches
+  languages with no extractor at all, and the only filter applied is that a match
+  must stand alone as an identifier token (`Add` inside `Address` is provably not a
+  use) — a necessary condition, the same discipline the Cox reduction follows. Three
+  cases the postings cannot answer soundly (a sub-trigram name, a deselected gram, a
+  shard restored without postings) fall back to a content scan rather than to an
+  empty answer, so an index built content-only for symbol extraction cannot silently
+  lose the arm; `(*Corpus).Scanning` reports when that happens. `GenerateAll` sweeps
+  the corpus (exported, trigram-length names by default) into an in-memory `Set` whose
+  `Sweep()` accounts for every name admitted and excluded. The raw work list is not
+  persisted before scoring. `graph/verify.Verify` then applies Go-specific
+  import/qualified-call/type patterns, C# `using`/call/type patterns, and a general
+  identifier-boundary fallback. A language-aware lexical mask keeps comments and
+  quoted literals at Candidate confidence (except a path inside a real Go import).
+  Regex-confirmed edges become Pattern (`0.6`); every unconfirmed edge remains in
+  the result as Candidate (`0.3`), so the precision pass never costs recall. Nothing
+  is wired to an MCP graph tool yet (phase 6 owns that surface). Phase 5 now
+  consumes this scored stream into `internal/graph/diskgraph`: call sites are
+  widened to their enclosing source symbol for adjacency, identical cross-shard
+  content is deduplicated by SHA, and `moedex-index` rebuilds the mmap sidecar with
+  the token and symbol sidecars after build/refresh/export.
 - An IR-metrics evaluation harness (recall@k, precision@k, MRR, nDCG@k).
 - A full-corpus exact-match retrieval parity harness (`internal/parity`,
   `cmd/moedex-parity`): sharded whole-corpus build, seeded ≥1000-query battery,

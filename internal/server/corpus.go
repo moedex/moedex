@@ -7,13 +7,16 @@
 // results from independent shards are globally meaningful and merge by simple
 // concatenation — there is no cross-shard blob-ID space to reconcile. This is the
 // retrieval spine the daemon and (later) the ranked MCP path compose against.
+//
+// The SYMBOL spine (symbolcorpus.go) is the one place a cross-shard blob-ID space
+// does exist: a symbol index's blob IDs are shard-local, so its corpus-wide merge
+// reconciles them explicitly by qualifying every blob ID with its shard.
 package server
 
 import (
 	"context"
 	"fmt"
 	"io"
-	"path/filepath"
 	"runtime"
 	"sort"
 	"sync"
@@ -57,14 +60,10 @@ type Corpus struct {
 // shared blobs.dat content store) loads each shard against the once-opened shared
 // store. The format is detected per dir; the external API is unchanged.
 func Open(dir string) (*Corpus, error) {
-	paths, err := filepath.Glob(filepath.Join(dir, "*.idx"))
+	paths, err := globShards(dir)
 	if err != nil {
-		return nil, fmt.Errorf("server: glob shards: %w", err)
+		return nil, err
 	}
-	if len(paths) == 0 {
-		return nil, fmt.Errorf("server: no *.idx shards under %s", dir)
-	}
-	sort.Strings(paths)
 
 	c := &Corpus{dir: dir}
 	cs, err := openSharedContent(dir, paths)

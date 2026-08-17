@@ -8,6 +8,32 @@ import (
 	"moedex/internal/index"
 )
 
+// ExtractorsVersion identifies the CONTENT this package's extractors produce —
+// not the wire format the sidecar codec writes (that is the `SYM2` magic in
+// codec.go, which changes only when the file layout does). A persisted symbol
+// sidecar is a cache of extractor OUTPUT, so a fix that changes what the
+// extractors emit makes every existing sidecar wrong while leaving its
+// fingerprint (shard set + blob count) perfectly valid. Recording this version in
+// the sidecar's .meta is what lets a stale cache be detected and rebuilt instead
+// of silently served.
+//
+// BUMP THIS whenever a change could alter any extractor's emitted symbols or
+// references — a new/removed extractor, a changed Kind, a precision fix. Bumping
+// it spuriously costs one sidecar rebuild; NOT bumping it serves stale symbol
+// data until the corpus itself changes, which is far worse.
+//
+// History:
+//
+//	(absent) — sidecars written before this field existed. They carry no version
+//	          at all, so they never match a versioned reader and are rebuilt: the
+//	          right outcome, since they predate the fixes below.
+//	2       — C# statement-vs-declaration fix (a line whose return-type slot is a
+//	          statement head such as `throw new X(` no longer defines X) and the
+//	          TypeScript call-vs-declaration fix (an indented call such as
+//	          `expect(...)` no longer defines expect). Together these removed
+//	          ~97k spurious definitions, 39% of the corpus total.
+const ExtractorsVersion = 2
+
 // Extractor pulls symbols out of a blob's content. Implementations are
 // language-specific; the only one in slice 1 is GoExtractor. An error means the
 // content could not be parsed; callers (e.g. Build) treat that as "no symbols"

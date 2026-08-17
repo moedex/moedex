@@ -181,3 +181,176 @@ func names(syms []Symbol) []string {
 	}
 	return out
 }
+
+// csStatementFixture holds one statement line per shape that the return-type slot
+// used to swallow. Each line, when it STARTS a line, previously read as a member
+// declaration and emitted a bogus Method definition of the constructed/called
+// name (see csStatementKeywords).
+const csStatementFixture = `namespace N
+{
+    public class C
+    {
+        public int Work(int x)
+        {
+            if (x < 0) throw new ArgumentException("inline");
+            await SendAsync(x);
+            return new Widget(x);
+        }
+
+        public IEnumerable<int> Stream()
+        {
+            yield return new Thing(1);
+        }
+
+        public void Guard(int x)
+        {
+            throw new ArgumentOutOfRangeException(nameof(x));
+        }
+
+        public int Fallback(int? x) => x ?? throw new InvalidOperationException("none");
+
+        public void Chained(string? id)
+        {
+            Register(
+                id ?? throw new ArgumentNullException(nameof(id)));
+            Register(
+                new Registration("fallback"));
+        }
+
+        // Member hiding: new IS a legal modifier here, so these must still be
+        // definitions -- the last prefix token is the return type, not new.
+        public new void Hide() { }
+
+        new void Hide2() { }
+    }
+}
+`
+
+// TestCSharpExtractor_StatementsAreNotDefinitions pins the fix for the
+// statement-prefix false positive: a line beginning with a statement keyword is
+// never a definition, and the name it constructs/calls surfaces as a REFERENCE
+// instead (it used to be suppressed, because a def site shadows the reference).
+func TestCSharpExtractor_StatementsAreNotDefinitions(t *testing.T) {
+	src := []byte(csStatementFixture)
+	defs, occs, err := extractDefsRefs(CSharpExtractor{}, src)
+	if err != nil {
+		t.Fatalf("extractDefsRefs: %v", err)
+	}
+
+	got := symNames(defs)
+	// The real members must still be extracted.
+	for name, kind := range map[string]Kind{
+		"C":        Type,
+		"Work":     Method,
+		"Stream":   Method,
+		"Guard":    Method,
+		"Fallback": Method,
+		"Chained":  Method,
+		"Hide":     Method,
+		"Hide2":    Method,
+	} {
+		s, ok := got[name]
+		if !ok {
+			t.Errorf("missing real definition %q; got %v", name, names(defs))
+			continue
+		}
+		if s.Kind != kind {
+			t.Errorf("%q: kind = %v, want %v", name, s.Kind, kind)
+		}
+	}
+	// None of the constructed/called names may be a definition.
+	for _, bogus := range []string{
+		"ArgumentException",
+		"ArgumentOutOfRangeException",
+		"InvalidOperationException",
+		"Widget",
+		"Thing",
+		"SendAsync",
+		"ArgumentNullException", // `id ?? throw new ...` on a continuation line
+		"Registration",          // a bare `new Registration(` continuation line
+	} {
+		if s, ok := got[bogus]; ok {
+			t.Errorf("%q emitted as a %v definition at [%d,%d) — statement, not declaration",
+				bogus, s.Kind, s.BodyStart, s.BodyEnd)
+		}
+	}
+
+	// Each one must instead appear as a reference, with `new` constructions typed.
+	wantRefKind := map[string]Kind{
+		"ArgumentException":           Type,
+		"ArgumentOutOfRangeException": Type,
+		"InvalidOperationException":   Type,
+		"Widget":                      Type,
+		"Thing":                       Type,
+		"SendAsync":                   Method,
+		"ArgumentNullException":       Type,
+		"Registration":                Type,
+	}
+	for name, kind := range wantRefKind {
+		found := occByName(occs, name)
+		if len(found) == 0 {
+			t.Errorf("%q: no reference emitted; refs = %v", name, occNames(occs))
+			continue
+		}
+		if found[0].Role != Reference {
+			t.Errorf("%q: role = %v, want Reference", name, found[0].Role)
+		}
+		if found[0].Kind != kind {
+			t.Errorf("%q: reference kind = %v, want %v", name, found[0].Kind, kind)
+		}
+		if s := string(src[found[0].Start:found[0].End]); s != name {
+			t.Errorf("%q: offsets [%d,%d) = %q", name, found[0].Start, found[0].End, s)
+		}
+	}
+}
+
+// TestCSharpExtractor_DeclarationsWithSpacedTypesStillMatch guards the other
+// direction: the return-type slot must keep admitting spaces, so generic and
+// array types with spaces in them remain real declarations. A fix that tightened
+// the character class instead of filtering the leading token would break these.
+func TestCSharpExtractor_DeclarationsWithSpacedTypesStillMatch(t *testing.T) {
+	src := []byte(`namespace N
+{
+    public class C
+    {
+        public Dictionary<string, int> Counts(string id)
+        {
+            return null;
+        }
+
+        protected internal static async Task<IReadOnlyList<Widget>> LoadAsync(int id)
+        {
+            return null;
+        }
+
+        public C(int seed)
+        {
+        }
+
+        private int[] Sizes(int n)
+        {
+            return null;
+        }
+    }
+}
+`)
+	defs, _, err := extractDefsRefs(CSharpExtractor{}, src)
+	if err != nil {
+		t.Fatalf("extractDefsRefs: %v", err)
+	}
+	got := symNames(defs)
+	for _, name := range []string{"Counts", "LoadAsync", "Sizes", "C"} {
+		if _, ok := got[name]; !ok {
+			t.Errorf("declaration %q was dropped; got %v", name, names(defs))
+		}
+	}
+}
+
+// occNames lists occurrence names in order, for failure messages.
+func occNames(occs []Occurrence) []string {
+	out := make([]string, 0, len(occs))
+	for _, o := range occs {
+		out = append(out, o.Name)
+	}
+	return out
+}

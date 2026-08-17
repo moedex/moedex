@@ -59,7 +59,7 @@ test:
 ## roundtrip: persistence save/load identity (AC-C1).
 roundtrip:
 	@echo "=== round-trip (AC-C1) ==="
-	go test ./internal/parity/ -run 'RoundTrip|MoedexEqualsGold|CaseInsensitive' -count=1
+	go test ./internal/parity/ ./internal/graph/diskgraph/ -run 'RoundTrip|MoedexEqualsGold|CaseInsensitive' -count=1
 
 ## parity: full-corpus exact-match parity gate over MOEDEX_CORPUS (AC-B/D/E/F).
 ## Builds the index (sharded), runs the battery vs ripgrep + gold (+ Zoekt),

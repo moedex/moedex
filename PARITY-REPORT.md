@@ -1,6 +1,6 @@
 # moedex v0.1 — Full-Corpus Parity Report
 
-_Generated 2026-08-17T08:35:09-06:00 by `make parity` (seed 20260622)._
+_Generated 2026-08-17T09:49:27-06:00 by `make parity` (seed 20260622)._
 
 ## Verdict
 
@@ -28,9 +28,9 @@ _Generated 2026-08-17T08:35:09-06:00 by `make parity` (seed 20260622)._
 | Indexed files `\|F\|` | 63268 |
 | Indexed content | 962.8 MB |
 | Shards | 6 |
-| Build wall time | 58.092s |
-| Build peak RSS | 8562.8 MB |
-| Run peak RSS | 9107.4 MB |
+| Build wall time | 55.211s |
+| Build peak RSS | 8429.7 MB |
+| Run peak RSS | 8973.0 MB |
 
 - **AC-B1** discovery == `.git` count: **PASS**
 - **AC-B2** ≥99% of repos indexed: **PASS** (491/491)
@@ -65,34 +65,45 @@ Seeded (seed 20260622), reproducible. Total **1053** queries (floor 1000). Per-b
 
 ## Zoekt differential (AC-E, soft)
 
-- zoekt-index not on PATH; differential skipped
 
-Zoekt unavailable — section skipped (ripgrep gate remains authoritative).
+Compared at **file** granularity vs ground truth (ripgrep). Buckets sent: a-common-literal, b-rare-literal, c-phrase-literal, d-metachar-literal, f-high-frequency, g-regex.
+
+| Bucket | Queries | moedex⊇truth | zoekt⊇truth | zoekt skipped |
+|---|---|---|---|---|
+| a-common-literal | 156 | 156 | 87 | 0 |
+| b-rare-literal | 152 | 152 | 90 | 0 |
+| c-phrase-literal | 117 | 117 | 69 | 0 |
+| d-metachar-literal | 133 | 133 | 34 | 48 |
+| f-high-frequency | 45 | 45 | 13 | 0 |
+| g-regex | 236 | 236 | 56 | 48 |
+
+- Queries where **Zoekt missed truth but moedex did not** (expected — Zoekt's file/trigram caps): 394.
+- Queries where **moedex missed truth but Zoekt did not** (HIGH-priority bugs; must be zero): 0.
 
 ## Performance (soft)
 
 | Metric | Value |
 |---|---|
-| Scan wall (moedex+gold, all shards) | 3m59.534s |
-| ripgrep wall (all queries) | 37m6.434s |
-| Total run wall | 42m22.231s |
-| moedex query latency p50 | 114.893ms |
-| moedex query latency p95 | 1.023398s |
-| moedex query latency max | 11.345358s |
+| Scan wall (moedex+gold, all shards) | 3m54.241s |
+| ripgrep wall (all queries) | 13m0.183s |
+| Total run wall | 18m31.846s |
+| moedex query latency p50 | 116.831ms |
+| moedex query latency p95 | 1.011179s |
+| moedex query latency max | 9.888228s |
 
 ### moedex latency by bucket
 
 | Bucket | n | p50 | p95 | max |
 |---|---|---|---|---|
-| a-common-literal | 156 | 11.655ms | 265.527ms | 356.229ms |
-| b-rare-literal | 152 | 6.198ms | 169.579ms | 354.222ms |
-| c-phrase-literal | 117 | 47.86ms | 195.497ms | 227.206ms |
-| d-metachar-literal | 133 | 6.999ms | 258.143ms | 474.973ms |
-| e-sub-trigram | 49 | 646.788ms | 2.182962s | 9.996598s |
-| f-high-frequency | 45 | 173.008ms | 572.926ms | 781.58ms |
-| g-regex | 236 | 448.864ms | 1.11038s | 9.246444s |
-| h-case-insensitive | 114 | 559.306ms | 1.921223s | 2.902901s |
-| i-unicode | 51 | 2.382ms | 1.244434s | 11.345358s |
+| a-common-literal | 156 | 5.367ms | 270.983ms | 348.073ms |
+| b-rare-literal | 152 | 4.166ms | 174.079ms | 348.942ms |
+| c-phrase-literal | 117 | 47.279ms | 206.135ms | 229.82ms |
+| d-metachar-literal | 133 | 5.635ms | 273.335ms | 478.177ms |
+| e-sub-trigram | 49 | 639.822ms | 2.251229s | 9.833544s |
+| f-high-frequency | 45 | 178.277ms | 627.891ms | 855.846ms |
+| g-regex | 236 | 431.053ms | 1.107806s | 8.872195s |
+| h-case-insensitive | 114 | 552.825ms | 1.809417s | 2.77045s |
+| i-unicode | 51 | 1.974ms | 1.265282s | 9.888228s |
 
 ### moedex candidate attribution by bucket
 
@@ -114,26 +125,26 @@ Candidate counts are measured at unique-blob granularity before final line verif
 
 | dur | bucket | matches | cand blobs | cand MB | cand lines | RE2 lines | workers | kind | all/query-All | query |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 11.345358s | i-unicode | 2220 | 55134 | 848.8 | 27725459 | 27725459 | 18 | regex-all | all/query-All | #1006 i-unicode "\\p{Greek}" |
-| 9.996598s | e-sub-trigram | 16960149 | 55134 | 848.8 | 27725459 |  | 18 | literal-subtrigram | all | #601 e-sub-trigram [F]"co" |
-| 9.246444s | g-regex | 2940514 | 24257 | 787.1 | 26007764 | 26007764 | 1 | regex-trigram |  | #709 g-regex [U]"[0-9][0-9][0-9][0-9]" |
-| 2.902901s | h-case-insensitive | 2 | 55134 | 848.8 | 27725459 | 127085 | 18 | regex-all | all/query-All | #936 h-case-insensitive [Fi]"SAASsS" |
-| 2.659498s | h-case-insensitive | 113 | 55134 | 848.8 | 27725459 | 636328 | 18 | regex-all | all/query-All | #940 h-case-insensitive [Fi]"WAKT" |
-| 2.565188s | e-sub-trigram | 3002663 | 55134 | 848.8 | 27725459 |  | 1 | literal-subtrigram | all | #598 e-sub-trigram [F]"al" |
-| 2.450707s | h-case-insensitive | 1804 | 55134 | 848.8 | 27725459 | 187957 | 18 | regex-all | all/query-All | #963 h-case-insensitive [Fi]"dts" |
-| 2.333138s | h-case-insensitive | 923 | 23259 | 85.1 | 582769 | 438712 | 18 | regex-trigram |  | #919 h-case-insensitive [i]"IsUpsert\|collectible" |
-| 2.182962s | e-sub-trigram | 3634702 | 55134 | 848.8 | 27725459 |  | 1 | literal-subtrigram | all | #564 e-sub-trigram [F]"," |
-| 2.038633s | h-case-insensitive | 773 | 4618 | 55.3 | 118573 | 9433 | 18 | regex-trigram |  | #946 h-case-insensitive [i]"amman\|overlayColor" |
-| 1.962172s | e-sub-trigram | 1855820 | 55134 | 848.8 | 27725459 |  | 18 | literal-subtrigram | all | #599 e-sub-trigram [F]"as" |
-| 1.921223s | h-case-insensitive | 11 | 7106 | 57.9 | 158773 | 1438 | 18 | regex-trigram |  | #917 h-case-insensitive [i]"IAAgBjF\|ntensela" |
-| 1.8782s | e-sub-trigram | 1793797 | 55134 | 848.8 | 27725459 |  | 1 | literal-subtrigram | all | #597 e-sub-trigram [F]"ac" |
-| 1.774684s | e-sub-trigram | 2764605 | 55134 | 848.8 | 27725459 |  | 18 | literal-subtrigram | all | #569 e-sub-trigram [F]";" |
-| 1.655629s | i-unicode | 1979 | 55134 | 848.8 | 27725459 | 1957 | 1 | regex-all | all/query-All | #1005 i-unicode "[α-ω]+" |
-| 1.575752s | g-regex | 708 | 4623 | 673.1 | 23203985 | 474 | 18 | regex-trigram |  | #876 g-regex [U]"tabSize\|EAAGiC\|catar" |
-| 1.570915s | h-case-insensitive | 41 | 17834 | 46.8 | 470505 | 10738 | 18 | regex-trigram |  | #918 h-case-insensitive [i]"IAElCt\|linkdomain" |
-| 1.555612s | h-case-insensitive | 34 | 5405 | 45.8 | 129380 | 14261 | 18 | regex-trigram |  | #954 h-case-insensitive [i]"billingsgate\|Dhaalu" |
-| 1.532883s | h-case-insensitive | 12 | 6127 | 52.3 | 108823 | 2043 | 18 | regex-trigram |  | #988 h-case-insensitive [i]"rattoppato\|EACAxI" |
-| 1.456494s | g-regex | 33687 | 4882 | 628.9 | 22545480 | 29320 | 18 | regex-trigram |  | #707 g-regex [U]"YAAnC\|long\|ateneo" |
+| 9.888228s | i-unicode | 2220 | 55134 | 848.8 | 27725459 | 27725459 | 18 | regex-all | all/query-All | #1006 i-unicode "\\p{Greek}" |
+| 9.833544s | e-sub-trigram | 16960149 | 55134 | 848.8 | 27725459 |  | 18 | literal-subtrigram | all | #601 e-sub-trigram [F]"co" |
+| 8.872195s | g-regex | 2940514 | 24257 | 787.1 | 26007764 | 26007764 | 18 | regex-trigram |  | #709 g-regex [U]"[0-9][0-9][0-9][0-9]" |
+| 2.77045s | h-case-insensitive | 2 | 55134 | 848.8 | 27725459 | 127085 | 18 | regex-all | all/query-All | #936 h-case-insensitive [Fi]"SAASsS" |
+| 2.626953s | e-sub-trigram | 3002663 | 55134 | 848.8 | 27725459 |  | 1 | literal-subtrigram | all | #598 e-sub-trigram [F]"al" |
+| 2.279656s | h-case-insensitive | 1804 | 55134 | 848.8 | 27725459 | 187957 | 18 | regex-all | all/query-All | #963 h-case-insensitive [Fi]"dts" |
+| 2.264528s | h-case-insensitive | 923 | 23259 | 85.1 | 582769 | 438712 | 18 | regex-trigram |  | #919 h-case-insensitive [i]"IsUpsert\|collectible" |
+| 2.251229s | e-sub-trigram | 3634702 | 55134 | 848.8 | 27725459 |  | 1 | literal-subtrigram | all | #564 e-sub-trigram [F]"," |
+| 2.201784s | h-case-insensitive | 113 | 55134 | 848.8 | 27725459 | 636328 | 18 | regex-all | all/query-All | #940 h-case-insensitive [Fi]"WAKT" |
+| 2.107904s | e-sub-trigram | 1793797 | 55134 | 848.8 | 27725459 |  | 18 | literal-subtrigram | all | #597 e-sub-trigram [F]"ac" |
+| 2.019744s | e-sub-trigram | 1855820 | 55134 | 848.8 | 27725459 |  | 1 | literal-subtrigram | all | #599 e-sub-trigram [F]"as" |
+| 1.879314s | e-sub-trigram | 2764605 | 55134 | 848.8 | 27725459 |  | 1 | literal-subtrigram | all | #569 e-sub-trigram [F]";" |
+| 1.812642s | h-case-insensitive | 773 | 4618 | 55.3 | 118573 | 9433 | 18 | regex-trigram |  | #946 h-case-insensitive [i]"amman\|overlayColor" |
+| 1.809417s | h-case-insensitive | 227 | 11387 | 60.3 | 298699 | 85717 | 18 | regex-trigram |  | #933 h-case-insensitive [i]"Randomizes\|structurally" |
+| 1.777691s | h-case-insensitive | 12 | 6127 | 52.3 | 108823 | 2043 | 18 | regex-trigram |  | #988 h-case-insensitive [i]"rattoppato\|EACAxI" |
+| 1.751854s | h-case-insensitive | 11 | 7106 | 57.9 | 158773 | 1438 | 18 | regex-trigram |  | #917 h-case-insensitive [i]"IAAgBjF\|ntensela" |
+| 1.611103s | h-case-insensitive | 41 | 17834 | 46.8 | 470505 | 10738 | 18 | regex-trigram |  | #918 h-case-insensitive [i]"IAElCt\|linkdomain" |
+| 1.601073s | i-unicode | 1979 | 55134 | 848.8 | 27725459 | 1957 | 1 | regex-all | all/query-All | #1005 i-unicode "[α-ω]+" |
+| 1.503153s | h-case-insensitive | 439 | 12596 | 66.8 | 276392 | 132626 | 18 | regex-trigram |  | #983 h-case-insensitive [Fi]"orderdomain" |
+| 1.429039s | g-regex | 708 | 4623 | 673.1 | 23203985 | 474 | 18 | regex-trigram |  | #876 g-regex [U]"tabSize\|EAAGiC\|catar" |
 
 ## Persistence round-trip (AC-C1)
 
@@ -145,4 +156,4 @@ Verified by `go test ./internal/parity/ -run RoundTrip` (save→load→mmap matc
 - Master gate: `make verify`.
 - Machine: darwin/arm64, 18 CPU
 - Go: go1.26.4
-- ripgrep: ripgrep 15.2.0 (rev e89fff89ac)
+- ripgrep: ripgrep 15.1.0
