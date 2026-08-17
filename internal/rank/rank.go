@@ -1,14 +1,14 @@
 // Package rank turns unordered match sets into scored, ordered results.
 //
-// The northstar wants "BM25 + learned signals as default, dense scores fused
-// in, tuned for agent relevance." This package owns the result contract
-// (RankedResult) and the fusion of two retrieval arms:
+// The ranking architecture calls for BM25 plus learned signals by default, with
+// dense scores fused and tuned for agent relevance. This package owns the result
+// contract (RankedResult) and the fusion of two retrieval arms:
 //
 //   - lexical: BM25 over a persistent token index (internal/tokenindex)
 //   - dense:   cosine similarity over chunk embeddings (internal/embed)
 //
 // fused via Reciprocal Rank Fusion (RRF), which needs no score calibration
-// between arms and is the doc's conservative default over a learned reranker.
+// between arms and is the conservative default over a learned reranker.
 //
 // CONTRACT FREEZE: the exported types RankedResult and LineSpan are frozen so
 // internal/contextwin can build against them while this package's fusion logic

@@ -1,7 +1,7 @@
 # Symbol Layer for moedex — Implementation-Ready Guidance
 
-> Research date: 2026-06-22. Builds on `zoekt-2026-redesign.md`, which lists a
-> "Symbol/semantic layer" as an ADD but flags it as **synthesis, no surviving
+> Research date: 2026-06-22. Builds on the initial architecture research, which
+> lists a "Symbol/semantic layer" as an addition but flags it as **synthesis, no surviving
 > verified claims — an open question**. This doc resolves that open question
 > against current (2026) sources and moedex's actual code. Evidence is tagged
 > **[confirmed]** (primary source) vs **[synthesis]** (engineering judgment).
@@ -173,10 +173,10 @@ there is no symbol layer yet." Replace step 1 with: convert the salient
 mapped back to lines via `Blob.LineOf`. **Fall back to the existing heuristic when
 no symbol covers the span** (unsupported language, no sidecar, top-level code) —
 so the change is purely additive and the dense arm / pure-stdlib mode still work
-with zero symbol data. This directly delivers the northstar's "symbol-scoped
+with zero symbol data. This directly delivers the architecture's "symbol-scoped
 context blocks."
 
-**3. `rank` (symbol-name as a retrieval arm).** The northstar wants three arms
+**3. `rank` (symbol-name as a retrieval arm).** The design calls for three arms
 (exact/symbol/dense) fused. Add a third RRF input alongside `lexicalArm` and
 `denseArm`: a `symbolArm` that matches query terms against `Symbol.Name` and
 boosts blobs whose *symbol names* match (zoekt confirms "match is on a symbol" is
@@ -259,7 +259,7 @@ precomputed SCIP for actual go-to-def/find-refs and a `goto_definition` MCP tool
 - **Single-node assumption.** Sidecar-by-blob-SHA is distribution-friendly (same
   seam as the trigram store), so this doesn't hardcode single-node — but verify
   the sidecar can be sharded the same way the posting store will be.
-- **Still-open (not resolved by this run) [from northstar].** Right fusion for
+- **Still-open (not resolved by this run) [from the initial design].** Right fusion for
   lexical+symbol+dense: RRF (current default, used by slice's symbol arm) vs a
   learned reranker. Slice 1 doesn't touch fusion, so this stays deferred.
 

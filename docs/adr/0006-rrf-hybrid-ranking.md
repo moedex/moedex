@@ -5,7 +5,7 @@
 - **Context owner:** moedex (TurnCommerce)
 
 ## Context
-Grep returns matches in scan order; an agent needs them **ranked**. CodeRAG-Bench overturned the old "BM25 always wins on code" wisdom — dense models now frequently surpass BM25 semantically, while BM25 still wins on exact identifiers — so the research verdict ([`zoekt-2026-redesign.md`](../../zoekt-2026-redesign.md)) was **hybrid: lexical for exact symbols, dense for intent, plus filename and symbol signals, fused.** Fusing arms whose scores live on different scales (BM25 magnitudes vs cosine in [0,1] vs coverage fractions) needs either careful score calibration or a rank-based fusion that sidesteps it. A learned reranker is the higher ceiling but needs a labeled gold set to train and tune against — which did not exist when ranking was first built.
+Grep returns matches in scan order; an agent needs them **ranked**. CodeRAG-Bench overturned the old "BM25 always wins on code" wisdom — dense models now frequently surpass BM25 semantically, while BM25 still wins on exact identifiers — so the initial research verdict was **hybrid: lexical for exact symbols, dense for intent, plus filename and symbol signals, fused.** Fusing arms whose scores live on different scales (BM25 magnitudes vs cosine in [0,1] vs coverage fractions) needs either careful score calibration or a rank-based fusion that sidesteps it. A learned reranker is the higher ceiling but needs a labeled gold set to train and tune against — which did not exist when ranking was first built. The design lineage and source links are retained in [`ARCHITECTURE.md`](../../ARCHITECTURE.md#design-lineage).
 
 ## Decision
 Fuse up to four independent retrieval arms with **Reciprocal Rank Fusion** (RRF, each arm contributing `1/(RRFk + rank)`, `RRFk = 60`), in `internal/rank/ranker.go`. Each arm is **independently gated so it only ever adds signal, never subtracts**:
@@ -19,7 +19,7 @@ A learned reranker (GBDT/LambdaMART or cross-encoder) is **explicitly deferred**
 
 ## Consequences
 **Positive**
-- RRF needs no cross-arm score calibration — it is the northstar's conservative, robust default, and the per-arm gates keep every arm purely additive (proven on the gold set, not assumed).
+- RRF needs no cross-arm score calibration — it is the conservative, robust default, and the per-arm gates keep every arm purely additive (proven on the gold set, not assumed).
 - The path and symbol arms are pure-Go and dependency-free, so the strongest ranking signals ship in the zero-dep build.
 
 **Negative / costs**

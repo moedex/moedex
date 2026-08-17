@@ -5,7 +5,7 @@
 - **Context owner:** moedex (TurnCommerce)
 
 ## Context
-The deep-research pass on a fresh-from-scratch Zoekt ([`zoekt-2026-redesign.md`](../../zoekt-2026-redesign.md)) concluded: **keep the engine, replace the chassis.** The positional-trigram core is the part of Zoekt that aged well — n=3 is the proven sweet spot ("too few distinct 2-grams, too many distinct 4-grams"), and storing each trigram's offset lets a substring query intersect a small number of posting lists and verify positional distance rather than scan every file. That research also surfaced a correction: **Zoekt stores rune offsets, not byte offsets** — a clean-room build gets to choose.
+The initial deep-research pass on a fresh-from-scratch Zoekt concluded: **keep the engine, replace the chassis.** The positional-trigram core is the part of Zoekt that aged well — n=3 is the proven sweet spot ("too few distinct 2-grams, too many distinct 4-grams"), and storing each trigram's offset lets a substring query intersect a small number of posting lists and verify positional distance rather than scan every file. That research also surfaced a correction: **Zoekt stores rune offsets, not byte offsets** — a clean-room build gets to choose. The durable design lineage and primary sources are summarized in [`ARCHITECTURE.md`](../../ARCHITECTURE.md#design-lineage).
 
 ## Decision
 Adopt **positional trigrams (n=3)** as the retrieval primitive, and store **byte offsets, not rune offsets**.

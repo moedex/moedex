@@ -28,7 +28,6 @@ These ADRs capture the architectural decisions behind moedex, a clean-room, sing
 
 **Companion docs**: [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) (what the code is today),
 [`../plans/`](../plans/) (implementation plans for proposed decisions),
-[`../../zoekt-2026-redesign.md`](../../zoekt-2026-redesign.md) (the northstar / design lineage),
 [`../../research/`](../../research) (the deep-research notes these decisions rest on), and
 [`../../PARITY-REPORT.md`](../../PARITY-REPORT.md) (the generated correctness-gate artifact, see
 [0003](./0003-cox-reduction-ripgrep-parity.md)).

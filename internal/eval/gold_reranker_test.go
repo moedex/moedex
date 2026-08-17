@@ -9,7 +9,7 @@ import (
 
 // TestCorpusLearnedRerankerAB is the deliverable's real A/B: RRF (the production
 // 4-arm stack, minus dense which needs -tags onnx) vs the OPTIONAL learned linear
-// reranker, on the pooled P8 gold set. It is the answer to the northstar's open
+// reranker, on the pooled P8 gold set. It answers the architecture's open
 // question "RRF vs a learned reranker for the lexical+symbol+dense hybrid."
 //
 // HONESTY PROTOCOL (the whole point on an 82-query set):

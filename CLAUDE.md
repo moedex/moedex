@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 moedex is a clean-room, single-node trigram **code-search engine and agent context API** in Go 1.26 (`module moedex`). It keeps Zoekt's positional-trigram retrieval core and replaces everything else: content is addressed by **git blob SHA** (identical content indexed once), trigrams are **positional byte-trigrams** (byte offsets, not rune offsets), and a regex is reduced to a **necessary-condition boolean trigram query** that selects candidate blobs which a real regex engine then verifies.
 
-The single most authoritative reference is **`ARCHITECTURE.md`** (describes the code as it actually exists) with decisions recorded as ADRs in **`docs/adr/`**. Read those before non-trivial changes. `zoekt-2026-redesign.md` is the northstar; `research/` holds design notes.
+Start with **`README.md`** for the operator-facing entry point. The single most authoritative technical reference is **`ARCHITECTURE.md`** (the code as it actually exists), with decisions recorded as ADRs in **`docs/adr/`**. Read those before non-trivial changes; `research/` holds exploratory design notes rather than current behavior.
 
 ## Commands
 

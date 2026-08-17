@@ -1,5 +1,5 @@
 // Package contextwin assembles ranked results into the agent-facing context
-// window the northstar calls for: "ranked, deduplicated, symbol-aware,
+// window described by the architecture: ranked, deduplicated, symbol-aware,
 // token-budgeted context blocks, not raw grep hits."
 //
 // Given ranked results (which carry salient LineSpans) and the index that holds

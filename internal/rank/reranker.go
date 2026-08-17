@@ -8,9 +8,9 @@ import (
 )
 
 // This file implements an OPTIONAL learned-reranker fusion mode that sits beside
-// the default Reciprocal Rank Fusion (RRF) in ranker.go. The northstar's strongest
-// named follow-up is "RRF vs a learned reranker for the lexical+symbol+dense
-// hybrid" (research/learned-reranker.md). The reranker is a POST-FUSION re-scorer:
+// the default Reciprocal Rank Fusion (RRF) in ranker.go. The strongest named
+// follow-up in research/learned-reranker.md is RRF vs a learned reranker for the
+// lexical+symbol+dense hybrid. The reranker is a POST-FUSION re-scorer:
 // it consumes per-arm features that already exist at fusion time (raw BM25, dense
 // cosine, symbol coverage, path coverage, and each arm's per-arm RRF rank, plus the
 // aggregate RRF score itself) and emits a fused score that REPLACES the RRF score

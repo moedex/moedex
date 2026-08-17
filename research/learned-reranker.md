@@ -47,7 +47,7 @@ three-stage rollout, gated on actually being able to *measure* improvement:
   precision lever in the literature but also the most data-hungry, highest-latency,
   and heaviest-infra option — justify it with eval numbers, not vibes.
 
-The northstar already hedges this exact way: *"BM25 + learned signals as default;
+The initial design already hedged this exact way: *"BM25 + learned signals as default;
 dense scores fused in"* and the open question *"what's the right fusion (RRF vs.
 learned reranker)..."*. The staged path resolves the open question empirically
 instead of betting up front.
@@ -272,4 +272,4 @@ Ship **Stage 0 + the eval harness**, nothing more:
 - [Principles and Guidelines for the Use of LLM Judges (Dietz, 2025)](https://www.cs.unh.edu/~dietz/papers/dietz2025principles.pdf) — self-referential ceiling, diversity concerns, when LLM judges are/aren't trustworthy. 2025.
 - [RAG Reranking with Cross-Encoders (BigData Boutique)](https://bigdataboutique.com/blog/rag-reranking-improving-retrieval-quality-with-cross-encoders) — funnel pipeline; nDCG@10 +5–15 (20+ on lexically hard sets) under ~200ms; retrieve 50–100, rerank to 10. Accessed 2026.
 - [SPENCER: Self-Adaptive Model Distillation for Efficient Code Retrieval (arXiv 2508.00546)](https://arxiv.org/pdf/2508.00546) — cross-encoder reranks dual-encoder code candidates for accuracy; cross-encoder cost is the limiter at codebase scale. Aug 2025.
-- [zoekt-2026-redesign.md (in-repo)](../zoekt-2026-redesign.md) — northstar: BM25 + learned signals default, dense fused; open question RRF vs learned reranker; +27.4% SWE-Bench with oracle context, bottlenecked on both ends. 2026-06-22.
+- [Architecture design lineage](../ARCHITECTURE.md#design-lineage) and [ADR 0006](../docs/adr/0006-rrf-hybrid-ranking.md) — hybrid lexical/dense design, the RRF decision, and the learned-reranker boundary.

@@ -12,9 +12,9 @@
 // internal/diskstore, so the ripgrep-parity invariant is untouched: an FM-index
 // with zero callers cannot under- or over-approximate the live search.
 //
-// The northstar (zoekt-2026-redesign.md, ADD "Compressed self-indexes") and the
-// research synthesis (research/fm-index-cold-tier.md) are explicit that an
-// FM-index is NOT warranted at moedex's ~8GB single-node scale and that nothing
+// The architecture and research synthesis (research/fm-index-cold-tier.md) are
+// explicit that an FM-index is NOT warranted at moedex's ~8GB single-node scale
+// and that nothing
 // should be wired in now. This package's job is the de-risking the verdict asks
 // for: prove the structure correct and report its real size/latency without
 // overselling. In particular, the refuted "FM-index is only 44% of the corpus"
@@ -113,8 +113,8 @@ type FMIndex struct {
 	// sampledSA[row] is the original-text position SA[row] for rows whose
 	// suffix-array value is a multiple of saSample; sampledRows[row] reports
 	// whether row is sampled. Locate LF-walks to the nearest sampled row.
-	sampledSA   map[int]int
-	saSample    int
+	sampledSA map[int]int
+	saSample  int
 }
 
 // Build constructs an FM-index over a copy of text. It returns ErrNULInput if

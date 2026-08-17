@@ -5,7 +5,7 @@
 - **Context owner:** moedex (TurnCommerce)
 
 ## Context
-Zoekt shards roughly per-repo, with `uint32` offsets capping a shard at 4 GB / content at 1 GB. The research pass ([`zoekt-2026-redesign.md`](../../zoekt-2026-redesign.md)) identified the single highest-leverage change as **GitHub Blackbird's content-addressable architecture**: shard by git blob SHA so identical content is stored once. With content dedup + delta indexing, GitHub collapsed ~115 TB raw → ~28 TB unique. A polyglot corpus like `~/TCGitlab` (vendored libraries, forks, copied config) has heavy cross-repo and cross-shard content duplication that per-repo sharding pays for repeatedly.
+Zoekt shards roughly per-repo, with `uint32` offsets capping a shard at 4 GB / content at 1 GB. The initial research pass identified the single highest-leverage change as **GitHub Blackbird's content-addressable architecture**: shard by git blob SHA so identical content is stored once. With content dedup + delta indexing, GitHub collapsed ~115 TB raw → ~28 TB unique. A polyglot corpus like `~/TCGitlab` (vendored libraries, forks, copied config) has heavy cross-repo and cross-shard content duplication that per-repo sharding pays for repeatedly. The source and its historical-scale caveat are retained in [`ARCHITECTURE.md`](../../ARCHITECTURE.md#design-lineage).
 
 ## Decision
 Address all content by **git blob SHA** and store each unique blob **once corpus-wide**, with a per-blob delta refresh path and a deduped served format.

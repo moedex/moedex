@@ -1,7 +1,7 @@
 # FM-Index as a moedex Cold/Archival Tier — Implementation Guidance
 
-> Research synthesis, 2026-06-22. Grounds the northstar's "Compressed self-indexes
-> (FM-index)" ADD item against moedex's actual post-slice-4 baseline.
+> Research synthesis, 2026-06-22. Evaluates the architecture's deferred
+> compressed FM-index tier against moedex's actual post-slice-4 baseline.
 > Sources with URLs + dates at the bottom. The refuted "44% of corpus" framing is
 > corrected explicitly in §1.
 
@@ -52,7 +52,7 @@ lower indexing memory** than the prior best FM-index implementation.
 
 **The "44% of corpus" claim — corrected.** The paper does state its index is
 "size only 44% of the corpus" and "down to 7% compared to a canonical suffix
-array index." Both numbers are real *as reported*. What the northstar's
+array index." Both numbers are real *as reported*. What the initial
 deep-research run **refuted (scored 0-3)** is the stronger inference that *an
 FM-index is therefore strictly smaller than a trigram index*. That does not
 follow, for three reasons:
@@ -189,7 +189,7 @@ building to keep the dependency story clean.
   query planner unions candidates across tiers before the shared verify pass.
   Promotion/demotion between tiers is "re-index this SHA into the other
   structure" — no identity churn, no dedup loss, because identity is the SHA, not
-  the tier. This is the part of the northstar's content-addressable architecture
+  the tier. This is the part of the content-addressable architecture
   that makes tiering cheap to reason about.
 
 **When does a single-node ~8GB project cross into needing this?**
@@ -222,7 +222,7 @@ strictly added complexity.
    already reported.
 3. **Preserve the seam cheaply when you next touch the query planner:** if a
    `CandidateSource` / retrieval-backend abstraction is natural to introduce
-   anyway (it also helps the hybrid-ranking work the northstar prioritizes), shape
+   anyway (it also helps the hybrid-ranking work the architecture prioritizes), shape
    it so a future cold-tier backend could plug in behind the shared verify pass.
    Don't build the backend; just don't paint yourself out of it.
 4. **Revisit when** live single-node corpus approaches the RAM crossover (§4) *and*
@@ -263,7 +263,8 @@ strictly added complexity.
   corpus), on-disk index ~2.8x content (192 MB), grouped-varint postings codec
   (`internal/index/codec.go`), mmap loader (`internal/diskstore`), ripgrep parity
   (`internal/search/parity_test.go`, `mmap_parity_test.go`).
-- **northstar** — `zoekt-2026-redesign.md`: FM-index listed as ADD for
-  cold/archival tier; "FM-index is only 44% of corpus" refuted **0-3** (don't sell
-  as strictly smaller than trigrams).
+- **moedex architecture** — [`ARCHITECTURE.md`](../ARCHITECTURE.md#design-lineage):
+  FM-index retained as a deferred cold/archival-tier question; "FM-index is only
+  44% of corpus" was refuted **0-3** as evidence that it is strictly smaller than
+  trigrams.
 ```

@@ -5,7 +5,7 @@
 - **Context owner:** moedex (TurnCommerce)
 
 ## Context
-The research pass ([`research/simd-kernel.md`](../../research/simd-kernel.md), [`zoekt-2026-redesign.md`](../../zoekt-2026-redesign.md)) flagged SIMD-accelerated posting-list intersection and candidate verification as the inner loop where ripgrep-class throughput comes from, and where Go is weakest (poor autovectorization, awkward Plan9 assembly or cgo). The honest counsel was: **don't hand-write SIMD on a hunch** — profile first, exhaust pure-Go wins (intersect-smallest-first, buffer reuse, bitmaps), and only reach for a native kernel if intersection or verify clears a large share of query CPU after that. The dev machine is arm64; Go 1.26's `simd/archsimd` is amd64-only.
+The research pass in [`research/simd-kernel.md`](../../research/simd-kernel.md) flagged SIMD-accelerated posting-list intersection and candidate verification as the inner loop where ripgrep-class throughput comes from, and where Go is weakest (poor autovectorization, awkward Plan9 assembly or cgo). The honest counsel was: **don't hand-write SIMD on a hunch** — profile first, exhaust pure-Go wins (intersect-smallest-first, buffer reuse, bitmaps), and only reach for a native kernel if intersection or verify clears a large share of query CPU after that. The dev machine is arm64; Go 1.26's `simd/archsimd` is amd64-only.
 
 ## Decision
 Ship **pure Go by default on every architecture**, behind a clean kernel boundary, and **defer** a native SIMD kernel as the standing default — to be revisited only against a profile, not a hunch.

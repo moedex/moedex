@@ -16,15 +16,39 @@ build tag (which is the only thing that pulls the `github.com/sugarme/tokenizer`
 `github.com/yalue/onnxruntime_go` modules in `go.mod`), or a **local HTTP embedding
 server**. Neither is needed for lexical/symbol/path retrieval.
 
-The design lineage lives in [`zoekt-2026-redesign.md`](zoekt-2026-redesign.md)
-(the northstar) and the [`research/`](research) notes; the **architectural
-decisions — with their evidence — are recorded as ADRs in [`docs/adr/`](docs/adr)**.
-This document describes the code as it actually exists today.
+The **architectural decisions and their evidence are recorded as ADRs in
+[`docs/adr/`](docs/adr)**; [`research/`](research) holds exploratory inputs and
+follow-up investigations. This document describes the code as it actually exists
+today.
 
 > **Note on stability.** `internal/search`, `internal/rank`, and `internal/symbol`
 > are under active development. Their *exported* surface (the contracts other
 > packages compile against) is described here as stable; treat those packages'
 > unexported internals as potentially in flux.
+
+---
+
+## Design lineage
+
+moedex began with a fresh evaluation of Zoekt's architecture: keep the proven
+positional-trigram retrieval core and Cox-style regex reduction, but redesign the
+storage, ranking, and serving layers for content deduplication and agent consumers.
+The foundational sources were [Zoekt's design](https://github.com/sourcegraph/zoekt/blob/main/doc/design.md),
+[Russ Cox's trigram-index explanation](https://swtch.com/~rsc/regexp/regexp4.html),
+[GitHub's Blackbird architecture](https://github.blog/engineering/architecture-optimization/the-technology-behind-githubs-new-code-search/),
+and [CodeRAG-Bench](https://arxiv.org/abs/2406.14497). The accepted conclusions
+now live in ADRs [0002](docs/adr/0002-positional-trigram-core-byte-offsets.md),
+[0004](docs/adr/0004-content-addressable-blob-store.md),
+[0006](docs/adr/0006-rrf-hybrid-ranking.md), and
+[0009](docs/adr/0009-agent-context-api.md), rather than in a separate proposal.
+
+The original research also drew boundaries that remain important: Blackbird's
+published scale figures were historical rather than current measurements;
+selective n-gram and bit-vector results came from log-analysis workloads rather
+than code search; and early FM-index, symbol-layer, and SIMD ideas were hypotheses,
+not implementation facts. The corresponding notes under [`research/`](research)
+retain those caveats, while the ADRs and the measured state below supersede the
+initial proposal.
 
 ---
 
@@ -464,7 +488,7 @@ alongside `find_definition`/`find_references`/`find_implementations` in
 (one `name\tkind\tfile:line:col` line each) instead of a bare `Location`.
 
 **Deliberately deferred (design intentions, not yet built)** — tracked in the
-northstar and [`research/`](research):
+ADRs and [`research/`](research):
 
 - **Incremental / delta indexing** — a **per-blob delta path exists at the storage
   layer** (the content-addressable store, `internal/blobstore`, dedups blobs globally

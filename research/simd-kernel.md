@@ -13,8 +13,8 @@ all of the available win is reachable in pure Go without touching assembly.**
 
 Three reasons, in priority order:
 
-1. **No profile exists.** moedex has never been profiled at scale. The northstar
-   doc is explicit: isolate a native SIMD kernel behind a clean boundary "**only
+1. **No profile exists.** moedex has never been profiled at scale. The initial
+   design constraint is explicit: isolate a native SIMD kernel behind a clean boundary "**only
    once profiling proves it's the bottleneck.**" We are not there. Writing SIMD
    now is speculative optimization against an unmeasured workload.
 
@@ -213,7 +213,7 @@ Linux likely). Portability is therefore a first-class concern.
 | **Subprocess / IPC worker** | Native helper process, batched requests | yes | yes | Medium — process mgmt, serialization cost; only wins if batches are large | Last resort; serialization usually eats the SIMD win for fine-grained intersect. |
 
 Key constraint to call out loudly: **cgo breaks Go's static-binary deployment
-story**, which the northstar doc lists as a top reason to keep Go. Any native
+story**, which the architecture lists as a top reason to keep Go. Any native
 kernel must be **optional behind a build tag with a pure-Go fallback** so
 `CGO_ENABLED=0` still builds a working binary.
 
@@ -345,10 +345,11 @@ Properties this boundary guarantees:
   substring matching usually loses to memchr+Boyer-Moore on latency/throughput.
   Accessed 2026-06-22. https://burntsushi.net/ripgrep/ ;
   https://github.com/jneem/teddy
-- **REI bit-vector filter index — arXiv 2510.10348** (cited by the moedex
-  northstar): ~2.1% extra storage, 14x (production) up to 379x speedups; pure bit
+- **REI bit-vector filter index — arXiv 2510.10348** (cited by the initial moedex
+  design research): ~2.1% extra storage, 14x (production) up to 379x speedups; pure bit
   ops. Benchmarked on log analysis — transfer to code search is by analogy.
   https://arxiv.org/html/2510.10348v1
-- **moedex northstar** `zoekt-2026-redesign.md`, "Implementation language": Go for
-  90%, native SIMD core for the hot 10%, isolated behind a clean boundary "only
-  once profiling proves it's the bottleneck." 2026-06-22.
+- **moedex architecture** [`ARCHITECTURE.md`](../ARCHITECTURE.md#design-lineage)
+  and [ADR 0013](../docs/adr/0013-pure-go-defer-simd.md): pure Go by default,
+  with a native SIMD core isolated behind a clean boundary only when profiling
+  proves it is the bottleneck.
