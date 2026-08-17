@@ -146,8 +146,13 @@ func BuildGraphWithOptions(dir string, opts GraphBuildOptions) (path string, rep
 	sweep.recordCorpusRoster(builder)
 	emit := newGraphEmitter(builder)
 
+	edgeResults, err := sweep.computeEdgesParallel(sweep.names, diskgraph.FirstGeneration)
+	if err != nil {
+		return "", report, err
+	}
+
 	crossRelevant := make(map[string]bool)
-	for _, name := range sweep.names {
+	for i, name := range sweep.names {
 		for _, definition := range sweep.merged.Definitions(name) {
 			if definition.Shard < 0 || definition.Shard >= len(sweep.idxs) {
 				return "", report, fmt.Errorf("server: graph definition %q references unknown shard %d", name, definition.Shard)
@@ -163,8 +168,10 @@ func BuildGraphWithOptions(dir string, opts GraphBuildOptions) (path string, rep
 				return "", report, err
 			}
 		}
-		if err := sweep.emit(name, diskgraph.FirstGeneration, emit); err != nil {
-			return "", report, err
+		for j := range edgeResults[i] {
+			if err := emit.Add(edgeResults[i][j].Key, edgeResults[i][j].Edge); err != nil {
+				return "", report, err
+			}
 		}
 		generated := candidates.GenerateCandidates(sweep.corpus, name)
 		for _, candidate := range generated {
