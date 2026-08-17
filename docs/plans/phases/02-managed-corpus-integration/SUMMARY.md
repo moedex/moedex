@@ -46,16 +46,16 @@ key-decisions:
 
 requirements-completed: []
 
-duration: 3h23m
-completed: null
-status: awaiting-production-refresh
+duration: 3d elapsed
+completed: "2026-08-17T08:37:52-06:00"
+status: complete
 ---
 
 # Phase 2: Managed Corpus Integration and Rollout Summary
 
-**The managed snapshot is live and healthy. The 14:10 calendar trigger was proven, but its first
-production run exposed and was terminated for a dense reuse-seed bug; the tested fix is installed
-and awaits explicit approval for one production kickstart.**
+**The managed snapshot is live and healthy on commit `4317b61`. The fixed production refresh
+completed with exit zero, reused 852,265 dense chunks, warm-reloaded 942,867 chunks, and passed
+privacy, freshness, authenticated-MCP, health, and full-corpus parity gates.**
 
 ## Accomplishments
 
@@ -65,10 +65,10 @@ and awaits explicit approval for one production kickstart.**
   deduped served export, freshness, scale, and evaluation paths.
 - Added strict privacy parsing and fail-closed enforcement before tracked content reads. Policy
   fingerprints now invalidate stale CAS, served, parity, and sidecar publications.
-- Built an isolated real sibling containing 491 locked repositories, a 53,205-blob CAS, six
-  MOEDEX05 served shards, token/symbol sidecars, a fingerprint-fresh 942,718-chunk dense sidecar,
+- Built an isolated real sibling containing 491 locked repositories, a 53,406-blob CAS, six
+  MOEDEX05 served shards, token/symbol sidecars, a fingerprint-fresh 942,867-chunk dense sidecar,
   and a tested warm-reload path.
-- Proved the post-refresh candidate against ripgrep over 63,225 eligible files and 1,046 queries
+- Proved the post-refresh candidate against ripgrep over 63,268 eligible files and 1,053 queries
   with zero under-approximations, over-approximations, or oracle errors.
 - Switched both launchd agents coherently to the managed corpus/CAS/shards, retained the legacy
   rollback set, and verified health, authenticated MCP, representative search, and the 14:10
@@ -99,20 +99,24 @@ and awaits explicit approval for one production kickstart.**
 - `scripts/managed-refresh-test.sh` — pass, including forced export failure/no reload
 - Managed doctor — pass for marker, lock, 491 submodules, auth, VPN/API, and Git transport
 - Index doctor — six MOEDEX05 shards, zero critical findings
-- Freshness check — no changed repos after scheduled-equivalent refresh
+- Freshness check — no changed repos after the fixed production refresh
 - Policy audit — 116 policies; one global level-1 repo; one level-1 path override
-- Publication audit — 63,225 eligible references; zero restricted references; zero fingerprint
+- Publication audit — 63,268 eligible references; zero restricted references; zero fingerprint
   mismatches or missing CAS/served identities
-- Full parity — 491/491 repos, 63,225 files, 1,046 queries, zero real divergences and zero errors
+- Full parity — 491/491 repos, 63,268 files, 1,053 queries, zero real divergences and zero errors
 - Test daemon — health, exact query, SIGHUP reload, and graceful shutdown pass
-- Dense sidecar — v2/incremental-ready, 942,718 chunks, fingerprint fresh; 852,492 vectors reused
+- Dense sidecar — v2/incremental-ready, 942,867 chunks, fingerprint fresh; 852,265 vectors reused
 - Legacy service after token rotation — health pass and authenticated MCP `200`
-- Managed production service — 55,080 blobs, 27,833 symbol blobs, 942,718 dense chunks; health,
-  authenticated MCP, and redacted representative search pass
+- Managed production service — commit `4317b61`, 55,118 blobs, 27,854 symbol blobs, 942,867 dense
+  chunks; health and authenticated MCP pass
 - Production refresh agent — all three managed paths, loaded, scheduled 14:10 local; calendar
   trigger observed
 - Dense wall-clock regression — cross-corpus seed reused 852,481/942,724 chunks and completed in
   11m22s; a current same-corpus repeat completed in 4.47s with nothing to embed
+- Accepted production refresh — changed four projects, rewrote three shards, carried three,
+  reused 852,265/942,867 dense chunks, exited zero, and completed in 23m57s (18m29s dense)
+- Final parity — build 58s, Moedex+gold scan 3m59s, ripgrep 37m6s, total 42m22s; exact pass
+- Zoekt — installed after final parity so future runs include its optional differential oracle
 
 See [ROLLOUT.md](./ROLLOUT.md) and the root [PARITY-REPORT.md](../../../../PARITY-REPORT.md) for
 redacted aggregate evidence and the generated full-corpus report.
@@ -146,20 +150,25 @@ redacted aggregate evidence and the generated full-corpus report.
    now leaves an unchanged served directory in place and hard-links a complete dense seed pair
    across changed-directory swaps. Repository-wide tests pass; a production-scale temporary
    benchmark completed the seeded migration in 11m22s and the steady-state repeat in 4.47s.
+9. **Unattended calendar triggers lacked VPN connectivity.** Two weekend triggers and the first
+   Monday kickstart failed closed at managed sync, before CAS or served publication. After VPN
+   reconnection, the same registered job completed with exit zero.
+10. **Warm reload did not replace the old process image.** It correctly published new data without
+    downtime, but the operator wanted production to execute the installed fix as well. A deliberate
+    launchd restart promoted commit `4317b61`; cold load took 10m47s under parity contention and
+    then passed health, doctor, and authenticated MCP checks.
 
-## Active Production Refresh Checkpoint
+## Production Acceptance
 
-The retained live index has 359 manifest heads and 48,300 served blobs. The managed candidate has
-491 heads and 55,080 served blobs. Hermetic same-commit conventional/managed parity passes, and the
-candidate equals ripgrep, but literal live/candidate equality is impossible because the live scope
-is stale and smaller.
+The retained rollback index has 359 manifest heads and 48,300 served blobs. Production has 491
+heads and 55,118 served blobs. Hermetic same-commit conventional/managed parity passes, and the
+managed production corpus equals ripgrep and gold across all 1,053 final queries.
 
-The operator approved the scope expansion and production switch. The managed daemon is live; the
-legacy corpus and shards remain available for rollback. The fixed binaries and 14:10 schedule are
-installed, and a v2 cross-corpus seed is staged for incremental reuse. Phase 3 stays blocked until
-the operator explicitly approves one production kickstart, it exits zero after warm reload, and
-the post-refresh privacy/health checks pass.
+The operator approved the scope expansion, production switch, fixed kickstart, and 23m57s observed
+refresh wall clock. The registered job exited zero after warm reload; the production daemon now
+runs commit `4317b61`; privacy, freshness, health, authenticated MCP, and full parity all pass.
+The legacy corpus and shards remain available for rollback. Phase 3 is unblocked.
 
 ---
 *Phase: 02-managed-corpus-integration*
-*Status: awaiting-production-refresh*
+*Status: complete*

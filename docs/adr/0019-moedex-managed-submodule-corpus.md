@@ -1,6 +1,6 @@
 # ADR 0019: Moedex-managed corpus as a local Git superproject
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-08-14
 - **Context owner:** moedex (TurnCommerce)
 

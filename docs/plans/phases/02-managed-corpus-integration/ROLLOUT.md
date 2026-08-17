@@ -1,9 +1,10 @@
 ---
-status: awaiting-production-refresh
+status: complete
 phase: 02-managed-corpus-integration
 owner: "operator (user)"
 started: "2026-08-14T09:29:00-06:00"
-updated: "2026-08-14T15:08:29-06:00"
+updated: "2026-08-17T08:37:52-06:00"
+completed: "2026-08-17T08:37:52-06:00"
 soak_until: null
 ---
 
@@ -17,10 +18,10 @@ usernames, or other corpus membership details.
 | Artifact | Previous live | Managed sibling |
 |---|---|---|
 | Corpus root | Retained conventional root; local path redacted | Isolated managed sibling; local path redacted |
-| Corpus snapshot / lock digest | No managed lock | `5030891ff8b5e530785683fecd80503962c3b61e` / `sha256:a9a9be4a753e2757bf43783cbc057c267e5ea457f5501bf5cf397b1a7d45053a` |
-| CAS directory / manifest digest | No legacy CAS manifest | Isolated sibling / `sha256:0b8c7b0c737be38f8a5e08b7f226968d99d0f5ffb316de326dbd06a6d813dc9d` |
-| Served shard directory / fingerprint | Retained live / `sha256:7f1cfa10e4f95463835056a57ef62aabdc6f023a7639244e828b9149d2edd54c` | Isolated sibling / `sha256:9d2d165f652d40c1ee98d08292f7e8bd9246f8d8bc5ef89aa3c5942817076c11` |
-| Dense sidecar | Retained v2, fingerprint-fresh | Live daemon retains the prior 942,718-chunk mapping; disk holds a v2 incremental reuse seed pending fixed refresh completion |
+| Corpus snapshot / lock digest | No managed lock | `764ed889d630ea40198dc35f6a78cbac344d52a2` / `sha256:79ba75229959760ae155f439420f2ee75f5eb277c410422329a9ae85e4c12cd8` |
+| CAS directory / manifest digest | No legacy CAS manifest | Isolated sibling / `sha256:29aaeefb065fdbc5b67033ce8b0918429c3985d08a3b5dd6287ecb03c5f56927` |
+| Served shard directory / fingerprint | Retained live / `sha256:7f1cfa10e4f95463835056a57ef62aabdc6f023a7639244e828b9149d2edd54c` | Isolated sibling / `sha256:7f05d57f400087745379d137e09314e8dd3c045069cfb05880d496dcad5f7d14` |
+| Dense sidecar | Retained v2, fingerprint-fresh | v2, fingerprint-fresh, 942,867 chunks; production daemon loaded from cache |
 
 ## Redacted counts
 
@@ -31,11 +32,11 @@ usernames, or other corpus membership details.
 | Canonical `.ai-privacy.yml` policies | 114 | 116 | all parse; difference follows scope expansion |
 | Globally level-1 repositories | 1 | 1 | candidate contributes zero indexed file references |
 | Level-1 path overrides | 1 | 1 | candidate contributes zero indexed file references |
-| Privacy-eligible indexed files | unavailable in legacy manifest | 63,225 | candidate equals its ripgrep oracle scope |
-| Served blobs | 48,300 | 55,080 | explained by scope expansion and four-repo refresh |
-| Dense chunks | 930,725 | 942,724 current shard target; live daemon 942,718 until reload | temporary benchmark reused 852,481; 90,243 new |
-| CAS unique blobs | n/a | 53,205 | 1.23x raw/stored dedup ratio |
-| Privacy-eligible file references | unavailable in legacy manifest | 63,225 | restricted references = 0 |
+| Privacy-eligible indexed files | unavailable in legacy manifest | 63,268 | candidate equals its ripgrep oracle scope |
+| Served blobs | 48,300 | 55,118 | explained by scope expansion and subsequent managed refreshes |
+| Dense chunks | 930,725 | 942,867 | production refresh reused 852,265; 90,602 new |
+| CAS unique blobs | n/a | 53,406 | 962.8 MB raw / 795.8 MB stored |
+| Privacy-eligible file references | unavailable in legacy manifest | 63,268 | restricted references = 0 |
 
 ## Automated gates
 
@@ -43,8 +44,8 @@ usernames, or other corpus membership details.
       VPN/API reachability, and Git transport checks.
 - [x] `moedex-index doctor -shard-dir <new-shards>` passes with zero critical findings.
 - [x] `moedex-index check -shard-dir <new-shards> -corpus <new-corpus>` reports no changes.
-- [ ] Fixed production refresh writes a fingerprint-fresh 942,724-chunk dense sidecar and reloads
-      it; the live daemon remains healthy on its prior 942,718-chunk mapping meanwhile.
+- [x] Fixed production refresh writes and reloads a fingerprint-fresh 942,867-chunk dense sidecar;
+      launchd exits zero and the production daemon serves the new mapping.
 - [x] Policy-only audit validates every canonical `.ai-privacy.yml` without reading repository
       content; the current conventional-corpus baseline is 114 policies and zero `.yaml` aliases.
 - [x] CAS and served manifests contain privacy fingerprints for every repository; every global or
@@ -74,23 +75,29 @@ privacy policy audit:
   conventional policies=114 global_level1=1 level1_overrides=1
   managed policies=116 global_level1=1 level1_overrides=1
 publication privacy audit:
-  repos=491 eligible_file_refs=63225 restricted_file_refs=0
+  repos=491 eligible_file_refs=63268 restricted_file_refs=0
   missing CAS/served identities=0 fingerprint mismatches=0
 CAS build: repos=491 unique_blobs=53192 file_refs=63224 stored=782.5 MB
 scheduled-equivalent refresh:
   changed=4 added=0 removed=0 failed=0; +13 blobs / +0.3 MB
   export rewrote 4 shards and carried 2; served repos=491
   SIGHUP reload PASS; health PASS; representative exact query PASS
-post-refresh CAS: unique_blobs=53205 file_refs=63225 stored_bytes=782771828
+fixed production refresh:
+  changed=4 added=0 removed=0 failed=0; export rewrote 3 shards and carried 3
+  dense_chunks=942867 reused=852265 new=90602 distinct_texts=86820
+  dense_wall=18m29s total_wall=23m57s; launchd_exit=0; SIGHUP_reload=PASS
+post-refresh CAS: unique_blobs=53406 file_refs=63268 stored_bytes=795839386
 post-refresh parity:
-  repos=491 files=63225 content=962.5 MB shards=6 queries=1046
+  repos=491 files=63268 content=962.8 MB shards=6 queries=1053
   under_approximations=0 over_approximations=0 rg_errors=0 moedex_errors=0
 post-cutover production:
   doctor=21 ok / 2 optional-LSP warnings / 0 critical
-  served_blobs=55080 symbol_blobs=27833 dense_chunks=942718
+  installed_commit=4317b61 served_blobs=55118 symbol_blobs=27854 dense_chunks=942867
   health=PASS authenticated_MCP=200 representative_search=PASS
   refresh_paths=managed corpus/CAS/shards; schedule=14:10 local; calendar_trigger=PASS
   legacy_corpus_and_shards_retained=PASS
+full parity wall: build=58s scan=3m59s ripgrep=37m6s total=42m22s; PASS
+Zoekt: installed after this run for future differential coverage
 ```
 
 ## Preflight deviations
@@ -122,6 +129,15 @@ post-cutover production:
   full rebuild was still active after 39 minutes and was terminated by the operator. The live
   daemon stayed healthy and retained its in-memory snapshot. Commit `4317b61` adds a no-change
   fast path and O(1) dense seed carry; full tests and a production-scale temporary benchmark pass.
+- Two weekend calendar triggers and the first Monday kickstart failed closed at managed sync while
+  the VPN was unavailable. No CAS or served snapshot advanced. After VPN reconnection, the exact
+  same launchd job completed successfully with exit zero.
+- The accepted production dense migration took 18m29s rather than the isolated benchmark's 11m22s,
+  and the complete refresh took 23m57s. The operator accepted this as a substantial bounded
+  improvement over the interrupted full rebuild.
+- Warm reload proved zero-downtime data publication, then the operator requested a real process
+  promotion onto commit `4317b61`. The cold restart took 10m47s while full parity saturated the
+  machine; the new PID passed health, doctor, and authenticated MCP checks.
 
 ## Configuration switch
 
@@ -132,8 +148,8 @@ post-cutover production:
 - Previous configured paths retained at: retained live paths; local values redacted
 - Token rotation: completed; the legacy-path daemon was restarted and passed `/healthz` plus an
   authenticated MCP request with the rotated token
-- Health immediately after switch: pass; production serves 55,080 blobs, 27,833 symbol blobs, and
-  942,718 dense chunks; authenticated MCP and a redacted representative search pass
+- Health after fixed refresh and executable promotion: pass; production serves 55,118 blobs,
+  27,854 symbol blobs, and 942,867 dense chunks from commit `4317b61`; authenticated MCP passes
 
 ## Rollback
 
@@ -151,21 +167,24 @@ and shard manifest were confirmed retained after the production switch.
 ## Event-based acceptance outcome
 
 - Acceptance owner: operator (user)
-- Scheduled refreshes observed: one isolated scheduled-equivalent refresh before cutover; one real
-  14:10 calendar-triggered production run after cutover
-- Real production run outcome: sync/CAS/export passed; dense stage terminated by operator after
+- Scheduled refreshes observed: one isolated scheduled-equivalent refresh before cutover; three
+  real 14:10 calendar triggers after cutover; two weekend triggers failed closed without VPN
+- First production run outcome: sync/CAS/export passed; dense stage terminated by operator after
   the missing-seed wall-clock defect was identified; launchd recorded terminating signal 15
-- VPN/glab/Git transport failures: 0
+- Fixed production run outcome: sync/CAS/export/dense/reload all passed; launchd exit code 0
+- VPN/glab/Git transport failures: 3 managed-sync attempts failed closed before CAS publication
 - Availability incidents during refresh: 0; health remained `ok` and the serving PID stayed stable
 - Fixed-path benchmark: 852,481 chunks reused, 90,243 new, 11m22s cross-corpus migration; same
   current corpus completed in 4.47s with zero embeddings
-- Final outcome: production switch healthy; fixed production refresh completion pending explicit
-  kickstart approval
-- Approval: scope expansion and production rebootstrap approved by operator
+- Accepted production result: 852,265 chunks reused, 90,602 new, 18m29s dense, 23m57s total;
+  privacy/freshness/health/authenticated-MCP/full-parity gates pass
+- Final outcome: accepted; Phase 2 complete and Phase 3 unblocked
+- Approval: scope expansion, production rebootstrap, fixed kickstart, and final wall clock accepted
+  by operator
 
-## Open checkpoint
+## Closure
 
-The managed snapshot is live and healthy. ADR 0020 Phase 3 remains blocked until the operator
-explicitly approves one fixed production kickstart, launchd records exit zero after warm reload,
-and the post-refresh privacy, freshness, and health checks pass. The legacy corpus and shards
-remain the rollback set.
+The managed snapshot is live and healthy on the installed `4317b61` executable. The fixed refresh
+completed with launchd exit zero; privacy, freshness, health, authenticated MCP, and full-corpus
+parity all pass. ADR 0020 Phase 3 is unblocked. The legacy corpus and shards remain the rollback
+set.

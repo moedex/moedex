@@ -290,15 +290,15 @@ GOCACHE=/tmp/moedex-phase2-gocache MOEDEX_PRIVACY_CORPUS=/path/to/conventional-c
 
 <verification>
 
-- [ ] `go test ./cmd/moedex-corpus ./internal/corpus ./internal/ingest ./internal/parity ./internal/blobstore ./cmd/moedex-index -count=1`
-- [ ] `MOEDEX_PRIVACY_CORPUS=/path/to/conventional-corpus go test ./internal/ingest -run TestCorpusAIPrivacyPoliciesParse -count=1 -v`
-- [ ] `make health`
-- [ ] `make roundtrip`
-- [ ] `make parity MOEDEX_CORPUS=/path/to/managed-default-only-corpus`
-- [ ] `moedex-corpus doctor -corpus /path/to/managed-default-only-corpus`
-- [ ] `moedex-index doctor -shard-dir /path/to/new-shards`
-- [ ] `moedex-index check -shard-dir /path/to/new-shards`
-- [ ] Sibling rollout report records old/new lock, privacy-policy/restricted counts,
+- [x] `go test ./cmd/moedex-corpus ./internal/corpus ./internal/ingest ./internal/parity ./internal/blobstore ./cmd/moedex-index -count=1`
+- [x] `MOEDEX_PRIVACY_CORPUS=/path/to/conventional-corpus go test ./internal/ingest -run TestCorpusAIPrivacyPoliciesParse -count=1 -v`
+- [x] `make health`
+- [x] `make roundtrip`
+- [x] `make parity MOEDEX_CORPUS=/path/to/managed-default-only-corpus`
+- [x] `moedex-corpus doctor -corpus /path/to/managed-default-only-corpus`
+- [x] `moedex-index doctor -shard-dir /path/to/new-shards`
+- [x] `moedex-index check -shard-dir /path/to/new-shards`
+- [x] Sibling rollout report records old/new lock, privacy-policy/restricted counts,
       privacy-eligible project/file/blob counts, health, rollback, and soak owner.
 
 </verification>
