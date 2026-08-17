@@ -3,15 +3,23 @@
 // A node is keyed by (git blob SHA, symbol byte offset). Each node points at a
 // contiguous range of fixed-width edge records, so Open can mmap the file and a
 // lookup only binary-searches the node table and decodes the requested range.
-// Blob SHAs are interned once in a variable-width table; node and edge records
-// refer to them by uint32 ID. Format v2 edges are 48 bytes: relationship and
-// target identity, a confidence-tier ordinal, evidence blob ID/offset/length,
-// and an optional semantic-similarity metric. No flat confidence float is
-// persisted.
+// Blob SHAs and edge names are interned once in variable-width tables; node and
+// edge records refer to them by uint32 ID.
+//
+// Beyond adjacency the file records two things for incremental refresh:
+//
+//   - Every edge carries the NAME that generated it and the GENERATION it was
+//     last computed in. The graph is built name by name, so the name is the unit
+//     an incremental rebuild can recompute or carry forward, and the generation
+//     is the per-edge staleness stamp.
+//   - The CORPUS ROSTER holds one opaque identity token per blob the graph was
+//     built over, including blobs that produced no edge. Diffing the roster
+//     against the current corpus yields the added/removed delta.
 package diskgraph
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -26,11 +34,16 @@ import (
 
 const (
 	magic         = "MDXGRF01"
-	formatVersion = 2
-	headerSize    = 80
+	formatVersion = 3
+	headerSize    = 112
 	nodeSize      = 32
-	edgeSize      = 48
+	edgeSize      = 64
 )
+
+// FirstGeneration is the generation stamped on a graph built from scratch.
+// Zero is reserved for "unstamped", so a caller can tell an edge that predates
+// generation tracking from one computed in the first build.
+const FirstGeneration uint64 = 1
 
 // EdgeType is the persisted relationship type. Values are deliberately a
 // uint32 on disk so later graph phases can add semantic types without changing
@@ -51,6 +64,14 @@ const (
 	EdgePublishes
 	EdgeConsumes
 	EdgeSimilarTo
+	// EdgeHTTPCalls is a cross-service HTTP relationship: a client call site
+	// whose URL matches a route handler's template (internal/graph/httproute).
+	EdgeHTTPCalls
+	// EdgeDependsOn is a package-manifest dependency: the source content declares
+	// a dependency that the target content declares it publishes. Unlike the edge
+	// types above it is not derived from a symbol, so its source node is the
+	// manifest file itself at offset 0 and its evidence points at the declaration.
+	EdgeDependsOn
 )
 
 // String renders an edge type using the stable names exposed by graph-query
@@ -75,6 +96,10 @@ func (t EdgeType) String() string {
 		return "consumes"
 	case EdgeSimilarTo:
 		return "similar_to"
+	case EdgeHTTPCalls:
+		return "http_calls"
+	case EdgeDependsOn:
+		return "depends_on"
 	default:
 		return fmt.Sprintf("edge_type_%d", uint32(t))
 	}
@@ -94,15 +119,23 @@ type Node = Key
 // Confidence is one of the four provenance-backed tiers. EdgeSimilarTo also
 // persists its cosine metric separately in Similarity; that metric does not
 // change the edge's Candidate provenance.
+//
+// Name is the symbol name whose candidate sweep produced the edge, and
+// Generation is the refresh that last computed it — an edge carried forward
+// unchanged keeps the older stamp, which is what makes edge staleness
+// observable per edge rather than per file.
 type Edge struct {
-	Type         EdgeType
-	TargetBlob   string
+	Type       EdgeType
+	TargetBlob string
+	// TargetOffset is the byte offset of the target definition within its blob.
 	TargetOffset uint64
 	Confidence   graph.ConfidenceTier
 	Evidence     graph.Evidence
 	// Similarity is the exact cosine metric for EdgeSimilarTo. Other edge types
 	// leave this field zero.
 	Similarity float64
+	Name       string
+	Generation uint64
 }
 
 // Weight returns the relationship weight used by clustering. Confidence stays
@@ -129,7 +162,6 @@ func validateSimilarity(edge Edge) error {
 
 // MarshalJSON exposes the structured confidence and evidence contracts used by
 // MCP graph tools while keeping the compact tier enum in memory and on disk.
-
 func (e Edge) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Type         string           `json:"type"`
@@ -150,15 +182,55 @@ func (e Edge) MarshalJSON() ([]byte, error) {
 
 // Builder accumulates a graph offline before it is written in mmap-friendly
 // form. The zero value is ready to use. Edges retain insertion order within a
-// node; nodes (including zero-degree nodes) and blob SHAs are sorted when saved
-// for reproducible lookup.
+// node; nodes (including zero-degree nodes), blob SHAs, and names are sorted
+// when saved for reproducible lookup.
 type Builder struct {
-	adjacency map[Key][]Edge
-	edges     uint64
+	adjacency  map[Key][]Edge
+	edges      uint64
+	generation uint64
+	corpus     map[string]struct{}
 }
 
-// NewBuilder returns an empty offline graph builder.
-func NewBuilder() *Builder { return &Builder{adjacency: make(map[Key][]Edge)} }
+// NewBuilder returns an empty offline graph builder stamped with
+// FirstGeneration.
+func NewBuilder() *Builder {
+	return &Builder{adjacency: make(map[Key][]Edge), generation: FirstGeneration}
+}
+
+// SetGeneration records the refresh generation this graph is being written in.
+func (b *Builder) SetGeneration(generation uint64) {
+	if b != nil {
+		b.generation = generation
+	}
+}
+
+// Generation reports the generation the builder will stamp on the file.
+func (b *Builder) Generation() uint64 {
+	if b == nil {
+		return 0
+	}
+	return b.generation
+}
+
+// AddCorpusEntry records one identity token of the corpus this graph was built
+// over. Repeats and the empty token are ignored.
+func (b *Builder) AddCorpusEntry(entry string) {
+	if b == nil || entry == "" {
+		return
+	}
+	if b.corpus == nil {
+		b.corpus = make(map[string]struct{})
+	}
+	b.corpus[entry] = struct{}{}
+}
+
+// NumCorpusEntries reports how many distinct identity tokens the roster holds.
+func (b *Builder) NumCorpusEntries() int {
+	if b == nil {
+		return 0
+	}
+	return len(b.corpus)
+}
 
 // AddNode retains key even when it has no outgoing edges. It is idempotent and
 // lets graph consumers distinguish an isolated definition from an absent node.
@@ -290,6 +362,7 @@ func Save(b *Builder, path string) error {
 	}
 	keys := make([]Key, 0, len(b.adjacency))
 	blobSet := make(map[string]struct{})
+	nameSet := make(map[string]struct{})
 	var edgeCount uint64
 	for key, edges := range b.adjacency {
 		if key.BlobSHA == "" {
@@ -312,6 +385,7 @@ func Save(b *Builder, path string) error {
 			}
 			blobSet[edge.TargetBlob] = struct{}{}
 			blobSet[edge.Evidence.BlobSHA] = struct{}{}
+			nameSet[edge.Name] = struct{}{}
 		}
 		if uint64(len(edges)) > ^uint64(0)-edgeCount {
 			return fmt.Errorf("diskgraph: too many edges")
@@ -319,25 +393,17 @@ func Save(b *Builder, path string) error {
 		edgeCount += uint64(len(edges))
 	}
 
-	blobs := make([]string, 0, len(blobSet))
-	for sha := range blobSet {
-		blobs = append(blobs, sha)
+	blobs, blobIDs, blobBytes, err := internTable(blobSet, "blob SHA")
+	if err != nil {
+		return err
 	}
-	sort.Strings(blobs)
-	if uint64(len(blobs)) > uint64(^uint32(0)) {
-		return fmt.Errorf("diskgraph: too many blob SHAs")
+	names, nameIDs, nameBytes, err := internTable(nameSet, "edge name")
+	if err != nil {
+		return err
 	}
-	blobIDs := make(map[string]uint32, len(blobs))
-	var blobBytes uint64
-	for i, sha := range blobs {
-		if uint64(len(sha)) > uint64(^uint32(0)) {
-			return fmt.Errorf("diskgraph: blob SHA is too long")
-		}
-		if uint64(len(sha))+4 > ^uint64(0)-blobBytes {
-			return fmt.Errorf("diskgraph: blob table is too large")
-		}
-		blobIDs[sha] = uint32(i)
-		blobBytes += 4 + uint64(len(sha))
+	corpus, _, corpusBytes, err := internTable(b.corpus, "corpus roster entry")
+	if err != nil {
+		return err
 	}
 	sort.Slice(keys, func(i, j int) bool {
 		left, right := blobIDs[keys[i].BlobSHA], blobIDs[keys[j].BlobSHA]
@@ -356,7 +422,15 @@ func Save(b *Builder, path string) error {
 		return fmt.Errorf("diskgraph: edge table is too large")
 	}
 	blobOff := uint64(headerSize)
-	nodeOff, ok := add64(blobOff, blobBytes)
+	nameOff, ok := add64(blobOff, blobBytes)
+	if !ok {
+		return fmt.Errorf("diskgraph: file is too large")
+	}
+	corpusOff, ok := add64(nameOff, nameBytes)
+	if !ok {
+		return fmt.Errorf("diskgraph: file is too large")
+	}
+	nodeOff, ok := add64(corpusOff, corpusBytes)
 	if !ok {
 		return fmt.Errorf("diskgraph: file is too large")
 	}
@@ -392,28 +466,29 @@ func Save(b *Builder, path string) error {
 	binary.LittleEndian.PutUint32(hdr[8:12], formatVersion)
 	binary.LittleEndian.PutUint32(hdr[12:16], headerSize)
 	binary.LittleEndian.PutUint64(hdr[16:24], uint64(len(blobs)))
-	binary.LittleEndian.PutUint64(hdr[24:32], uint64(len(keys)))
-	binary.LittleEndian.PutUint64(hdr[32:40], edgeCount)
-	binary.LittleEndian.PutUint64(hdr[40:48], blobOff)
-	binary.LittleEndian.PutUint64(hdr[48:56], nodeOff)
-	binary.LittleEndian.PutUint64(hdr[56:64], edgeOff)
-	binary.LittleEndian.PutUint64(hdr[64:72], fileSize)
+	binary.LittleEndian.PutUint64(hdr[24:32], uint64(len(names)))
+	binary.LittleEndian.PutUint64(hdr[32:40], uint64(len(corpus)))
+	binary.LittleEndian.PutUint64(hdr[40:48], uint64(len(keys)))
+	binary.LittleEndian.PutUint64(hdr[48:56], edgeCount)
+	binary.LittleEndian.PutUint64(hdr[56:64], blobOff)
+	binary.LittleEndian.PutUint64(hdr[64:72], nameOff)
+	binary.LittleEndian.PutUint64(hdr[72:80], corpusOff)
+	binary.LittleEndian.PutUint64(hdr[80:88], nodeOff)
+	binary.LittleEndian.PutUint64(hdr[88:96], edgeOff)
+	binary.LittleEndian.PutUint64(hdr[96:104], fileSize)
+	binary.LittleEndian.PutUint64(hdr[104:112], b.generation)
 	if _, err := w.Write(hdr); err != nil {
 		return err
 	}
-	var scratch [48]byte
-	for _, sha := range blobs {
-		binary.LittleEndian.PutUint32(scratch[:4], uint32(len(sha)))
-		if _, err := w.Write(scratch[:4]); err != nil {
-			return err
-		}
-		if _, err := w.WriteString(sha); err != nil {
+	for _, table := range [][]string{blobs, names, corpus} {
+		if err := writeStringTable(w, table); err != nil {
 			return err
 		}
 	}
+	var scratch [edgeSize]byte
 	var firstEdge uint64
 	for _, key := range keys {
-		clear(scratch[:])
+		clear(scratch[:nodeSize])
 		binary.LittleEndian.PutUint32(scratch[0:4], blobIDs[key.BlobSHA])
 		binary.LittleEndian.PutUint64(scratch[8:16], key.SymbolOffset)
 		binary.LittleEndian.PutUint64(scratch[16:24], firstEdge)
@@ -434,6 +509,8 @@ func Save(b *Builder, path string) error {
 			binary.LittleEndian.PutUint64(scratch[24:32], edge.Evidence.ByteOffset)
 			binary.LittleEndian.PutUint64(scratch[32:40], edge.Evidence.ByteLength)
 			binary.LittleEndian.PutUint64(scratch[40:48], math.Float64bits(edge.Similarity))
+			binary.LittleEndian.PutUint32(scratch[48:52], nameIDs[edge.Name])
+			binary.LittleEndian.PutUint64(scratch[56:64], edge.Generation)
 			if _, err := w.Write(scratch[:edgeSize]); err != nil {
 				return err
 			}
@@ -455,15 +532,59 @@ func Save(b *Builder, path string) error {
 	return nil
 }
 
+// internTable sorts set into a canonical string table and returns it with its
+// value->ID map and its on-disk byte size.
+func internTable(set map[string]struct{}, label string) ([]string, map[string]uint32, uint64, error) {
+	table := make([]string, 0, len(set))
+	for s := range set {
+		table = append(table, s)
+	}
+	sort.Strings(table)
+	if uint64(len(table)) > uint64(^uint32(0)) {
+		return nil, nil, 0, fmt.Errorf("diskgraph: too many %ss", label)
+	}
+	ids := make(map[string]uint32, len(table))
+	var size uint64
+	for i, s := range table {
+		if uint64(len(s)) > uint64(^uint32(0)) {
+			return nil, nil, 0, fmt.Errorf("diskgraph: %s is too long", label)
+		}
+		if uint64(len(s))+4 > ^uint64(0)-size {
+			return nil, nil, 0, fmt.Errorf("diskgraph: %s table is too large", label)
+		}
+		ids[s] = uint32(i)
+		size += 4 + uint64(len(s))
+	}
+	return table, ids, size, nil
+}
+
+func writeStringTable(w *bufio.Writer, table []string) error {
+	var length [4]byte
+	for _, s := range table {
+		binary.LittleEndian.PutUint32(length[:], uint32(len(s)))
+		if _, err := w.Write(length[:]); err != nil {
+			return err
+		}
+		if _, err := w.WriteString(s); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Graph is a read-only mmap-backed graph. Close must not race with lookups.
 type Graph struct {
-	data      []byte
-	blobIDs   map[string]uint32
-	blobs     []string
-	nodeOff   int
-	edgeOff   int
-	nodeCount int
-	edgeCount int
+	data        []byte
+	blobIDs     map[string]uint32
+	blobs       []string
+	names       []string
+	corpusOff   int
+	corpusCount int
+	nodeOff     int
+	edgeOff     int
+	nodeCount   int
+	edgeCount   int
+	generation  uint64
 }
 
 // Open memory-maps path and validates its complete directory and record layout.
@@ -516,13 +637,19 @@ func parse(data []byte) (*Graph, error) {
 		return nil, fmt.Errorf("diskgraph: unsupported header size %d", size)
 	}
 	blobCount := binary.LittleEndian.Uint64(data[16:24])
-	nodeCount := binary.LittleEndian.Uint64(data[24:32])
-	edgeCount := binary.LittleEndian.Uint64(data[32:40])
-	blobOff := binary.LittleEndian.Uint64(data[40:48])
-	nodeOff := binary.LittleEndian.Uint64(data[48:56])
-	edgeOff := binary.LittleEndian.Uint64(data[56:64])
-	fileSize := binary.LittleEndian.Uint64(data[64:72])
-	if fileSize != uint64(len(data)) || blobOff != headerSize || blobOff > nodeOff || nodeOff > edgeOff || edgeOff > fileSize {
+	nameCount := binary.LittleEndian.Uint64(data[24:32])
+	corpusCount := binary.LittleEndian.Uint64(data[32:40])
+	nodeCount := binary.LittleEndian.Uint64(data[40:48])
+	edgeCount := binary.LittleEndian.Uint64(data[48:56])
+	blobOff := binary.LittleEndian.Uint64(data[56:64])
+	nameOff := binary.LittleEndian.Uint64(data[64:72])
+	corpusOff := binary.LittleEndian.Uint64(data[72:80])
+	nodeOff := binary.LittleEndian.Uint64(data[80:88])
+	edgeOff := binary.LittleEndian.Uint64(data[88:96])
+	fileSize := binary.LittleEndian.Uint64(data[96:104])
+	generation := binary.LittleEndian.Uint64(data[104:112])
+	if fileSize != uint64(len(data)) || blobOff != headerSize ||
+		blobOff > nameOff || nameOff > corpusOff || corpusOff > nodeOff || nodeOff > edgeOff || edgeOff > fileSize {
 		return nil, fmt.Errorf("diskgraph: corrupt section offsets")
 	}
 	nodeBytes := edgeOff - nodeOff
@@ -533,44 +660,88 @@ func parse(data []byte) (*Graph, error) {
 	if edgeBytes%edgeSize != 0 || edgeBytes/edgeSize != edgeCount {
 		return nil, fmt.Errorf("diskgraph: corrupt edge section")
 	}
-	if blobCount > uint64(^uint32(0)) || blobCount > uint64(maxInt()) || nodeCount > uint64(maxInt()) || edgeCount > uint64(maxInt()) {
+	if blobCount > uint64(^uint32(0)) || nameCount > uint64(^uint32(0)) ||
+		blobCount > uint64(maxInt()) || nameCount > uint64(maxInt()) || corpusCount > uint64(maxInt()) ||
+		nodeCount > uint64(maxInt()) || edgeCount > uint64(maxInt()) {
 		return nil, fmt.Errorf("diskgraph: record count exceeds platform limits")
 	}
 
 	g := &Graph{
-		data:      data,
-		blobIDs:   make(map[string]uint32, int(blobCount)),
-		blobs:     make([]string, 0, int(blobCount)),
-		nodeOff:   int(nodeOff),
-		edgeOff:   int(edgeOff),
-		nodeCount: int(nodeCount),
-		edgeCount: int(edgeCount),
+		data:        data,
+		blobIDs:     make(map[string]uint32, int(blobCount)),
+		blobs:       make([]string, 0, int(blobCount)),
+		names:       make([]string, 0, int(nameCount)),
+		corpusOff:   int(corpusOff),
+		corpusCount: int(corpusCount),
+		nodeOff:     int(nodeOff),
+		edgeOff:     int(edgeOff),
+		nodeCount:   int(nodeCount),
+		edgeCount:   int(edgeCount),
+		generation:  generation,
 	}
+
+	// Parse blob table.
 	pos := int(blobOff)
+	var previous []byte
 	for i := 0; i < int(blobCount); i++ {
-		if pos+4 > int(nodeOff) {
-			return nil, fmt.Errorf("diskgraph: truncated blob table")
+		entry, next, err := readTableEntry(data, pos, int(nameOff), "blob")
+		if err != nil {
+			return nil, err
 		}
-		n := uint64(binary.LittleEndian.Uint32(data[pos : pos+4]))
-		pos += 4
-		if n > uint64(int(nodeOff)-pos) {
-			return nil, fmt.Errorf("diskgraph: truncated blob SHA")
-		}
-		sha := string(data[pos : pos+int(n)])
-		pos += int(n)
-		if sha == "" {
+		pos = next
+		if len(entry) == 0 {
 			return nil, fmt.Errorf("diskgraph: empty blob SHA in table")
 		}
-		if _, duplicate := g.blobIDs[sha]; duplicate {
-			return nil, fmt.Errorf("diskgraph: duplicate blob SHA %q", sha)
+		if i > 0 && bytes.Compare(previous, entry) >= 0 {
+			return nil, fmt.Errorf("diskgraph: unsorted blob table")
 		}
-		g.blobIDs[sha] = uint32(i)
-		g.blobs = append(g.blobs, sha)
+		previous = entry
+		g.blobs = append(g.blobs, string(entry))
+		g.blobIDs[g.blobs[i]] = uint32(i)
 	}
-	if pos != int(nodeOff) {
+	if pos != int(nameOff) {
 		return nil, fmt.Errorf("diskgraph: blob table length mismatch")
 	}
 
+	// Parse name table.
+	previous = nil
+	for i := 0; i < int(nameCount); i++ {
+		name, next, err := readTableEntry(data, pos, int(corpusOff), "name")
+		if err != nil {
+			return nil, err
+		}
+		pos = next
+		if i > 0 && bytes.Compare(previous, name) >= 0 {
+			return nil, fmt.Errorf("diskgraph: unsorted name table")
+		}
+		previous = name
+		g.names = append(g.names, string(name))
+	}
+	if pos != int(corpusOff) {
+		return nil, fmt.Errorf("diskgraph: name table length mismatch")
+	}
+
+	// Validate corpus roster in place (it stays in the mmap — serving never needs it).
+	previous = nil
+	for i := 0; i < int(corpusCount); i++ {
+		entry, next, err := readTableEntry(data, pos, int(nodeOff), "corpus roster")
+		if err != nil {
+			return nil, err
+		}
+		pos = next
+		if len(entry) == 0 {
+			return nil, fmt.Errorf("diskgraph: empty corpus roster entry")
+		}
+		if i > 0 && bytes.Compare(previous, entry) >= 0 {
+			return nil, fmt.Errorf("diskgraph: unsorted corpus roster")
+		}
+		previous = entry
+	}
+	if pos != int(nodeOff) {
+		return nil, fmt.Errorf("diskgraph: corpus roster length mismatch")
+	}
+
+	// Validate node table.
 	var previousBlob uint32
 	var previousOffset uint64
 	var nextEdge uint64
@@ -595,6 +766,8 @@ func parse(data []byte) (*Graph, error) {
 	if nextEdge != edgeCount {
 		return nil, fmt.Errorf("diskgraph: unclaimed edge records")
 	}
+
+	// Validate edge records.
 	for i := 0; i < g.edgeCount; i++ {
 		record := data[g.edgeOff+i*edgeSize : g.edgeOff+(i+1)*edgeSize]
 		if binary.LittleEndian.Uint32(record[4:8]) >= uint32(len(g.blobs)) {
@@ -615,6 +788,12 @@ func parse(data []byte) (*Graph, error) {
 		if !evidence.Valid() {
 			return nil, fmt.Errorf("diskgraph: edge %d has invalid evidence span", i)
 		}
+		if len(g.names) > 0 && binary.LittleEndian.Uint32(record[48:52]) >= uint32(len(g.names)) {
+			return nil, fmt.Errorf("diskgraph: edge %d has invalid name", i)
+		}
+		if binary.LittleEndian.Uint32(record[52:56]) != 0 {
+			return nil, fmt.Errorf("diskgraph: edge %d has a non-zero reserved field", i)
+		}
 		typeID := EdgeType(binary.LittleEndian.Uint32(record[0:4]))
 		similarity := math.Float64frombits(binary.LittleEndian.Uint64(record[40:48]))
 		if err := validateSimilarity(Edge{Type: typeID, Similarity: similarity}); err != nil {
@@ -622,6 +801,20 @@ func parse(data []byte) (*Graph, error) {
 		}
 	}
 	return g, nil
+}
+
+// readTableEntry decodes one length-prefixed string-table entry starting at pos
+// and returns it (aliasing data) plus the offset just past it.
+func readTableEntry(data []byte, pos, limit int, label string) ([]byte, int, error) {
+	if pos+4 > limit {
+		return nil, 0, fmt.Errorf("diskgraph: truncated %s table", label)
+	}
+	n := uint64(binary.LittleEndian.Uint32(data[pos : pos+4]))
+	pos += 4
+	if n > uint64(limit-pos) {
+		return nil, 0, fmt.Errorf("diskgraph: truncated %s table entry", label)
+	}
+	return data[pos : pos+int(n)], pos + int(n), nil
 }
 
 // Load returns the outgoing edges for (blobSHA, symbolOffset), or nil when the
@@ -656,16 +849,19 @@ func (g *Graph) Edges(key Key) []Edge {
 	count := binary.LittleEndian.Uint64(record[24:32])
 	out := make([]Edge, int(count))
 	for j := range out {
-		start := g.edgeOff + int(first+uint64(j))*edgeSize
-		out[j] = g.decodeEdge(g.data[start : start+edgeSize])
+		out[j] = g.decodeEdge(int(first) + j)
 	}
 	return out
 }
 
-// decodeEdge reads one fixed-width edge record. Blob SHAs come from the table
-// interned at Open, so the returned Edge borrows no mmap bytes and allocates
-// nothing.
-func (g *Graph) decodeEdge(record []byte) Edge {
+// decodeEdge reads one fixed-width edge record by index. Blob SHAs and names
+// come from tables interned at Open, so the returned Edge allocates nothing.
+func (g *Graph) decodeEdge(i int) Edge {
+	record := g.data[g.edgeOff+i*edgeSize : g.edgeOff+(i+1)*edgeSize]
+	var name string
+	if nameID := binary.LittleEndian.Uint32(record[48:52]); int(nameID) < len(g.names) {
+		name = g.names[nameID]
+	}
 	return Edge{
 		Type:         EdgeType(binary.LittleEndian.Uint32(record[0:4])),
 		TargetBlob:   g.blobs[binary.LittleEndian.Uint32(record[4:8])],
@@ -677,37 +873,114 @@ func (g *Graph) decodeEdge(record []byte) Edge {
 			ByteLength: binary.LittleEndian.Uint64(record[32:40]),
 		},
 		Similarity: math.Float64frombits(binary.LittleEndian.Uint64(record[40:48])),
+		Name:       name,
+		Generation: binary.LittleEndian.Uint64(record[56:64]),
 	}
+}
+
+// Generation reports the refresh generation this graph file was written in.
+func (g *Graph) Generation() uint64 {
+	if g == nil {
+		return 0
+	}
+	return g.generation
+}
+
+// Names returns the distinct edge names interned in the file, sorted.
+func (g *Graph) Names() []string {
+	if g == nil {
+		return nil
+	}
+	return append([]string(nil), g.names...)
+}
+
+// NumCorpusEntries reports how many identity tokens the corpus roster holds.
+func (g *Graph) NumCorpusEntries() int {
+	if g == nil {
+		return 0
+	}
+	return g.corpusCount
+}
+
+// EachCorpusEntry calls fn for every roster token in sorted order, stopping
+// early if fn returns false.
+func (g *Graph) EachCorpusEntry(fn func(entry string) bool) {
+	if g == nil || g.data == nil {
+		return
+	}
+	pos := g.corpusOff
+	for i := 0; i < g.corpusCount; i++ {
+		n := int(binary.LittleEndian.Uint32(g.data[pos : pos+4]))
+		pos += 4
+		entry := string(g.data[pos : pos+n])
+		pos += n
+		if !fn(entry) {
+			return
+		}
+	}
+}
+
+// CorpusEntrySet folds the roster onto the Go heap. The offline refresh's one
+// materialization of the largest table in the file; serving never calls it.
+func (g *Graph) CorpusEntrySet() map[string]struct{} {
+	if g == nil {
+		return nil
+	}
+	out := make(map[string]struct{}, g.corpusCount)
+	g.EachCorpusEntry(func(entry string) bool {
+		out[entry] = struct{}{}
+		return true
+	})
+	return out
+}
+
+// NodeAt returns the i'th node's key and the half-open range of edge records it
+// owns, or ok=false for an out-of-range index.
+func (g *Graph) NodeAt(i int) (key Key, firstEdge, count int, ok bool) {
+	if g == nil || g.data == nil || i < 0 || i >= g.nodeCount {
+		return Key{}, 0, 0, false
+	}
+	record := g.data[g.nodeOff+i*nodeSize : g.nodeOff+(i+1)*nodeSize]
+	return Key{
+		BlobSHA:      g.blobs[binary.LittleEndian.Uint32(record[0:4])],
+		SymbolOffset: binary.LittleEndian.Uint64(record[8:16]),
+	}, int(binary.LittleEndian.Uint64(record[16:24])), int(binary.LittleEndian.Uint64(record[24:32])), true
+}
+
+// EdgeAt decodes the i'th edge record, or ok=false for an out-of-range index.
+func (g *Graph) EdgeAt(i int) (Edge, bool) {
+	if g == nil || g.data == nil || i < 0 || i >= g.edgeCount {
+		return Edge{}, false
+	}
+	return g.decodeEdge(i), true
+}
+
+// EdgeName returns just the name of the i'th edge record without decoding the
+// rest of it. An out-of-range index returns "".
+func (g *Graph) EdgeName(i int) string {
+	if g == nil || g.data == nil || i < 0 || i >= g.edgeCount {
+		return ""
+	}
+	record := g.data[g.edgeOff+i*edgeSize : g.edgeOff+(i+1)*edgeSize]
+	if nameID := binary.LittleEndian.Uint32(record[48:52]); int(nameID) < len(g.names) {
+		return g.names[nameID]
+	}
+	return ""
 }
 
 // EachEdge visits every persisted edge in on-disk order, passing the source node
 // it belongs to. Returning false stops the walk.
-//
-// This is the REVERSE-traversal primitive. The sidecar stores only forward
-// adjacency, so answering "what points at X" means sweeping the edge set — and
-// doing that as Keys() + Edges(key) costs a fresh key slice, a binary search per
-// node, and an edge slice per node. EachEdge is the same sweep as one linear pass
-// over the node directory and edge section with no allocation at all, which is
-// what keeps a reverse query (and the graph annotation search_context does by
-// default) proportional to the graph rather than to the graph times log of it.
 func (g *Graph) EachEdge(fn func(source Key, edge Edge) bool) {
 	if g == nil || g.data == nil || fn == nil {
 		return
 	}
 	for i := 0; i < g.nodeCount; i++ {
-		record := g.data[g.nodeOff+i*nodeSize : g.nodeOff+(i+1)*nodeSize]
-		count := binary.LittleEndian.Uint64(record[24:32])
-		if count == 0 {
-			continue
+		key, first, count, ok := g.NodeAt(i)
+		if !ok {
+			return
 		}
-		source := Key{
-			BlobSHA:      g.blobs[binary.LittleEndian.Uint32(record[0:4])],
-			SymbolOffset: binary.LittleEndian.Uint64(record[8:16]),
-		}
-		first := binary.LittleEndian.Uint64(record[16:24])
-		for j := uint64(0); j < count; j++ {
-			start := g.edgeOff + int(first+j)*edgeSize
-			if !fn(source, g.decodeEdge(g.data[start:start+edgeSize])) {
+		for j := 0; j < count; j++ {
+			if !fn(key, g.decodeEdge(first+j)) {
 				return
 			}
 		}

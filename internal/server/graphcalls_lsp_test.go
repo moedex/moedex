@@ -191,7 +191,7 @@ func TestBuildGraphSidecarLSPPersistsProvenInterfaceDispatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	var stats LSPGraphStats
-	path, err := BuildGraphSidecarWithOptions(shardDir, GraphBuildOptions{
+	path, _, err := BuildGraphSidecarWithOptions(shardDir, GraphBuildOptions{
 		LSPRequestsPerSecond: 1000,
 		LSPRequestTimeout:    30 * time.Second,
 		LSPStats:             &stats,

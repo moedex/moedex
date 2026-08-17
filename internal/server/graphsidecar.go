@@ -4,6 +4,12 @@ package server
 // pipeline to the mmap-backed adjacency format. It intentionally builds from
 // the per-shard indices (rather than loadUnified): candidate sites carry
 // shard-local blob IDs until they are folded to content identity by blob SHA.
+//
+// The sweep is factored into graphSweep because the incremental refresh in
+// graphrefresh.go runs the SAME per-name generation over the SAME shard view and
+// only differs in which names it spends the fan-out on. Keeping one emitter means
+// a carried-forward edge and a freshly computed one cannot disagree about record
+// shape, ordering, or dedup.
 
 import (
 	"context"
@@ -19,6 +25,8 @@ import (
 	"moedex/internal/embed"
 	"moedex/internal/graph/candidates"
 	"moedex/internal/graph/diskgraph"
+	"moedex/internal/graph/httproute"
+	"moedex/internal/graph/manifest"
 	graphverify "moedex/internal/graph/verify"
 	"moedex/internal/index"
 	"moedex/internal/symbol"
@@ -82,55 +90,406 @@ type LSPGraphStats struct {
 // GraphSidecarPath returns the default graph sidecar path under dir.
 func GraphSidecarPath(dir string) string { return filepath.Join(dir, GraphSidecarName) }
 
+// GraphSidecarReport accounts for one graph sidecar build, so a small sidecar is
+// never mistaken for a small corpus.
+type GraphSidecarReport struct {
+	Nodes    int
+	Edges    uint64
+	HTTP     httproute.Report
+	Manifest manifest.Report
+}
+
 // BuildGraphSidecar generates, verifies, and persists the graph for every
-// exported trigram-length symbol name in dir's shard set. Posting lists and, for
-// deduped shards, content stay mmap-backed during the offline sweep.
-func BuildGraphSidecar(dir string) (path string, err error) {
+// exported trigram-length symbol name in dir's shard set, plus proven DEPENDS_ON
+// edges from package manifests. Posting lists and, for deduped shards, content
+// stay mmap-backed during the offline sweep.
+//
+// This is the unconditional full build, stamped diskgraph.FirstGeneration. A dir
+// that already holds a sidecar should usually go through RefreshGraphSidecar,
+// which recomputes only the names the content delta invalidated.
+func BuildGraphSidecar(dir string) (path string, report GraphSidecarReport, err error) {
 	return BuildGraphSidecarWithOptions(dir, GraphBuildOptions{})
 }
 
 // BuildGraphSidecarWithOptions is BuildGraphSidecar plus optional tagged graph
 // passes such as ONNX-backed semantic similarity.
-func BuildGraphSidecarWithOptions(dir string, opts GraphBuildOptions) (path string, err error) {
+func BuildGraphSidecarWithOptions(dir string, opts GraphBuildOptions) (path string, report GraphSidecarReport, err error) {
 	if opts.SimilarTopK < 0 {
-		return "", fmt.Errorf("server: graph similar top-K must be non-negative")
+		return "", report, fmt.Errorf("server: graph similar top-K must be non-negative")
 	}
 	if math.IsNaN(opts.SimilarThreshold) || opts.SimilarThreshold < -1 || opts.SimilarThreshold > 1 {
-		return "", fmt.Errorf("server: graph similarity threshold %g is outside [-1,1]", opts.SimilarThreshold)
+		return "", report, fmt.Errorf("server: graph similarity threshold %g is outside [-1,1]", opts.SimilarThreshold)
 	}
 	if math.IsNaN(opts.LSPRequestsPerSecond) || math.IsInf(opts.LSPRequestsPerSecond, 0) || opts.LSPRequestsPerSecond < 0 {
-		return "", fmt.Errorf("server: graph LSP requests/second must be finite and non-negative")
+		return "", report, fmt.Errorf("server: graph LSP requests/second must be finite and non-negative")
 	}
 	if opts.LSPRequestTimeout < 0 {
-		return "", fmt.Errorf("server: graph LSP request timeout must be non-negative")
+		return "", report, fmt.Errorf("server: graph LSP request timeout must be non-negative")
 	}
 	if opts.LSPStats != nil {
 		*opts.LSPStats = LSPGraphStats{}
 	}
-	paths, err := globShards(dir)
+
+	sweep, err := openGraphSweep(dir)
 	if err != nil {
-		return "", err
+		return "", report, err
 	}
-	content, err := openSharedContent(dir, paths)
-	if err != nil {
-		return "", err
-	}
-	var closers []io.Closer
 	defer func() {
-		for i := len(closers) - 1; i >= 0; i-- {
-			if closeErr := closers[i].Close(); err == nil && closeErr != nil {
-				err = fmt.Errorf("server: close graph shard mmap: %w", closeErr)
-			}
-		}
-		if content != nil {
-			if closeErr := content.Close(); err == nil && closeErr != nil {
-				err = fmt.Errorf("server: close graph content mmap: %w", closeErr)
-			}
+		if closeErr := sweep.Close(); err == nil {
+			err = closeErr
 		}
 	}()
 
-	idxs := make([]*index.Index, 0, len(paths))
+	builder := diskgraph.NewBuilder()
+	builder.SetGeneration(diskgraph.FirstGeneration)
+	sweep.recordCorpusRoster(builder)
+	emit := newGraphEmitter(builder)
+
+	crossRelevant := make(map[string]bool)
+	for _, name := range sweep.names {
+		for _, definition := range sweep.merged.Definitions(name) {
+			if definition.Shard < 0 || definition.Shard >= len(sweep.idxs) {
+				return "", report, fmt.Errorf("server: graph definition %q references unknown shard %d", name, definition.Shard)
+			}
+			blob := sweep.idxs[definition.Shard].Blob(definition.Blob)
+			if blob == nil {
+				return "", report, fmt.Errorf("server: graph definition %q references an unknown blob", name)
+			}
+			if definition.Start < 0 {
+				return "", report, fmt.Errorf("server: graph definition %q has a negative byte offset", name)
+			}
+			if err := builder.AddNode(diskgraph.Key{BlobSHA: blob.SHA, SymbolOffset: uint64(definition.Start)}); err != nil {
+				return "", report, err
+			}
+		}
+		if err := sweep.emit(name, diskgraph.FirstGeneration, emit); err != nil {
+			return "", report, err
+		}
+		generated := candidates.GenerateCandidates(sweep.corpus, name)
+		for _, candidate := range generated {
+			if candidate.CrossShard() {
+				crossRelevant[name] = true
+				break
+			}
+		}
+	}
+	if err := addLSPCallEdges(context.Background(), builder, sweep.merged, sweep.idxs, emit.seen, crossRelevant, opts); err != nil {
+		return "", report, err
+	}
+	if err := addSimilarToEdges(context.Background(), builder, sweep.merged, sweep.idxs, emit.seen, opts); err != nil {
+		return "", report, err
+	}
+
+	httpShards := make([]httproute.Shard, len(sweep.idxs))
+	for i, shardPath := range sweep.paths {
+		httpShards[i] = httproute.Shard{Name: filepath.Base(shardPath), Index: sweep.idxs[i], Symbols: sweep.symbols[i]}
+	}
+	httpReport, err := addHTTPCallEdges(builder, httproute.NewCorpus(httpShards...), emit.seen)
+	if err != nil {
+		return "", report, err
+	}
+
+	manifestReport, err := addManifestEdges(builder, emit.seen, sweep.idxs)
+	if err != nil {
+		return "", report, err
+	}
+	report = GraphSidecarReport{Nodes: builder.NumNodes(), Edges: builder.NumEdges(), HTTP: httpReport, Manifest: manifestReport}
+
+	path, err = saveGraphSidecar(builder, dir)
+	return path, report, err
+}
+
+// ---------------------------------------------------------------------------
+// graphSweep — the loaded shard-set view a graph build or refresh runs over
+// ---------------------------------------------------------------------------
+
+// blobSite locates one copy of a blob's content within the loaded shard set.
+type blobSite struct {
+	shard int
+	blob  uint64
+}
+
+// graphSweep is the loaded shard-set view a graph build or refresh runs over:
+// the merged cross-shard symbol index, the per-shard content indices behind it,
+// the eligible name list, and the corpus's blob roster.
+type graphSweep struct {
+	corpus  *candidates.Corpus
+	merged  *symbol.Corpus
+	idxs    []*index.Index
+	paths   []string
+	symbols []*symbol.Index
+
+	names    []string
+	eligible map[string]int
+
+	// sites maps every blob SHA in the shard set to every shard copy of it.
+	sites map[string][]blobSite
+	// identity maps each blob SHA to the roster token persisted in the sidecar.
+	identity map[string]string
+
+	closers []io.Closer
+	content io.Closer
+}
+
+// openGraphSweep loads dir's shard set and derives everything a graph pass needs
+// from it. The caller must Close the result.
+func openGraphSweep(dir string) (sweep *graphSweep, err error) {
+	paths, err := globShards(dir)
+	if err != nil {
+		return nil, err
+	}
+	contentStore, err := openSharedContent(dir, paths)
+	if err != nil {
+		return nil, err
+	}
+	s := &graphSweep{
+		sites: make(map[string][]blobSite),
+		paths: paths,
+	}
+	if contentStore != nil {
+		s.content = contentStore
+	}
+	defer func() {
+		if err != nil {
+			_ = s.Close()
+		}
+	}()
+
 	merged := symbol.NewCorpus()
+	s.symbols = make([]*symbol.Index, 0, len(paths))
+	for _, shardPath := range paths {
+		var (
+			ix     *index.Index
+			closer io.Closer
+		)
+		if contentStore != nil && diskstore.IsDeduped(shardPath) {
+			ix, closer, err = diskstore.LoadMmapDeduped(shardPath, contentStore)
+		} else {
+			ix, closer, err = diskstore.LoadMmap(shardPath)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("server: load graph shard %s: %w", shardPath, err)
+		}
+		s.closers = append(s.closers, closer)
+		sym := symbol.BuildMulti(ix)
+		s.symbols = append(s.symbols, sym)
+		shard := merged.AddShard(filepath.Base(shardPath), sym)
+		s.idxs = append(s.idxs, ix)
+		for id := uint64(0); id < uint64(ix.NumBlobs()); id++ {
+			b := ix.Blob(id)
+			if b == nil || b.SHA == "" {
+				continue
+			}
+			s.sites[b.SHA] = append(s.sites[b.SHA], blobSite{shard: shard, blob: id})
+		}
+	}
+	s.merged = merged
+
+	// Fold each SHA's per-shard path context into one roster token.
+	s.identity = make(map[string]string, len(s.sites))
+	exts := make([]string, 0, 4)
+	for sha, sites := range s.sites {
+		exts = exts[:0]
+		for _, site := range sites {
+			exts = append(exts, blobExtensions(s.idxs[site.shard].Blob(site.blob)))
+		}
+		sort.Strings(exts)
+		s.identity[sha] = sha + "\x00" + strings.Join(exts, "\x01")
+	}
+	if s.corpus, err = candidates.NewCorpus(merged, s.idxs...); err != nil {
+		return nil, err
+	}
+
+	s.names = make([]string, 0, merged.NumNames())
+	merged.EachName(func(name string) bool {
+		if len(name) >= trigram.N && candidates.Exported(name) {
+			s.names = append(s.names, name)
+		}
+		return true
+	})
+	sort.Strings(s.names)
+	s.eligible = make(map[string]int, len(s.names))
+	for i, name := range s.names {
+		s.eligible[name] = i
+	}
+	return s, nil
+}
+
+// Close releases every mmap the sweep opened, innermost first.
+func (s *graphSweep) Close() error {
+	var err error
+	for i := len(s.closers) - 1; i >= 0; i-- {
+		if closeErr := s.closers[i].Close(); err == nil && closeErr != nil {
+			err = fmt.Errorf("server: close graph shard mmap: %w", closeErr)
+		}
+	}
+	s.closers = nil
+	if s.content != nil {
+		if closeErr := s.content.Close(); err == nil && closeErr != nil {
+			err = fmt.Errorf("server: close graph content mmap: %w", closeErr)
+		}
+		s.content = nil
+	}
+	return err
+}
+
+// blobExtensions returns the distinct lower-cased file extensions of a blob's
+// refs within one shard, in first-appearance order.
+func blobExtensions(b *index.Blob) string {
+	var out []string
+	seen := make(map[string]struct{}, len(b.Files))
+	for _, f := range b.Files {
+		ext := strings.ToLower(filepath.Ext(f.RelPath))
+		if _, dup := seen[ext]; dup {
+			continue
+		}
+		seen[ext] = struct{}{}
+		out = append(out, ext)
+	}
+	return strings.Join(out, ",")
+}
+
+// recordCorpusRoster stamps one identity token per corpus blob into the builder.
+func (s *graphSweep) recordCorpusRoster(builder *diskgraph.Builder) {
+	for _, token := range s.identity {
+		builder.AddCorpusEntry(token)
+	}
+}
+
+// rosterSHA recovers the blob SHA from a roster token.
+func rosterSHA(token string) string {
+	if i := strings.IndexByte(token, 0); i >= 0 {
+		return token[:i]
+	}
+	return token
+}
+
+// saveGraphSidecar persists builder as dir's graph sidecar.
+func saveGraphSidecar(builder *diskgraph.Builder, dir string) (string, error) {
+	path := GraphSidecarPath(dir)
+	if err := builder.Save(path); err != nil {
+		return "", fmt.Errorf("server: persist graph sidecar: %w", err)
+	}
+	return path, nil
+}
+
+// emit generates, verifies, and hands every edge for name to add, stamped with
+// generation. It is the one place a candidate becomes a persisted record, so a
+// full build and an incremental recompute produce byte-identical output for the
+// same name.
+func (s *graphSweep) emit(name string, generation uint64, add *graphEmitter) error {
+	for _, scored := range graphverify.Verify(candidates.GenerateCandidates(s.corpus, name)) {
+		sourceBlob := s.corpus.Blob(scored.Source)
+		targetBlob := s.corpus.Blob(scored.Target)
+		if sourceBlob == nil || targetBlob == nil {
+			return fmt.Errorf("server: graph edge %q references an unknown blob", name)
+		}
+		if scored.Source.Start < 0 || scored.Target.Start < 0 {
+			return fmt.Errorf("server: graph edge %q has a negative byte offset", name)
+		}
+
+		sourceOffset := uint64(scored.Source.Start)
+		if enclosing, ok := s.merged.Enclosing(scored.Source.Shard, scored.Source.Blob, scored.Source.Start); ok {
+			if enclosing.NameStart < 0 {
+				return fmt.Errorf("server: enclosing symbol %q has a negative byte offset", enclosing.Name)
+			}
+			sourceOffset = uint64(enclosing.NameStart)
+		}
+		key := diskgraph.Key{BlobSHA: sourceBlob.SHA, SymbolOffset: sourceOffset}
+		edge := diskgraph.Edge{
+			Type:         graphEdgeType(scored, sourceBlob.Content),
+			TargetBlob:   targetBlob.SHA,
+			TargetOffset: uint64(scored.Target.Start),
+			Confidence:   scored.Confidence,
+			Evidence:     scored.Evidence,
+			Name:         name,
+			Generation:   generation,
+		}
+		if err := add.Add(key, edge); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// graphEmitter — dedup wrapper around diskgraph.Builder
+// ---------------------------------------------------------------------------
+
+// graphEmitter folds the duplicate candidates produced when identical content
+// occurs in several shards down to one record and appends the survivors to the
+// builder.
+type graphEmitter struct {
+	builder *diskgraph.Builder
+	seen    map[persistedGraphEdge]struct{}
+}
+
+// newGraphEmitter returns a new emitter that deduplicates and appends to builder.
+func newGraphEmitter(builder *diskgraph.Builder) *graphEmitter {
+	return &graphEmitter{builder: builder, seen: make(map[persistedGraphEdge]struct{})}
+}
+
+// Add deduplicates and appends one edge.
+func (e *graphEmitter) Add(key diskgraph.Key, edge diskgraph.Edge) error {
+	record := persistedGraphEdge{
+		sourceBlob:     key.BlobSHA,
+		sourceOffset:   key.SymbolOffset,
+		name:           edge.Name,
+		typeID:         edge.Type,
+		targetBlob:     edge.TargetBlob,
+		targetOffset:   edge.TargetOffset,
+		confidence:     uint64(edge.Confidence),
+		evidenceBlob:   edge.Evidence.BlobSHA,
+		evidence:       edge.Evidence.ByteOffset,
+		evidenceLength: edge.Evidence.ByteLength,
+	}
+	if _, duplicate := e.seen[record]; duplicate {
+		return nil
+	}
+	e.seen[record] = struct{}{}
+	return e.builder.AddEdge(key, edge)
+}
+
+// ---------------------------------------------------------------------------
+// openGraphShards — low-level shard opener used by manifestsidecar.go
+// ---------------------------------------------------------------------------
+
+// openGraphShards opens every shard under dir for an offline graph pass, sharing
+// the deduped content store when the shard dir has one. The returned closer
+// releases every mmap in reverse order and must be called even on error paths.
+func openGraphShards(dir string) (paths []string, idxs []*index.Index, closeAll func() error, err error) {
+	paths, err = globShards(dir)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	content, err := openSharedContent(dir, paths)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	var closers []io.Closer
+	closeAll = func() error {
+		var closeErr error
+		for i := len(closers) - 1; i >= 0; i-- {
+			if err := closers[i].Close(); err != nil && closeErr == nil {
+				closeErr = fmt.Errorf("server: close graph shard mmap: %w", err)
+			}
+		}
+		closers = nil
+		if content != nil {
+			if err := content.Close(); err != nil && closeErr == nil {
+				closeErr = fmt.Errorf("server: close graph content mmap: %w", err)
+			}
+			content = nil
+		}
+		return closeErr
+	}
+	defer func() {
+		if err != nil {
+			_ = closeAll()
+		}
+	}()
+
+	idxs = make([]*index.Index, 0, len(paths))
 	for _, shardPath := range paths {
 		var (
 			ix     *index.Index
@@ -142,119 +501,26 @@ func BuildGraphSidecarWithOptions(dir string, opts GraphBuildOptions) (path stri
 			ix, closer, err = diskstore.LoadMmap(shardPath)
 		}
 		if err != nil {
-			return "", fmt.Errorf("server: load graph shard %s: %w", shardPath, err)
+			return nil, nil, nil, fmt.Errorf("server: load graph shard %s: %w", shardPath, err)
 		}
 		closers = append(closers, closer)
 		idxs = append(idxs, ix)
-		merged.AddShard(filepath.Base(shardPath), symbol.BuildMulti(ix))
 	}
-
-	corpus, err := candidates.NewCorpus(merged, idxs...)
-	if err != nil {
-		return "", err
-	}
-	names := make([]string, 0, merged.NumNames())
-	merged.EachName(func(name string) bool {
-		if len(name) >= trigram.N && candidates.Exported(name) {
-			names = append(names, name)
-		}
-		return true
-	})
-	sort.Strings(names)
-
-	builder := diskgraph.NewBuilder()
-	seen := make(map[persistedGraphEdge]struct{})
-	crossRelevant := make(map[string]bool)
-	for _, name := range names {
-		// Definitions are graph nodes even when nothing references them. Keeping
-		// them in the sidecar is what lets clustering return isolated services as
-		// singleton communities instead of silently dropping them.
-		for _, definition := range merged.Definitions(name) {
-			if definition.Shard < 0 || definition.Shard >= len(idxs) {
-				return "", fmt.Errorf("server: graph definition %q references unknown shard %d", name, definition.Shard)
-			}
-			blob := idxs[definition.Shard].Blob(definition.Blob)
-			if blob == nil {
-				return "", fmt.Errorf("server: graph definition %q references an unknown blob", name)
-			}
-			if definition.Start < 0 {
-				return "", fmt.Errorf("server: graph definition %q has a negative byte offset", name)
-			}
-			if err := builder.AddNode(diskgraph.Key{BlobSHA: blob.SHA, SymbolOffset: uint64(definition.Start)}); err != nil {
-				return "", err
-			}
-		}
-		generated := candidates.GenerateCandidates(corpus, name)
-		for _, candidate := range generated {
-			if candidate.CrossShard() {
-				crossRelevant[name] = true
-				break
-			}
-		}
-		for _, scored := range graphverify.Verify(generated) {
-			sourceBlob := corpus.Blob(scored.Source)
-			targetBlob := corpus.Blob(scored.Target)
-			if sourceBlob == nil || targetBlob == nil {
-				return "", fmt.Errorf("server: graph edge %q references an unknown blob", name)
-			}
-			if scored.Source.Start < 0 || scored.Target.Start < 0 {
-				return "", fmt.Errorf("server: graph edge %q has a negative byte offset", name)
-			}
-
-			sourceOffset := uint64(scored.Source.Start)
-			if enclosing, ok := merged.Enclosing(scored.Source.Shard, scored.Source.Blob, scored.Source.Start); ok {
-				if enclosing.NameStart < 0 {
-					return "", fmt.Errorf("server: enclosing symbol %q has a negative byte offset", enclosing.Name)
-				}
-				sourceOffset = uint64(enclosing.NameStart)
-			}
-			edge := diskgraph.Edge{
-				Type:         graphEdgeType(scored, sourceBlob.Content),
-				TargetBlob:   targetBlob.SHA,
-				TargetOffset: uint64(scored.Target.Start),
-				Confidence:   scored.Confidence,
-				Evidence:     scored.Evidence,
-			}
-			record := persistedGraphEdge{
-				sourceBlob:     sourceBlob.SHA,
-				sourceOffset:   sourceOffset,
-				typeID:         edge.Type,
-				targetBlob:     edge.TargetBlob,
-				targetOffset:   edge.TargetOffset,
-				confidence:     uint64(edge.Confidence),
-				evidenceBlob:   edge.Evidence.BlobSHA,
-				evidence:       edge.Evidence.ByteOffset,
-				evidenceLength: edge.Evidence.ByteLength,
-			}
-			if _, duplicate := seen[record]; duplicate {
-				continue // the same content may appear in several shards
-			}
-			seen[record] = struct{}{}
-			if err := builder.Add(sourceBlob.SHA, sourceOffset, edge); err != nil {
-				return "", err
-			}
-		}
-	}
-	if err := addLSPCallEdges(context.Background(), builder, merged, idxs, seen, crossRelevant, opts); err != nil {
-		return "", err
-	}
-	if err := addSimilarToEdges(context.Background(), builder, merged, idxs, seen, opts); err != nil {
-		return "", err
-	}
-
-	path = GraphSidecarPath(dir)
-	if err := builder.Save(path); err != nil {
-		return "", fmt.Errorf("server: persist graph sidecar: %w", err)
-	}
-	return path, nil
+	return paths, idxs, closeAll, nil
 }
+
+// ---------------------------------------------------------------------------
+// persistedGraphEdge — dedup key
+// ---------------------------------------------------------------------------
 
 // persistedGraphEdge is the content-addressed identity used to collapse the
 // duplicate candidates produced when identical source/target blobs occur in
-// several shards. Confidence is compared by bits so the key remains exact.
+// several shards. Generation is deliberately absent: it records when an edge was
+// computed, not which edge it is.
 type persistedGraphEdge struct {
 	sourceBlob     string
 	sourceOffset   uint64
+	name           string
 	typeID         diskgraph.EdgeType
 	targetBlob     string
 	targetOffset   uint64
@@ -264,6 +530,10 @@ type persistedGraphEdge struct {
 	evidenceLength uint64
 	similarity     uint64
 }
+
+// ---------------------------------------------------------------------------
+// edge classification
+// ---------------------------------------------------------------------------
 
 func graphEdgeType(edge graphverify.Edge, source []byte) diskgraph.EdgeType {
 	if edge.Edge.Type == candidates.SiblingDefinition {
@@ -289,9 +559,7 @@ func graphEdgeType(edge graphverify.Edge, source []byte) diskgraph.EdgeType {
 }
 
 // messagingEdgeType recognizes the two MassTransit relationships needed by
-// trace_consumers. Verification has already proved the occurrence is code (not
-// a comment/string) and identifier-delimited; this pass only specializes that
-// verified type use from its nearby framework syntax.
+// trace_consumers.
 func messagingEdgeType(edge graphverify.Edge, content []byte) diskgraph.EdgeType {
 	start, end := edge.Source.Start, edge.Source.End
 	if start < 0 || end < start || end > len(content) {
@@ -308,9 +576,6 @@ func messagingEdgeType(edge graphverify.Edge, content []byte) diskgraph.EdgeType
 	before := string(content[windowStart:start])
 	after := string(content[end:windowEnd])
 
-	// IConsumer<Foo> / IConsumer<Namespace.Foo> associates the containing
-	// consumer definition with Foo. Requiring the most recent '<' to remain
-	// unclosed before the occurrence avoids matching an unrelated earlier use.
 	if marker := strings.LastIndex(before, "IConsumer"); marker >= 0 {
 		between := before[marker+len("IConsumer"):]
 		if open := strings.LastIndexByte(between, '<'); open >= 0 &&
@@ -319,10 +584,6 @@ func messagingEdgeType(edge graphverify.Edge, content []byte) diskgraph.EdgeType
 		}
 	}
 
-	// Publish<Foo>(...) and Publish(new Foo(...)) are the two common typed
-	// publisher forms. The candidate name itself is the event definition, so a
-	// Publish(message) call with only a runtime variable correctly cannot invent
-	// an event edge.
 	if marker := strings.LastIndex(before, "Publish"); marker >= 0 {
 		between := before[marker+len("Publish"):]
 		if !strings.ContainsAny(between, ";{}") &&

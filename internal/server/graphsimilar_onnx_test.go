@@ -77,7 +77,7 @@ func (e *graphFixtureEmbedder) Embed(_ context.Context, texts []string) ([]embed
 func TestBuildGraphSidecarSimilarToEdges(t *testing.T) {
 	dir, shas := writeSimilarityFixture(t)
 	embedder := &graphFixtureEmbedder{}
-	path, err := BuildGraphSidecarWithOptions(dir, GraphBuildOptions{
+	path, _, err := BuildGraphSidecarWithOptions(dir, GraphBuildOptions{
 		SimilarTopK:      1,
 		SimilarThreshold: 0.90,
 		Embedder:         embedder,
@@ -116,7 +116,7 @@ func TestBuildGraphSidecarSimilarToEdgesONNX(t *testing.T) {
 	defer embedder.Close()
 
 	dir, shas := writeSimilarityFixture(t)
-	path, err := BuildGraphSidecarWithOptions(dir, GraphBuildOptions{
+	path, _, err := BuildGraphSidecarWithOptions(dir, GraphBuildOptions{
 		SimilarTopK:      1,
 		SimilarThreshold: DefaultSimilarThreshold,
 		Embedder:         embedder,

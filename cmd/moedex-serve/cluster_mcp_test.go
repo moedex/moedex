@@ -20,7 +20,7 @@ func TestMCPHTTPListsAndCallsListClusters(t *testing.T) {
 	if err := diskstore.Save(ix, filepath.Join(dir, "shard-0000.idx")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := server.BuildGraphSidecar(dir); err != nil {
+	if _, _, err := server.BuildGraphSidecar(dir); err != nil {
 		t.Fatal(err)
 	}
 

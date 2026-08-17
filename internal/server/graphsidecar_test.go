@@ -29,7 +29,7 @@ func TestBuildGraphSidecarPersistsVerifiedAdjacency(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path, err := BuildGraphSidecar(dir)
+	path, _, err := BuildGraphSidecar(dir)
 	if err != nil {
 		t.Fatalf("BuildGraphSidecar: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestBuildGraphSidecarFromDedupedShards(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path, err := BuildGraphSidecar(dir)
+	path, _, err := BuildGraphSidecar(dir)
 	if err != nil {
 		t.Fatalf("BuildGraphSidecar deduped: %v", err)
 	}

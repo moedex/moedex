@@ -46,8 +46,8 @@ func TestRoundTripMmapRecoversEdgesExactly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := binary.LittleEndian.Uint32(raw[8:12]); got != 2 {
-		t.Fatalf("sidecar format version = %d, want 2", got)
+	if got := binary.LittleEndian.Uint32(raw[8:12]); got != 3 {
+		t.Fatalf("sidecar format version = %d, want 3", got)
 	}
 	g, err := Open(path)
 	if err != nil {

@@ -25,7 +25,8 @@ func buildGraphSidecar(dir string) (path string, err error) {
 		return "", err
 	}
 	if topK == 0 {
-		return server.BuildGraphSidecar(dir)
+		path, _, err := server.BuildGraphSidecar(dir)
+		return path, err
 	}
 
 	embedder, err := embed.NewONNXEmbedder(os.Getenv("ONNXRUNTIME_LIB_PATH"))
@@ -37,11 +38,12 @@ func buildGraphSidecar(dir string) (path string, err error) {
 			err = fmt.Errorf("close graph ONNX embedder: %w", closeErr)
 		}
 	}()
-	return server.BuildGraphSidecarWithOptions(dir, server.GraphBuildOptions{
+	path, _, err = server.BuildGraphSidecarWithOptions(dir, server.GraphBuildOptions{
 		SimilarTopK:      topK,
 		SimilarThreshold: threshold,
 		Embedder:         embedder,
 	})
+	return path, err
 }
 
 func graphIntEnv(key string, fallback int) (int, error) {

@@ -223,6 +223,30 @@ func identifierAt(content []byte, off, n int) bool {
 	return true
 }
 
+// EachIdentifier calls fn for every maximal identifier run in content, in
+// ascending offset order, stopping early if fn returns false. The run aliases
+// content and must not be retained past the call.
+//
+// This is the inverse of the identifierAt filter and shares its byte rule:
+// a name occurs in a blob (as far as candidate generation is concerned) if and
+// only if it equals one of these runs.
+func EachIdentifier(content []byte, fn func(run []byte) bool) {
+	for i := 0; i < len(content); {
+		if !identByte(content[i]) {
+			i++
+			continue
+		}
+		j := i + 1
+		for j < len(content) && identByte(content[j]) {
+			j++
+		}
+		if !fn(content[i:j]) {
+			return
+		}
+		i = j
+	}
+}
+
 // identByte reports whether b can continue an identifier.
 //
 // The ASCII set is the intersection of every language's identifier rule, plus '$'
