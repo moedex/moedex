@@ -260,6 +260,19 @@ func TestMoedexIndexBuildProducesSidecars(t *testing.T) {
 	if graph2.NumEdges() == 0 {
 		t.Error("refreshed graph lost existing AlphaUniqueToken call edge")
 	}
+	if got, want := graph2.Generation(), diskgraph.FirstGeneration+1; got != want {
+		t.Errorf("graph generation after refresh = %d, want %d (prior sidecar not carried across the dir swap)", got, want)
+	}
+	var carried int
+	graph2.EachEdge(func(_ diskgraph.Key, edge diskgraph.Edge) bool {
+		if edge.Name == "AlphaUniqueToken" && edge.Generation == diskgraph.FirstGeneration {
+			carried++
+		}
+		return true
+	})
+	if carried == 0 {
+		t.Error("no AlphaUniqueToken edge kept its original generation; the refresh re-swept unaffected names")
+	}
 	if err := graph2.Close(); err != nil {
 		t.Fatalf("close graph after refresh: %v", err)
 	}

@@ -231,6 +231,161 @@ func TestBuilderRejectsMissingBlobIdentity(t *testing.T) {
 	}
 }
 
+func TestRoundTripNamesAndGenerations(t *testing.T) {
+	b := NewBuilder()
+	b.SetGeneration(7)
+	source := Key{BlobSHA: "aaaa", SymbolOffset: 4}
+	edges := []Edge{
+		{Type: EdgeCalls, TargetBlob: "bbbb", TargetOffset: 1, Confidence: graph.Pattern, Evidence: graph.Evidence{BlobSHA: "aaaa", ByteOffset: 2, ByteLength: 1}, Name: "Zeta", Generation: 7},
+		{Type: EdgeImports, TargetBlob: "cccc", TargetOffset: 3, Confidence: graph.Candidate, Evidence: graph.Evidence{BlobSHA: "aaaa", ByteOffset: 4, ByteLength: 1}, Name: "Alpha", Generation: 3},
+		{Type: EdgeReferences, TargetBlob: "bbbb", TargetOffset: 5, Confidence: graph.Proven, Evidence: graph.Evidence{BlobSHA: "aaaa", ByteOffset: 6, ByteLength: 1}, Name: "Zeta", Generation: 1},
+	}
+	if err := b.AddEdges(source, edges...); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := b.Generation(), uint64(7); got != want {
+		t.Fatalf("builder generation = %d, want %d", got, want)
+	}
+
+	path := filepath.Join(t.TempDir(), "named.graph")
+	if err := b.Save(path); err != nil {
+		t.Fatal(err)
+	}
+	g, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+
+	if got, want := g.Generation(), uint64(7); got != want {
+		t.Fatalf("file generation = %d, want %d", got, want)
+	}
+	if got := g.Edges(source); !reflect.DeepEqual(got, edges) {
+		t.Fatalf("edges:\n got  %#v\n want %#v", got, edges)
+	}
+	if got, want := g.Names(), []string{"Alpha", "Zeta"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("Names = %#v, want %#v", got, want)
+	}
+
+	var walked []Edge
+	g.EachEdge(func(key Key, edge Edge) bool {
+		if key != source {
+			t.Fatalf("EachEdge key = %#v, want %#v", key, source)
+		}
+		walked = append(walked, edge)
+		return true
+	})
+	if !reflect.DeepEqual(walked, edges) {
+		t.Fatalf("EachEdge:\n got  %#v\n want %#v", walked, edges)
+	}
+
+	count := 0
+	g.EachEdge(func(Key, Edge) bool { count++; return false })
+	if count != 1 {
+		t.Fatalf("EachEdge visited %d edge(s) after returning false, want 1", count)
+	}
+}
+
+func TestRoundTripCorpusRoster(t *testing.T) {
+	b := NewBuilder()
+	if err := b.Add("aaaa", 0, Edge{TargetBlob: "bbbb", Confidence: graph.Candidate, Evidence: graph.Evidence{BlobSHA: "aaaa", ByteOffset: 0, ByteLength: 1}, Name: "Used"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, sha := range []string{"bbbb", "aaaa", "edgeless", "aaaa"} {
+		b.AddCorpusEntry(sha)
+	}
+	b.AddCorpusEntry("")
+	if got, want := b.NumCorpusEntries(), 3; got != want {
+		t.Fatalf("builder roster = %d, want %d", got, want)
+	}
+
+	path := filepath.Join(t.TempDir(), "roster.graph")
+	if err := b.Save(path); err != nil {
+		t.Fatal(err)
+	}
+	g, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+
+	if got, want := g.NumCorpusEntries(), 3; got != want {
+		t.Fatalf("roster = %d blob(s), want %d", got, want)
+	}
+	var sorted []string
+	g.EachCorpusEntry(func(sha string) bool { sorted = append(sorted, sha); return true })
+	if want := []string{"aaaa", "bbbb", "edgeless"}; !reflect.DeepEqual(sorted, want) {
+		t.Fatalf("EachCorpusEntry = %#v, want %#v", sorted, want)
+	}
+	set := g.CorpusEntrySet()
+	if len(set) != 3 {
+		t.Fatalf("CorpusEntrySet = %#v", set)
+	}
+	if _, ok := set["edgeless"]; !ok {
+		t.Fatalf("edge-free blob missing from the roster: %#v", set)
+	}
+	bare := NewBuilder()
+	barePath := filepath.Join(t.TempDir(), "bare.graph")
+	if err := bare.Save(barePath); err != nil {
+		t.Fatal(err)
+	}
+	bg, err := Open(barePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer bg.Close()
+	if bg.NumCorpusEntries() != 0 || len(bg.CorpusEntrySet()) != 0 {
+		t.Fatalf("empty roster = %d / %#v", bg.NumCorpusEntries(), bg.CorpusEntrySet())
+	}
+	if got, want := bg.Generation(), FirstGeneration; got != want {
+		t.Fatalf("default generation = %d, want %d", got, want)
+	}
+}
+
+func TestOpenRejectsForeignFormats(t *testing.T) {
+	dir := t.TempDir()
+	valid := filepath.Join(dir, "valid.graph")
+	b := NewBuilder()
+	if err := b.Add("aaaa", 0, Edge{TargetBlob: "bbbb", Confidence: graph.Candidate, Evidence: graph.Evidence{BlobSHA: "aaaa", ByteOffset: 0, ByteLength: 1}, Name: "N"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.Save(valid); err != nil {
+		t.Fatal(err)
+	}
+	good, err := os.ReadFile(valid)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		name    string
+		mutate  func(b []byte)
+		wantErr string
+	}{
+		{"old magic", func(b []byte) { copy(b[0:8], "MDXGRF00") }, "bad magic"},
+		{"future version", func(b []byte) { binary.LittleEndian.PutUint32(b[8:12], 99) }, "unsupported version"},
+		{"bad header size", func(b []byte) { binary.LittleEndian.PutUint32(b[12:16], 96) }, "unsupported header size"},
+		{"shuffled sections", func(b []byte) { binary.LittleEndian.PutUint64(b[64:72], 0) }, "corrupt section offsets"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			corrupt := append([]byte(nil), good...)
+			tc.mutate(corrupt)
+			path := filepath.Join(t.TempDir(), "corrupt.graph")
+			if err := os.WriteFile(path, corrupt, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			g, err := Open(path)
+			if err == nil {
+				g.Close()
+				t.Fatal("corrupt file opened cleanly")
+			}
+			if !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("error = %v, want it to mention %q", err, tc.wantErr)
+			}
+		})
+	}
+}
+
 func TestEdgeJSONUsesStructuredConfidenceAndEvidence(t *testing.T) {
 	edge := Edge{
 		Type:         EdgeCalls,

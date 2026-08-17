@@ -4,7 +4,6 @@ package main
 
 import "moedex/internal/server"
 
-func buildGraphSidecar(dir string) (string, error) {
-	path, _, err := server.BuildGraphSidecar(dir)
-	return path, err
+func buildGraphSidecar(dir string) (string, server.GraphRefreshStats, error) {
+	return server.RefreshGraphSidecar(dir)
 }

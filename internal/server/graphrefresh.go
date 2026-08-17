@@ -1,0 +1,279 @@
+package server
+
+// graphrefresh.go is phase 12 of docs/GRAPH-LAYER-PLAN.md: a CAS-aware
+// incremental rebuild of the graph sidecar.
+//
+// # Why the delta unit is a NAME, not a blob
+//
+// The graph is generated one name at a time (candidates.GenerateCandidates), and
+// the edges for a name are a pure function of that name's occurrences across the
+// corpus. So the sound partition is by name:
+//
+//	E(name) is unchanged  <=  no blob holding an occurrence of name was added or removed
+//
+// Content is addressed by SHA, so "unchanged blob" means byte-identical content,
+// which means identical occurrences and identical verification.
+//
+// # Where the two halves of the dirty set come from
+//
+//   - ADDED blobs are scanned for their maximal identifier runs
+//     (candidates.EachIdentifier) plus the names the symbol extractors recorded.
+//   - REMOVED blobs no longer have content to scan, so their names come from the
+//     PREVIOUS sidecar: every edge whose source or target was that blob.
+//
+// # Generations
+//
+// Each edge records the generation it was last computed in. A carried-forward
+// edge keeps its older stamp, so "when was this edge last verified against the
+// corpus" is answerable per edge.
+
+import (
+	"errors"
+	"fmt"
+	"io/fs"
+	"math"
+	"os"
+
+	"moedex/internal/graph/candidates"
+	"moedex/internal/graph/diskgraph"
+)
+
+// GraphRefreshStats reports what an incremental graph refresh actually did.
+type GraphRefreshStats struct {
+	Generation         uint64
+	PreviousGeneration uint64
+
+	FullRebuild bool
+	Reason      string
+	Unchanged   bool
+
+	CorpusBlobs  int
+	BlobsAdded   int
+	BlobsRemoved int
+
+	NamesEligible   int
+	NamesRecomputed int
+	NamesCarried    int
+
+	EdgesRecomputed int
+	EdgesCarried    int
+	EdgesDropped    int
+}
+
+// RefreshGraphSidecar rebuilds dir's graph sidecar incrementally against the
+// sidecar already there, recomputing only the names the content delta made
+// stale. It falls back to a full build — and says so in the returned stats —
+// whenever there is no usable prior sidecar.
+//
+// The result is identical to BuildGraphSidecar's for the same shard set, edge
+// for edge and in the same order; only the per-edge generation stamps differ.
+func RefreshGraphSidecar(dir string) (path string, stats GraphRefreshStats, err error) {
+	sweep, err := openGraphSweep(dir)
+	if err != nil {
+		return "", stats, err
+	}
+	defer func() {
+		if closeErr := sweep.Close(); err == nil {
+			err = closeErr
+		}
+	}()
+	stats.CorpusBlobs = len(sweep.identity)
+	stats.NamesEligible = len(sweep.names)
+
+	previous, reason := openPreviousGraph(dir)
+	if previous == nil {
+		stats.FullRebuild = true
+		stats.Reason = reason
+		stats.Generation = diskgraph.FirstGeneration
+		path, err = sweep.rebuildAll(dir, &stats)
+		return path, stats, err
+	}
+	defer func() {
+		if closeErr := previous.Close(); err == nil {
+			err = closeErr
+		}
+	}()
+	stats.PreviousGeneration = previous.Generation()
+
+	added, removed := sweep.contentDelta(previous)
+	stats.BlobsAdded, stats.BlobsRemoved = len(added), len(removed)
+	if len(added) == 0 && len(removed) == 0 {
+		stats.Unchanged = true
+		stats.Generation = previous.Generation()
+		stats.NamesCarried = len(sweep.names)
+		stats.EdgesCarried = previous.NumEdges()
+		return GraphSidecarPath(dir), stats, nil
+	}
+
+	dirty := sweep.dirtyNames(previous, added, removed)
+	stats.Generation = previous.Generation() + 1
+
+	carried := make(map[string][]carriedGraphEdge)
+	for node := 0; node < previous.NumNodes(); node++ {
+		_, first, count, ok := previous.NodeAt(node)
+		if !ok {
+			break
+		}
+		for i := first; i < first+count; i++ {
+			name := previous.EdgeName(i)
+			if _, stale := dirty[name]; stale {
+				continue
+			}
+			if _, ok := sweep.eligible[name]; !ok {
+				stats.EdgesDropped++
+				continue
+			}
+			carried[name] = append(carried[name], carriedGraphEdge{node: uint32(node), edge: uint32(i)})
+		}
+	}
+
+	builder := diskgraph.NewBuilder()
+	builder.SetGeneration(stats.Generation)
+	sweep.recordCorpusRoster(builder)
+	emit := newGraphEmitter(builder)
+	for _, name := range sweep.names {
+		if _, stale := dirty[name]; stale {
+			stats.NamesRecomputed++
+			before := builder.NumEdges()
+			if err := sweep.emit(name, stats.Generation, emit); err != nil {
+				return "", stats, err
+			}
+			stats.EdgesRecomputed += int(builder.NumEdges() - before)
+			continue
+		}
+		stats.NamesCarried++
+		for _, c := range carried[name] {
+			key, _, _, ok := previous.NodeAt(int(c.node))
+			if !ok {
+				return "", stats, fmt.Errorf("server: graph refresh lost node %d of the previous sidecar", c.node)
+			}
+			edge, ok := previous.EdgeAt(int(c.edge))
+			if !ok {
+				return "", stats, fmt.Errorf("server: graph refresh lost edge %d of the previous sidecar", c.edge)
+			}
+			if err := builder.AddEdge(key, edge); err != nil {
+				return "", stats, err
+			}
+			stats.EdgesCarried++
+		}
+	}
+
+	path, err = saveGraphSidecar(builder, dir)
+	return path, stats, err
+}
+
+type carriedGraphEdge struct {
+	node uint32
+	edge uint32
+}
+
+// CarryGraphSidecarSeed hard-links srcDir's graph sidecar into dstDir so a
+// refresh that rebuilt the shard dir from scratch still has a previous
+// generation to diff against.
+func CarryGraphSidecarSeed(srcDir, dstDir string) bool {
+	src := GraphSidecarPath(srcDir)
+	info, err := os.Lstat(src)
+	if err != nil || !info.Mode().IsRegular() {
+		return false
+	}
+	return os.Link(src, GraphSidecarPath(dstDir)) == nil
+}
+
+func openPreviousGraph(dir string) (*diskgraph.Graph, string) {
+	path := GraphSidecarPath(dir)
+	g, err := diskgraph.Open(path)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, "no previous graph sidecar"
+		}
+		return nil, fmt.Sprintf("previous graph sidecar unusable: %v", err)
+	}
+	if g.NumNodes() > math.MaxUint32 || g.NumEdges() > math.MaxUint32 {
+		reason := fmt.Sprintf("previous graph sidecar too large to carry forward (%d nodes, %d edges)", g.NumNodes(), g.NumEdges())
+		_ = g.Close()
+		return nil, reason
+	}
+	return g, ""
+}
+
+func (s *graphSweep) rebuildAll(dir string, stats *GraphRefreshStats) (string, error) {
+	builder := diskgraph.NewBuilder()
+	builder.SetGeneration(stats.Generation)
+	s.recordCorpusRoster(builder)
+	emit := newGraphEmitter(builder)
+	for _, name := range s.names {
+		if err := s.emit(name, stats.Generation, emit); err != nil {
+			return "", err
+		}
+	}
+	stats.NamesRecomputed = len(s.names)
+	stats.EdgesRecomputed = int(builder.NumEdges())
+	stats.BlobsAdded = len(s.identity)
+	return saveGraphSidecar(builder, dir)
+}
+
+func (s *graphSweep) contentDelta(previous *diskgraph.Graph) (added []string, removed map[string]struct{}) {
+	before := previous.CorpusEntrySet()
+	now := make(map[string]struct{}, len(s.identity))
+	for sha, token := range s.identity {
+		now[token] = struct{}{}
+		if _, known := before[token]; !known {
+			added = append(added, sha)
+		}
+	}
+	removed = make(map[string]struct{})
+	for token := range before {
+		if _, present := now[token]; !present {
+			removed[rosterSHA(token)] = struct{}{}
+		}
+	}
+	return added, removed
+}
+
+func (s *graphSweep) dirtyNames(previous *diskgraph.Graph, added []string, removed map[string]struct{}) map[string]struct{} {
+	dirty := make(map[string]struct{})
+	mark := func(name string) {
+		if i, ok := s.eligible[name]; ok {
+			dirty[s.names[i]] = struct{}{}
+		}
+	}
+	for _, sha := range added {
+		sites := s.sites[sha]
+		if len(sites) == 0 {
+			continue
+		}
+		if b := s.idxs[sites[0].shard].Blob(sites[0].blob); b != nil {
+			candidates.EachIdentifier(b.Content, func(run []byte) bool {
+				if i, ok := s.eligible[string(run)]; ok {
+					dirty[s.names[i]] = struct{}{}
+				}
+				return true
+			})
+		}
+		for _, site := range sites {
+			six := s.merged.ShardIndex(site.shard)
+			if six == nil {
+				continue
+			}
+			for _, sym := range six.Symbols(site.blob) {
+				mark(sym.Name)
+			}
+			for _, ref := range six.Refs(site.blob) {
+				mark(ref.Name)
+			}
+		}
+	}
+	if len(removed) > 0 {
+		previous.EachEdge(func(key diskgraph.Key, edge diskgraph.Edge) bool {
+			if _, gone := removed[key.BlobSHA]; gone {
+				mark(edge.Name)
+				return true
+			}
+			if _, gone := removed[edge.TargetBlob]; gone {
+				mark(edge.Name)
+			}
+			return true
+		})
+	}
+	return dirty
+}

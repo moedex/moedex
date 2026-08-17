@@ -59,9 +59,17 @@ func TestBuildGraphSidecarPersistsVerifiedAdjacency(t *testing.T) {
 			ByteOffset: evidenceOffset,
 			ByteLength: uint64(len("Target")),
 		},
+		Name:       "Target",
+		Generation: diskgraph.FirstGeneration,
 	}
 	if edges[0] != want {
 		t.Fatalf("edge = %#v, want %#v", edges[0], want)
+	}
+	if got := g.Generation(); got != diskgraph.FirstGeneration {
+		t.Fatalf("graph generation = %d, want %d", got, diskgraph.FirstGeneration)
+	}
+	if got, want := g.NumCorpusEntries(), 2; got != want {
+		t.Fatalf("corpus roster = %d blob(s), want %d", got, want)
 	}
 	line, ok := edges[0].Evidence.SourceLine(callerContent)
 	if !ok || string(line) != "func Caller() { Target() }" {

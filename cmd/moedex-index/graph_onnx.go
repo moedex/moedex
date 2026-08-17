@@ -12,26 +12,22 @@ import (
 	"moedex/internal/server"
 )
 
-// buildGraphSidecar enables the semantic graph pass in tagged index binaries.
-// Environment settings keep the refresh/build/cas-export paths on one shared
-// configuration seam; top-K zero explicitly disables semantic edges.
-func buildGraphSidecar(dir string) (path string, err error) {
+func buildGraphSidecar(dir string) (path string, stats server.GraphRefreshStats, err error) {
 	topK, err := graphIntEnv("MOEDEX_GRAPH_SIMILAR_TOP_K", server.DefaultSimilarTopK)
 	if err != nil {
-		return "", err
+		return "", stats, err
 	}
 	threshold, err := graphFloatEnv("MOEDEX_GRAPH_SIMILAR_THRESHOLD", server.DefaultSimilarThreshold)
 	if err != nil {
-		return "", err
+		return "", stats, err
 	}
 	if topK == 0 {
-		path, _, err := server.BuildGraphSidecar(dir)
-		return path, err
+		return server.RefreshGraphSidecar(dir)
 	}
 
 	embedder, err := embed.NewONNXEmbedder(os.Getenv("ONNXRUNTIME_LIB_PATH"))
 	if err != nil {
-		return "", fmt.Errorf("initialize graph ONNX embedder: %w", err)
+		return "", stats, fmt.Errorf("initialize graph ONNX embedder: %w", err)
 	}
 	defer func() {
 		if closeErr := embedder.Close(); err == nil && closeErr != nil {
@@ -43,7 +39,7 @@ func buildGraphSidecar(dir string) (path string, err error) {
 		SimilarThreshold: threshold,
 		Embedder:         embedder,
 	})
-	return path, err
+	return path, stats, err
 }
 
 func graphIntEnv(key string, fallback int) (int, error) {

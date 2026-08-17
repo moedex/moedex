@@ -216,15 +216,34 @@ func buildSidecars(dir string) string {
 	} else {
 		built = append(built, "token", "symbol")
 	}
-	if _, err := buildGraphSidecar(dir); err != nil {
+	if _, stats, err := buildGraphSidecar(dir); err != nil {
 		fmt.Fprintf(os.Stderr, "moedex-index: warning: build graph sidecar: %v\n", err)
 	} else {
 		built = append(built, "graph")
+		printGraphSidecarStats(stats)
 	}
 	if len(built) == 0 {
 		return ""
 	}
 	return " (+" + strings.Join(built, "/") + " sidecars)"
+}
+
+func printGraphSidecarStats(stats server.GraphRefreshStats) {
+	switch {
+	case stats.Unchanged:
+		fmt.Printf("  graph: corpus content unchanged (%d blob(s)); sidecar kept at generation %d\n",
+			stats.CorpusBlobs, stats.Generation)
+	case stats.FullRebuild:
+		fmt.Printf("  graph: FULL rebuild (%s): %d name(s) swept, %d edge(s), generation %d\n",
+			stats.Reason, stats.NamesRecomputed, stats.EdgesRecomputed, stats.Generation)
+	default:
+		fmt.Printf("  graph: DELTA refresh: +%d/-%d blob(s) -> %d of %d name(s) recomputed (%d edge(s)); %d edge(s) carried forward; generation %d->%d\n",
+			stats.BlobsAdded, stats.BlobsRemoved, stats.NamesRecomputed, stats.NamesEligible,
+			stats.EdgesRecomputed, stats.EdgesCarried, stats.PreviousGeneration, stats.Generation)
+	}
+	if stats.EdgesDropped > 0 {
+		fmt.Fprintf(os.Stderr, "moedex-index: warning: graph refresh dropped %d prior edge(s) whose name left the sweep\n", stats.EdgesDropped)
+	}
 }
 
 // buildShards indexes every repo under root into byte-sized shards written to
@@ -450,6 +469,10 @@ func runRefresh(args []string) error {
 		return fmt.Errorf("fix up manifest paths: %w", err)
 	}
 
+	if server.CarryGraphSidecarSeed(bak, dir) {
+		logf("carried previous graph sidecar forward as the incremental refresh seed")
+	}
+
 	// Rebuild the token/symbol/graph sidecars on the LIVE dir (the shard set
 	// changed, so any prior sidecars are now stale). Best-effort, as in build.
 	sidecars := buildSidecars(dir)
@@ -619,6 +642,9 @@ func runCASExport(args []string) error {
 		fmt.Printf("  served dir now: %d shard(s) from %d repo(s) at %s%s\n", len(m.Shards), len(m.Heads), out, sidecars)
 		if ds.DenseSeedCarried {
 			fmt.Println("  dense embedding reuse seed carried forward (incremental refresh enabled)")
+		}
+		if ds.GraphSeedCarried {
+			fmt.Println("  graph adjacency seed carried forward (incremental graph refresh enabled)")
 		}
 		return nil
 	}

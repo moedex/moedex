@@ -1,0 +1,77 @@
+package blobstore
+
+import (
+	"os"
+	"testing"
+
+	"moedex/internal/graph/diskgraph"
+	"moedex/internal/server"
+)
+
+// TestDedupedDeltaCarriesGraphSidecarSeed covers the served-side half of the
+// incremental graph refresh. The delta re-export builds a new dir and swaps it
+// in, so without an explicit carry the graph sidecar disappears with the old dir
+// and every refresh silently degrades to a full corpus-wide rebuild — correct,
+// but the whole cost the incremental path exists to avoid. The seed is what
+// makes the swap survivable, and the generation stamp is how we can tell.
+func TestDedupedDeltaCarriesGraphSidecarSeed(t *testing.T) {
+	requireGit(t)
+	liveDir, casDir, _, _ := buildBaselineAndStagedDelta(t)
+
+	if _, _, err := server.BuildGraphSidecar(liveDir); err != nil {
+		t.Fatalf("build baseline graph sidecar: %v", err)
+	}
+	baseline, err := diskgraph.Open(server.GraphSidecarPath(liveDir))
+	if err != nil {
+		t.Fatalf("open baseline graph: %v", err)
+	}
+	baseGeneration := baseline.Generation()
+	baseRoster := baseline.NumCorpusEntries()
+	if err := baseline.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if baseRoster == 0 {
+		t.Fatal("baseline graph recorded no corpus blobs; there is nothing to diff against")
+	}
+
+	_, ds, err := RefreshDedupedShardDir(casDir, liveDir, 1<<10)
+	if err != nil {
+		t.Fatalf("RefreshDedupedShardDir: %v", err)
+	}
+	if len(ds.ChangedRepos)+len(ds.AddedRepos)+len(ds.RemovedRepos) == 0 {
+		t.Fatal("fixture produced no repo delta; the swap under test never happened")
+	}
+	if !ds.GraphSeedCarried {
+		t.Fatal("GraphSeedCarried = false; the prior graph sidecar was lost in the swap")
+	}
+	if _, err := os.Stat(server.GraphSidecarPath(liveDir)); err != nil {
+		t.Fatalf("graph sidecar missing from the swapped-in dir: %v", err)
+	}
+
+	// The carry is verbatim — the swap does not recompute anything — so the
+	// generation only advances once the graph refresh actually runs over it.
+	carried, err := diskgraph.Open(server.GraphSidecarPath(liveDir))
+	if err != nil {
+		t.Fatalf("open carried graph: %v", err)
+	}
+	if got := carried.Generation(); got != baseGeneration {
+		t.Errorf("carried graph generation = %d, want the untouched %d", got, baseGeneration)
+	}
+	if err := carried.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	_, stats, err := server.RefreshGraphSidecar(liveDir)
+	if err != nil {
+		t.Fatalf("RefreshGraphSidecar over the swapped dir: %v", err)
+	}
+	if stats.FullRebuild {
+		t.Fatalf("refresh over the carried seed fell back to a full rebuild: %s", stats.Reason)
+	}
+	if stats.Generation != baseGeneration+1 {
+		t.Errorf("generation %d -> %d, want a single increment", baseGeneration, stats.Generation)
+	}
+	if stats.BlobsAdded == 0 {
+		t.Error("refresh saw no net-new content despite a changed repo")
+	}
+}

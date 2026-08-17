@@ -57,6 +57,7 @@ const (
 	dedupBakSuffix        = ".dedup-bak-"     // sibling holding the prior live dir moved aside
 	denseStoreName        = "corpus-embeddings.store"
 	denseStoreMetaName    = denseStoreName + ".meta"
+	graphSidecarName      = "corpus-graph.graph"
 )
 
 // DedupedDeltaStats reports what a RefreshDedupedShardDir actually did, for honest
@@ -84,6 +85,7 @@ type DedupedDeltaStats struct {
 	// were hard-linked into the staged directory. The embedding refresh may safely use
 	// the stale store as a content-keyed reuse seed before atomically replacing it.
 	DenseSeedCarried bool
+	GraphSeedCarried bool
 }
 
 // IsDedupedDir reports whether dir is an existing deduped served dir (it has a
@@ -485,6 +487,7 @@ func RefreshDedupedShardDir(casDir, outShardDir string, shardBytes int64) (*pari
 	// multi-gigabyte store. Carry the pair only when both are regular files; a missing,
 	// partial, or unsupported seed safely falls back to a full rebuild later.
 	ds.DenseSeedCarried = carryDenseEmbeddingSeed(outShardDir, tmpDir)
+	ds.GraphSeedCarried = carryGraphSidecarSeed(outShardDir, tmpDir)
 
 	// Freshness identity is independent of shard membership. In particular, a
 	// globally Restricted repo contributes zero blobs but must remain represented
@@ -593,7 +596,14 @@ func copyFile(src, dst string) error {
 // a stale fingerprint is both intentional and safe. This function is best-effort:
 // correctness never depends on the optimization.
 func carryDenseEmbeddingSeed(srcDir, dstDir string) bool {
-	names := []string{denseStoreName, denseStoreMetaName}
+	return carrySeedFiles(srcDir, dstDir, denseStoreName, denseStoreMetaName)
+}
+
+func carryGraphSidecarSeed(srcDir, dstDir string) bool {
+	return carrySeedFiles(srcDir, dstDir, graphSidecarName)
+}
+
+func carrySeedFiles(srcDir, dstDir string, names ...string) bool {
 	for _, name := range names {
 		info, err := os.Lstat(filepath.Join(srcDir, name))
 		if err != nil || !info.Mode().IsRegular() {
