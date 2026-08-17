@@ -93,10 +93,11 @@ func GraphPath(dir string) string { return filepath.Join(dir, GraphFileName) }
 // GraphBuildReport accounts for one graph build, so a small graph is never
 // mistaken for a small corpus.
 type GraphBuildReport struct {
-	Nodes    int
-	Edges    uint64
-	HTTP     httproute.Report
-	Manifest manifest.Report
+	Nodes     int
+	Edges     uint64
+	HTTP      httproute.Report
+	Manifest  manifest.Report
+	Hierarchy HierarchyReport
 }
 
 // BuildGraph generates, verifies, and persists the graph for every exported
@@ -193,7 +194,19 @@ func BuildGraphWithOptions(dir string, opts GraphBuildOptions) (path string, rep
 	if err != nil {
 		return "", report, err
 	}
-	report = GraphBuildReport{Nodes: builder.NumNodes(), Edges: builder.NumEdges(), HTTP: httpReport, Manifest: manifestReport}
+
+	hierarchyReport, err := addHierarchyEdges(builder, sweep, emit.seen)
+	if err != nil {
+		return "", report, err
+	}
+
+	report = GraphBuildReport{
+		Nodes:     builder.NumNodes(),
+		Edges:     builder.NumEdges(),
+		HTTP:      httpReport,
+		Manifest:  manifestReport,
+		Hierarchy: hierarchyReport,
+	}
 
 	path, err = saveGraph(builder, dir)
 	return path, report, err

@@ -72,6 +72,16 @@ const (
 	// types above it is not derived from a symbol, so its source node is the
 	// manifest file itself at offset 0 and its evidence points at the declaration.
 	EdgeDependsOn
+	// EdgeExtends links a type to its base type (C# class inheritance, TS extends,
+	// Go struct embedding). Source is the derived type, target is the base type.
+	EdgeExtends
+	// EdgeImplements links a type to an interface it implements (C# : IFoo,
+	// TS implements IFoo, Go interface embedding). Source is the implementor,
+	// target is the interface.
+	EdgeImplements
+	// EdgeContainsMethod links a type to a method defined within its body. Source
+	// is the type, target is the method. Both share the same blob SHA.
+	EdgeContainsMethod
 )
 
 // String renders an edge type using the stable names exposed by graph-query
@@ -100,6 +110,12 @@ func (t EdgeType) String() string {
 		return "http_calls"
 	case EdgeDependsOn:
 		return "depends_on"
+	case EdgeExtends:
+		return "extends"
+	case EdgeImplements:
+		return "implements"
+	case EdgeContainsMethod:
+		return "contains_method"
 	default:
 		return fmt.Sprintf("edge_type_%d", uint32(t))
 	}

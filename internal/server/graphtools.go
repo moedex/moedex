@@ -328,6 +328,7 @@ func (g *GraphToolset) Tools() []mcp.ToolHandler {
 	return []mcp.ToolHandler{
 		&graphTool{owner: g, name: "trace_calls"},
 		&graphTool{owner: g, name: "trace_consumers"},
+		&graphTool{owner: g, name: "trace_hierarchy"},
 		&graphTool{owner: g, name: "impact_analysis"},
 		g.ClusterTool(),
 	}
@@ -411,6 +412,13 @@ func (t *graphTool) Descriptor() map[string]interface{} {
 			"name": map[string]interface{}{"type": "string", "minLength": 1, "description": "Exact event or queue symbol name."},
 		}
 		schema["required"] = []string{"name"}
+	case "trace_hierarchy":
+		description = "Return the type hierarchy for a type symbol: supertypes (extends/implements), subtypes, and contained methods."
+		schema["properties"] = map[string]interface{}{
+			"symbol": map[string]interface{}{"type": "string", "minLength": 1, "description": "Exact type name to trace."},
+			"hops":   depth,
+		}
+		schema["required"] = []string{"symbol"}
 	case "impact_analysis":
 		description = "Return the transitive closure of graph dependents for exactly one file or symbol, up to the requested depth."
 		schema["properties"] = map[string]interface{}{
@@ -474,6 +482,26 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 			return invalidGraphArgs(err), nil
 		}
 		result, err = snap.traceConsumers(ctx, args.Name)
+	case "trace_hierarchy":
+		var args struct {
+			Symbol string `json:"symbol"`
+			Hops   *int   `json:"hops"`
+		}
+		if err := decodeGraphArgs(raw, &args); err != nil {
+			return invalidGraphArgs(err), nil
+		}
+		args.Symbol = strings.TrimSpace(args.Symbol)
+		if err := validateGraphString("symbol", args.Symbol); err != nil {
+			return invalidGraphArgs(err), nil
+		}
+		hops := defaultTraceDepth
+		if args.Hops != nil {
+			hops = *args.Hops
+		}
+		if err := validateDepth("hops", hops); err != nil {
+			return invalidGraphArgs(err), nil
+		}
+		result, err = snap.traceHierarchy(ctx, args.Symbol, hops)
 	case "impact_analysis":
 		var args struct {
 			File   *string `json:"file"`
@@ -593,6 +621,13 @@ func (s *graphSnapshot) traceConsumers(ctx context.Context, name string) (GraphQ
 		conf[rel.Source] = maxTier(conf[rel.Source], rel.Confidence)
 	}
 	return s.makeResult("trace_consumers", name, 1, conf, relations), nil
+}
+
+func (s *graphSnapshot) traceHierarchy(ctx context.Context, symbol string, hops int) (GraphQueryResult, error) {
+	roots := append([]diskgraph.Key(nil), s.bySymbol[symbol]...)
+	return s.traverse(ctx, "trace_hierarchy", symbol, roots, hops, true, func(t diskgraph.EdgeType) bool {
+		return t == diskgraph.EdgeExtends || t == diskgraph.EdgeImplements || t == diskgraph.EdgeContainsMethod
+	})
 }
 
 func (s *graphSnapshot) impactAnalysis(ctx context.Context, file, symbol string, depth int) (GraphQueryResult, error) {
