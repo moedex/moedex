@@ -118,8 +118,16 @@ func (d *deadError) Unwrap() error { return ErrServerDead }
 type LSP struct {
 	cmd        *exec.Cmd
 	stdin      io.WriteCloser
-	procCancel context.CancelFunc // cancels the process's own context; Close only
-	writeMu    sync.Mutex         // serializes frame writes to the server's stdin
+	procCancel context.CancelFunc // cancels the process's own context; Close and a wedged write's timeout both use it
+
+	// writeSem is a 1-buffered token channel acting as a context-cancelable
+	// mutex serializing frame writes to stdin (F-10): a full/absent token means
+	// "held". Unlike sync.Mutex, acquiring it can select against a caller's
+	// ctx, so a lane stuck behind a write to a wedged server (one that stopped
+	// draining stdin while staying alive) fails on its own deadline instead of
+	// blocking forever — and so does Close(), whose shutdown handshake goes
+	// through the same writeFrame. Starts with one token buffered (free).
+	writeSem chan struct{}
 
 	nextID atomic.Int64
 
@@ -325,10 +333,14 @@ func NewLSP(ctx context.Context, cfg Config) (*LSP, error) {
 		return nil, fmt.Errorf("navigate: start %s: %w (is it on PATH?)", server, err)
 	}
 
+	writeSem := make(chan struct{}, 1)
+	writeSem <- struct{}{} // starts unheld (F-10)
+
 	c := &LSP{
-		cmd:        cmd,
-		stdin:      stdin,
-		procCancel: procCancel,
+		cmd:         cmd,
+		stdin:       stdin,
+		procCancel:  procCancel,
+		writeSem:    writeSem,
 		pending:     make(map[int64]chan rpcResponse),
 		docs:        make(map[string]*docState),
 		rootURI:     pathToURI(cfg.RootDir),
@@ -375,6 +387,21 @@ func (c *LSP) References(ctx context.Context, at Pos, includeDecl bool) ([]Locat
 // graceful shutdown is strictly best-effort.
 const shutdownTimeout = 3 * time.Second
 
+// defaultWriteTimeout bounds a stdin write (writeSem acquisition plus the
+// write itself) when the caller's ctx carries no deadline of its own — F-10.
+// Mirrors the reqTimeout convention in call(): a default cap applied only
+// when ctx has none. Without this, a server that stops draining stdin while
+// staying alive (wedged, not dead) hangs every lane sharing it forever,
+// including Close().
+const defaultWriteTimeout = 5 * time.Second
+
+// bestEffortNotifyTimeout bounds the handful of fire-and-forget notifications
+// sent purely as cleanup — a request's $/cancelRequest after its OWN ctx
+// already expired, and Close's "exit" — so an already-abandoned lane, or
+// teardown, never waits the full defaultWriteTimeout behind a wedged server
+// for a message nobody is waiting on a reply to.
+const bestEffortNotifyTimeout = 500 * time.Millisecond
+
 func (c *LSP) Close() error {
 	c.mu.Lock()
 	if c.closed {
@@ -386,11 +413,17 @@ func (c *LSP) Close() error {
 	c.dead.Store(true)
 
 	// Best-effort graceful shutdown; then drop stdin, cancel the process context
-	// (kills it if it lingers), and reap.
+	// (kills it if it lingers), and reap. Both writes below are ctx-bounded
+	// (F-10): a wedged server's stdin can no longer hang this handshake — the
+	// write times out, procCancel fires from inside writeFrame, and we fall
+	// through to the same kill+reap teardown a healthy shutdown would have led
+	// to anyway.
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	_, _ = c.call(ctx, "shutdown", nil)
 	cancel()
-	_ = c.notify("exit", nil)
+	exitCtx, exitCancel := context.WithTimeout(context.Background(), bestEffortNotifyTimeout)
+	_ = c.notify(exitCtx, "exit", nil)
+	exitCancel()
 	_ = c.stdin.Close()
 	c.procCancel()
 	return c.cmd.Wait()
@@ -402,7 +435,7 @@ func (c *LSP) locationQuery(ctx context.Context, method string, at Pos, extra ma
 	if err := c.ensureInit(ctx, at.File); err != nil {
 		return nil, err
 	}
-	if err := c.ensureFresh(at.File); err != nil {
+	if err := c.ensureFresh(ctx, at.File); err != nil {
 		return nil, err
 	}
 	params := map[string]any{
@@ -582,7 +615,7 @@ func (c *LSP) DocumentSymbol(ctx context.Context, file string) ([]Symbol, error)
 	if err := c.ensureInit(ctx, file); err != nil {
 		return nil, err
 	}
-	if err := c.ensureFresh(file); err != nil {
+	if err := c.ensureFresh(ctx, file); err != nil {
 		return nil, err
 	}
 	uri := pathToURI(file)
@@ -673,7 +706,7 @@ func (c *LSP) ensureInit(ctx context.Context, file string) error {
 			c.posEncoding = "utf-8"
 		}
 	}
-	if err := c.notify("initialized", map[string]any{}); err != nil {
+	if err := c.notify(ctx, "initialized", map[string]any{}); err != nil {
 		return fmt.Errorf("navigate: initialized: %w", err)
 	}
 	c.inited = true
@@ -733,7 +766,7 @@ func (c *LSP) docFor(abs string) *docState {
 // it sends a versioned full-text didChange. This is the live-tree freshness of
 // ADR 0017 Condition 3: the SHA-addressed corpus is stale against uncommitted
 // edits by construction; this path is not.
-func (c *LSP) ensureFresh(file string) error {
+func (c *LSP) ensureFresh(ctx context.Context, file string) error {
 	abs, err := filepath.Abs(file)
 	if err != nil {
 		return fmt.Errorf("navigate: abs path: %w", err)
@@ -746,7 +779,7 @@ func (c *LSP) ensureFresh(file string) error {
 	if err != nil {
 		return err
 	}
-	return c.syncLocked(abs, ds, content)
+	return c.syncLocked(ctx, abs, ds, content)
 }
 
 // liveContent returns the bytes that represent the file's live state: the
@@ -764,11 +797,11 @@ func (c *LSP) liveContent(abs string, ds *docState) ([]byte, error) {
 
 // syncLocked opens (first time) or didChanges (on content drift) the document.
 // Caller must hold ds.mu.
-func (c *LSP) syncLocked(abs string, ds *docState, content []byte) error {
+func (c *LSP) syncLocked(ctx context.Context, abs string, ds *docState, content []byte) error {
 	h := fnv1a(content)
 	if !ds.opened {
 		ds.version = 1
-		if err := c.notify("textDocument/didOpen", map[string]any{
+		if err := c.notify(ctx, "textDocument/didOpen", map[string]any{
 			"textDocument": map[string]any{
 				"uri":        pathToURI(abs),
 				"languageId": languageID(abs),
@@ -816,7 +849,7 @@ func (c *LSP) syncLocked(abs string, ds *docState, content []byte) error {
 	}
 
 	ds.version++
-	if err := c.notify("textDocument/didChange", map[string]any{
+	if err := c.notify(ctx, "textDocument/didChange", map[string]any{
 		"textDocument": map[string]any{
 			"uri":     pathToURI(abs),
 			"version": ds.version,
@@ -897,7 +930,7 @@ func (c *LSP) SetOverlay(ctx context.Context, file string, content []byte) error
 	defer ds.mu.Unlock()
 	ds.overlay = append([]byte(nil), content...)
 	ds.hasOverlay = true
-	return c.syncLocked(abs, ds, ds.overlay)
+	return c.syncLocked(ctx, abs, ds, ds.overlay)
 }
 
 // NotifyChanged tells the server that the given working-tree files changed on
@@ -931,7 +964,7 @@ func (c *LSP) NotifyChanged(ctx context.Context, paths ...string) error {
 		case ds.opened:
 			content, rerr := c.liveContent(abs, ds) // disk
 			if rerr == nil {
-				err = c.syncLocked(abs, ds, content)
+				err = c.syncLocked(ctx, abs, ds, content)
 			} else {
 				err = rerr
 			}
@@ -944,7 +977,7 @@ func (c *LSP) NotifyChanged(ctx context.Context, paths ...string) error {
 		}
 	}
 	if len(watched) > 0 {
-		return c.notify("workspace/didChangeWatchedFiles", map[string]any{"changes": watched})
+		return c.notify(ctx, "workspace/didChangeWatchedFiles", map[string]any{"changes": watched})
 	}
 	return nil
 }
@@ -968,7 +1001,7 @@ func (c *LSP) DropOverlay(ctx context.Context, file string) error {
 	if err != nil {
 		return err
 	}
-	return c.syncLocked(abs, ds, content)
+	return c.syncLocked(ctx, abs, ds, content)
 }
 
 func fnv1a(b []byte) uint64 {
@@ -1016,7 +1049,11 @@ func (c *LSP) call(ctx context.Context, method string, params any) (json.RawMess
 	c.pending[id] = ch
 	c.mu.Unlock()
 
-	if err := c.writeFrame(rpcRequest{JSONRPC: "2.0", ID: id, Method: method, Params: params}); err != nil {
+	// F-10: bounded by ctx (or writeFrame's own defaultWriteTimeout fallback)
+	// instead of an unbounded stdin write, so a server that stopped draining
+	// stdin can no longer hang every lane sharing it — this write used to run
+	// before any ctx-aware select at all.
+	if err := c.writeFrame(ctx, rpcRequest{JSONRPC: "2.0", ID: id, Method: method, Params: params}); err != nil {
 		c.mu.Lock()
 		delete(c.pending, id)
 		c.mu.Unlock()
@@ -1029,9 +1066,14 @@ func (c *LSP) call(ctx context.Context, method string, params any) (json.RawMess
 		c.mu.Lock()
 		delete(c.pending, id)
 		c.mu.Unlock()
-		// Best-effort: tell the server to stop the in-flight request. Never blocks
-		// the caller's returned ctx.Err() and is harmless if the server is gone.
-		_ = c.notify("$/cancelRequest", map[string]any{"id": id})
+		// Best-effort: tell the server to stop the in-flight request. Uses its own
+		// short-lived context rather than the already-expired ctx (which would
+		// make writeFrame give up immediately, before ever attempting the write) —
+		// still bounded, so this cleanup send can never itself hang behind a
+		// wedged server and delay the ctx.Err() we are about to return.
+		cancelCtx, cancelCancel := context.WithTimeout(context.Background(), bestEffortNotifyTimeout)
+		_ = c.notify(cancelCtx, "$/cancelRequest", map[string]any{"id": id})
+		cancelCancel()
 		c.log.Debug("lsp call canceled", "method", method, "id", id, "dur", time.Since(start).String())
 		return nil, ctx.Err()
 	case resp := <-ch:
@@ -1048,24 +1090,77 @@ func (c *LSP) call(ctx context.Context, method string, params any) (json.RawMess
 	}
 }
 
-func (c *LSP) notify(method string, params any) error {
-	return c.writeFrame(rpcNotification{JSONRPC: "2.0", Method: method, Params: params})
+func (c *LSP) notify(ctx context.Context, method string, params any) error {
+	return c.writeFrame(ctx, rpcNotification{JSONRPC: "2.0", Method: method, Params: params})
 }
 
-func (c *LSP) writeFrame(v any) error {
+// writeFrame serializes v and writes it to the server's stdin, bounding both
+// the writeSem acquisition and the write itself by ctx — the F-10 fix. A
+// server that stops draining stdin (wedged, but still alive from the OS's
+// perspective) used to block here forever, holding the mutex every other lane
+// sharing this server (and Close(), whose shutdown handshake runs through
+// here too) needed. Now:
+//   - ctx.Deadline() absent -> wrapped with defaultWriteTimeout, mirroring the
+//     reqTimeout convention in call().
+//   - On success, the write completes and the token is released immediately.
+//   - On ctx expiry, the connection is declared dead and the process is
+//     killed (procCancel) so the abandoned write eventually unblocks (a killed
+//     process's closed pipe fails a pending Write) and releases the token in
+//     the background. This *LSP is now dead: call()'s dead-check fast-fails
+//     every future request on it except "shutdown", which — being routed
+//     through this same bounded path — returns promptly too instead of
+//     hanging Close().
+func (c *LSP) writeFrame(ctx context.Context, v any) error {
 	body, err := json.Marshal(v)
 	if err != nil {
 		return fmt.Errorf("navigate: marshal frame: %w", err)
 	}
-	c.writeMu.Lock()
-	defer c.writeMu.Unlock()
-	if _, err := fmt.Fprintf(c.stdin, "Content-Length: %d\r\n\r\n", len(body)); err != nil {
-		return fmt.Errorf("navigate: write header: %w", err)
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, defaultWriteTimeout)
+		defer cancel()
 	}
-	if _, err := c.stdin.Write(body); err != nil {
-		return fmt.Errorf("navigate: write body: %w", err)
+
+	select {
+	case <-c.writeSem:
+	case <-ctx.Done():
+		return fmt.Errorf("navigate: acquire write lock: %w", ctx.Err())
 	}
-	return nil
+
+	done := make(chan error, 1)
+	go func() {
+		_, werr := fmt.Fprintf(c.stdin, "Content-Length: %d\r\n\r\n", len(body))
+		if werr == nil {
+			_, werr = c.stdin.Write(body)
+		}
+		done <- werr
+	}()
+
+	select {
+	case werr := <-done:
+		c.writeSem <- struct{}{} // release: the write actually finished
+		if werr != nil {
+			return fmt.Errorf("navigate: write frame: %w", werr)
+		}
+		return nil
+	case <-ctx.Done():
+		// The write is stuck — treat the server as dead and kill it so the
+		// abandoned write unblocks. Do NOT release the token yet: a still
+		// in-flight write must never race a fresh one on the same stdin. The
+		// background goroutine below returns it once the killed process's
+		// closed pipe fails the pending write, which is the only path anything
+		// could still be waiting on it (every future call on this dead *LSP
+		// fails before reaching here, except the exempt "shutdown"/"exit"
+		// calls Close() makes, which get their own fresh bounded ctx and so
+		// time out here too rather than hanging).
+		c.dead.Store(true)
+		c.procCancel()
+		go func() {
+			<-done
+			c.writeSem <- struct{}{}
+		}()
+		return fmt.Errorf("navigate: write frame timed out on a wedged server: %w", ctx.Err())
+	}
 }
 
 // readLoop parses framed messages and dispatches them: responses to their
@@ -1139,7 +1234,10 @@ func (c *LSP) answerServerRequest(id json.RawMessage, method string, params json
 	}
 	resp := map[string]any{"jsonrpc": "2.0", "id": json.RawMessage(id), "result": result}
 	c.log.Debug("lsp answer server request", "method", method)
-	_ = c.writeFrame(resp)
+	// Runs synchronously on the readLoop goroutine with no caller-scoped ctx
+	// available; writeFrame's own defaultWriteTimeout fallback (F-10) still
+	// bounds it, so a wedged server can no longer stall the read loop forever.
+	_ = c.writeFrame(context.Background(), resp)
 }
 
 func (c *LSP) failAllPending(err error) {
