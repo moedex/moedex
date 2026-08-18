@@ -8,6 +8,7 @@ import (
 
 	"moedex/internal/diskstore"
 	"moedex/internal/embed"
+	"moedex/internal/graph/diskgraph"
 )
 
 // ShardDirInfo is a cheap, read-only snapshot of a servable shard dir for
@@ -15,8 +16,8 @@ import (
 // command, and tell whether the dense sidecar is fresh — WITHOUT loading the
 // corpus (no mmap of blob content or vectors).
 type ShardDirInfo struct {
-	Dir    string
-	Shards int  // number of *.idx shards
+	Dir     string
+	Shards  int  // number of *.idx shards
 	Deduped bool // shards are content-less MOEDEX05 (need a shared blobs.dat)
 
 	HasBlobsDat     bool // shared deduped content store (blobs.dat) present
@@ -30,6 +31,19 @@ type ShardDirInfo struct {
 	StoreChunks      int
 	StoreModel       string
 	StoreFresh       bool // store meta fingerprint == the current shard set
+
+	// Graph sidecar (corpus-graph.graph).
+	GraphExists     bool
+	GraphOpenErr    string // non-empty if GraphExists but the file failed to open (corrupt/truncated)
+	GraphGeneration uint64
+	GraphNodes      int
+	GraphEdges      int
+	// GraphStale is true when some *.idx shard was written more recently than
+	// the graph file. A refresh that rebuilds the shard set but fails to
+	// rebuild (or carries forward, via CarryGraphSeed) the graph leaves exactly
+	// this signature: fresh shards next to an older graph — the silent-staleness
+	// failure mode this check exists to catch.
+	GraphStale bool
 }
 
 // RefreshCommand returns the refresh subcommand that matches this dir's layout, so
@@ -74,6 +88,24 @@ func InspectShardDir(dir string) (ShardDirInfo, error) {
 			info.StoreMetaPresent = true
 			info.StoreModel = m.Model
 			info.StoreFresh = m.Fingerprint == corpusFingerprint(paths)
+		}
+	}
+
+	if graphInfo, err := os.Stat(GraphPath(dir)); err == nil {
+		info.GraphExists = true
+		if g, err := diskgraph.Open(GraphPath(dir)); err != nil {
+			info.GraphOpenErr = err.Error()
+		} else {
+			info.GraphGeneration = g.Generation()
+			info.GraphNodes = g.NumNodes()
+			info.GraphEdges = g.NumEdges()
+			_ = g.Close()
+		}
+		for _, p := range paths {
+			if sfi, err := os.Stat(p); err == nil && sfi.ModTime().After(graphInfo.ModTime()) {
+				info.GraphStale = true
+				break
+			}
 		}
 	}
 	return info, nil

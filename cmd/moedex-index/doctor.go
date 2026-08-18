@@ -18,11 +18,13 @@ import (
 )
 
 // runDoctor is the new-machine / pre-refresh preflight: a READ-ONLY report on
-// whether this install is sane. It checks the four things that have actually bitten
+// whether this install is sane. It checks the things that have actually bitten
 // us — binary skew (the index-loss incident), shard-dir layout ambiguity (picking
-// the wrong refresh), a stale/legacy dense sidecar, and daemon/timer health — and
-// exits non-zero on a CRITICAL problem so the refresh script can abort before the
-// destructive swap.
+// the wrong refresh), a stale/legacy dense sidecar, a missing or STALE graph
+// sidecar (the silent failure mode when a build/refresh's best-effort graph
+// rebuild fails and the daemon keeps serving a prior-generation graph), and
+// daemon/timer health — and exits non-zero on a CRITICAL problem so the refresh
+// script can abort before the destructive swap.
 func runDoctor(args []string) error {
 	fs := newFlagSet("doctor")
 	shardDir := fs.String("shard-dir", os.Getenv("MOEDEX_SHARD_DIR"), "servable shard dir to inspect (default ~/.moedex-index/shards)")
@@ -247,7 +249,7 @@ func probeVersion(path string) binCopy {
 	return c
 }
 
-// --- shard dir: layout + dense sidecar freshness ---
+// --- shard dir: layout + dense/graph sidecar freshness ---
 
 func checkShardDir(d *doctorReport, dir string) {
 	section := "shard dir (" + dir + ")"
@@ -289,6 +291,17 @@ func checkShardDir(d *doctorReport, dir string) {
 		} else {
 			d.warnf(section, "embedding store is STALE vs shards — refresh will rebuild it")
 		}
+	}
+
+	switch {
+	case !info.GraphExists:
+		d.warnf(section, "no graph sidecar (%s) — graph-annotated search_context results and graph tools are unavailable until the next successful build/refresh", server.GraphFileName)
+	case info.GraphOpenErr != "":
+		d.warnf(section, "graph sidecar present but failed to open (%v) — likely corrupt/truncated; the next build/refresh will fall back to a full graph rebuild", info.GraphOpenErr)
+	case info.GraphStale:
+		d.warnf(section, "graph sidecar (generation %d, %d node(s), %d edge(s)) is STALE — a shard was rewritten more recently than the graph, which means the last build/refresh's graph rebuild failed silently (see its stderr) and the daemon is serving a prior-generation graph; re-run the refresh and check for a \"warning: build graph\" line", info.GraphGeneration, info.GraphNodes, info.GraphEdges)
+	default:
+		d.ok(section, "graph sidecar generation %d: %d node(s), %d edge(s)", info.GraphGeneration, info.GraphNodes, info.GraphEdges)
 	}
 }
 
