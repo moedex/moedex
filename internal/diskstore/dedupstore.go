@@ -180,8 +180,20 @@ func parseDedupedHeader(data []byte) (dedupedHeader, error) {
 	if h.blobOff > uint64(len(data)) || h.postOff > uint64(len(data)) || h.blobOff > h.postOff {
 		return dedupedHeader{}, fmt.Errorf("diskstore: corrupt deduped section offsets")
 	}
+	if err := checkSectionCount(h.numBlobs, minDedupedBlobRecordSize, h.postOff-h.blobOff, "deduped blob count"); err != nil {
+		return dedupedHeader{}, err
+	}
+	if err := checkSectionCount(h.numTrigrams, minTrigramRecordSize, uint64(len(data))-h.postOff, "deduped trigram count"); err != nil {
+		return dedupedHeader{}, err
+	}
 	return h, nil
 }
+
+// minDedupedBlobRecordSize is the smallest possible on-disk encoding of one
+// MOEDEX05 (content-less) BLOB SECTION record (see loadDedupedBlobs /
+// appendDedupedBlob): shaLen(4)+numFiles(4), each of which permits zero
+// bytes following it.
+const minDedupedBlobRecordSize = 4 + 4
 
 // loadDedupedBlobs reads the content-less blob section and resolves each blob's
 // content from the shared content store cs (zero-copy mmap sub-slice). The

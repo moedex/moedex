@@ -185,11 +185,11 @@ func TestParseHeaderSelectiveOverflow(t *testing.T) {
 	b := make([]byte, dataLen)
 	copy(b[0:8], magicSelective)
 	binary.LittleEndian.PutUint32(b[8:12], formatVersionV4)
-	binary.LittleEndian.PutUint64(b[16:24], 0)            // numBlobs
-	binary.LittleEndian.PutUint64(b[24:32], 0)            // numTrigrams
-	binary.LittleEndian.PutUint64(b[32:40], headerSizeV4) // blobOff
-	binary.LittleEndian.PutUint64(b[40:48], headerSizeV4) // postOff
-	binary.LittleEndian.PutUint64(b[48:56], headerSizeV4) // selOff
+	binary.LittleEndian.PutUint64(b[16:24], 0)                    // numBlobs
+	binary.LittleEndian.PutUint64(b[24:32], 0)                    // numTrigrams
+	binary.LittleEndian.PutUint64(b[32:40], headerSizeV4)         // blobOff
+	binary.LittleEndian.PutUint64(b[40:48], headerSizeV4)         // postOff
+	binary.LittleEndian.PutUint64(b[48:56], headerSizeV4)         // selOff
 	binary.LittleEndian.PutUint64(b[56:64], 12297829382473034432) // selCount: *3 wraps mod 2^64 to 64
 
 	_, err := parseHeader(b)
@@ -198,6 +198,85 @@ func TestParseHeaderSelectiveOverflow(t *testing.T) {
 	}
 	if !contains(err.Error(), "corrupt selection") {
 		t.Errorf("parseHeader err = %q, want substring %q", err, "corrupt selection")
+	}
+}
+
+// TestParseHeaderRejectsImplausibleBlobCount is the regression for the
+// eager-make-from-untrusted-count gap in loadBlobs' caller: numBlobs is an
+// attacker-controlled header field that used to be handed straight to
+// make([]index.BlobData, n) before a single blob record was read. A numBlobs
+// claiming far more blob records than the BLOB SECTION's actual bytes could
+// ever encode (each record needs >= minBlobRecordSize bytes) must be rejected
+// by parseHeader itself, not discovered only once loadBlobs' bounds-checked
+// reads run out of data. The 32-byte blob section below can hold at most two
+// 16-byte records, so 5,000,000 is implausible for it while staying far below
+// the scale (~4e9, a multi-hundred-GB allocation) the real finding reproduced.
+func TestParseHeaderRejectsImplausibleBlobCount(t *testing.T) {
+	const blobSectionLen = 32
+	const dataLen = headerSize + blobSectionLen
+	b := make([]byte, dataLen)
+	copy(b[0:8], magic)
+	binary.LittleEndian.PutUint32(b[8:12], formatVersion)
+	binary.LittleEndian.PutUint64(b[16:24], 5_000_000)                 // numBlobs: implausible for a 32-byte section
+	binary.LittleEndian.PutUint64(b[24:32], 0)                         // numTrigrams
+	binary.LittleEndian.PutUint64(b[32:40], headerSize)                // blobOff
+	binary.LittleEndian.PutUint64(b[40:48], headerSize+blobSectionLen) // postOff: blob section is the whole tail
+
+	_, err := parseHeader(b)
+	if err == nil {
+		t.Fatal("parseHeader accepted a numBlobs the blob section could not possibly hold")
+	}
+	if !contains(err.Error(), "blob count") {
+		t.Errorf("parseHeader err = %q, want substring %q", err, "blob count")
+	}
+}
+
+// TestParseHeaderRejectsImplausibleTrigramCount is the loadMmap/walkPostings
+// counterpart: numTrigrams used to size a postings map directly. See
+// TestParseHeaderRejectsImplausibleBlobCount for the full rationale.
+func TestParseHeaderRejectsImplausibleTrigramCount(t *testing.T) {
+	const postSectionLen = 22 // fits at most two 11-byte trigram records
+	const dataLen = headerSize + postSectionLen
+	b := make([]byte, dataLen)
+	copy(b[0:8], magic)
+	binary.LittleEndian.PutUint32(b[8:12], formatVersion)
+	binary.LittleEndian.PutUint64(b[16:24], 0)          // numBlobs
+	binary.LittleEndian.PutUint64(b[24:32], 5_000_000)  // numTrigrams: implausible for a 22-byte section
+	binary.LittleEndian.PutUint64(b[32:40], headerSize) // blobOff
+	binary.LittleEndian.PutUint64(b[40:48], headerSize) // postOff: postings section is the whole tail
+
+	_, err := parseHeader(b)
+	if err == nil {
+		t.Fatal("parseHeader accepted a numTrigrams the postings section could not possibly hold")
+	}
+	if !contains(err.Error(), "trigram count") {
+		t.Errorf("parseHeader err = %q, want substring %q", err, "trigram count")
+	}
+}
+
+// TestParseHeaderSelectiveRejectsImplausibleTrigramCount is the MOEDEX04
+// (selective) analogue: that branch bounds numTrigrams against selOff-postOff
+// rather than len(data)-postOff, a distinct expression that needs its own
+// coverage.
+func TestParseHeaderSelectiveRejectsImplausibleTrigramCount(t *testing.T) {
+	const postSectionLen = 22
+	const dataLen = headerSizeV4 + postSectionLen
+	b := make([]byte, dataLen)
+	copy(b[0:8], magicSelective)
+	binary.LittleEndian.PutUint32(b[8:12], formatVersionV4)
+	binary.LittleEndian.PutUint64(b[16:24], 0)                           // numBlobs
+	binary.LittleEndian.PutUint64(b[24:32], 5_000_000)                   // numTrigrams: implausible for a 22-byte section
+	binary.LittleEndian.PutUint64(b[32:40], headerSizeV4)                // blobOff
+	binary.LittleEndian.PutUint64(b[40:48], headerSizeV4)                // postOff
+	binary.LittleEndian.PutUint64(b[48:56], headerSizeV4+postSectionLen) // selOff
+	binary.LittleEndian.PutUint64(b[56:64], 0)                           // selCount
+
+	_, err := parseHeader(b)
+	if err == nil {
+		t.Fatal("parseHeader accepted a numTrigrams the postings section could not possibly hold (MOEDEX04)")
+	}
+	if !contains(err.Error(), "trigram count") {
+		t.Errorf("parseHeader err = %q, want substring %q", err, "trigram count")
 	}
 }
 

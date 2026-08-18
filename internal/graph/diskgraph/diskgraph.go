@@ -697,6 +697,22 @@ func parse(data []byte) (*Graph, error) {
 		nodeCount > uint64(maxInt()) || edgeCount > uint64(maxInt()) {
 		return nil, fmt.Errorf("diskgraph: record count exceeds platform limits")
 	}
+	// Reject a blob/name count that implies more table entries than the
+	// section's bytes could ever encode before sizing blobIDs/blobs/names off
+	// it below: every table entry needs at least its 4-byte length prefix
+	// (minTableEntrySize), so a count exceeding bytesAvailable/4 is corrupt.
+	// Without this, a corrupted blobCount/nameCount near the uint64 max drives
+	// make(map[string]uint32, n) / make([]string, 0, n) into a multi-GB
+	// allocation attempt before readTableEntry below ever gets a chance to
+	// reject the table as truncated (reproduced: ~82GB RSS from a corrupted
+	// blobCount, with no panic).
+	const minTableEntrySize = 4
+	if blobCount > (nameOff-blobOff)/minTableEntrySize {
+		return nil, fmt.Errorf("diskgraph: blob count exceeds blob table bytes")
+	}
+	if nameCount > (corpusOff-nameOff)/minTableEntrySize {
+		return nil, fmt.Errorf("diskgraph: name count exceeds name table bytes")
+	}
 
 	g := &Graph{
 		data:        data,
