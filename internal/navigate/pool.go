@@ -9,6 +9,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"moedex/internal/ingest"
 )
 
 // Pool is the ADR 0017 Condition-2 answer: concurrency-safe navigation under
@@ -73,6 +75,17 @@ type poolCooldown struct {
 // retries, so callers can branch on errors.Is(err, ErrCooldown). Lives in
 // pool.go (no build tag) so it is identical in both build arms.
 var ErrCooldown = errors.New("navigate: server cooling down after repeated failures")
+
+// ErrPrivacyRestricted is wrapped by the error NavigatorFor returns when a
+// workspace's .ai-privacy.yml marks it Restricted (level 1). F-03: an external
+// language server can scan the entire workspace after a single query, not just
+// the file that was asked about, so this check has to gate the spawn itself
+// structurally — inside Pool, the one place every current caller (moedex-serve's
+// LSP tools, moedex-nav's CLI, internal/server's graph pass) and any future one
+// shares — rather than relying on each caller to remember to preflight it the
+// way internal/server/graphcalls_lsp.go already does. Lives in pool.go (no
+// build tag) so it is identical in both build arms.
+var ErrPrivacyRestricted = errors.New("navigate: workspace is privacy-restricted (.ai-privacy.yml level 1); refusing to launch an external language server there")
 
 // goClose shuts a server down in the background while letting Close() wait for
 // it. Use this instead of a bare `go nav.Close()` for any server removed from
@@ -280,6 +293,11 @@ func (p *Pool) Navigator(ctx context.Context, root string) (*LSP, error) {
 // creation and one server. A server discovered to be dead is evicted and
 // recreated. In legacy single-server mode (p.cfg.Server set) lang selects the
 // pool key but not the command — the configured server handles every language.
+//
+// Before ever spawning a server for root, this fails closed (ErrPrivacyRestricted,
+// wrapped) if root's .ai-privacy.yml marks it Restricted (level 1) — F-03. This
+// is the structural gate: callers no longer need their own preflight (see
+// ErrPrivacyRestricted's doc for why it lives here instead of at each caller).
 func (p *Pool) NavigatorFor(ctx context.Context, lang, root string) (*LSP, error) {
 	k := keyFor(lang, root)
 
@@ -341,6 +359,27 @@ func (p *Pool) NavigatorFor(ctx context.Context, lang, root string) (*LSP, error
 		p.entries[k] = ent
 		p.mu.Unlock()
 		p.closeAll(victims)
+
+		// F-03 fail-closed privacy preflight, run once per (root,language) key
+		// right here — "before any process is spawned" — rather than on every
+		// call: a cache hit above never reaches this line. Unlike a NewLSP
+		// failure this returns immediately instead of feeding failCount/
+		// sleepBackoff/continue: the same root fails the exact same way every
+		// time (it's a local file check, not a flaky process), so looping
+		// maxRestart times would just burn backoff delay for nothing AND —
+		// worse — let a privacy rejection reach recordExhausted's generic
+		// "kept dying after N restarts" error, silently losing the
+		// ErrPrivacyRestricted sentinel callers branch on.
+		if allowed, perr := ingest.LSPWorkspaceAllowed(root); perr != nil || !allowed {
+			if perr == nil {
+				perr = ErrPrivacyRestricted
+			}
+			err := fmt.Errorf("navigate: privacy preflight %s: %w", root, perr)
+			ent.err = err
+			close(ent.ready)
+			p.evict(k, ent) // don't cache a failed creation
+			return nil, err
+		}
 
 		cfg := p.cfg
 		cfg.RootDir = root
