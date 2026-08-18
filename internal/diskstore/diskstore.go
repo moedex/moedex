@@ -459,6 +459,12 @@ func parseHeader(data []byte) (header, error) {
 		if h.blobOff > uint64(len(data)) || h.postOff > uint64(len(data)) || h.blobOff > h.postOff {
 			return header{}, fmt.Errorf("diskstore: corrupt section offsets")
 		}
+		if err := checkSectionCount(h.numBlobs, minBlobRecordSize, h.postOff-h.blobOff, "blob count"); err != nil {
+			return header{}, err
+		}
+		if err := checkSectionCount(h.numTrigrams, minTrigramRecordSize, uint64(len(data))-h.postOff, "trigram count"); err != nil {
+			return header{}, err
+		}
 		return h, nil
 	case magicSelective:
 		if len(data) < headerSizeV4 {
@@ -485,6 +491,12 @@ func parseHeader(data []byte) (header, error) {
 		// either, unlike the multiply-then-compare this replaces.
 		if h.selCount > (uint64(len(data))-h.selOff)/trigram.N {
 			return header{}, fmt.Errorf("diskstore: corrupt selection section")
+		}
+		if err := checkSectionCount(h.numBlobs, minBlobRecordSize, h.postOff-h.blobOff, "blob count"); err != nil {
+			return header{}, err
+		}
+		if err := checkSectionCount(h.numTrigrams, minTrigramRecordSize, h.selOff-h.postOff, "trigram count"); err != nil {
+			return header{}, err
 		}
 		return h, nil
 	default:
@@ -635,6 +647,33 @@ func (r *reader) lenBytes() ([]byte, error) {
 // index.FileRef: three length-prefixed strings, each at least the 4-byte
 // length prefix with zero content bytes.
 const minFileRefSize = 4 + 4 + 4
+
+// minBlobRecordSize is the smallest possible on-disk encoding of one BLOB
+// SECTION record (see loadBlobs / appendBlob): shaLen(4)+contentLen(8)+
+// numFiles(4), each of which permits zero bytes following it.
+const minBlobRecordSize = 4 + 8 + 4
+
+// minTrigramRecordSize is the smallest possible on-disk encoding of one
+// POSTINGS SECTION record (see walkPostings): 3 trigram bytes + encLen(8),
+// which permits a zero-length encoded posting list.
+const minTrigramRecordSize = trigram.N + 8
+
+// checkSectionCount rejects an untrusted header item count (numBlobs /
+// numTrigrams) before a caller does an eager make([]T, n) or
+// make(map[K]V, n) sized off it: n records of at least minItemSize bytes
+// each could never fit inside a section of sectionBytes bytes, so a count
+// exceeding that bound is corrupt. Without this, a header claiming a count
+// near the uint64 max drives loadBlobs' make([]index.BlobData, n) or a
+// postings map sized by hdr.numTrigrams into a multi-GB allocation attempt
+// before the per-record bounds-checked reads below ever get a chance to
+// fail cleanly on EOF — the header-level counterpart of checkCount, which
+// guards the same class of gap for a per-record count (e.g. numFiles).
+func checkSectionCount(n uint64, minItemSize int, sectionBytes uint64, label string) error {
+	if n > sectionBytes/uint64(minItemSize) {
+		return fmt.Errorf("diskstore: %s %d exceeds section bytes (%d)", label, n, sectionBytes)
+	}
+	return nil
+}
 
 // checkCount rejects an untrusted item count before a caller does an eager
 // make([]T, n) sized off it: n items of at least minItemSize bytes each could
