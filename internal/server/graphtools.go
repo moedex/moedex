@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -126,10 +127,21 @@ func (r graphRelation) weight() float64 {
 // OpenGraphTools opens dir's graph adjacency file with mmap and its symbol/location
 // resolver. The caller must Close the returned toolset after the MCP server has
 // stopped accepting calls.
+//
+// A missing, unbuilt, or unopenable graph sidecar is never fatal: every other
+// ranking sidecar (token index, symbol index, embedding store) degrades
+// best-effort, moedex-index build/refresh treats a graph-build failure as a
+// logged warning rather than aborting the shard build, and this same toolset's
+// own Reload keeps serving the old (possibly absent) graph when a refresh's
+// re-open fails. Boot mirrors that: log a warning and return a toolset with no
+// active generation — every graph tool call and Neighbors annotation already
+// handles that state gracefully (see acquire) — instead of failing the whole
+// MCP daemon over an optional sidecar.
 func OpenGraphTools(dir string) (*GraphToolset, error) {
 	snap, err := openGraphSnapshot(dir)
 	if err != nil {
-		return nil, err
+		fmt.Fprintf(os.Stderr, "server: open graph (serving without graph tools/annotations until the next reload): %v\n", err)
+		return &GraphToolset{}, nil
 	}
 	return &GraphToolset{cur: snap}, nil
 }

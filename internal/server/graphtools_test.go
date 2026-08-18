@@ -222,6 +222,58 @@ func TestImpactAnalysisReturnsTransitiveDependentsForFile(t *testing.T) {
 	}
 }
 
+// TestOpenGraphToolsDegradesWhenGraphSidecarMissing pins F-02: a shard dir with
+// no corpus-graph.graph on disk (unbuilt, or built by an older moedex-index that
+// predates this feature) must still let OpenGraphTools succeed, exactly like
+// moedex-index build/refresh treats a graph build failure as a non-fatal
+// warning and Reload keeps serving the old (possibly absent) graph rather than
+// failing. A hard error here propagates straight to a fatal daemon-boot exit in
+// cmd/moedex-serve, taking every navigation and search tool down over an
+// optional sidecar.
+func TestOpenGraphToolsDegradesWhenGraphSidecarMissing(t *testing.T) {
+	dir := t.TempDir()
+	ix := index.New()
+	ix.AddFile("fixture", "leaf.go", filepath.Join(dir, "leaf.go"), "leaf-sha", []byte("package fixture\nfunc Leaf() {}\n"))
+	if err := diskstore.Save(ix, filepath.Join(dir, "shard-0000.idx")); err != nil {
+		t.Fatalf("save shard: %v", err)
+	}
+	// Deliberately no graph builder run here: GraphPath(dir) does not exist.
+
+	tools, err := OpenGraphTools(dir)
+	if err != nil {
+		t.Fatalf("OpenGraphTools with missing graph sidecar must degrade, not fail: %v", err)
+	}
+	t.Cleanup(func() { _ = tools.Close() })
+
+	// Every registered tool must still answer (not panic, not transport-error)
+	// with a graceful "no graph" result rather than crashing the caller.
+	for _, tool := range tools.Tools() {
+		args := `{}`
+		switch tool.Name() {
+		case "trace_calls", "trace_hierarchy", "trace_queries", "trace_renders":
+			args = `{"symbol":"Leaf"}`
+		case "trace_consumers":
+			args = `{"name":"Leaf"}`
+		case "impact_analysis":
+			args = `{"symbol":"Leaf"}`
+		}
+		got, callErr := tool.Call(context.Background(), json.RawMessage(args))
+		if callErr != nil {
+			t.Fatalf("%s Call returned transport error on a graphless toolset: %v", tool.Name(), callErr)
+		}
+		if isErr, _ := got["isError"].(bool); !isErr {
+			t.Fatalf("%s on a graphless toolset = %#v, want a graceful isError result", tool.Name(), got)
+		}
+	}
+
+	// Graph-fused search annotation must also degrade to "no annotation" rather
+	// than erroring, matching the documented Neighbors contract.
+	neighbors, err := tools.Neighbors(context.Background(), []contextwin.ContextBlock{{AbsPath: filepath.Join(dir, "leaf.go"), StartLine: 1, EndLine: 2}}, 1)
+	if err != nil || neighbors != nil {
+		t.Fatalf("Neighbors on a graphless toolset = (%v, %v), want (nil, nil)", neighbors, err)
+	}
+}
+
 func TestGraphToolInputValidation(t *testing.T) {
 	fixture := newGraphFixture(t)
 	tests := []struct {
