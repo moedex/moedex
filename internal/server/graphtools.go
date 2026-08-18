@@ -170,14 +170,15 @@ func openGraphSnapshot(dir string) (*graphSnapshot, error) {
 
 func (s *graphSnapshot) buildCatalog() {
 	seenSymbols := make(map[string]map[diskgraph.Key]bool)
-	for shard, ix := range s.symbols.idxs {
-		for id := uint64(0); id < uint64(ix.NumBlobs()); id++ {
-			blob := ix.Blob(id)
+	merged := s.symbols.Merged()
+	for shard := 0; shard < s.symbols.NumShards(); shard++ {
+		for id := uint64(0); id < uint64(s.symbols.NumShardBlobs(shard)); id++ {
+			blob := s.symbols.ShardBlob(shard, id)
 			if blob == nil || blob.SHA == "" {
 				continue
 			}
 			s.blobs[blob.SHA] = append(s.blobs[blob.SHA], blob)
-			for _, sym := range s.symbols.corpus.Symbols(shard, id) {
+			for _, sym := range merged.Symbols(shard, id) {
 				if sym.NameStart < 0 {
 					continue
 				}
@@ -208,6 +209,19 @@ func (s *graphSnapshot) buildCatalog() {
 		}
 		s.nodes[key] = nodeMetadata{Locations: s.locationsForKey(key)}
 	}
+	// An edge's TARGET need not itself be the SOURCE of any edge (e.g. an
+	// HTTP_CALLS handler with no enclosing named symbol falls back to its own
+	// raw byte offset -- see httpgraph.go's httpNodeOffset), so it can be
+	// entirely absent from s.graph.Keys() (which enumerates sources only).
+	// Fold every edge target in too, so it is addressable -- and locatable via
+	// rootsForFile -- the same way a source-only raw-evidence node already is.
+	s.graph.EachEdge(func(_ diskgraph.Key, edge diskgraph.Edge) bool {
+		target := diskgraph.Key{BlobSHA: edge.TargetBlob, SymbolOffset: edge.TargetOffset}
+		if _, ok := s.nodes[target]; !ok {
+			s.nodes[target] = nodeMetadata{Locations: s.locationsForKey(target)}
+		}
+		return true
+	})
 	for name := range s.bySymbol {
 		sort.Slice(s.bySymbol[name], func(i, j int) bool { return keyID(s.bySymbol[name][i]) < keyID(s.bySymbol[name][j]) })
 	}
@@ -350,10 +364,18 @@ func (g *GraphToolset) Tools() []mcp.ToolHandler {
 
 // Reload atomically installs a freshly mmap'd graph generation. Existing calls
 // drain against the old generation before its mappings are released.
-func (g *GraphToolset) Reload(dir string) error {
+//
+// The two return values name independent failure sources; callers must not
+// conflate them. openErr means the NEW generation failed to build, so the OLD
+// generation is still installed and being served -- the reload genuinely did
+// not take effect. closeErr means the swap to the new generation already
+// SUCCEEDED (it is what every call now sees) and only releasing the PREVIOUS
+// generation's mmaps/handles afterward failed -- a resource leak on the
+// retired generation, not a staleness problem for callers.
+func (g *GraphToolset) Reload(dir string) (openErr, closeErr error) {
 	next, err := openGraphSnapshot(dir)
 	if err != nil {
-		return err
+		return err, nil
 	}
 	g.mu.Lock()
 	old := g.cur
@@ -361,9 +383,9 @@ func (g *GraphToolset) Reload(dir string) error {
 	g.mu.Unlock()
 	if old != nil {
 		old.wg.Wait()
-		return old.close()
+		return nil, old.close()
 	}
-	return nil
+	return nil, nil
 }
 
 func (g *GraphToolset) acquire() *graphSnapshot {
