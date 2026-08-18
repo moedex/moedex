@@ -115,6 +115,72 @@ func TestEvaluateAggregation(t *testing.T) {
 	}
 }
 
+// TestEvaluateZeroRelevantQueryExcludedFromMean pins F-28: a GoldQuery whose
+// Relevant map has no grade>=1 entry (NumRelevant == 0 — e.g. NewBinaryGold
+// called with no relevant-doc varargs, or a distractor-only query) must NOT be
+// folded into the Mean* denominator. Every per-query metric is DEFINED to
+// return exactly 0.0 for such a query (see RecallAtK/NDCGAtK/UDCGAtK), so
+// averaging it in at equal weight would silently drag every Mean* field
+// toward 0 with no accompanying signal — the bug F-28 describes. The
+// zero-relevant query's own QueryReport must still appear in rep.Queries
+// (nothing is hidden), just excluded from the aggregate.
+func TestEvaluateZeroRelevantQueryExcludedFromMean(t *testing.T) {
+	ix := index.New()
+	addDoc(ix, "r", "auth/login.go", "package auth\nfunc Login(user, password string) bool { return checkPassword(user, password) }\n")
+	addDoc(ix, "r", "math/add.go", "package math\nfunc Add(a, b int) int { return a + b }\n")
+
+	run := NewRunner(ix)
+	gold := []GoldQuery{
+		// Answerable: the gold doc is retrievable and should recall/rank perfectly.
+		NewBinaryGold("Login password user", "auth/login.go"),
+		// Zero-relevant: no varargs, so Relevant is an empty map (NumRelevant == 0).
+		// This is the shape a future NewBinaryGold(query) call or a copy/paste slip
+		// would produce per the finding's trigger.
+		NewBinaryGold("Add return"),
+	}
+	rep, err := run.Evaluate(context.Background(), gold, 3, 10)
+	if err != nil {
+		t.Fatalf("evaluate: %v", err)
+	}
+	if len(rep.Queries) != 2 {
+		t.Fatalf("expected 2 query reports (zero-relevant query must still be visible), got %d", len(rep.Queries))
+	}
+
+	var zeroRelevant, answerable *QueryReport
+	for i := range rep.Queries {
+		q := &rep.Queries[i]
+		if q.Query == "Add return" {
+			zeroRelevant = q
+		} else {
+			answerable = q
+		}
+	}
+	if zeroRelevant == nil || answerable == nil {
+		t.Fatalf("could not find both queries in report: %+v", rep.Queries)
+	}
+	if zeroRelevant.NumRelevant != 0 {
+		t.Fatalf("expected zero-relevant query to have NumRelevant == 0, got %d", zeroRelevant.NumRelevant)
+	}
+	if answerable.NumRelevant == 0 {
+		t.Fatalf("expected the answerable query to have NumRelevant > 0")
+	}
+
+	// The bug: averaging the guaranteed-0.0 zero-relevant query in with the
+	// answerable query would dilute MeanRecall/MeanMRR/MeanNDCG to ~0.5 of the
+	// answerable query's own (perfect) score. The fix must average over
+	// answerable queries only, so the means equal the answerable query's values.
+	const tol = 1e-9
+	if diff := rep.MeanRecall - answerable.RecallAtK; diff < -tol || diff > tol {
+		t.Errorf("MeanRecall = %.4f diluted by zero-relevant query; want answerable query's own value %.4f", rep.MeanRecall, answerable.RecallAtK)
+	}
+	if diff := rep.MeanMRR - answerable.MRR; diff < -tol || diff > tol {
+		t.Errorf("MeanMRR = %.4f diluted by zero-relevant query; want answerable query's own value %.4f", rep.MeanMRR, answerable.MRR)
+	}
+	if diff := rep.MeanNDCG - answerable.NDCGAtK; diff < -tol || diff > tol {
+		t.Errorf("MeanNDCG = %.4f diluted by zero-relevant query; want answerable query's own value %.4f", rep.MeanNDCG, answerable.NDCGAtK)
+	}
+}
+
 // TestRealCorpus runs the harness over a real repo if present, mirroring the
 // skip pattern in internal/diskstore/diskstore_test.go. It does NOT hard-fail
 // when the corpus is absent. The corpus dir is configurable via MOEDEX_EVAL_CORPUS;
