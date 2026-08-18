@@ -34,6 +34,16 @@ A second, independent theme is worth calling out because it wasn't found by one 
 | security / build-tag-boundary / privacy-boundary | 0 | 1 | 0 | 0 |
 | testing | 0 | 0 | 3 | 0 |
 
+## Remediation status
+
+Tracks the codebase-review-fixes effort across every wave run against this report so far. All remediation work lands on `codebase-review-fixes/2026-08-18`.
+
+| Wave | Findings in scope | Fixed | Skipped | Unresolved conflicts |
+| --- | --- | ---: | ---: | ---: |
+| high | F-01, F-02, F-03, F-04, F-05, F-06, F-07, F-08, F-09, F-10, F-11 | 11 | 0 | 0 |
+
+**Totals so far:** 11 fixed · 0 skipped · 0 unresolved conflicts, out of 40 findings. All 11 High-severity findings are fixed; the 24 Medium and 5 Low findings have not yet had a remediation wave run against them.
+
 ## Coverage
 
 | | |
@@ -77,6 +87,8 @@ These were deliberately left out of scope by the depth budget. Nothing here has 
 
 _`cmd/moedex-corpus/main.go:492` · lane: resilience · confidence: confirmed_
 
+**Status.** Fixed — commit `9d57f13` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** main.go uses context.Background() in every runXxx path with no os/signal handling anywhere. A kill (systemd stop, OOM, reboot) landing between the git add and git commit steps of a managed sync (internal/corpus/managed_sync.go) leaves the superproject index staged-but-uncommitted.
 
 **Trigger.** SIGTERM/SIGKILL/OOM/reboot during the narrow window between `git add` and `git commit` in a managed sync -- realistic for an hourly, unattended systemd-timer job over a long-running deployment.
@@ -90,6 +102,8 @@ _`cmd/moedex-corpus/main.go:492` · lane: resilience · confidence: confirmed_
 #### F-06 — cmd/moedex-corpus has no context deadline on any subprocess call
 
 _`cmd/moedex-corpus/main.go:182` · lane: resilience · confidence: confirmed_
+
+**Status.** Fixed — commit `9d57f13` on `codebase-review-fixes/2026-08-18` · tests added: yes.
 
 **Problem.** Every glab/git subprocess call inherits an undeadlined context.Background() straight through to exec.CommandContext, and the shipped moedex-sync.service unit sets no TimeoutStartSec.
 
@@ -105,6 +119,8 @@ _`cmd/moedex-corpus/main.go:182` · lane: resilience · confidence: confirmed_
 
 _`cmd/moedex-index/main.go:219` · also at `cmd/moedex-index/doctor.go:252`, `internal/server/doctor.go:17,47` · lane: graph-refresh-consistency / resilience · confidence: confirmed_
 
+**Status.** Fixed — commit `e839d22` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** build/refresh/cas-export intentionally downgrade a graph-sidecar build failure to a stderr warning and exit 0 regardless, and moedex-index doctor never checks the graph sidecar's presence or freshness -- it only tracks the dense embedding store's freshness.
 
 **Trigger.** Any failure in the graph-build pass during `moedex-index build`/`refresh`. Total absence of the graph file is actually loud (it crashes moedex-serve -mcp/-mcp-http at boot, per the related finding on daemon boot hard-failing) -- the genuinely silent failure mode is a *stale* graph: a refresh that fails to rebuild an already-existing graph leaves the prior generation in place indefinitely, and SIGHUP reload just logs and keeps serving the old one.
@@ -118,6 +134,8 @@ _`cmd/moedex-index/main.go:219` · also at `cmd/moedex-index/doctor.go:252`, `in
 #### F-03 — LSP navigation MCP tools bypass .ai-privacy.yml entirely
 
 _`cmd/moedex-serve/nav_lsp.go:110` · also at `internal/navigate/pool.go:283 (root cause: package has no privacy hook at all)`, `cmd/moedex-nav/main.go (third unguarded caller)` · lane: security / build-tag-boundary / privacy-boundary · corroborated by: build-tag-boundary, security, privacy-boundary · confidence: confirmed_
+
+**Status.** Fixed — commit `e513851` on `codebase-review-fixes/2026-08-18` · tests added: yes.
 
 **Problem.** The -tags lsp MCP tools (find_definition, find_references, find_implementations, find_symbol, symbols_overview) accept a caller-supplied absolute file/root path and hand it directly to navigate.Pool, which spawns a real external language server rooted there, with no check against .ai-privacy.yml. internal/server/graphcalls_lsp.go DOES call ingest.LSPWorkspaceAllowed before touching the same Pool API, proving the check is meant to exist at this layer, but internal/navigate itself has zero awareness of the privacy policy and offers no hook for a caller to install one -- of the three current callers, only graphcalls_lsp.go gets it right; cmd/moedex-serve/nav_lsp.go and cmd/moedex-nav's CLI both pass paths straight through.
 
@@ -133,6 +151,8 @@ _`cmd/moedex-serve/nav_lsp.go:110` · also at `internal/navigate/pool.go:283 (ro
 
 _`internal/graph/diskgraph/diskgraph.go:687` · also at `internal/diskstore/diskstore.go:538 (loadBlobs, numBlobs/numTrigrams)`, `internal/diskstore/dedupstore.go:195 (loadDedupedBlobs)`, `internal/symbol/codec.go:206 (readIndex, blobCount/symCount/nameLen/refCount)` · lane: binary-format-safety · corroborated by: binary-format-safety (x3 assignments) · confidence: confirmed_
 
+**Status.** Fixed — commit `29a9856` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** In all three formats, a header-provided element count (blobCount/nameCount in diskgraph.go; numBlobs/numTrigrams in diskstore.go/dedupstore.go; blobCount/symCount/nameLen/refCount in symbol/codec.go) is read and used directly to size a make() map/slice before being cross-checked against the actual remaining bytes in the file's corresponding section. Every one of these formats already implements exactly this kind of bound-checking for OTHER count fields in the same file (diskgraph's node/edge sections, diskstore's per-record checkCount, contentstore's capHint clamp) -- this is a gap in an otherwise well-hardened pattern, not an absent pattern. Reproduced directly for diskgraph.go: a corrupted count field drove make(map[string]uint32, 4294967295) + make([]string, 0, 4294967295) to ~82GB RSS in ~32s with no panic.
 
 **Trigger.** A corrupted or maliciously truncated corpus-graph.graph / *.idx / *.sym sidecar file with an inflated count field but an otherwise-valid-looking header, loaded at daemon boot, SIGHUP reload, or incremental graph refresh -- e.g. from a disk bit-flip, an interrupted write on a filesystem without the atomic temp+rename this repo otherwise favors, or a hand-edited file during testing.
@@ -146,6 +166,8 @@ _`internal/graph/diskgraph/diskgraph.go:687` · also at `internal/diskstore/disk
 #### F-08 — A directory-scoped privacy_levels override without a trailing slash silently protects nothing
 
 _`internal/ingest/privacy.go:362` · lane: privacy-boundary · confidence: confirmed_
+
+**Status.** Fixed — commit `f4e2501` on `codebase-review-fixes/2026-08-18` · tests added: yes.
 
 **Problem.** privacyPathContains decides file-vs-directory purely from whether the policy author typed a trailing '/' in the path, with no filesystem check and no documentation anywhere (ADR 0021, ARCHITECTURE.md, or a code comment) warning that this matters. A directory-scoped override written as `path: /secrets` instead of `/secrets/` parses and validates without error, but since a directory is never itself a git blob path, the exact-match branch can never fire -- every file under that directory is silently treated as unrestricted. Every production build path (internal/blobstore, internal/parity, cmd/moedex-index, cmd/scale, internal/eval) shares this same logic via ingest.AIPrivacyFingerprint/ingest.Repo.
 
@@ -161,6 +183,8 @@ _`internal/ingest/privacy.go:362` · lane: privacy-boundary · confidence: confi
 
 _`internal/mcp/http.go:29` · also at `cmd/moedex-serve/main.go:392 (unwrapped) vs :560 (/search, wrapped in withConcurrencyLimit)` · lane: security · confidence: confirmed_
 
+**Status.** Fixed — commit `4b6da4b` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** Server.maxConcurrency (and its semaphore) exists only inside the stdio Serve() loop. HTTPHandler/handleHTTPPost/handleHTTPBatch dispatch every POST straight through handleSafe with no limiter, and handleHTTPBatch additionally has no cap on batch-array length and never checks ctx.Err() between items. cmd/moedex-serve/main.go explicitly wraps the sibling /search route in withConcurrencyLimit for precisely this CPU-bound-scan concern, but applies no equivalent wrapper to /mcp.
 
 **Trigger.** Many concurrent agent sessions (the documented purpose of -mcp-http: 'let many agent sessions share one warm daemon concurrently') or a single client sending a large JSON-RPC batch array.
@@ -174,6 +198,8 @@ _`internal/mcp/http.go:29` · also at `cmd/moedex-serve/main.go:392 (unwrapped) 
 #### F-10 — A wedged (alive but unresponsive) language server can hang every lane sharing it, including Close()
 
 _`internal/navigate/lsp.go:1019` · also at `internal/navigate/lsp.go:1051,736,1055,391`, `internal/navigate/pool.go:319,743` · lane: resilience · confidence: confirmed_
+
+**Status.** Fixed — commit `e513851` on `codebase-review-fixes/2026-08-18` · tests added: yes.
 
 **Problem.** call()'s write happens before the context-aware select, writeMu is shared by every lane routed to that pooled server, and notify()/ensureFresh() take no context at all -- so a server that stops draining stdin while staying alive can wedge every lane sharing it indefinitely, defeat both production timeout layers (MCP's 30s default and moedex-nav's -timeout flag), and even hang Close() itself since the shutdown handshake goes through the same blocking path.
 
@@ -189,6 +215,8 @@ _`internal/navigate/lsp.go:1019` · also at `internal/navigate/lsp.go:1051,736,1
 
 _`internal/search/search.go:182` · lane: correctness · confidence: confirmed_
 
+**Status.** Fixed — commit `8421c3d` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** LiteralWithStats's positional begin/end-gram intersection verifies a candidate with bytes.Equal against the blob's raw, unsplit content and attributes the match to a single line via b.LineOf(pos), without checking that the matched span stays within that line. A literal query containing a raw newline byte (length >= 3, so it takes the fast/positional path rather than the line-bounded fallback) can match content that straddles two real lines.
 
 **Trigger.** A literal query containing a raw newline byte, reachable via cmd/moedex-serve's GET /search?q=... handler with a URL-encoded newline (%0A) in the query string, or any CLI one-shot query.
@@ -203,6 +231,8 @@ _`internal/search/search.go:182` · lane: correctness · confidence: confirmed_
 
 _`internal/server/graphrefresh.go:124` · also at `internal/server/graphbuild.go:188,198`, `internal/server/graphhierarchy.go:118,364`, `internal/server/graphcalls_lsp.go`, `internal/server/graphsimilar_onnx.go`, `cmd/moedex-index/graph_onnx.go:37` · lane: graph-refresh-consistency · corroborated by: build-tag-boundary, correctness, graph-refresh-consistency (x4 assignments) · confidence: confirmed_
 
+**Status.** Fixed — commit `f9049e7` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** RefreshGraph's incremental carry-forward logic (graphrefresh.go:124) only preserves an existing edge if its Name is present in sweep.eligible, which by construction can never contain the empty string. LSP CALLS, ONNX SIMILAR_TO, HTTP_CALLS, manifest DEPENDS_ON, and the newly-added EXTENDS/IMPLEMENTS/CONTAINS_METHOD hierarchy edges are all persisted with Name == "" (they have no associated symbol name), so every one of these edge families is unconditionally treated as stale and dropped the moment any single blob anywhere in the corpus changes. Separately, RefreshGraph's own rebuildAll fallback (the only full-build code path the default, non-onnx moedex-index binary ever calls) never invokes the LSP-call, ONNX-similarity, HTTP-route, manifest-dependency, or hierarchy edge-generation passes at all -- those only run inside BuildGraphWithOptions, whose only production caller is the onnx-tagged cmd/moedex-index/graph_onnx.go path.
 
 **Trigger.** Only fires when RefreshGraph's delta path actually runs against a previous graph that already contains Name=="" edges. It does NOT fire for the default (non-onnx, non-lsp) build at all, since that binary's wrapper only ever calls RefreshGraph and its full-build fallback (rebuildAll) never generates HTTP/manifest/hierarchy edges in the first place -- there is nothing to drop. It also does NOT fire for an onnx-tagged binary under default settings, since MOEDEX_GRAPH_SIMILAR_TOP_K defaults nonzero and that always routes every build/refresh through the full (non-incremental) BuildGraphWithOptions path. It fires when: an onnx-tagged deployment runs a build/refresh with similarity enabled (topK>0, producing SIMILAR_TO/HTTP/manifest/hierarchy edges), then later runs a refresh with MOEDEX_GRAPH_SIMILAR_TOP_K=0 (or any caller invokes server.RefreshGraph directly, as only tests do today) against that same shard dir -- every edge of those types is silently and permanently dropped on that refresh and stays gone on all subsequent refreshes, with no error and no counter surfaced to an operator who isn't specifically watching EdgesDropped in the stats output.
@@ -216,6 +246,8 @@ _`internal/server/graphrefresh.go:124` · also at `internal/server/graphbuild.go
 #### F-02 — A missing or unbuilt graph sidecar hard-fails the entire moedex-serve MCP daemon boot
 
 _`internal/server/graphtools.go:137` · lane: resilience · confidence: confirmed_
+
+**Status.** Fixed — commit `c4ccdb6` on `codebase-review-fixes/2026-08-18` · tests added: yes.
 
 **Problem.** openGraphSnapshot treats a missing/unbuilt corpus-graph.graph file as a fatal boot error (propagating to os.Exit(1)) for moedex-serve -mcp/-mcp-http, even though every sibling ranking sidecar (token index, symbol index, embedding store) is documented and implemented as best-effort ("a failed cache write never fails a boot"), moedex-index build/refresh itself treats a graph-sidecar build failure as a non-fatal warning, and this exact toolset's own SIGHUP Reload path treats the identical failure as recoverable (keeps serving the old graph).
 
