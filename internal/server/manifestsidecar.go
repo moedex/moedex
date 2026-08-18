@@ -101,9 +101,16 @@ func addManifestEdges(builder *diskgraph.Builder, seen map[persistedGraphEdge]st
 			evidenceLen = 1
 		}
 		edge := diskgraph.Edge{
-			Type:         diskgraph.EdgeDependsOn,
+			Type: diskgraph.EdgeDependsOn,
+			// The target is keyed at manifestNodeOffset, same as the source: a
+			// manifest file has exactly one node identity no matter which side of
+			// an edge it plays. Keying it at the resolver's raw identity-declaration
+			// offset instead would give the same manifest two different node
+			// identities depending on its role, so an edge landing on it as a
+			// target would never match the node it is stored under as a source —
+			// impact_analysis would find the node but report zero dependents.
 			TargetBlob:   resolved.Target.Blob,
-			TargetOffset: uint64(resolved.Target.Offset),
+			TargetOffset: manifestNodeOffset,
 			Confidence:   graph.Proven,
 			Evidence: graph.Evidence{
 				BlobSHA:    resolved.Source.Blob,
@@ -121,6 +128,15 @@ func addManifestEdges(builder *diskgraph.Builder, seen map[persistedGraphEdge]st
 			evidenceBlob:   edge.Evidence.BlobSHA,
 			evidence:       edge.Evidence.ByteOffset,
 			evidenceLength: edge.Evidence.ByteLength,
+		}
+		// builder.Add below only registers a node for the edge's source. A target
+		// manifest with no outgoing dependencies of its own (a pure leaf, e.g. a
+		// shared "core"/"common" library) would otherwise never become a graph
+		// node at any offset, and impact_analysis(file=<that leaf>) would find no
+		// node to anchor its roots to. AddNode is idempotent, so this is a no-op
+		// once the target is also seen as a source elsewhere.
+		if err := builder.AddNode(diskgraph.Key{BlobSHA: resolved.Target.Blob, SymbolOffset: manifestNodeOffset}); err != nil {
+			return report, err
 		}
 		if _, duplicate := seen[record]; duplicate {
 			continue

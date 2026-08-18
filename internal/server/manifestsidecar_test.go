@@ -249,6 +249,87 @@ func TestManifestEdgesFromDedupedShards(t *testing.T) {
 	}
 }
 
+// TestManifestEdgeTargetOffsetMatchesSourceNodeKey pins F-20: a manifest that is
+// both a DEPENDS_ON source (billing depends on core) and the target of another
+// manifest's dependency (gateway depends on billing) must resolve to the exact
+// same node key on both sides. addManifestEdges forces the source side to
+// manifestNodeOffset but, before the fix, left the target side at the resolver's
+// raw non-zero identity-declaration offset, so an edge landing on billing never
+// matched the node billing was actually stored under.
+func TestManifestEdgeTargetOffsetMatchesSourceNodeKey(t *testing.T) {
+	dir := writeManifestShards(t)
+	gatewayGoMod := "module gitlab.example.com/platform/gateway\n\ngo 1.26\n\nrequire gitlab.example.com/platform/billing v0.9.0\n"
+	gateway := index.New()
+	gateway.AddFile("platform/gateway", "go.mod", "/gateway/go.mod", "gateway-gomod-sha", []byte(gatewayGoMod))
+	if err := diskstore.Save(gateway, filepath.Join(dir, "shard-0002.idx")); err != nil {
+		t.Fatal(err)
+	}
+
+	path, _, err := BuildGraph(dir)
+	if err != nil {
+		t.Fatalf("BuildGraph: %v", err)
+	}
+	g, err := diskgraph.Open(path)
+	if err != nil {
+		t.Fatalf("open graph: %v", err)
+	}
+	defer g.Close()
+
+	// billing-gomod-sha is itself a DEPENDS_ON source (it requires core), so its
+	// own node already sits at manifestNodeOffset regardless of this fix.
+	foundBillingNode := false
+	for _, k := range g.Keys() {
+		if k.BlobSHA == "billing-gomod-sha" && k.SymbolOffset == manifestNodeOffset {
+			foundBillingNode = true
+		}
+	}
+	if !foundBillingNode {
+		t.Fatalf("billing-gomod-sha has no node at manifestNodeOffset in %#v", g.Keys())
+	}
+
+	edges := g.Load("gateway-gomod-sha", manifestNodeOffset)
+	if len(edges) != 1 || edges[0].TargetBlob != "billing-gomod-sha" {
+		t.Fatalf("gateway-gomod-sha adjacency = %#v, want exactly one DEPENDS_ON to billing-gomod-sha", edges)
+	}
+	if edges[0].TargetOffset != manifestNodeOffset {
+		t.Fatalf("edge TargetOffset = %d, want %d (billing's own node key) — otherwise impact_analysis(file=billing/go.mod) can never find gateway as a dependent", edges[0].TargetOffset, manifestNodeOffset)
+	}
+}
+
+// TestManifestLeafDependencyTargetBecomesGraphNode pins F-20's second bug: a
+// manifest that is only ever the target of another manifest's dependency, and
+// declares no outgoing dependencies of its own (a pure leaf, like platform/core
+// here), must still become a graph node. addManifestEdges only calls
+// builder.AddNode for the source side of an edge, so before the fix a pure-leaf
+// target never became a node at all and impact_analysis(file=<leaf>) had
+// nothing to anchor its roots to.
+func TestManifestLeafDependencyTargetBecomesGraphNode(t *testing.T) {
+	dir := writeManifestShards(t)
+	path, _, err := BuildGraph(dir)
+	if err != nil {
+		t.Fatalf("BuildGraph: %v", err)
+	}
+	g, err := diskgraph.Open(path)
+	if err != nil {
+		t.Fatalf("open graph: %v", err)
+	}
+	defer g.Close()
+
+	want := []diskgraph.Key{
+		{BlobSHA: "core-csproj-sha", SymbolOffset: manifestNodeOffset},
+		{BlobSHA: "core-gomod-sha", SymbolOffset: manifestNodeOffset},
+	}
+	keys := make(map[diskgraph.Key]bool, len(g.Keys()))
+	for _, k := range g.Keys() {
+		keys[k] = true
+	}
+	for _, w := range want {
+		if !keys[w] {
+			t.Errorf("graph has no node at %+v: platform/core is a pure dependency leaf and must still resolve for impact_analysis(file=core)", w)
+		}
+	}
+}
+
 func TestManifestEdgesReportsAnEmptyShardDir(t *testing.T) {
 	dir := t.TempDir()
 	if _, _, err := ManifestEdges(dir); err == nil {
