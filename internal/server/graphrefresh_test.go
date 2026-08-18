@@ -648,3 +648,73 @@ func TestRefreshGraphIsFasterThanFullRebuild(t *testing.T) {
 		t.Fatalf("delta refresh took %s, full rebuild took %s", deltaTime, fullTime)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// computeParallel — panic recovery and fail-fast (F-33, F-34)
+// ---------------------------------------------------------------------------
+
+// TestComputeParallelHappyPath checks computeParallel preserves input order
+// and runs every item through fn when nothing fails, before the failure-path
+// tests below exercise the recovery/fail-fast behavior.
+func TestComputeParallelHappyPath(t *testing.T) {
+	items := []string{"a", "b", "c", "d", "e"}
+	got, err := computeParallel(items, 4, func(name string) (string, error) {
+		return name + "!", nil
+	})
+	if err != nil {
+		t.Fatalf("computeParallel: %v", err)
+	}
+	want := []string{"a!", "b!", "c!", "d!", "e!"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("results = %v, want %v", got, want)
+	}
+}
+
+// TestComputeParallelRecoversPanic pins F-33: a panic anywhere inside fn's
+// call graph must not crash the caller. Before the fix, computeEdgesParallel's
+// worker loop called computeEdgesForName with no recover() at all, so a panic
+// while processing any one name — reachable transitively through every
+// language extractor in the corpus — would take down the whole
+// moedex-index build/refresh process instead of surfacing as an error.
+func TestComputeParallelRecoversPanic(t *testing.T) {
+	items := []string{"safe-1", "boom", "safe-2"}
+	_, err := computeParallel(items, 4, func(name string) (int, error) {
+		if name == "boom" {
+			panic("simulated extractor panic")
+		}
+		return len(name), nil
+	})
+	if err == nil {
+		t.Fatal("computeParallel: want an error from the recovered panic, got nil")
+	}
+	if !strings.Contains(err.Error(), "boom") {
+		t.Fatalf("error %q does not name the offending item", err.Error())
+	}
+	if !strings.Contains(err.Error(), "simulated extractor panic") {
+		t.Fatalf("error %q does not carry the panic value", err.Error())
+	}
+}
+
+// TestComputeParallelFailsFast pins F-34: once one item's call errors, workers
+// must stop STARTING new items instead of draining the whole remaining queue
+// to completion before the error is inspected. workers=1 makes the shared
+// work channel's FIFO drain order deterministic, so every item queued after
+// the failing one is provably never invoked — before the fix, all of them
+// would have run to completion regardless.
+func TestComputeParallelFailsFast(t *testing.T) {
+	items := []string{"first", "second", "third", "fourth", "fifth"}
+	var invoked []string
+	_, err := computeParallel(items, 1, func(name string) (struct{}, error) {
+		invoked = append(invoked, name)
+		if name == "first" {
+			return struct{}{}, fmt.Errorf("boom on %s", name)
+		}
+		return struct{}{}, nil
+	})
+	if err == nil {
+		t.Fatal("computeParallel: want an error, got nil")
+	}
+	if !reflect.DeepEqual(invoked, []string{"first"}) {
+		t.Fatalf("invoked = %v, want only [first] — items queued after the failing one ran anyway", invoked)
+	}
+}

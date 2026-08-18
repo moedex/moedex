@@ -34,7 +34,9 @@ import (
 	"math"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"sync"
+	"sync/atomic"
 
 	"moedex/internal/graph/candidates"
 	"moedex/internal/graph/diskgraph"
@@ -301,19 +303,54 @@ func (s *graphSweep) rebuildAll(dir string, stats *GraphRefreshStats) (string, e
 
 // computeEdgesParallel fans out computeEdgesForName across GOMAXPROCS workers.
 // Results are returned in the same order as names for deterministic output.
+// See computeParallel for the panic-recovery and fail-fast behavior this
+// relies on.
 func (s *graphSweep) computeEdgesParallel(names []string, generation uint64) ([][]graphKeyEdge, error) {
-	n := len(names)
+	return computeParallel(names, runtime.GOMAXPROCS(0), func(name string) ([]graphKeyEdge, error) {
+		return s.computeEdgesForName(name, generation)
+	})
+}
+
+// computeParallel fans fn out across up to workers goroutines, one call per
+// entry of items, and returns the results in input order.
+//
+// Two failure modes are handled that a bare "drain a channel, spawn goroutines"
+// pool does not:
+//
+//   - Panic recovery. fn's call graph (computeEdgesForName reaches every
+//     language-specific extractor in the corpus) is not guarded by any
+//     recover() anywhere else in that call graph, so a single panic — a nil
+//     deref, an index-out-of-range — while processing one item among
+//     potentially tens of thousands would otherwise crash the whole
+//     moedex-index build/refresh process with no indication of which item
+//     was being processed. Each worker recovers a panic from fn into an
+//     error naming the offending item, mirroring the recover-per-unit-of-work
+//     pattern already used at the MCP (mcp.handleSafe) and HTTP
+//     (cmd/moedex-serve's withRecover) layers.
+//   - Fail-fast. Once any item reports an error (returned or recovered),
+//     every worker stops STARTING new items and drains the rest of the work
+//     queue without calling fn, instead of running every other
+//     already-queued item to completion before the error is even inspected.
+//     Items already in flight when the error is observed still run to
+//     completion — fn takes no context/cancellation, so an in-flight call
+//     cannot be interrupted mid-call — which bounds the wasted work to at
+//     most `workers` items instead of the whole remaining backlog.
+//
+// On any error (returned or recovered), the results collected so far are
+// discarded, matching the caller's existing all-or-nothing contract.
+func computeParallel[T any](items []string, workers int, fn func(name string) (T, error)) ([]T, error) {
+	n := len(items)
 	if n == 0 {
 		return nil, nil
 	}
-
-	workers := runtime.GOMAXPROCS(0)
 	if workers > n {
 		workers = n
 	}
+	if workers < 1 {
+		workers = 1
+	}
 
-	results := make([][]graphKeyEdge, n)
-	errs := make([]error, n)
+	results := make([]T, n)
 
 	work := make(chan int, n)
 	for i := range n {
@@ -321,24 +358,50 @@ func (s *graphSweep) computeEdgesParallel(names []string, generation uint64) ([]
 	}
 	close(work)
 
-	var wg sync.WaitGroup
+	var (
+		wg       sync.WaitGroup
+		failed   atomic.Bool
+		errOnce  sync.Once
+		firstErr error
+	)
 	wg.Add(workers)
 	for range workers {
 		go func() {
 			defer wg.Done()
 			for i := range work {
-				results[i], errs[i] = s.computeEdgesForName(names[i], generation)
+				if failed.Load() {
+					continue // an earlier item already failed; drain without computing
+				}
+				result, err := runRecovered(items[i], func() (T, error) { return fn(items[i]) })
+				if err != nil {
+					errOnce.Do(func() { firstErr = err })
+					failed.Store(true)
+					continue
+				}
+				results[i] = result
 			}
 		}()
 	}
 	wg.Wait()
 
-	for _, err := range errs {
-		if err != nil {
-			return nil, err
-		}
+	if firstErr != nil {
+		return nil, firstErr
 	}
 	return results, nil
+}
+
+// runRecovered calls fn and converts any panic into an error naming item, so
+// a panic anywhere in fn's call graph cannot crash the caller. The stack is
+// printed immediately (mirrors mcp.handleSafe) so it is not lost even though
+// the returned error is just a one-line summary.
+func runRecovered[T any](item string, fn func() (T, error)) (result T, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			debug.PrintStack()
+			err = fmt.Errorf("server: panic computing graph edges for %q: %v", item, r)
+		}
+	}()
+	return fn()
 }
 
 func (s *graphSweep) contentDelta(previous *diskgraph.Graph) (added []string, removed map[string]struct{}) {
