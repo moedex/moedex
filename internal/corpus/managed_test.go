@@ -770,6 +770,134 @@ func TestManagedStagedOnly(t *testing.T) {
 		})
 	}
 }
+func TestAcquireManagedLockIsExclusiveNonBlockingAndReleasable(t *testing.T) {
+	root := t.TempDir()
+
+	release, err := acquireManagedLock(root)
+	if err != nil {
+		t.Fatalf("first acquireManagedLock: %v", err)
+	}
+
+	if _, err := acquireManagedLock(root); !errors.Is(err, errManagedCorpusLocked) {
+		t.Fatalf("second acquireManagedLock while held = %v, want errManagedCorpusLocked", err)
+	}
+
+	if err := release(); err != nil {
+		t.Fatalf("release: %v", err)
+	}
+	// Releasing must not delete the lock file (see managed_lock.go): a
+	// missing file here would mean a later acquirer could recreate a
+	// different inode than a still-open racer, silently splitting the lock.
+	if _, statErr := os.Stat(managedLockPath(root)); statErr != nil {
+		t.Fatalf("release removed the lock file: %v", statErr)
+	}
+
+	next, err := acquireManagedLock(root)
+	if err != nil {
+		t.Fatalf("acquireManagedLock after release: %v", err)
+	}
+	if err := next(); err != nil {
+		t.Fatalf("release after reacquire: %v", err)
+	}
+	// Calling release twice must be a harmless no-op.
+	if err := next(); err != nil {
+		t.Fatalf("second release call: %v", err)
+	}
+}
+
+// TestSyncManagedRejectsConcurrentInvocation reproduces F-14: a second
+// sync/init against the same corpus root while one is already in flight must
+// not be allowed to interleave its check-then-act sequence with the first
+// and desync corpus.lock.json. It simulates "already in flight" by holding
+// the same advisory lock SyncManaged itself takes, then asserts the second
+// call fails closed with the whole superproject snapshot byte-for-byte
+// untouched, and that the lock does not leak past the holder that failed.
+func TestSyncManagedRejectsConcurrentInvocation(t *testing.T) {
+	fixture := newManagedGitFixture(t)
+	root := filepath.Join(t.TempDir(), "managed")
+	cfg := Config{Host: DefaultHost, Root: root, Groups: []string{"g"}, Concurrency: 1}
+	if _, err := InitManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}); err != nil {
+		t.Fatalf("InitManaged: %v", err)
+	}
+
+	initialHead := strings.TrimSpace(runFixtureGit(t, "-C", root, "rev-parse", "HEAD"))
+	initialLock, err := os.ReadFile(LockPath(root))
+	if err != nil {
+		t.Fatal(err)
+	}
+	initialCatalog, err := os.ReadFile(CatalogPath(root))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A concurrent invocation (e.g. a systemd-timer sync) already holds the
+	// root's advisory lock.
+	release, err := acquireManagedLock(root)
+	if err != nil {
+		t.Fatalf("simulate concurrent holder: %v", err)
+	}
+
+	updatedCommit := commitManagedFixture(t, &fixture, "raced update\n", false)
+	_, err = SyncManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}, ManagedSyncOptions{EnumerationComplete: true})
+	if !errors.Is(err, errManagedCorpusLocked) {
+		t.Fatalf("SyncManaged while locked = %v, want errManagedCorpusLocked", err)
+	}
+
+	assertFileBytes(t, LockPath(root), initialLock)
+	assertFileBytes(t, CatalogPath(root), initialCatalog)
+	if head := strings.TrimSpace(runFixtureGit(t, "-C", root, "rev-parse", "HEAD")); head != initialHead {
+		t.Fatalf("rejected concurrent sync still advanced the superproject: %s -> %s", initialHead, head)
+	}
+
+	if err := release(); err != nil {
+		t.Fatalf("release: %v", err)
+	}
+
+	// With the lock free, the update that was pending during the race is
+	// now picked up normally — the lock does not leak past its holder.
+	result, err := SyncManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}, ManagedSyncOptions{EnumerationComplete: true})
+	if err != nil || !result.Changed {
+		t.Fatalf("SyncManaged after release: result=%+v err=%v", result, err)
+	}
+	assertLockedCommit(t, root, fixture.Project.ID, updatedCommit, LockStatusCurrent)
+}
+
+// TestInitManagedAcquiresLockBeforeMutatingAndReleasesIt exercises the same
+// call InitManaged makes right after "git init" (see managed.go): once a
+// first attempt has reached that point and holds the root's lock, a second,
+// slower attempt reaching the identical point must not be able to take it
+// too — and once the first attempt's lock is released (as InitManaged's own
+// defer does on every return path), the lock is acquirable again rather
+// than leaking. InitManaged's own requireEmptyDestination preflight already
+// rejects a second *whole* invocation once ".git" exists on disk (covered
+// by TestInitManagedRejectsUserOwnedAndUnsafeDestinations's "unmarked Git
+// repository" case); this test isolates the narrower guarantee added for
+// F-14 — the lock InitManaged takes for the mutating phase itself — using
+// the same acquireManagedLock/root pairing InitManaged uses, rather than
+// racing two real InitManaged goroutines through an inherently timing
+// dependent TOCTOU window.
+func TestInitManagedAcquiresLockBeforeMutatingAndReleasesIt(t *testing.T) {
+	root := t.TempDir()
+	if _, err := runManagedGit(t.Context(), ExecRunner{}, "test setup", root, "init"); err != nil {
+		t.Fatalf("simulate InitManaged's own git init: %v", err)
+	}
+
+	release, err := acquireManagedLock(root)
+	if err != nil {
+		t.Fatalf("first InitManaged-equivalent acquire: %v", err)
+	}
+	if _, err := acquireManagedLock(root); !errors.Is(err, errManagedCorpusLocked) {
+		t.Fatalf("second, slower InitManaged-equivalent acquire = %v, want errManagedCorpusLocked", err)
+	}
+
+	if err := release(); err != nil {
+		t.Fatalf("release: %v", err)
+	}
+	if _, err := acquireManagedLock(root); err != nil {
+		t.Fatalf("acquire after release did not succeed — lock leaked: %v", err)
+	}
+}
+
 func TestManagedFailureAtCloneLeavesMarkedRootAndNoUserDeletion(t *testing.T) {
 	fixture := newManagedGitFixture(t)
 	root := filepath.Join(t.TempDir(), "managed")

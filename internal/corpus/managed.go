@@ -57,6 +57,18 @@ func InitManaged(ctx context.Context, r Runner, cfg Config, projects []Project) 
 	if _, err := runManagedGit(ctx, r, "initialize superproject", root, "init"); err != nil {
 		return fail("initializing the Git superproject", err)
 	}
+
+	// Serialize everything from here on (marker, submodule adds, lock write,
+	// commit) against any other sync/init invocation racing this same root.
+	// Acquired only once ".git" exists, since the lock lives inside it —
+	// see managed_lock.go. Two concurrent "git init" calls against a fresh,
+	// still-empty root are themselves harmless/idempotent.
+	release, err := acquireManagedLock(root)
+	if err != nil {
+		return fail("locking the managed corpus root", err)
+	}
+	defer func() { _ = release() }()
+
 	if err := WriteCatalog(root, catalog); err != nil {
 		return fail("writing the ownership marker", err)
 	}
