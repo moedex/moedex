@@ -115,6 +115,29 @@ func TestRestoreAliasesContentWithoutCopying(t *testing.T) {
 	}
 }
 
+// TestRestoreNilPostingsThenAddFile locks in that Restore(blobs, nil) never
+// aliases the nil map into ix.postings (F-29): a nil ix.postings would panic
+// with "assignment to entry in nil map" on the very first AddFile call after
+// Restore. AddFile must succeed and its postings must be visible through
+// Postings/PostingCount, exactly as if the index had been built fresh.
+func TestRestoreNilPostingsThenAddFile(t *testing.T) {
+	blobs := []BlobData{{SHA: "sha1", Content: []byte("foo")}}
+	ix := Restore(blobs, nil)
+
+	// Must not panic on a nil-postings-map write.
+	ix.AddFile("r", "b.txt", "/b", "sha2", []byte("bar"))
+
+	if got := ix.Postings(tg("bar")); !reflect.DeepEqual(got, []Posting{{Blob: 1, Offset: 0}}) {
+		t.Errorf("Postings(bar) = %v, want [{1 0}]", got)
+	}
+	if got := ix.PostingCount(tg("bar")); got != 1 {
+		t.Errorf("PostingCount(bar) = %d, want 1", got)
+	}
+	if ix.NumBlobs() != 2 {
+		t.Errorf("NumBlobs = %d, want 2", ix.NumBlobs())
+	}
+}
+
 // fakePP is a PostingProvider that serves from an in-memory map, letting us
 // assert that a lazily-loaded index delegates to its provider.
 type fakePP struct {

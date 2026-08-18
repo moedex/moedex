@@ -129,6 +129,44 @@ func TestAddFilePostingsSortedAndCorrect(t *testing.T) {
 	}
 }
 
+// TestAddFilePanicsOnLazyIndex locks in AddFile's guard against a
+// RestoreLazy-built index. Without the guard, addFile writes new postings
+// into ix.postings, but Postings/PostingCount/Trigrams all check ix.pp first
+// and never consult ix.postings once pp is set -- so the new blob's postings
+// would be silently unreachable through every read path, a real
+// under-approximation of matches (F-29). Panicking loudly is safer than that.
+func TestAddFilePanicsOnLazyIndex(t *testing.T) {
+	blobs := []BlobData{{SHA: "sha1", Content: []byte("foo")}}
+	pp := &fakePP{m: map[trigram.Trigram][]Posting{
+		tg("foo"): {{Blob: 0, Offset: 0}},
+	}}
+	ix := RestoreLazy(blobs, pp)
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("AddFile on a RestoreLazy index did not panic, want panic")
+		}
+	}()
+	ix.AddFile("r", "b.txt", "/b", "sha2", []byte("bar"))
+}
+
+// TestAddFileUnindexedPanicsOnLazyIndex mirrors the AddFile guard for the
+// unindexed variant, which shares the same addFile guard.
+func TestAddFileUnindexedPanicsOnLazyIndex(t *testing.T) {
+	blobs := []BlobData{{SHA: "sha1", Content: []byte("foo")}}
+	pp := &fakePP{m: map[trigram.Trigram][]Posting{
+		tg("foo"): {{Blob: 0, Offset: 0}},
+	}}
+	ix := RestoreLazy(blobs, pp)
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("AddFileUnindexed on a RestoreLazy index did not panic, want panic")
+		}
+	}()
+	ix.AddFileUnindexed("r", "b.txt", "/b", "sha2", []byte("bar"))
+}
+
 func TestBlobOutOfRangeReturnsNil(t *testing.T) {
 	ix := New()
 	ix.AddFile("repo", "a.txt", "/abs/a.txt", "sha1", []byte("abc"))
