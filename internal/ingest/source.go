@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"moedex/internal/corpus"
+	"moedex/internal/corpus/catalog"
 )
 
 // RepoSource is the acquisition-to-indexing boundary for one repository.
@@ -46,7 +46,7 @@ func DiscoverSources(root string) ([]RepoSource, error) {
 	if err != nil {
 		return nil, fmt.Errorf("resolve corpus root: %w", err)
 	}
-	managed, err := corpus.IsManagedRoot(absRoot)
+	managed, err := catalog.IsManagedRoot(absRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -88,14 +88,14 @@ func DiscoverSourceDirs(root string) ([]string, error) {
 }
 
 func discoverManagedSources(root string) ([]RepoSource, error) {
-	catalog, err := corpus.LoadCatalog(root)
+	cat, err := catalog.LoadCatalog(root)
 	if err != nil {
 		return nil, err
 	}
-	if catalog.Host != corpus.DefaultHost {
-		return nil, fmt.Errorf("managed corpus host %q does not match pinned host %q", catalog.Host, corpus.DefaultHost)
+	if cat.Host != catalog.DefaultHost {
+		return nil, fmt.Errorf("managed corpus host %q does not match pinned host %q", cat.Host, catalog.DefaultHost)
 	}
-	lock, err := corpus.LoadLock(root, catalog.Host)
+	lock, err := catalog.LoadLock(root, cat.Host)
 	if err != nil {
 		return nil, err
 	}
