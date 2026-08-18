@@ -44,6 +44,54 @@ func TestHardPassOKWithNoErrors(t *testing.T) {
 	}
 }
 
+// TestAdjudicateAllExcludesRGFailedQueriesFromEngineQuirk pins F-30: a query
+// whose own rg.run() call errored must not be classified as a "Justified
+// engine quirk" merely because its ripgrep match set is nil — rg.run()'s
+// zero value on error — while moedex agrees with gold. Before the fix, the
+// caller threaded the run-wide rgAvail flag into every query's adjudicate()
+// call regardless of whether that specific query's rg.run() had failed, so
+// this nil set was misread as "ripgrep genuinely found zero matches" — a
+// real divergence from a non-empty moe/gold set — filing the query under
+// EngineQuirks even though the true cause was a ripgrep tool error, not an
+// RE2-vs-Rust semantics quirk. Query 1 is a control: a genuine rg divergence
+// (rgFailed=false) must still classify as VEngineQuirk, so the fix only
+// excludes queries actually marked failed rather than blanket-suppressing
+// the classification.
+func TestAdjudicateAllExcludesRGFailedQueriesFromEngineQuirk(t *testing.T) {
+	queries := []Query{{Pattern: "a"}, {Pattern: "b"}}
+	moeSets := []MatchSet{{pack(1, 1)}, {pack(1, 1)}}
+	goldSets := []MatchSet{{pack(1, 1)}, {pack(1, 1)}}
+	// Both queries' rg match sets are nil: query 0 because rg.run() actually
+	// errored for it (rgFailed[0]=true); query 1 stands in for a genuine rg
+	// divergence (rgFailed[1]=false).
+	rgSets := []MatchSet{nil, nil}
+	rgFailed := []bool{true, false}
+
+	results, _, _, quirks := adjudicateAll(queries, moeSets, rgSets, goldSets, true, rgFailed)
+
+	if results[0].Verdict != VOK {
+		t.Fatalf("query 0 (rg.run() errored): Verdict = %v, want VOK (moe==gold, rg not actually comparable)", results[0].Verdict)
+	}
+	for _, id := range quirks {
+		if id == 0 {
+			t.Fatalf("query 0 (rg.run() errored) must not appear in EngineQuirks, got quirks=%v", quirks)
+		}
+	}
+
+	if results[1].Verdict != VEngineQuirk {
+		t.Fatalf("query 1 (genuine rg divergence): Verdict = %v, want VEngineQuirk", results[1].Verdict)
+	}
+	found := false
+	for _, id := range quirks {
+		if id == 1 {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("query 1 (genuine rg divergence) should still appear in EngineQuirks, got quirks=%v", quirks)
+	}
+}
+
 // TestHardPassFailsWhenRGUnavailable locks the invariant F-055 relies on:
 // adjudicate's rgAvail==false branch sets VOK on moedex==gold alone (no
 // ripgrep comparison happened), and that is only safe because HardPass

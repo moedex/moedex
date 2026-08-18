@@ -228,6 +228,14 @@ func Run(cfg RunConfig) (*Result, error) {
 
 	// --- ripgrep phase over the materialized mirror (= exactly F).
 	rgSets := make([]MatchSet, nq)
+	// rgFailed[i] marks a query whose own rg.run() call errored (e.g.
+	// exhausted its retries) even though ripgrep overall is available. It is
+	// distinct from rgAvail (the run-wide "rg process could be spawned at
+	// all" flag): without tracking it separately, a per-query rg.run()
+	// failure would leave rgSets[i] at its nil zero value, which
+	// adjudicate/runZoekt would then misread as "ripgrep found zero matches"
+	// truth rather than "ripgrep could not be asked for this query" (F-30).
+	rgFailed := make([]bool, nq)
 	var rgErrs []RGError
 	var rgMu sync.Mutex
 	rgAvail := false
@@ -242,6 +250,7 @@ func Run(cfg RunConfig) (*Result, error) {
 				rgMu.Lock()
 				rgErrs = append(rgErrs, RGError{QueryID: i, Err: e.Error()})
 				rgMu.Unlock()
+				rgFailed[i] = true
 				return
 			}
 			rgSets[i] = set
@@ -257,31 +266,50 @@ func Run(cfg RunConfig) (*Result, error) {
 		MoeErrors: moeErrs, SkipRG: cfg.SkipRG,
 		ScanWall: scanWall, RGWall: rgWall,
 	}
-	res.Results = make([]QueryResult, nq)
-	for i := range bat.Queries {
-		qr := adjudicate(bat.Queries[i], moeSets[i], rgSets[i], goldSets[i], rgAvail)
-		res.Results[i] = qr
-		switch qr.Verdict {
-		case VUnderApprox:
-			res.UnderApprox = append(res.UnderApprox, i)
-		case VOverApprox:
-			res.OverApprox = append(res.OverApprox, i)
-		case VEngineQuirk:
-			res.EngineQuirks = append(res.EngineQuirks, i)
-		}
-	}
+	res.Results, res.UnderApprox, res.OverApprox, res.EngineQuirks =
+		adjudicateAll(bat.Queries, moeSets, rgSets, goldSets, rgAvail, rgFailed)
 	res.MoeLatency = latency(moeDur)
 	res.MoeDur = moeDur
 	res.MoeAttr = moeAttr
 
 	// --- Zoekt differential (soft).
 	if !cfg.SkipZoekt {
-		res.Zoekt = runZoekt(cfg, built, bat, moeSets, rgSets, goldSets, rgAvail)
+		res.Zoekt = runZoekt(cfg, built, bat, moeSets, rgSets, goldSets, rgAvail, rgFailed)
 	}
 
 	res.PeakRSS = maxRSS()
 	res.TotalWall = time.Since(t0)
 	return res, nil
+}
+
+// adjudicateAll adjudicates every query in the battery against moedex,
+// ripgrep, and gold, and buckets the resulting verdicts into
+// UnderApprox/OverApprox/EngineQuirks query-ID slices.
+//
+// rgAvail is the run-wide "the rg process itself could be spawned" flag;
+// rgFailed marks the query IDs whose own rg.run() call errored (e.g.
+// exhausted its retries) even though rg is available overall. Ripgrep is
+// only treated as a real per-query comparison point when both hold —
+// otherwise a query whose individual rg invocation failed would have its
+// empty (zero-value) rgSets[i] misread as "ripgrep found zero matches,"
+// which can misclassify a genuine tool-error query as a "Justified engine
+// quirk" (F-30) instead of excluding it from that classification the way a
+// run-wide rg outage already does.
+func adjudicateAll(queries []Query, moeSets, rgSets, goldSets []MatchSet, rgAvail bool, rgFailed []bool) (results []QueryResult, under, over, quirks []int) {
+	results = make([]QueryResult, len(queries))
+	for i, q := range queries {
+		qr := adjudicate(q, moeSets[i], rgSets[i], goldSets[i], rgAvail && !rgFailed[i])
+		results[i] = qr
+		switch qr.Verdict {
+		case VUnderApprox:
+			under = append(under, i)
+		case VOverApprox:
+			over = append(over, i)
+		case VEngineQuirk:
+			quirks = append(quirks, i)
+		}
+	}
+	return results, under, over, quirks
 }
 
 // ZoektReport holds the competitive differential outcome.
@@ -301,7 +329,7 @@ type ZBucketStat struct {
 	ZoektSkipped      int
 }
 
-func runZoekt(cfg RunConfig, built *Built, bat *Battery, moeSets, rgSets, goldSets []MatchSet, rgAvail bool) *ZoektReport {
+func runZoekt(cfg RunConfig, built *Built, bat *Battery, moeSets, rgSets, goldSets []MatchSet, rgAvail bool, rgFailed []bool) *ZoektReport {
 	idxDir := filepath.Join(cfg.Build.WorkDir, "zoekt-index")
 	z := setupZoekt(built.MirrorDir, idxDir, cfg.ZoektFileLimit, cfg.Logf)
 	rep := &ZoektReport{Available: z.available, Notes: z.notes, PerBucket: map[Bucket]*ZBucketStat{}}
@@ -329,7 +357,7 @@ func runZoekt(cfg RunConfig, built *Built, bat *Battery, moeSets, rgSets, goldSe
 		i := ids[k]
 		q := bat.Queries[i]
 		truth := goldSets[i]
-		if rgAvail {
+		if rgAvail && !rgFailed[i] {
 			truth = rgSets[i]
 		}
 		truthFiles := fileSetOf(truth)

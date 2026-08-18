@@ -116,6 +116,14 @@ type QueryResult struct {
 
 // adjudicate compares moedex against ripgrep, using gold to classify any
 // divergence. rg may be nil (Zoekt/ripgrep unavailable for this query).
+//
+// rgAvail must reflect this specific query, not just whether the rg process
+// could be spawned at all: if ripgrep overall is available but this query's
+// own rg.run() call errored, the caller must still pass rgAvail=false here,
+// or a nil/empty rg (its zero value on error) gets misread as "ripgrep found
+// zero matches" and can misclassify a real tool-error query as a "Justified
+// engine quirk" (F-30). See run.go's adjudicateAll, which threads a per-query
+// rgFailed flag through for exactly this reason.
 func adjudicate(q Query, moe, rg, gold MatchSet, rgAvail bool) QueryResult {
 	r := QueryResult{Q: q, NMoe: moe.Len(), NRG: rg.Len(), NGold: gold.Len(), RGAvail: rgAvail}
 
@@ -138,12 +146,13 @@ func adjudicate(q Query, moe, rg, gold MatchSet, rgAvail bool) QueryResult {
 				r.Verdict = VEngineQuirk
 			}
 		} else {
-			// rg unavailable: moedex==gold is the best truth available for this
-			// query alone, with no ripgrep comparison. That's only safe because
-			// Result.HardPass (run.go) requires RGAvailable==true run-wide, so a
-			// run where this branch fires already fails the hard gate regardless
-			// of this VOK. If rg availability ever became per-query, this verdict
-			// would need its own gate rather than relying on the run-wide guard.
+			// rg unavailable for this query (a run-wide outage, or this
+			// query's own rg.run() call failed): moedex==gold is the best
+			// truth available for this query alone, with no ripgrep
+			// comparison. That's only safe because Result.HardPass (run.go)
+			// requires RGAvailable==true run-wide AND zero RGErrors, so a run
+			// where this branch fires for any query already fails the hard
+			// gate regardless of this VOK.
 			r.Verdict = VOK
 		}
 	}
