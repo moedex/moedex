@@ -1,10 +1,13 @@
 package mcp
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"moedex/internal/contextwin"
@@ -156,5 +159,102 @@ func TestHTTPUnknownMethod(t *testing.T) {
 	}
 	if resp := decodeRPC(t, rec); resp.Error == nil || resp.Error.Code != codeMethodNotFound {
 		t.Errorf("want method-not-found %d, got %+v", codeMethodNotFound, resp.Error)
+	}
+}
+
+// batchOf builds a JSON-RPC batch array of n distinct tools/call messages.
+func batchOf(t *testing.T, n int) string {
+	t.Helper()
+	msgs := make([]interface{}, n)
+	for i := range msgs {
+		msgs[i] = toolCall(i, fmt.Sprintf("q%d", i))
+	}
+	body, err := json.Marshal(msgs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(body)
+}
+
+// TestHTTPBatchOversizedRejected confirms a batch array beyond maxBatchSize is
+// rejected outright — with a JSON-RPC invalid-request error and no dispatch at
+// all — rather than processed. Without this cap, a client can pack thousands
+// of tools/call messages into one POST (bounded only by maxRequestBytes) and
+// turn a single request into an unbounded amount of serialized CPU-bound work.
+func TestHTTPBatchOversizedRejected(t *testing.T) {
+	fs := &fakeSearcher{}
+	s := NewServer(fs, WithMaxBatchSize(4))
+	h := s.HTTPHandler()
+
+	rec := postRPC(t, h, batchOf(t, 5)) // one over the cap
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("oversized batch status = %d, want 400", rec.Code)
+	}
+	resp := decodeRPC(t, rec)
+	if resp.Error == nil || resp.Error.Code != codeInvalidRequest {
+		t.Fatalf("want invalid-request error %d, got %+v", codeInvalidRequest, resp.Error)
+	}
+	if fs.gotQuery != "" {
+		t.Errorf("searcher was called with query %q — an oversized batch must be rejected before any dispatch", fs.gotQuery)
+	}
+}
+
+// TestHTTPBatchWithinCapAccepted confirms the cap only rejects batches that
+// exceed it — a batch at or under maxBatchSize still runs and answers every
+// item, so the new guard doesn't regress the legacy-batch behavior.
+func TestHTTPBatchWithinCapAccepted(t *testing.T) {
+	fs := &fakeSearcher{win: contextwin.ContextWindow{TokenEstimate: 1}}
+	s := NewServer(fs, WithMaxBatchSize(4))
+	h := s.HTTPHandler()
+
+	rec := postRPC(t, h, batchOf(t, 4)) // exactly at the cap
+	if rec.Code != http.StatusOK {
+		t.Fatalf("in-cap batch status = %d, want 200", rec.Code)
+	}
+	var resps []response
+	if err := json.Unmarshal(rec.Body.Bytes(), &resps); err != nil {
+		t.Fatalf("decode batch response array: %v\nbody: %s", err, rec.Body.String())
+	}
+	if len(resps) != 4 {
+		t.Fatalf("want 4 responses, got %d", len(resps))
+	}
+}
+
+// cancelAfterFirstSearcher cancels the caller-supplied context as soon as its
+// first call completes, letting the test simulate a request that is
+// cancelled/expired partway through a batch.
+type cancelAfterFirstSearcher struct {
+	calls  int32
+	cancel context.CancelFunc
+}
+
+func (c *cancelAfterFirstSearcher) SearchContext(_ context.Context, q string, _, _ int) (contextwin.ContextWindow, error) {
+	atomic.AddInt32(&c.calls, 1)
+	c.cancel() // simulate the client going away / the request deadline firing
+	return contextwin.ContextWindow{
+		Blocks:        []contextwin.ContextBlock{{RelPath: q + ".go", StartLine: 1, EndLine: 1, Text: "x\n"}},
+		TokenEstimate: 1,
+	}, nil
+}
+
+// TestHTTPBatchStopsOnContextCancellation confirms handleHTTPBatch rechecks
+// ctx.Err() before each item and stops dispatching the rest of the batch once
+// the request context is cancelled, instead of draining every remaining
+// message (each its own CPU-bound tools/call) after the client is already
+// gone.
+func TestHTTPBatchStopsOnContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	cs := &cancelAfterFirstSearcher{cancel: cancel}
+	h := NewServer(cs).HTTPHandler()
+
+	const n = 10
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(batchOf(t, n))).WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if got := atomic.LoadInt32(&cs.calls); got != 1 {
+		t.Fatalf("dispatched %d of %d batch items after cancellation, want exactly 1 (the loop should stop at the next ctx.Err() check)", got, n)
 	}
 }

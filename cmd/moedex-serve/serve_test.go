@@ -46,7 +46,7 @@ func newTestChain(t *testing.T, token string, timeout time.Duration, searchMaxCo
 		snap := holder.acquire()
 		defer snap.release()
 		handleSearch(snap.c, w, r)
-	}), searchMaxConcurrency, m))
+	}), searchMaxConcurrency, m.searchRejected, "too many concurrent searches"))
 	return chain(mux, token, timeout, m), holder, m
 }
 

@@ -43,6 +43,13 @@ const (
 	// defaultMaxQueryBytes caps the search query string itself; oversized
 	// queries are rejected as a tool-level error, mirroring the empty-query path.
 	defaultMaxQueryBytes = 8 << 10 // 8 KiB
+	// defaultMaxBatchSize caps the number of messages in a single Streamable
+	// HTTP JSON-RPC batch array. Without a cap, one POST within maxRequestBytes
+	// can still pack thousands of tools/call messages, each processed serially
+	// in handleHTTPBatch under its own requestTimeout — turning a single
+	// request into hours of held CPU. 32 comfortably covers legitimate legacy
+	// batch use while keeping the worst case bounded.
+	defaultMaxBatchSize = 32
 )
 
 // ContextSearcher is the retrieval dependency the server calls per tool
@@ -65,6 +72,7 @@ type Server struct {
 	maxConcurrency  int
 	maxRequestBytes int
 	maxQueryBytes   int
+	maxBatchSize    int
 
 	// corpusRoot is the directory the corpus was built under (cfg.Root), if known.
 	// The mirror is laid out as <corpusRoot>/<path_with_namespace>, so a block's
@@ -178,6 +186,17 @@ func WithMaxQueryBytes(n int) Option {
 	}
 }
 
+// WithMaxBatchSize caps the number of messages accepted in a single
+// Streamable HTTP JSON-RPC batch array (see handleHTTPBatch). A value <= 0
+// leaves the default in place.
+func WithMaxBatchSize(n int) Option {
+	return func(s *Server) {
+		if n > 0 {
+			s.maxBatchSize = n
+		}
+	}
+}
+
 // WithCorpusRoot tells the server the directory the corpus was built under, so
 // the structured block can carry each hit's full path_with_namespace (the corpus
 // is laid out as <root>/<path_with_namespace>). An empty value leaves the field
@@ -191,7 +210,7 @@ func WithCorpusRoot(root string) Option {
 
 // NewServer builds a Server backed by searcher. With no options it uses the
 // hardening defaults (30s timeout, 8-way concurrency, 1 MiB request cap, 8 KiB
-// query cap).
+// query cap, 32-message HTTP batch cap).
 func NewServer(searcher ContextSearcher, opts ...Option) *Server {
 	s := &Server{
 		searcher:        searcher,
@@ -201,6 +220,7 @@ func NewServer(searcher ContextSearcher, opts ...Option) *Server {
 		maxConcurrency:  defaultMaxConcurrency,
 		maxRequestBytes: defaultMaxRequestBytes,
 		maxQueryBytes:   defaultMaxQueryBytes,
+		maxBatchSize:    defaultMaxBatchSize,
 		byName:          make(map[string]ToolHandler),
 	}
 	for _, opt := range opts {

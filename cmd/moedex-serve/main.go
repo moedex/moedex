@@ -77,6 +77,7 @@ func main() {
 	tlsKey := flag.String("tls-key", os.Getenv("MOEDEX_TLS_KEY"), "TLS private key file; serve -http over HTTPS (requires -tls-cert)")
 	requestTimeout := flag.Duration("request-timeout", 30*time.Second, "per-request HTTP timeout on -http (503 on expiry; the underlying scan observes cancellation and aborts promptly)")
 	searchMaxConcurrency := flag.Int("search-max-concurrency", envOrInt("MOEDEX_SEARCH_MAX_CONCURRENCY", defaultSearchMaxConcurrency), "cap concurrent in-flight /search requests on -http; each one scans the full corpus and can pin a core for up to -request-timeout. 0 disables the cap. Mirrors the MCP server's request-concurrency guard.")
+	mcpMaxConcurrency := flag.Int("mcp-max-concurrency", envOrInt("MOEDEX_MCP_MAX_CONCURRENCY", defaultMCPMaxConcurrency), "cap concurrent in-flight /mcp requests on -mcp-http; each one runs a ranked search + context assembly and can pin a core for up to -request-timeout. 0 disables the cap. Mirrors -search-max-concurrency.")
 	showVersion := flag.Bool("version", false, "print build identity (name, commit, dense capability) and exit")
 	flag.Parse()
 
@@ -127,6 +128,7 @@ func main() {
 			topK:           *topK,
 			embedKind:      *embedKind,
 			onnxRuntime:    *onnxRuntime,
+			maxConcurrency: *mcpMaxConcurrency,
 		}
 		if err := runMCPHTTP(cfg); err != nil {
 			fmt.Fprintf(os.Stderr, "moedex-serve: %v\n", err)
@@ -326,6 +328,7 @@ type mcpHTTPConfig struct {
 	topK           int
 	embedKind      string
 	onnxRuntime    string
+	maxConcurrency int
 }
 
 // runMCPHTTP is the warm SHARED agent daemon: it builds the ranked corpus once and
@@ -334,7 +337,10 @@ type mcpHTTPConfig struct {
 // stdio process and re-paying the ~40s cold load (the daemon pays it once per
 // process lifetime). The same refcounted hot-swap as the retrieval daemon keeps
 // it serving the old generation while a SIGHUP rebuilds the new one, and the same
-// hardening chain (recover/log/timeout/auth — see middleware.go) wraps the mux.
+// hardening chain (recover/log/timeout/auth — see middleware.go) wraps the mux,
+// and /mcp is additionally wrapped in withConcurrencyLimit (cfg.maxConcurrency)
+// the same way /search is on the retrieval daemon, since a burst of agent
+// sessions is exactly the CPU-bound-scan concern that guard exists for.
 // /mcp requires the bearer token when one is configured; /healthz and /metrics
 // stay open.
 func runMCPHTTP(cfg mcpHTTPConfig) error {
@@ -389,7 +395,13 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 		_, _ = w.Write([]byte("ok\n"))
 	})
 	mux.Handle("/metrics", rankMetricsHandler(holder, m))
-	mux.Handle("/mcp", mcpSrv.HTTPHandler())
+	// /mcp is wrapped in withConcurrencyLimit exactly as /search is on the
+	// retrieval daemon: mcp.Server.HTTPHandler does not bound concurrency
+	// itself (see its doc comment), and each search_context call is a
+	// CPU-bound ranking + context-assembly pass, so unbounded fan-in from many
+	// agent sessions (or one large JSON-RPC batch) is the same
+	// resource-exhaustion vector /search already guards against.
+	mux.Handle("/mcp", withConcurrencyLimit(mcpSrv.HTTPHandler(), cfg.maxConcurrency, m.mcpRejected, "too many concurrent mcp requests"))
 
 	srv := &http.Server{
 		Addr:              effAddr,
@@ -561,7 +573,7 @@ func newHTTPMux(holder *corpusHolder, m *metrics, searchMaxConcurrency int) *htt
 		snap := holder.acquire()
 		defer snap.release()
 		handleSearch(snap.c, w, r)
-	}), searchMaxConcurrency, m))
+	}), searchMaxConcurrency, m.searchRejected, "too many concurrent searches"))
 	return mux
 }
 
