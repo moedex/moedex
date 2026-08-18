@@ -221,6 +221,17 @@ func syncManaged(ctx context.Context, r Runner, cfg Config, projects []Project, 
 		return ManagedSyncResult{}, fmt.Errorf("resolve managed corpus root: %w", err)
 	}
 	cfg.Root = root
+
+	// Serialize the entire check-then-act sequence below (load lock, check
+	// working-tree cleanliness, compute a plan, run git mutations, rewrite
+	// corpus.lock.json, commit) against any other sync/init invocation
+	// against this same root. See managed_lock.go.
+	release, err := acquireManagedLock(root)
+	if err != nil {
+		return ManagedSyncResult{}, err
+	}
+	defer func() { _ = release() }()
+
 	catalog, err := LoadCatalog(root)
 	if err != nil {
 		return ManagedSyncResult{}, err
