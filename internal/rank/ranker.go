@@ -588,6 +588,16 @@ func (r *Ranker) denseArm(ctx context.Context, q string) ([]armScore, error) {
 	best := map[uint64]armScore{}
 	order := []uint64{}
 	for _, h := range hits {
+		// Unlike the lexical/symbol/path arms, a dense chunk's blob ID comes from
+		// r.store (an external structure, e.g. a sidecar built against a different
+		// or larger index) rather than being derived from r.ix, so it is not
+		// structurally guaranteed to name one of r.ix's blobs. Drop anything r.ix
+		// can't resolve here so every candidate this arm contributes is safe for
+		// fuse/Rank/Features to dereference via r.ix.Blob, the same invariant the
+		// other three arms already provide by construction.
+		if r.ix.Blob(h.Chunk.Blob) == nil {
+			continue
+		}
 		s := float64(h.Score)
 		if cur, ok := best[h.Chunk.Blob]; !ok || s > cur.score {
 			if !ok {
