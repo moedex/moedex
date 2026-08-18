@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"sync"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"moedex/internal/diskstore"
+	"moedex/internal/embed"
 	"moedex/internal/index"
 	"moedex/internal/server"
 )
@@ -138,5 +140,81 @@ func TestRankHolderSwap(t *testing.T) {
 	}
 	if len(win.Blocks) == 0 {
 		t.Error("expected a context block for BetaRank after swap")
+	}
+}
+
+// failingEmbedder always errors, simulating a dense embedding backend that is
+// transiently down (embed service unreachable, model unavailable, etc.).
+type failingEmbedder struct{}
+
+func (failingEmbedder) Embed(context.Context, []string) ([]embed.Vector, error) {
+	return nil, errors.New("embed backend unreachable")
+}
+func (failingEmbedder) Dim() int { return 8 }
+
+// TestOpenRankOrDegradeFallsBackToLexicalOnDenseFailure pins F-22: a dense-arm
+// failure at OpenRank time must degrade to lexical+symbol rather than
+// aborting the whole corpus open, exactly like openRankCorpus already does at
+// boot -- and the SAME retry must be available to the SIGHUP reload paths,
+// which is why it is factored into this standalone helper rather than left
+// inlined in openRankCorpus.
+func TestOpenRankOrDegradeFallsBackToLexicalOnDenseFailure(t *testing.T) {
+	dir := makeShardDir(t, "DenseFallbackToken")
+	ctx := context.Background()
+	cfg := server.RankConfig{TopK: 5, Emb: failingEmbedder{}}
+
+	rc, effective, err := openRankOrDegrade(ctx, dir, cfg)
+	if err != nil {
+		t.Fatalf("openRankOrDegrade: %v, want a clean fallback to lexical+symbol", err)
+	}
+	defer func() { _ = rc.Close() }()
+
+	if effective.Emb != nil {
+		t.Fatalf("effective RankConfig still configures a dense arm after falling back")
+	}
+	if rc.DenseChunks() != 0 {
+		t.Fatalf("DenseChunks = %d, want 0 after falling back to lexical+symbol", rc.DenseChunks())
+	}
+	// cfg is passed by value and must never be mutated: a caller (a SIGHUP
+	// reload) that keeps its own cfg across calls needs a fresh dense attempt
+	// every time, not a corpus that stays degraded forever after one
+	// transient failure (F-22's actual complaint).
+	if cfg.Emb == nil {
+		t.Fatalf("openRankOrDegrade mutated the caller's cfg; a later reload would never retry dense again")
+	}
+
+	// Confirm the corpus still answers queries lexically.
+	win, err := rc.SearchContext(ctx, "DenseFallbackToken", 2000, 5)
+	if err != nil {
+		t.Fatalf("search after fallback: %v", err)
+	}
+	if len(win.Blocks) == 0 {
+		t.Error("expected a context block for DenseFallbackToken from the lexical fallback corpus")
+	}
+}
+
+// TestOpenRankOrDegradeRetriesDenseFreshOnEachCall complements the above: a
+// second SIGHUP-style call reusing the SAME original cfg (dense still
+// configured, never mutated by the first call) must independently attempt
+// dense and fall back again, proving one failed attempt cannot leave the
+// corpus permanently degraded the way calling server.OpenRank directly with
+// an already-degraded cfg would.
+func TestOpenRankOrDegradeRetriesDenseFreshOnEachCall(t *testing.T) {
+	dir := makeShardDir(t, "DenseRetryToken")
+	ctx := context.Background()
+	cfg := server.RankConfig{TopK: 5, Emb: failingEmbedder{}}
+
+	for i := 0; i < 2; i++ {
+		rc, effective, err := openRankOrDegrade(ctx, dir, cfg)
+		if err != nil {
+			t.Fatalf("call %d: openRankOrDegrade: %v, want a clean fallback every time", i, err)
+		}
+		if effective.Emb != nil {
+			t.Fatalf("call %d: effective cfg still configures a dense arm after fallback", i)
+		}
+		if cfg.Emb == nil {
+			t.Fatalf("call %d: openRankOrDegrade mutated the caller's cfg", i)
+		}
+		_ = rc.Close()
 	}
 }

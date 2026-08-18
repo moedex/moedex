@@ -189,19 +189,37 @@ func openRankCorpus(ctx context.Context, shardDir string, topK int, embedKind, o
 		fmt.Fprintln(os.Stderr, "moedex-serve: dense arm disabled; ranking lexical+symbol")
 	}
 
-	rc, err := server.OpenRank(ctx, shardDir, cfg)
-	if err != nil && dense {
-		// Dense build failed (service down, bad model, etc.): degrade to lexical.
-		fmt.Fprintf(os.Stderr, "moedex-serve: dense arm failed (%v); falling back to lexical+symbol\n", err)
-		cfg.Emb = nil
-		rc, err = server.OpenRank(ctx, shardDir, cfg)
-	}
+	rc, cfg, err := openRankOrDegrade(ctx, shardDir, cfg)
 	if err != nil {
 		return nil, cfg, err
 	}
 	fmt.Fprintf(os.Stderr, "moedex-serve: corpus ranker ready — %d blobs, %d docs, %d symbol blobs, %d dense chunks (%s) in %s\n",
 		rc.NumBlobs(), rc.NumDocs(), rc.NumSymbolBlobs(), rc.DenseChunks(), denseSource(rc), time.Since(start).Round(time.Millisecond))
 	return rc, cfg, nil
+}
+
+// openRankOrDegrade calls server.OpenRank(ctx, shardDir, cfg) and, when it
+// fails while cfg configures a dense arm, retries once with the dense arm
+// stripped -- lexical+symbol ranking has no external dependency, so a dense
+// arm failure (embed service down, bad model, transient network hiccup)
+// should never by itself keep the whole corpus from opening.
+//
+// It returns the RankConfig actually used to produce the returned corpus
+// (identical to cfg on a clean open; a copy with Emb cleared after a
+// fallback) so the caller decides whether to keep serving degraded. cfg is
+// passed by value and is never mutated, so a caller that discards this
+// return value and reuses its own cfg on a later call (as the SIGHUP reload
+// paths below do -- see F-22) gets a fresh attempt at the dense arm every
+// time, rather than staying degraded forever after one transient failure.
+func openRankOrDegrade(ctx context.Context, shardDir string, cfg server.RankConfig) (*server.RankCorpus, server.RankConfig, error) {
+	rc, err := server.OpenRank(ctx, shardDir, cfg)
+	if err != nil && cfg.Emb != nil {
+		// Dense build failed (service down, bad model, etc.): degrade to lexical.
+		fmt.Fprintf(os.Stderr, "moedex-serve: dense arm failed (%v); falling back to lexical+symbol\n", err)
+		cfg.Emb = nil
+		rc, err = server.OpenRank(ctx, shardDir, cfg)
+	}
+	return rc, cfg, err
 }
 
 // denseSource reports where the dense vectors came from, for the boot/reload log.
@@ -287,13 +305,23 @@ func runMCP(shardDir string, topK int, embedKind, onnxRuntime string) error {
 		for range hup {
 			t0 := time.Now()
 			fmt.Fprintln(os.Stderr, "moedex-serve: SIGHUP — rebuilding ranked corpus")
-			nrc, err := server.OpenRank(ctx, shardDir, cfg)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "moedex-serve: reload failed (%v); keeping current ranker\n", err)
-				continue
+			nrc, _, rankErr := openRankOrDegrade(ctx, shardDir, cfg)
+			if rankErr != nil {
+				fmt.Fprintf(os.Stderr, "moedex-serve: reload failed (%v); keeping current ranker\n", rankErr)
 			}
-			if err := graphTools.Reload(shardDir); err != nil {
-				fmt.Fprintf(os.Stderr, "moedex-serve: graph reload failed (%v); keeping current graph\n", err)
+
+			// Attempted regardless of the rank-corpus outcome above: rankHolder
+			// and GraphToolset are independently refcounted and hot-swappable, so
+			// a rank-corpus rebuild failure must not skip an unrelated,
+			// otherwise-successful graph-sidecar refresh (F-21).
+			if openErr, closeErr := graphTools.Reload(shardDir); openErr != nil {
+				fmt.Fprintf(os.Stderr, "moedex-serve: graph reload failed (%v); keeping current graph\n", openErr)
+			} else if closeErr != nil {
+				fmt.Fprintf(os.Stderr, "moedex-serve: graph reload succeeded but releasing the previous generation failed (%v)\n", closeErr)
+			}
+
+			if rankErr != nil {
+				continue
 			}
 			old := holder.swap(nrc)
 			go old.retire()
@@ -430,14 +458,24 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 		for range hup {
 			start := time.Now()
 			slog.Info("reload requested (SIGHUP)")
-			nrc, err := server.OpenRank(ctx, cfg.shardDir, rankCfg)
-			if err != nil {
+			nrc, _, rankErr := openRankOrDegrade(ctx, cfg.shardDir, rankCfg)
+			if rankErr != nil {
 				m.incReload("fail")
-				slog.Error("reload failed; keeping current ranker", "err", err.Error())
-				continue
+				slog.Error("rank corpus reload failed; keeping current ranker", "err", rankErr.Error())
 			}
-			if err := graphTools.Reload(cfg.shardDir); err != nil {
-				slog.Error("graph reload failed; keeping current graph", "err", err.Error())
+
+			// Attempted regardless of the rank-corpus outcome above: rankHolder
+			// and GraphToolset are independently refcounted and hot-swappable, so
+			// a rank-corpus rebuild failure must not skip an unrelated,
+			// otherwise-successful graph-sidecar refresh (F-21).
+			if openErr, closeErr := graphTools.Reload(cfg.shardDir); openErr != nil {
+				slog.Error("graph reload failed; keeping current graph", "err", openErr.Error())
+			} else if closeErr != nil {
+				slog.Error("graph reload succeeded but releasing the previous generation failed", "err", closeErr.Error())
+			}
+
+			if rankErr != nil {
+				continue
 			}
 			old := holder.swap(nrc)
 			go old.retire()

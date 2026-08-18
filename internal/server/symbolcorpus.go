@@ -155,6 +155,26 @@ func (sc *SymbolCorpus) Merged() *symbol.Corpus { return sc.corpus }
 // NumShards reports how many shards were merged.
 func (sc *SymbolCorpus) NumShards() int { return sc.corpus.NumShards() }
 
+// NumShardBlobs reports how many blobs shard (by ID) holds, for a caller that
+// needs to enumerate every blob across every shard (e.g. building an
+// online-serving catalog) without reaching into SymbolCorpus's private
+// per-shard index storage. 0 for an out-of-range shard.
+func (sc *SymbolCorpus) NumShardBlobs(shard int) int {
+	if shard < 0 || shard >= len(sc.idxs) {
+		return 0
+	}
+	return sc.idxs[shard].NumBlobs()
+}
+
+// ShardBlob returns blob id's record within shard, or nil when the shard or
+// blob id is unknown.
+func (sc *SymbolCorpus) ShardBlob(shard int, id uint64) *index.Blob {
+	if shard < 0 || shard >= len(sc.idxs) {
+		return nil
+	}
+	return sc.idxs[shard].Blob(id)
+}
+
 // NumNames reports how many distinct names the corpus-wide lookup covers.
 func (sc *SymbolCorpus) NumNames() int { return sc.corpus.NumNames() }
 
