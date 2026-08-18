@@ -1,9 +1,13 @@
 package server
 
 import (
+	"path/filepath"
+	"strings"
 	"testing"
 
+	"moedex/internal/diskstore"
 	"moedex/internal/graph/diskgraph"
+	"moedex/internal/index"
 	"moedex/internal/symbol"
 )
 
@@ -160,6 +164,92 @@ func TestTSExtractInheritance(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestCSHierarchyResolvedKindOverridesIPrefixHeuristic covers F-32:
+// csInferEdgeType's I-prefix name heuristic misclassifies a locally-defined
+// class whose name happens to match I[A-Z]... (e.g. IDGenerator) as an
+// interface, emitting EdgeImplements where EdgeExtends is correct. Once the
+// super resolves to a local definition, resolveAndEmitSuper must defer to
+// that definition's own declaring keyword instead of the name guess.
+func TestCSHierarchyResolvedKindOverridesIPrefixHeuristic(t *testing.T) {
+	dir := t.TempDir()
+
+	// IDGenerator is a locally-defined CLASS whose name matches the I[A-Z]...
+	// convention csInferEdgeType reads as "this is an interface".
+	idgenContent := []byte("public class IDGenerator\n{\n}\n")
+	idgenSHA := diskstore.GitBlobSHA1(idgenContent)
+
+	// IBar is a real, locally-defined interface — kept alongside IDGenerator
+	// so the fix is proven to still classify a genuine interface correctly via
+	// its own keyword, not merely by no longer being wrong about classes.
+	ibarContent := []byte("public interface IBar\n{\n}\n")
+	ibarSHA := diskstore.GitBlobSHA1(ibarContent)
+
+	defsShard := index.New()
+	defsShard.AddFile("repo", "idgen.cs", "/repo/idgen.cs", idgenSHA, idgenContent)
+	defsShard.AddFile("repo", "ibar.cs", "/repo/ibar.cs", ibarSHA, ibarContent)
+	if err := diskstore.Save(defsShard, filepath.Join(dir, "shard-0000.idx")); err != nil {
+		t.Fatal(err)
+	}
+
+	fooContent := []byte("public class Foo : IDGenerator\n{\n}\n")
+	fooSHA := diskstore.GitBlobSHA1(fooContent)
+	bazContent := []byte("public class Baz : IBar\n{\n}\n")
+	bazSHA := diskstore.GitBlobSHA1(bazContent)
+
+	usesShard := index.New()
+	usesShard.AddFile("repo", "foo.cs", "/repo/foo.cs", fooSHA, fooContent)
+	usesShard.AddFile("repo", "baz.cs", "/repo/baz.cs", bazSHA, bazContent)
+	if err := diskstore.Save(usesShard, filepath.Join(dir, "shard-0001.idx")); err != nil {
+		t.Fatal(err)
+	}
+
+	path, _, err := BuildGraph(dir)
+	if err != nil {
+		t.Fatalf("BuildGraph: %v", err)
+	}
+	g, err := diskgraph.Open(path)
+	if err != nil {
+		t.Fatalf("open graph: %v", err)
+	}
+	defer g.Close()
+
+	// The graph also carries a general EdgeUsesType reference edge between the
+	// same source/target — findEdge narrows to the hierarchy edge (extends or
+	// implements) specifically, since that's the one F-32 is about.
+	findEdge := func(sourceSHA string, sourceOffset uint64, targetSHA string, targetOffset uint64) *diskgraph.Edge {
+		for _, e := range g.Load(sourceSHA, sourceOffset) {
+			if e.TargetBlob != targetSHA || e.TargetOffset != targetOffset {
+				continue
+			}
+			if e.Type != diskgraph.EdgeExtends && e.Type != diskgraph.EdgeImplements {
+				continue
+			}
+			return &e
+		}
+		return nil
+	}
+
+	fooOffset := uint64(strings.Index(string(fooContent), "Foo"))
+	idgenOffset := uint64(strings.Index(string(idgenContent), "IDGenerator"))
+	edge := findEdge(fooSHA, fooOffset, idgenSHA, idgenOffset)
+	if edge == nil {
+		t.Fatalf("no edge found from Foo to IDGenerator; edges = %#v", g.Load(fooSHA, fooOffset))
+	}
+	if edge.Type != diskgraph.EdgeExtends {
+		t.Errorf("Foo -> IDGenerator edge type = %v, want EdgeExtends (IDGenerator is a locally-defined class)", edge.Type)
+	}
+
+	bazOffset := uint64(strings.Index(string(bazContent), "Baz"))
+	ibarOffset := uint64(strings.Index(string(ibarContent), "IBar"))
+	edge = findEdge(bazSHA, bazOffset, ibarSHA, ibarOffset)
+	if edge == nil {
+		t.Fatalf("no edge found from Baz to IBar; edges = %#v", g.Load(bazSHA, bazOffset))
+	}
+	if edge.Type != diskgraph.EdgeImplements {
+		t.Errorf("Baz -> IBar edge type = %v, want EdgeImplements (IBar is a locally-defined interface)", edge.Type)
 	}
 }
 
