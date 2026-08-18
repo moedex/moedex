@@ -322,10 +322,12 @@ func (b *Builder) lookupProject(site Site, declaration Declaration) ([]Provider,
 
 	first, rest, _ := strings.Cut(outside, "/")
 	if rest != "" {
+		var providers []Provider
 		for _, repo := range b.reposByDir[first] {
-			if providers := b.projectsInRepo[repoPathKey(repo, rest)]; len(providers) > 0 {
-				return providers, RuleProjectPath
-			}
+			providers = append(providers, b.projectsInRepo[repoPathKey(repo, rest)]...)
+		}
+		if len(providers) > 0 {
+			return providers, RuleProjectPath
 		}
 	}
 	if providers := b.projectsByPath[outside]; len(providers) > 0 {

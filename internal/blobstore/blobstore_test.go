@@ -77,10 +77,19 @@ func gitCommitAll(t *testing.T, dir, msg string) {
 
 func TestStoreRoundTrip(t *testing.T) {
 	dir := t.TempDir()
-	blobs := map[string][]byte{
-		"sha-aaa": []byte("package a\nfunc Alpha() {}\n"),
-		"sha-bbb": []byte("package b\nfunc Bravo() {}\n"),
-		"sha-ccc": bytes.Repeat([]byte("x"), 5000),
+	// Keyed by each content's real contentKey (not an arbitrary placeholder
+	// string): Put's documented CORRECTNESS CONTRACT requires sha to be a
+	// content hash of the bytes stored, and Get now enforces exactly that at
+	// read time (see verifyContentHasher) — a placeholder key would fail the
+	// round-trip Get with a (correct) content-corruption error.
+	contents := [][]byte{
+		[]byte("package a\nfunc Alpha() {}\n"),
+		[]byte("package b\nfunc Bravo() {}\n"),
+		bytes.Repeat([]byte("x"), 5000),
+	}
+	blobs := make(map[string][]byte, len(contents))
+	for _, c := range contents {
+		blobs[contentKey(c)] = c
 	}
 
 	s, err := Open(dir)
@@ -1080,11 +1089,13 @@ func TestCommitlessRepoStableAcrossRefresh(t *testing.T) {
 // index-rewrite) is rolled back to the last durable state on Open.
 func TestOpenRecoversTruncatedPack(t *testing.T) {
 	dir := t.TempDir()
+	content1 := []byte("durable content\n")
+	sha1Key := contentKey(content1) // real content-hash key (Get now verifies it)
 	s, err := Open(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Put("sha1", []byte("durable content\n")); err != nil {
+	if _, err := s.Put(sha1Key, content1); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.Close(); err != nil { // persists index + pack
@@ -1111,7 +1122,7 @@ func TestOpenRecoversTruncatedPack(t *testing.T) {
 	if s2.Len() != 1 {
 		t.Errorf("recovered Len = %d, want 1", s2.Len())
 	}
-	got, err := s2.Get("sha1")
+	got, err := s2.Get(sha1Key)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1119,7 +1130,8 @@ func TestOpenRecoversTruncatedPack(t *testing.T) {
 		t.Errorf("recovered content = %q", got)
 	}
 	// A subsequent Put must succeed (pack offset is consistent again).
-	added, err := s2.Put("sha2", []byte("after recovery\n"))
+	content2 := []byte("after recovery\n")
+	added, err := s2.Put(contentKey(content2), content2)
 	if err != nil || !added {
 		t.Fatalf("Put after recovery: added=%v err=%v", added, err)
 	}
@@ -1181,6 +1193,119 @@ func TestGetTruncatedPackTailErrorsInsteadOfPartialContent(t *testing.T) {
 	got, err := s.Get("sha-trunc")
 	if err == nil {
 		t.Fatalf("Get on a truncated pack record returned no error; got %d bytes %q (want an error, not partial/garbage content)", len(got), got)
+	}
+}
+
+// --- F-12 regression: Get must detect content corruption ------------------
+
+// TestGetDetectsContentCorruption is the regression for Store.Get never
+// re-verifying retrieved content against its claimed SHA key. Unlike the
+// sibling served content store (diskstore.OpenContentStoreVerified /
+// ContentStore.Verify), Get previously returned whatever bytes the pack's
+// length framing pointed at with no check that those bytes still hash to the
+// key. Bit-rot or partial disk corruption in blobs.pack's CONTENT region that
+// leaves the record's length framing intact therefore sailed through as valid
+// content instead of failing loudly.
+func TestGetDetectsContentCorruption(t *testing.T) {
+	dir := t.TempDir()
+	content := []byte("real content that will be corrupted on disk\n")
+	sha := contentKey(content)
+
+	s, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Put(sha, content); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Flush(); err != nil {
+		t.Fatal(err)
+	}
+	e := s.byID[sha]
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Flip one byte inside the CONTENT region of the on-disk record, leaving the
+	// shaLen+sha+contentLen framing untouched — exactly the "length framing
+	// intact" corruption the finding describes. Record layout is
+	// [u32 shaLen][sha][u64 contentLen][content] (see appendU32LenBytes/decodeRecord).
+	packPath := filepath.Join(dir, packName)
+	data, err := os.ReadFile(packPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	contentOff := e.packOff + 4 + int64(len(sha)) + 8
+	data[contentOff] ^= 0xFF
+	if err := os.WriteFile(packPath, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Default (verification on, MOEDEX_VERIFY_CONTENT unset): Get must fail
+	// loudly, never silently return the corrupted bytes.
+	s2, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s2.Close()
+	if got, err := s2.Get(sha); err == nil {
+		t.Fatalf("Get on corrupted content returned no error; got %d bytes %q (want a content-corruption error)", len(got), got)
+	}
+
+	// PRE-FIX behavior, pinned via the explicit opt-out: with verification
+	// disabled the corrupted bytes ARE returned. This proves the check above is
+	// load-bearing (Get would otherwise succeed) rather than rejecting for some
+	// unrelated reason, and that the opt-out itself still works.
+	t.Setenv("MOEDEX_VERIFY_CONTENT", "0")
+	s3, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s3.Close()
+	got, err := s3.Get(sha)
+	if err != nil {
+		t.Fatalf("Get with verification disabled (MOEDEX_VERIFY_CONTENT=0): %v", err)
+	}
+	if bytes.Equal(got, content) {
+		t.Fatal("test premise broken: corrupted bytes equal the original content")
+	}
+}
+
+// --- F-26 regression: Open must detect a missing pack with a non-empty index --
+
+// TestOpenDetectsMissingPackWithNonEmptyIndex is the regression for Open()
+// treating a completely-missing blobs.pack as a fresh empty store even when
+// blobs.idx already references one or more blobs. Before the fix, Open silently
+// fell through to creating a brand-new empty pack and returned a Store that
+// reports a populated Len() with no content behind any of it — Get on every one
+// of those SHAs would only fail much later, deep inside ReadAt/getViaReopen,
+// with a confusing low-level I/O error instead of an immediate, clear one at
+// Open time. It is also the gap that let CompactCAS's SACRED liveness check
+// (Has(), map-membership only — see compact.go) sail past this exact corruption.
+func TestOpenDetectsMissingPackWithNonEmptyIndex(t *testing.T) {
+	dir := t.TempDir()
+	content := []byte("some content that will be orphaned\n")
+	sha := contentKey(content)
+
+	s, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Put(sha, content); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Close(); err != nil { // persists both blobs.idx and blobs.pack
+		t.Fatal(err)
+	}
+
+	// Delete ONLY the pack, leaving the index intact (still referencing the blob) —
+	// the exact corruption the finding describes.
+	if err := os.Remove(filepath.Join(dir, packName)); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := Open(dir); err == nil {
+		t.Fatal("Open with an index referencing blobs but no pack file returned no error; want an immediate corruption error")
 	}
 }
 

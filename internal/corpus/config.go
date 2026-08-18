@@ -8,12 +8,15 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+
+	"moedex/internal/corpus/catalog"
 )
 
 // DefaultHost is the ONLY GitLab host moedex-corpus talks to. The whole tool is
 // pinned to TurnCommerce's internal GitLab by design — it never authenticates to
-// or clones from anywhere else (no gitlab.com, no other instance).
-const DefaultHost = "gitlab.tcdevops.com"
+// or clones from anywhere else (no gitlab.com, no other instance). It re-exports
+// internal/corpus/catalog.DefaultHost so the two never drift apart.
+const DefaultHost = catalog.DefaultHost
 
 // DefaultCorpusDirName is the corpus root under the user's home directory when
 // neither an explicit path nor MOEDEX_CORPUS is given. It matches the engine's

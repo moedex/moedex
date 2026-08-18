@@ -249,19 +249,31 @@ func (run *Runner) Evaluate(ctx context.Context, gold []GoldQuery, k, topK int) 
 	return rep, nil
 }
 
-// finalizeMeans fills the Mean* fields as the arithmetic mean across queries.
-// With no queries the means stay 0.
+// finalizeMeans fills the Mean* fields as the arithmetic mean across
+// ANSWERABLE queries — those with NumRelevant > 0. A query with no relevant
+// doc in its gold set (NumRelevant == 0: e.g. NewBinaryGold called with no
+// relevant-doc varargs, or a distractor-only query) has every per-query
+// metric DEFINED to return exactly 0.0 (see RecallAtK/NDCGAtK/UDCGAtK) — that
+// is a sentinel for "undefined", not a real 0 score, so folding it into the
+// mean at equal weight with a real query would silently drag every Mean*
+// field toward 0 with no accompanying signal (F-28). Such queries still
+// appear in rep.Queries — nothing is hidden — they are only excluded from the
+// aggregate. With no answerable queries the means stay 0.
 func (rep *Report) finalizeMeans() {
-	n := len(rep.Queries)
-	if n == 0 {
-		return
-	}
+	n := 0
 	for _, q := range rep.Queries {
+		if q.NumRelevant == 0 {
+			continue
+		}
+		n++
 		rep.MeanRecall += q.RecallAtK
 		rep.MeanPrec += q.PrecAtK
 		rep.MeanMRR += q.MRR
 		rep.MeanNDCG += q.NDCGAtK
 		rep.MeanUDCG += q.UDCGAtK
+	}
+	if n == 0 {
+		return
 	}
 	rep.MeanRecall /= float64(n)
 	rep.MeanPrec /= float64(n)

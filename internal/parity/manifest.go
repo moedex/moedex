@@ -38,7 +38,10 @@ package parity
 //   - Added / removed repos. A new repo (absent from the manifest) is appended
 //     and indexed into fresh shards. A removed repo (in the manifest, gone from
 //     disk) is simply not re-ingested; any shard it contributed to is treated as
-//     affected and rebuilt without it.
+//     affected and rebuilt without it. A repo that is still on disk but fails to
+//     ingest (a transient git/I/O error) is NOT treated as removed: it is
+//     recorded in the returned Manifest's Skipped field so an operator can tell
+//     "genuinely gone" apart from "temporarily broken" — see Rebuild.
 
 import (
 	"encoding/json"
@@ -96,6 +99,18 @@ type Manifest struct {
 	ShardDir string          `json:"shard_dir"`
 	Heads    []RepoHead      `json:"heads"`
 	Shards   []ShardManifest `json:"shards"`
+
+	// Skipped records repos that Rebuild could not re-ingest for a reason other
+	// than a rejected privacy policy (which is fatal, not skipped) or a genuine
+	// removal from disk (DiscoverSources no longer finding the repo at all — see
+	// the package CAVEATS above). A repo lands here when it is still discovered
+	// on disk but ingest.Repo failed for it (a transient git or filesystem
+	// error), so its shard contribution and manifest entry are dropped from this
+	// rebuild exactly as if it had been removed. Populated only by Rebuild, and
+	// intentionally excluded from the persisted JSON: it describes this one
+	// rebuild attempt, not a durable property of the corpus, so a later
+	// successful refresh should not carry a stale entry forward.
+	Skipped []SkippedRepo `json:"-"`
 }
 
 // HeadOf returns the recorded HEAD for a repo directory and whether it was
@@ -475,7 +490,11 @@ func Rebuild(old *Manifest, ch Changes, newShardDir string, builtAt time.Time,
 			if ingest.IsPrivacyPolicyError(err) {
 				return nil, fmt.Errorf("privacy preflight: %w", err)
 			}
-			// Repo vanished or unreadable: skip it (treated as removed).
+			// The repo is still on disk (sourceByDir found it above) but could not
+			// be ingested — a transient git/I/O failure, not a removal. Record it
+			// visibly (mirrors Build()'s b.Skipped) instead of silently dropping it
+			// exactly like a repo that is genuinely gone from disk.
+			m.Skipped = append(m.Skipped, SkippedRepo{Dir: dir, Reason: err.Error()})
 			continue
 		}
 		ix := index.New()

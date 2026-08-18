@@ -1,4 +1,19 @@
-package corpus
+// Package catalog is the leaf schema for a Moedex-managed corpus: the
+// on-disk ownership marker (Catalog) and the exact acquisition snapshot
+// (Lock) that let a caller recognize a managed corpus root and read its
+// locked project/commit identity. It depends on nothing beyond
+// encoding/json, net/url, and the filesystem — no os/exec, no Runner, no
+// network — so importing it never pulls glab/git shell-out machinery into a
+// binary's transitive closure.
+//
+// internal/corpus (the acquisition + freshness surface that actually shells
+// out to glab/git behind a Runner seam) depends on this package for the
+// schema and re-exports it under the same names for backward compatibility.
+// internal/ingest depends on it directly — never on internal/corpus — so
+// that discovering managed indexing sources stays exec-free, per the
+// corpus-isolation invariant in CLAUDE.md/ARCHITECTURE.md ("internal/corpus
+// ... is never imported by the engine or daemon") and docs/adr/0019.
+package catalog
 
 import (
 	"encoding/json"
@@ -26,8 +41,13 @@ const (
 	RefPolicyDefault = "default"
 )
 
+// DefaultHost is the ONLY GitLab host a managed corpus may be pinned to. It
+// mirrors internal/corpus.DefaultHost (the two must always agree; corpus
+// re-exports this constant rather than redeclaring it).
+const DefaultHost = "gitlab.tcdevops.com"
+
 // GroupPolicy records the curated top-level GitLab namespaces. An empty list
-// preserves Config's existing "all visible projects" behavior.
+// preserves the "all visible projects" behavior of an unfiltered corpus.
 type GroupPolicy struct {
 	TopLevelGroups []string `json:"top_level_groups"`
 }
@@ -41,13 +61,14 @@ type Catalog struct {
 	RefPolicy   string      `json:"ref_policy"`
 }
 
-// NewCatalog builds the canonical version-1 marker for cfg.
-func NewCatalog(cfg Config) (Catalog, error) {
+// NewCatalog builds the canonical version-1 marker for the given pinned host
+// and top-level group allowlist.
+func NewCatalog(host string, groups []string) (Catalog, error) {
 	c := Catalog{
 		Version: ManagedSchemaVersion,
-		Host:    cfg.Host,
+		Host:    host,
 		GroupPolicy: GroupPolicy{
-			TopLevelGroups: cloneStrings(cfg.Groups),
+			TopLevelGroups: cloneStrings(groups),
 		},
 		RefPolicy: RefPolicyDefault,
 	}
@@ -127,7 +148,7 @@ func WriteCatalog(root string, c Catalog) error {
 	if err := c.Validate(); err != nil {
 		return fmt.Errorf("validate managed corpus catalog: %w", err)
 	}
-	if err := writeCanonicalJSON(CatalogPath(root), c, nil); err != nil {
+	if err := WriteCanonicalJSON(CatalogPath(root), c, nil); err != nil {
 		return fmt.Errorf("write managed corpus catalog: %w", err)
 	}
 	return nil
@@ -182,10 +203,10 @@ func decodeStrictJSON(path string, dst any) error {
 	return nil
 }
 
-// writeCanonicalJSON writes to a sibling temporary file, fsyncs its contents,
+// WriteCanonicalJSON writes to a sibling temporary file, fsyncs its contents,
 // renames it over the destination, and best-effort fsyncs the parent directory.
 // beforeRename is an internal fault-injection seam used by lifecycle tests.
-func writeCanonicalJSON(path string, value any, beforeRename func(string) error) (err error) {
+func WriteCanonicalJSON(path string, value any, beforeRename func(string) error) (err error) {
 	data, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
 		return err

@@ -58,8 +58,16 @@ type PostingProvider interface {
 // Restore takes ownership of each BlobData's Content and Files: they are
 // aliased directly into the index, not copied (unlike AddFile, which
 // defensively copies). Callers must not mutate them after the call.
+//
+// A nil postings map is treated as "no postings yet" and replaced with an
+// empty map, never aliased as-is: ix.postings must stay non-nil so a later
+// AddFile call (e.g. incremental indexing on top of a restored index) can
+// write into it instead of panicking on a nil map.
 func Restore(blobs []BlobData, postings map[trigram.Trigram][]Posting) *Index {
 	ix := restoreBlobs(blobs)
+	if postings == nil {
+		postings = map[trigram.Trigram][]Posting{}
+	}
 	ix.postings = postings
 	return ix
 }

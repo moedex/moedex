@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -357,6 +358,93 @@ func TestRebuildOnlyAffectedShard(t *testing.T) {
 	oldBHead, _ := old.HeadOf(repoB)
 	if bHead == oldBHead || bHead == "" {
 		t.Errorf("repoB HEAD not updated: old=%q new=%q", oldBHead, bHead)
+	}
+}
+
+// TestRebuildRecordsTransientIngestFailureVisibly reproduces F-19: a repo that
+// still exists on disk (still discoverable, still has a .git entry) but whose
+// git metadata is transiently broken so ingest.Repo fails must be recorded
+// visibly on the rebuilt Manifest, not silently and permanently treated the
+// same as a repo that was genuinely removed from disk.
+func TestRebuildRecordsTransientIngestFailureVisibly(t *testing.T) {
+	requireGit(t)
+	corpus := t.TempDir()
+	repoA := filepath.Join(corpus, "repoA")
+	repoB := filepath.Join(corpus, "repoB")
+	commitGitRepo(t, repoA, map[string]string{"a.go": "package a\nconst MarkerAAA = 1\n"})
+	commitGitRepo(t, repoB, map[string]string{"b.go": "package b\nconst MarkerBBB = 1\n"})
+
+	work := t.TempDir()
+	if _, err := Build(Config{Root: corpus, WorkDir: work, Seed: 1, ShardBytes: 1 << 30}); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	old, err := LoadManifest(filepath.Join(work, "shards", ManifestName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := old.HeadOf(repoB); !ok {
+		t.Fatal("test premise: repoB missing from initial manifest")
+	}
+
+	// Break repoB's git metadata while leaving the ".git" entry itself in place,
+	// so DiscoverRepos still reports repoB as present (unlike an actual removal)
+	// but `git ls-files` / `git rev-parse HEAD` both fail against it.
+	gitDir := filepath.Join(repoB, ".git")
+	entries, err := os.ReadDir(gitDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if err := os.RemoveAll(filepath.Join(gitDir, e.Name())); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Test premise: repoB is still discoverable on disk, but ingest.Repo now
+	// fails for it with a non-privacy error.
+	repos, err := ingest.DiscoverRepos(corpus)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(repos, repoB) {
+		t.Fatalf("test premise broken: repoB no longer discoverable on disk (repos=%v)", repos)
+	}
+	if _, err := ingest.Repo(filepath.Base(repoB), repoB); err == nil {
+		t.Fatal("test premise broken: ingest.Repo(repoB) unexpectedly succeeded after corrupting .git")
+	} else if ingest.IsPrivacyPolicyError(err) {
+		t.Fatalf("test premise broken: ingest.Repo(repoB) failed as a privacy error, want a plain ingest failure: %v", err)
+	}
+
+	ch, err := DetectChanges(old, corpus, ingest.DiscoverRepos, ingest.Head)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ch.Removed) != 0 {
+		t.Fatalf("Removed = %v, want none: repoB still exists on disk", ch.Removed)
+	}
+	if len(ch.Changed) != 1 || ch.Changed[0] != repoB {
+		t.Fatalf("Changed = %v, want [repoB] (unreadable HEAD looks like a change)", ch.Changed)
+	}
+
+	newShardDir := filepath.Join(work, "shards2")
+	nm, err := Rebuild(old, ch, newShardDir, time.Now(), ingest.Head)
+	if err != nil {
+		t.Fatalf("Rebuild: %v", err)
+	}
+
+	// repoA shared repoB's shard (both fit under the huge ShardBytes budget), so
+	// it is co-resident and gets re-ingested too; it must survive untouched.
+	if _, ok := nm.HeadOf(repoA); !ok {
+		t.Fatal("unrelated co-resident repoA was dropped from the rebuilt manifest")
+	}
+
+	// The regression: repoB's transient ingest failure must be visible on the
+	// result, distinguishable from an intentional removal.
+	if len(nm.Skipped) != 1 || nm.Skipped[0].Dir != repoB {
+		t.Fatalf("Skipped = %+v, want exactly one entry for repoB", nm.Skipped)
+	}
+	if nm.Skipped[0].Reason == "" {
+		t.Error("Skipped repo has no reason recorded")
 	}
 }
 

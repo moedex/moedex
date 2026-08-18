@@ -5,6 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
+
+	"moedex/internal/graph/diskgraph"
 )
 
 // TestInspectShardDir covers the read-only shard-dir snapshot doctor relies on:
@@ -99,5 +102,78 @@ func TestInspectShardDir_CASLayout(t *testing.T) {
 func TestInspectShardDir_NoShards(t *testing.T) {
 	if _, err := InspectShardDir(t.TempDir()); err == nil {
 		t.Fatal("expected an error for a dir with no shards")
+	}
+}
+
+// TestInspectShardDir_Graph guards F-07: before this, doctor tracked the dense
+// embedding sidecar's presence and freshness but had no idea whether the graph
+// sidecar existed at all, let alone whether it was stale. That let a refresh
+// whose best-effort graph rebuild failed leave a prior-generation graph in
+// place indefinitely with an all-green doctor report. InspectShardDir must
+// surface both the graph's presence and a shard-newer-than-graph staleness
+// signal — the exact fingerprint a failed rebuild leaves behind, since
+// CarryGraphSeed hard-links the old graph forward with its original mtime
+// while the freshly rebuilt shards get a new one.
+func TestInspectShardDir_Graph(t *testing.T) {
+	dir := t.TempDir()
+	buildShard(t, dir, "shard-0000.idx", map[string]string{
+		"a.go": "package a\n\nfunc Foo() { Bar() }\nfunc Bar() {}\n",
+	})
+
+	// Before any graph is built: absent, not stale (nothing to be stale about).
+	info, err := InspectShardDir(dir)
+	if err != nil {
+		t.Fatalf("InspectShardDir: %v", err)
+	}
+	if info.GraphExists {
+		t.Error("GraphExists should be false before any graph is built")
+	}
+	if info.GraphStale {
+		t.Error("GraphStale should be false when there is no graph to be stale")
+	}
+
+	if _, _, err := BuildGraph(dir); err != nil {
+		t.Fatalf("BuildGraph: %v", err)
+	}
+	info, err = InspectShardDir(dir)
+	if err != nil {
+		t.Fatalf("InspectShardDir after BuildGraph: %v", err)
+	}
+	if !info.GraphExists {
+		t.Fatal("GraphExists should be true once BuildGraph has run")
+	}
+	if info.GraphOpenErr != "" {
+		t.Errorf("GraphOpenErr = %q, want empty for a freshly built graph", info.GraphOpenErr)
+	}
+	if info.GraphStale {
+		t.Error("a graph built over the current shard set should not read STALE")
+	}
+	if info.GraphGeneration != diskgraph.FirstGeneration {
+		t.Errorf("GraphGeneration = %d, want %d", info.GraphGeneration, diskgraph.FirstGeneration)
+	}
+	if info.GraphNodes == 0 || info.GraphEdges == 0 {
+		t.Errorf("GraphNodes=%d GraphEdges=%d, want both > 0 (Foo calls Bar)", info.GraphNodes, info.GraphEdges)
+	}
+
+	// Simulate the silent failure F-07 describes: the shard set is rebuilt
+	// (newer mtime) but the graph rebuild fails, so the graph on disk is the
+	// prior generation with an OLDER mtime — CarryGraphSeed's hard-link
+	// preserves the original file's mtime rather than bumping it.
+	graphStat, err := os.Stat(GraphPath(dir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	newer := graphStat.ModTime().Add(time.Hour)
+	shardPath := filepath.Join(dir, "shard-0000.idx")
+	if err := os.Chtimes(shardPath, newer, newer); err != nil {
+		t.Fatal(err)
+	}
+
+	info, err = InspectShardDir(dir)
+	if err != nil {
+		t.Fatalf("InspectShardDir after simulated stale graph: %v", err)
+	}
+	if !info.GraphStale {
+		t.Error("GraphStale should be true once a shard is newer than the graph file")
 	}
 }

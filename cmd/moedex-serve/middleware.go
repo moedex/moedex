@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/subtle"
+	"expvar"
 	"log/slog"
 	"net"
 	"net/http"
@@ -111,14 +112,25 @@ func withAccessLog(next http.Handler, m *metrics) http.Handler {
 // otherwise saturate every core under concurrent broad queries.
 const defaultSearchMaxConcurrency = 8
 
+// defaultMCPMaxConcurrency bounds concurrent /mcp requests by default. It
+// mirrors mcp.defaultMaxConcurrency (8), the bound the stdio transport already
+// applies to its own dispatch loop — the HTTP transport (mcp.Server.HTTPHandler)
+// does not enforce that bound itself (net/http hands every POST its own
+// goroutine), so the caller must, exactly as for /search below.
+const defaultMCPMaxConcurrency = 8
+
 // withConcurrencyLimit bounds the number of requests reaching next
 // concurrently via a buffered channel acting as a semaphore. Once n requests
 // are in flight, the next one is rejected immediately with 503 rather than
-// queuing — /search runs a full cross-shard regex/literal scan that can pin a
+// queuing — both /search (a full cross-shard regex/literal scan) and /mcp (a
+// ranked search + context-assembly pass) are CPU-bound work that can pin a
 // core for up to the request timeout, so an unbounded queue is its own
-// resource-exhaustion vector. n<=0 disables the limit (passthrough). Mirrors
-// mcp.WithMaxConcurrency, the MCP server's equivalent guard.
-func withConcurrencyLimit(next http.Handler, n int, m *metrics) http.Handler {
+// resource-exhaustion vector. n<=0 disables the limit (passthrough). rejected
+// is incremented on every reject (a distinct counter per route so a saturated
+// /mcp doesn't masquerade as /search load, or vice versa); msg is the caller-
+// specific text in the 503 body. Mirrors mcp.WithMaxConcurrency, the stdio
+// transport's equivalent guard.
+func withConcurrencyLimit(next http.Handler, n int, rejected *expvar.Int, msg string) http.Handler {
 	if n <= 0 {
 		return next
 	}
@@ -127,8 +139,8 @@ func withConcurrencyLimit(next http.Handler, n int, m *metrics) http.Handler {
 		select {
 		case sem <- struct{}{}:
 		default:
-			m.incSearchRejected()
-			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "too many concurrent searches"})
+			rejected.Add(1)
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": msg})
 			return
 		}
 		defer func() { <-sem }()

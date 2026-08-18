@@ -359,11 +359,16 @@ func normalizePrivacyPath(value string) (string, error) {
 	return trimmed, nil
 }
 
+// privacyPathContains reports whether child is parent itself or falls
+// beneath it. A tracked file can never have a descendant path, so this
+// treats every override as potentially directory-scoped regardless of
+// whether the policy author wrote a trailing slash: an override authored
+// as `/secrets` must restrict `/secrets/token.txt` exactly as `/secrets/`
+// would, so a missing trailing slash never silently degrades a
+// directory-scoped override into one that can never match anything.
 func privacyPathContains(parent, child string) bool {
-	if strings.HasSuffix(parent, "/") {
-		return child == strings.TrimSuffix(parent, "/") || strings.HasPrefix(child, parent)
-	}
-	return child == parent
+	base := strings.TrimSuffix(parent, "/")
+	return child == base || strings.HasPrefix(child, base+"/")
 }
 
 func (p privacyPolicy) effectiveLevel(rel string) int {

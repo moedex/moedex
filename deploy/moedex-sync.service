@@ -39,6 +39,15 @@ Type=oneshot
 User=moedex
 Group=moedex
 
+# Backstop for the whole oneshot (doctor + sync + cas-refresh + cas-export): a
+# stalled network call inside any of them now fails loudly on its own (see
+# moedex-corpus's -timeout, generous per-subcommand defaults), but this bounds
+# the parts that flag doesn't reach too, so a hang can never silently swallow
+# an hourly tick with no error and no non-zero exit to alert on. Systemd sends
+# SIGTERM at this limit, which moedex-corpus's own signal handling turns into
+# a clean, reported cancellation rather than a hard kill.
+TimeoutStartSec=5400
+
 # MOEDEX_CORPUS, MOEDEX_CAS_DIR, MOEDEX_SHARD_DIR (+ optional GITLAB_TOKEN).
 EnvironmentFile=/etc/moedex/moedex-serve.env
 

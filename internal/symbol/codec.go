@@ -171,11 +171,59 @@ func Load(path string) (*Index, error) {
 		return nil, err
 	}
 	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
 	r := bufio.NewReader(f)
-	return readIndex(r)
+	return readIndex(r, info.Size())
 }
 
-func readIndex(r *bufio.Reader) (*Index, error) {
+// minBlobHeaderSize is the smallest possible on-disk encoding of one
+// per-blob record in the symbols section: blobID + symCount, each a minimum
+// 1-byte uvarint (a blob with zero symbols is a valid record).
+const minBlobHeaderSize = 1 + 1
+
+// minSymbolRecordSize is the smallest possible on-disk encoding of one
+// Symbol: nameLen (permitting a zero-length name) + kind + nameStart +
+// nameEnd + bodyStart + bodyEnd, each a minimum 1-byte uvarint.
+const minSymbolRecordSize = 1 + 1 + 1 + 1 + 1 + 1
+
+// minOccurrenceRecordSize is the analogous minimum for one reference
+// Occurrence: nameLen + kind + role + start + end.
+const minOccurrenceRecordSize = 1 + 1 + 1 + 1 + 1
+
+// checkCount rejects an untrusted element count or byte length read from a
+// SYM1/SYM2 sidecar before a caller does an eager make([]T, 0, n) or
+// make([]byte, n) sized off it. minItemSize is the smallest possible
+// on-disk encoding of one element (1 for a raw byte length such as
+// nameLen): n elements of at least minItemSize bytes each could never fit
+// inside a file of size total bytes, so a count exceeding that bound is
+// corrupt. Without this, a corrupted count field near the uint64 max drives
+// a multi-GB allocation attempt before the per-item bounds-checked reads
+// below ever get a chance to fail cleanly on EOF — reproduced as a
+// panic-worthy allocation that would crash a live-serving daemon on SIGHUP
+// reload, since the only recover() in cmd/moedex-serve wraps HTTP handlers,
+// not the reload goroutine.
+//
+// This is necessarily a coarser bound than diskstore's checkCount (which
+// checks against bytes remaining in a fully-buffered slice): readIndex
+// consumes a streaming bufio.Reader with no cheap way to know how many bytes
+// remain at the current position, so it is checked against the whole file's
+// size instead. That is still a valid — if slightly loose — bound, because
+// no section can ever hold more than the entire file, and it is more than
+// enough to reject the wildly-inflated counts this guards against.
+func checkCount(n uint64, minItemSize int, total int64) error {
+	if total < 0 {
+		total = 0
+	}
+	if n > uint64(total)/uint64(minItemSize) {
+		return fmt.Errorf("count %d exceeds file size (%d bytes)", n, total)
+	}
+	return nil
+}
+
+func readIndex(r *bufio.Reader, size int64) (*Index, error) {
 	hdr := make([]byte, len(magic))
 	if _, err := io.ReadFull(r, hdr); err != nil {
 		return nil, fmt.Errorf("symbol: reading magic: %w", err)
@@ -193,6 +241,9 @@ func readIndex(r *bufio.Reader) (*Index, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := checkCount(blobCount, minBlobHeaderSize, size); err != nil {
+		return nil, fmt.Errorf("symbol: blobCount: %w", err)
+	}
 	symBlobs := make([]uint64, 0, blobCount)
 	for i := uint64(0); i < blobCount; i++ {
 		id, err := getU()
@@ -203,11 +254,17 @@ func readIndex(r *bufio.Reader) (*Index, error) {
 		if err != nil {
 			return nil, err
 		}
+		if err := checkCount(symCount, minSymbolRecordSize, size); err != nil {
+			return nil, fmt.Errorf("symbol: blob %d symCount: %w", id, err)
+		}
 		syms := make([]Symbol, 0, symCount)
 		for j := uint64(0); j < symCount; j++ {
 			nameLen, err := getU()
 			if err != nil {
 				return nil, err
+			}
+			if err := checkCount(nameLen, 1, size); err != nil {
+				return nil, fmt.Errorf("symbol: blob %d symbol %d nameLen: %w", id, j, err)
 			}
 			nb := make([]byte, nameLen)
 			if _, err := io.ReadFull(r, nb); err != nil {
@@ -265,11 +322,17 @@ func readIndex(r *bufio.Reader) (*Index, error) {
 			if err != nil {
 				return nil, err
 			}
+			if err := checkCount(refCount, minOccurrenceRecordSize, size); err != nil {
+				return nil, fmt.Errorf("symbol: ref blob %d refCount: %w", id, err)
+			}
 			occs := make([]Occurrence, 0, refCount)
 			for j := uint64(0); j < refCount; j++ {
 				nameLen, err := getU()
 				if err != nil {
 					return nil, err
+				}
+				if err := checkCount(nameLen, 1, size); err != nil {
+					return nil, fmt.Errorf("symbol: ref blob %d occurrence %d nameLen: %w", id, j, err)
 				}
 				nb := make([]byte, nameLen)
 				if _, err := io.ReadFull(r, nb); err != nil {

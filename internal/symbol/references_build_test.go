@@ -79,7 +79,7 @@ func TestLoad_SYM1Backward(t *testing.T) {
 	putU(20)           // bodyEnd
 	// No refs section: a SYM1 reader stops here.
 
-	ix, err := readIndex(bufio.NewReader(bytes.NewReader(buf.Bytes())))
+	ix, err := readIndex(bufio.NewReader(bytes.NewReader(buf.Bytes())), int64(buf.Len()))
 	if err != nil {
 		t.Fatalf("readIndex(SYM1): %v", err)
 	}
@@ -104,5 +104,105 @@ func TestLoad_BadMagic(t *testing.T) {
 	}
 	if _, err := Load(path); err == nil {
 		t.Fatal("expected error loading a file with bad magic, got nil")
+	}
+}
+
+// TestLoad_ImplausibleBlobCount is the regression for the
+// eager-make-from-untrusted-count gap in readIndex: blobCount is an
+// attacker-controlled uvarint that used to be handed straight to
+// make([]uint64, 0, blobCount) before a single blob record was read. A
+// corrupt/truncated SYM2 sidecar claiming far more blob records than the
+// (tiny) file could ever encode must be rejected before that allocation
+// happens — otherwise a SIGHUP reload of a corrupted symbol sidecar could
+// crash the whole live-serving daemon (the only recover() in
+// cmd/moedex-serve wraps HTTP handlers, not the reload goroutine).
+func TestLoad_ImplausibleBlobCount(t *testing.T) {
+	var buf bytes.Buffer
+	buf.WriteString("SYM2")
+	var tmp [binary.MaxVarintLen64]byte
+	putU := func(v uint64) {
+		n := binary.PutUvarint(tmp[:], v)
+		buf.Write(tmp[:n])
+	}
+	putU(5_000_000) // blobCount: implausible for this ~5-byte file
+
+	path := filepath.Join(t.TempDir(), "bad-blobcount.sym")
+	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	if _, err := Load(path); err == nil {
+		t.Fatal("Load accepted a blobCount the file could not possibly hold")
+	}
+}
+
+// TestLoad_ImplausibleSymCount is the per-blob counterpart: symCount used to
+// size make([]Symbol, 0, symCount) directly.
+func TestLoad_ImplausibleSymCount(t *testing.T) {
+	var buf bytes.Buffer
+	buf.WriteString("SYM2")
+	var tmp [binary.MaxVarintLen64]byte
+	putU := func(v uint64) {
+		n := binary.PutUvarint(tmp[:], v)
+		buf.Write(tmp[:n])
+	}
+	putU(1)         // blobCount
+	putU(0)         // blobID
+	putU(5_000_000) // symCount: implausible for this tiny file
+
+	path := filepath.Join(t.TempDir(), "bad-symcount.sym")
+	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	if _, err := Load(path); err == nil {
+		t.Fatal("Load accepted a symCount the file could not possibly hold")
+	}
+}
+
+// TestLoad_ImplausibleNameLen is the raw-byte-length counterpart: nameLen
+// used to be handed straight to make([]byte, nameLen) with no bound at all.
+func TestLoad_ImplausibleNameLen(t *testing.T) {
+	var buf bytes.Buffer
+	buf.WriteString("SYM2")
+	var tmp [binary.MaxVarintLen64]byte
+	putU := func(v uint64) {
+		n := binary.PutUvarint(tmp[:], v)
+		buf.Write(tmp[:n])
+	}
+	putU(1)         // blobCount
+	putU(0)         // blobID
+	putU(1)         // symCount
+	putU(5_000_000) // nameLen: implausible for this tiny file — no name bytes follow
+
+	path := filepath.Join(t.TempDir(), "bad-namelen.sym")
+	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	if _, err := Load(path); err == nil {
+		t.Fatal("Load accepted a nameLen the file could not possibly hold")
+	}
+}
+
+// TestLoad_ImplausibleRefCount is the references-section counterpart of
+// TestLoad_ImplausibleSymCount: refCount used to size
+// make([]Occurrence, 0, refCount) directly.
+func TestLoad_ImplausibleRefCount(t *testing.T) {
+	var buf bytes.Buffer
+	buf.WriteString("SYM2")
+	var tmp [binary.MaxVarintLen64]byte
+	putU := func(v uint64) {
+		n := binary.PutUvarint(tmp[:], v)
+		buf.Write(tmp[:n])
+	}
+	putU(0)         // blobCount: no definitions
+	putU(1)         // refBlobCount
+	putU(0)         // blobID
+	putU(5_000_000) // refCount: implausible for this tiny file
+
+	path := filepath.Join(t.TempDir(), "bad-refcount.sym")
+	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	if _, err := Load(path); err == nil {
+		t.Fatal("Load accepted a refCount the file could not possibly hold")
 	}
 }

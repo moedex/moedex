@@ -221,6 +221,17 @@ func syncManaged(ctx context.Context, r Runner, cfg Config, projects []Project, 
 		return ManagedSyncResult{}, fmt.Errorf("resolve managed corpus root: %w", err)
 	}
 	cfg.Root = root
+
+	// Serialize the entire check-then-act sequence below (load lock, check
+	// working-tree cleanliness, compute a plan, run git mutations, rewrite
+	// corpus.lock.json, commit) against any other sync/init invocation
+	// against this same root. See managed_lock.go.
+	release, err := acquireManagedLock(root)
+	if err != nil {
+		return ManagedSyncResult{}, err
+	}
+	defer func() { _ = release() }()
+
 	catalog, err := LoadCatalog(root)
 	if err != nil {
 		return ManagedSyncResult{}, err
@@ -531,24 +542,104 @@ func setManagedSubmoduleMetadata(ctx context.Context, r Runner, root string, pro
 	return nil
 }
 
+// ensureManagedIndexClean is syncManaged's precondition check, scoped — like
+// its predecessor — to the superproject index and its own metadata paths
+// only. It deliberately does not inspect individual submodule worktrees: a
+// dirty submodule is instead caught per-action by ensureManagedActionClean
+// further down, so one dirty project degrades to a scoped conflict rather
+// than blocking the whole run (see TestManagedSyncAddMissingDirtyAndExplicit
+// Prune / TestManagedSyncDirtyMoveIsConflictAndPreservesOldPath).
+//
+// A genuinely dirty index/metadata still fails closed, but a tree whose only
+// "damage" is content already staged by a prior, interrupted sync (see
+// probeManagedStage) is resumed by finishing that commit instead of wedging
+// every subsequent sync behind a manual-only fix.
 func ensureManagedIndexClean(ctx context.Context, r Runner, root string) error {
-	res, err := runManagedGit(ctx, r, "inspect managed superproject index", root,
-		"diff", "--cached", "--name-only", "-z")
+	state, err := probeManagedStage(ctx, r, root)
 	if err != nil {
 		return err
 	}
-	if len(res.Stdout) != 0 {
-		return fmt.Errorf("managed corpus at %q has pre-existing staged changes", root)
+	switch state {
+	case managedDirty:
+		return fmt.Errorf("managed corpus at %q has pre-existing staged or modified ownership metadata outside a resumable interrupted sync", root)
+	case managedClean:
+		return nil
 	}
-	res, err = runManagedGit(ctx, r, "inspect managed metadata", root,
-		"status", "--porcelain", "--untracked-files=all", "--", ".gitmodules", ManagedDirName)
-	if err != nil {
-		return err
-	}
-	if len(res.Stdout) != 0 {
-		return fmt.Errorf("managed corpus at %q has modified ownership metadata", root)
+	// managedStagedResumable: stageManagedSync's `git add` completed on a prior
+	// run but the process never reached `git commit` (signal, deadline, OOM,
+	// reboot landed in between). Nothing here was invented after the fact — a
+	// completed `git add` already put it there — so finishing that commit now
+	// is safe.
+	if _, err := runManagedGit(ctx, r, "resume interrupted managed sync commit", root,
+		"-c", "user.name=Moedex",
+		"-c", "user.email=moedex@localhost",
+		"commit", "-m", managedSyncCommitMessage); err != nil {
+		return fmt.Errorf("managed corpus at %q has a staged snapshot from an interrupted sync that failed to commit: %w", root, err)
 	}
 	return nil
+}
+
+// managedCleanliness classifies a managed corpus worktree's dirtiness, shared
+// by doctor's preflight and sync's own precondition check so the two always
+// agree on what is safe.
+type managedCleanliness int
+
+const (
+	// managedClean: nothing staged, modified, or untracked in the scope probed.
+	managedClean managedCleanliness = iota
+	// managedStagedResumable: the index holds staged content and nothing else
+	// in the probed scope is unstaged or untracked. This is exactly the
+	// signature stageManagedSync's completed `git add` leaves behind when a
+	// managed sync is interrupted before the follow-up `git commit` runs.
+	managedStagedResumable
+	// managedDirty: real, unstaged or untracked local work is present in the
+	// probed scope and a human needs to look at it before anything proceeds.
+	managedDirty
+)
+
+// probeManagedStage inspects the superproject worktree as a whole plus the
+// two Moedex-owned metadata paths specifically — the same scope
+// stageManagedSync stages. Untracked noise directly at the superproject root
+// (Finder metadata and similar) is deliberately ignored — it cannot enter
+// ingestion — but tracked changes anywhere, and untracked files inside
+// Moedex-owned paths, are not. It does not look inside any submodule's own
+// worktree; callers that need that do so separately (doctor checks every
+// locked submodule; syncManaged's per-action ensureManagedActionClean checks
+// only the ones a given action touches).
+func probeManagedStage(ctx context.Context, r Runner, root string) (managedCleanliness, error) {
+	wholeTree, err := runManagedGit(ctx, r, "inspect managed superproject worktree", root,
+		"status", "--porcelain", "--untracked-files=no")
+	if err != nil {
+		return managedDirty, err
+	}
+	metadata, err := runManagedGit(ctx, r, "inspect managed metadata", root,
+		"status", "--porcelain", "--untracked-files=all", "--", ".gitmodules", ManagedDirName)
+	if err != nil {
+		return managedDirty, err
+	}
+	if !managedStagedOnly(wholeTree.Stdout) || !managedStagedOnly(metadata.Stdout) {
+		return managedDirty, nil
+	}
+	if len(wholeTree.Stdout) != 0 || len(metadata.Stdout) != 0 {
+		return managedStagedResumable, nil
+	}
+	return managedClean, nil
+}
+
+// managedStagedOnly reports whether every line of a `git status --porcelain`
+// listing has a blank worktree-status column (column 2, "Y") — i.e.
+// describes content that is already staged with no further unstaged change
+// on top of it. An empty listing is vacuously staged-only.
+func managedStagedOnly(porcelain []byte) bool {
+	for _, line := range strings.Split(string(porcelain), "\n") {
+		if line == "" {
+			continue
+		}
+		if len(line) < 2 || line[1] != ' ' {
+			return false
+		}
+	}
+	return true
 }
 
 func ensureManagedActionClean(ctx context.Context, r Runner, root string, action ManagedAction) error {

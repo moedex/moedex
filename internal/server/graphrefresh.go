@@ -34,7 +34,9 @@ import (
 	"math"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"sync"
+	"sync/atomic"
 
 	"moedex/internal/graph/candidates"
 	"moedex/internal/graph/diskgraph"
@@ -111,21 +113,55 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 	stats.Generation = previous.Generation() + 1
 
 	carried := make(map[string][]carriedGraphEdge)
+	var carriedUnnamed []carriedGraphEdge
 	for node := 0; node < previous.NumNodes(); node++ {
-		_, first, count, ok := previous.NodeAt(node)
+		key, first, count, ok := previous.NodeAt(node)
 		if !ok {
 			break
 		}
 		for i := first; i < first+count; i++ {
 			name := previous.EdgeName(i)
-			if _, stale := dirty[name]; stale {
+			if name != "" {
+				// A per-name edge from the candidates.GenerateCandidates sweep:
+				// carry it forward unless the delta marked its name dirty, or the
+				// name no longer exists anywhere in the corpus to regenerate.
+				if _, stale := dirty[name]; stale {
+					continue
+				}
+				if _, ok := sweep.eligible[name]; !ok {
+					stats.EdgesDropped++
+					continue
+				}
+				carried[name] = append(carried[name], carriedGraphEdge{node: uint32(node), edge: uint32(i)})
 				continue
 			}
-			if _, ok := sweep.eligible[name]; !ok {
+			// An edge from one of the whole-corpus passes (HTTP, manifest,
+			// hierarchy, injection, queries, renders, LSP calls, similarity) —
+			// none of these have a symbol name, so the per-name dirty/eligible
+			// check above can never keep them. The six tag-independent passes
+			// are always regenerated fresh below (see addWholeCorpusEdges), so
+			// their previous copies are neither carried nor dropped here: they
+			// are simply superseded. LSP-call and SIMILAR_TO edges need runtime
+			// resources (a language-server pool, an embedder) this incremental
+			// path does not have, so they are carried forward instead, but only
+			// when neither endpoint's blob was removed by this delta — an
+			// unmodified pair of blobs cannot have produced a different edge.
+			edge, ok := previous.EdgeAt(i)
+			if !ok {
+				continue
+			}
+			if edge.Type != diskgraph.EdgeCalls && edge.Type != diskgraph.EdgeSimilarTo {
+				continue
+			}
+			if _, gone := removed[key.BlobSHA]; gone {
 				stats.EdgesDropped++
 				continue
 			}
-			carried[name] = append(carried[name], carriedGraphEdge{node: uint32(node), edge: uint32(i)})
+			if _, gone := removed[edge.TargetBlob]; gone {
+				stats.EdgesDropped++
+				continue
+			}
+			carriedUnnamed = append(carriedUnnamed, carriedGraphEdge{node: uint32(node), edge: uint32(i)})
 		}
 	}
 
@@ -178,6 +214,34 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 		}
 	}
 
+	// Carry forward the LSP-call / SIMILAR_TO edges whose endpoints this delta
+	// left untouched — see the loop above for why these two families alone are
+	// carried rather than regenerated.
+	for _, c := range carriedUnnamed {
+		key, _, _, ok := previous.NodeAt(int(c.node))
+		if !ok {
+			return "", stats, fmt.Errorf("server: graph refresh lost node %d of the previous graph", c.node)
+		}
+		edge, ok := previous.EdgeAt(int(c.edge))
+		if !ok {
+			return "", stats, fmt.Errorf("server: graph refresh lost edge %d of the previous graph", c.edge)
+		}
+		if err := builder.AddEdge(key, edge); err != nil {
+			return "", stats, err
+		}
+		stats.EdgesCarried++
+	}
+
+	// The six tag-independent whole-corpus passes are cheap pure functions of
+	// the current corpus and never consult the previous graph, so they are
+	// always regenerated fresh here instead of being diffed — see
+	// addWholeCorpusEdges.
+	before := builder.NumEdges()
+	if _, err := sweep.addWholeCorpusEdges(builder, emit.seen); err != nil {
+		return "", stats, err
+	}
+	stats.EdgesRecomputed += int(builder.NumEdges() - before)
+
 	path, err = saveGraph(builder, dir)
 	return path, stats, err
 }
@@ -216,23 +280,19 @@ func openPreviousGraph(dir string) (*diskgraph.Graph, string) {
 	return g, ""
 }
 
+// rebuildAll is the from-scratch fallback RefreshGraph takes when there is no
+// usable previous graph to diff against. It calls the exact same buildAllEdges
+// pass BuildGraphWithOptions does — every edge family, not just the per-name
+// sweep — so this path and a full BuildGraph produce the same graph, as the
+// package doc for RefreshGraph promises.
 func (s *graphSweep) rebuildAll(dir string, stats *GraphRefreshStats) (string, error) {
 	builder := diskgraph.NewBuilder()
 	builder.SetGeneration(stats.Generation)
 	s.recordCorpusRoster(builder)
-
-	results, err := s.computeEdgesParallel(s.names, stats.Generation)
-	if err != nil {
-		return "", err
-	}
-
 	emit := newGraphEmitter(builder)
-	for _, batch := range results {
-		for i := range batch {
-			if err := emit.Add(batch[i].Key, batch[i].Edge); err != nil {
-				return "", err
-			}
-		}
+
+	if _, err := s.buildAllEdges(builder, emit, stats.Generation, GraphBuildOptions{}); err != nil {
+		return "", err
 	}
 
 	stats.NamesRecomputed = len(s.names)
@@ -243,19 +303,54 @@ func (s *graphSweep) rebuildAll(dir string, stats *GraphRefreshStats) (string, e
 
 // computeEdgesParallel fans out computeEdgesForName across GOMAXPROCS workers.
 // Results are returned in the same order as names for deterministic output.
+// See computeParallel for the panic-recovery and fail-fast behavior this
+// relies on.
 func (s *graphSweep) computeEdgesParallel(names []string, generation uint64) ([][]graphKeyEdge, error) {
-	n := len(names)
+	return computeParallel(names, runtime.GOMAXPROCS(0), func(name string) ([]graphKeyEdge, error) {
+		return s.computeEdgesForName(name, generation)
+	})
+}
+
+// computeParallel fans fn out across up to workers goroutines, one call per
+// entry of items, and returns the results in input order.
+//
+// Two failure modes are handled that a bare "drain a channel, spawn goroutines"
+// pool does not:
+//
+//   - Panic recovery. fn's call graph (computeEdgesForName reaches every
+//     language-specific extractor in the corpus) is not guarded by any
+//     recover() anywhere else in that call graph, so a single panic — a nil
+//     deref, an index-out-of-range — while processing one item among
+//     potentially tens of thousands would otherwise crash the whole
+//     moedex-index build/refresh process with no indication of which item
+//     was being processed. Each worker recovers a panic from fn into an
+//     error naming the offending item, mirroring the recover-per-unit-of-work
+//     pattern already used at the MCP (mcp.handleSafe) and HTTP
+//     (cmd/moedex-serve's withRecover) layers.
+//   - Fail-fast. Once any item reports an error (returned or recovered),
+//     every worker stops STARTING new items and drains the rest of the work
+//     queue without calling fn, instead of running every other
+//     already-queued item to completion before the error is even inspected.
+//     Items already in flight when the error is observed still run to
+//     completion — fn takes no context/cancellation, so an in-flight call
+//     cannot be interrupted mid-call — which bounds the wasted work to at
+//     most `workers` items instead of the whole remaining backlog.
+//
+// On any error (returned or recovered), the results collected so far are
+// discarded, matching the caller's existing all-or-nothing contract.
+func computeParallel[T any](items []string, workers int, fn func(name string) (T, error)) ([]T, error) {
+	n := len(items)
 	if n == 0 {
 		return nil, nil
 	}
-
-	workers := runtime.GOMAXPROCS(0)
 	if workers > n {
 		workers = n
 	}
+	if workers < 1 {
+		workers = 1
+	}
 
-	results := make([][]graphKeyEdge, n)
-	errs := make([]error, n)
+	results := make([]T, n)
 
 	work := make(chan int, n)
 	for i := range n {
@@ -263,24 +358,50 @@ func (s *graphSweep) computeEdgesParallel(names []string, generation uint64) ([]
 	}
 	close(work)
 
-	var wg sync.WaitGroup
+	var (
+		wg       sync.WaitGroup
+		failed   atomic.Bool
+		errOnce  sync.Once
+		firstErr error
+	)
 	wg.Add(workers)
 	for range workers {
 		go func() {
 			defer wg.Done()
 			for i := range work {
-				results[i], errs[i] = s.computeEdgesForName(names[i], generation)
+				if failed.Load() {
+					continue // an earlier item already failed; drain without computing
+				}
+				result, err := runRecovered(items[i], func() (T, error) { return fn(items[i]) })
+				if err != nil {
+					errOnce.Do(func() { firstErr = err })
+					failed.Store(true)
+					continue
+				}
+				results[i] = result
 			}
 		}()
 	}
 	wg.Wait()
 
-	for _, err := range errs {
-		if err != nil {
-			return nil, err
-		}
+	if firstErr != nil {
+		return nil, firstErr
 	}
 	return results, nil
+}
+
+// runRecovered calls fn and converts any panic into an error naming item, so
+// a panic anywhere in fn's call graph cannot crash the caller. The stack is
+// printed immediately (mirrors mcp.handleSafe) so it is not lost even though
+// the returned error is just a one-line summary.
+func runRecovered[T any](item string, fn func() (T, error)) (result T, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			debug.PrintStack()
+			err = fmt.Errorf("server: panic computing graph edges for %q: %v", item, r)
+		}
+	}()
+	return fn()
 }
 
 func (s *graphSweep) contentDelta(previous *diskgraph.Graph) (added []string, removed map[string]struct{}) {

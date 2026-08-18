@@ -154,6 +154,12 @@ type inheritedSuper struct {
 	superName   string // identifier of the super type
 	superOffset int    // byte offset of the super name in blob content
 	edgeType    diskgraph.EdgeType // EdgeExtends or EdgeImplements
+	// guessedKind is true when edgeType came from csInferEdgeType's I-prefix
+	// name heuristic rather than an explicit extends/implements keyword (TS
+	// always has one). resolveAndEmitSuper uses it to know when a resolved
+	// local super definition's own declaring keyword should override the
+	// guess instead of being taken at face value.
+	guessedKind bool
 }
 
 // extractInheritance dispatches to language-specific inheritance parsers.
@@ -171,7 +177,10 @@ func extractInheritance(content []byte, syms []symbol.Symbol, ext string) []inhe
 // csExtractInheritance extracts C# inheritance clauses from type declarations.
 // For each Type symbol, it scans forward from NameEnd past optional generics
 // to find `:`, then collects comma-separated identifiers until `{`, `where`,
-// or `;`. Uses the I-prefix convention to distinguish interfaces.
+// or `;`. Uses the I-prefix convention to distinguish interfaces as an
+// initial guess (guessedKind); resolveAndEmitSuper overrides that guess when
+// the super resolves to a local definition whose own declaring keyword is
+// known.
 func csExtractInheritance(content []byte, syms []symbol.Symbol) []inheritedSuper {
 	var out []inheritedSuper
 	for _, s := range syms {
@@ -185,6 +194,7 @@ func csExtractInheritance(content []byte, syms []symbol.Symbol) []inheritedSuper
 				superName:   sup.name,
 				superOffset: sup.offset,
 				edgeType:    csInferEdgeType(sup.name),
+				guessedKind: true,
 			})
 		}
 	}
@@ -340,6 +350,23 @@ func resolveAndEmitSuper(
 			continue
 		}
 
+		// sup.edgeType is a name-based guess for C# (IFoo -> implements, Foo ->
+		// extends); it has no positional or resolved-kind cross-check. When the
+		// super resolves to a local definition, prefer that definition's own
+		// declaring keyword (class/struct/enum/record vs interface) over the
+		// guess. Unresolved supers (external/BCL) fall back to the guess, since
+		// there is no local declaration to inspect.
+		edgeType := sup.edgeType
+		if sup.guessedKind {
+			if kw, ok := csResolvedDeclKeyword(sweep, def, targetBlob); ok {
+				if kw == "interface" {
+					edgeType = diskgraph.EdgeImplements
+				} else {
+					edgeType = diskgraph.EdgeExtends
+				}
+			}
+		}
+
 		evidenceLen := uint64(len(sup.superName))
 		if evidenceLen == 0 {
 			evidenceLen = 1
@@ -348,7 +375,7 @@ func resolveAndEmitSuper(
 		record := persistedGraphEdge{
 			sourceBlob:     sourceBlobSHA,
 			sourceOffset:   uint64(sup.typeOffset),
-			typeID:         sup.edgeType,
+			typeID:         edgeType,
 			targetBlob:     targetBlob.SHA,
 			targetOffset:   uint64(def.Start),
 			confidence:     uint64(graph.Proven),
@@ -362,7 +389,7 @@ func resolveAndEmitSuper(
 		seen[record] = struct{}{}
 
 		if err := builder.Add(sourceBlobSHA, uint64(sup.typeOffset), diskgraph.Edge{
-			Type:         sup.edgeType,
+			Type:         edgeType,
 			TargetBlob:   targetBlob.SHA,
 			TargetOffset: uint64(def.Start),
 			Confidence:   graph.Proven,
@@ -374,7 +401,7 @@ func resolveAndEmitSuper(
 		}); err != nil {
 			return err
 		}
-		switch sup.edgeType {
+		switch edgeType {
 		case diskgraph.EdgeExtends:
 			report.ExtendsEdges++
 		case diskgraph.EdgeImplements:
@@ -385,11 +412,71 @@ func resolveAndEmitSuper(
 }
 
 // csInferEdgeType uses the C# I-prefix convention: IFoo → implements, Foo → extends.
+// It is a fallback guess only — resolveAndEmitSuper overrides it with
+// csResolvedDeclKeyword whenever the super resolves to a local definition.
 func csInferEdgeType(name string) diskgraph.EdgeType {
 	if len(name) >= 2 && name[0] == 'I' && name[1] >= 'A' && name[1] <= 'Z' {
 		return diskgraph.EdgeImplements
 	}
 	return diskgraph.EdgeExtends
+}
+
+// csResolvedDeclKeyword reports the C# keyword a resolved local super
+// definition was actually declared with ("class", "interface", "struct",
+// "enum", or "record"), so csInferEdgeType's name-based guess can be
+// overridden with ground truth instead of a naming convention. It returns
+// ok=false — meaning the caller should keep the guess — when def isn't a Type
+// symbol in a .cs blob, or when no declaring keyword sits immediately before
+// its name.
+func csResolvedDeclKeyword(sweep *graphSweep, def symbol.ShardRef, targetBlob *index.Blob) (kw string, ok bool) {
+	if blobPrimaryExtension(targetBlob) != ".cs" {
+		return "", false
+	}
+	if def.Shard < 0 || def.Shard >= len(sweep.symbols) || sweep.symbols[def.Shard] == nil {
+		return "", false
+	}
+	for _, s := range sweep.symbols[def.Shard].Symbols(def.Blob) {
+		if s.NameStart != def.Start {
+			continue
+		}
+		if s.Kind != symbol.Type {
+			return "", false
+		}
+		kw = csKeywordBeforeOffset(targetBlob.Content, s.NameStart)
+		return kw, kw != ""
+	}
+	return "", false
+}
+
+// csKeywordBeforeOffset scans backward from off over whitespace to the
+// preceding identifier token and returns it when it is one of the
+// type-declaring keywords csTypeRe (internal/symbol/extract_cs.go) matches:
+// class, interface, struct, enum, or record. This mirrors csTypeRe's own
+// shape — keyword, whitespace, name — without a second regex pass over the
+// blob. Returns "" when the preceding token isn't one of those keywords.
+func csKeywordBeforeOffset(content []byte, off int) string {
+	i := off
+	for i > 0 {
+		switch content[i-1] {
+		case ' ', '\t', '\r', '\n':
+			i--
+			continue
+		}
+		break
+	}
+	end := i
+	for i > 0 && hierIsIdentByte(content[i-1]) {
+		i--
+	}
+	if i == end {
+		return ""
+	}
+	switch word := string(content[i:end]); word {
+	case "class", "interface", "struct", "enum", "record":
+		return word
+	default:
+		return ""
+	}
 }
 
 // blobPrimaryExtension returns the lower-cased file extension of the blob's

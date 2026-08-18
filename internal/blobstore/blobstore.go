@@ -91,6 +91,11 @@ type Store struct {
 	order   []string      // SHAs in pack insertion order (for deterministic export)
 	byID    map[string]entry
 	dirty   bool // index needs re-persisting on Close
+
+	// hasher re-verifies a Get's returned content against its claimed SHA key; nil
+	// disables verification. Decided once at Open (see verifyContentHasher) so Get
+	// does not re-read the environment on every call.
+	hasher func([]byte) string
 }
 
 // Open opens (creating if absent) the CAS rooted at dir, loading the existing
@@ -103,7 +108,7 @@ func Open(dir string) (*Store, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, err
 	}
-	s := &Store{dir: dir, byID: map[string]entry{}}
+	s := &Store{dir: dir, byID: map[string]entry{}, hasher: verifyContentHasher()}
 	if err := s.loadIndex(); err != nil {
 		return nil, err
 	}
@@ -112,7 +117,15 @@ func Open(dir string) (*Store, error) {
 	fi, err := os.Stat(packPath)
 	switch {
 	case os.IsNotExist(err):
-		// fresh store
+		// A missing pack is only a "fresh store" if the index we just loaded is
+		// ALSO empty. An index that already references blobs with no backing pack
+		// file at all is corruption — the symmetric case to the fi.Size() <
+		// s.packPos check below (a too-short pack), just at the "zero bytes"
+		// extreme. Accepting it silently would let Open() report a populated,
+		// seemingly healthy store with no content behind any of it.
+		if len(s.byID) > 0 {
+			return nil, fmt.Errorf("blobstore: index references %d blobs but pack file is missing (corrupt store)", len(s.byID))
+		}
 	case err != nil:
 		return nil, err
 	default:
@@ -225,7 +238,8 @@ func (s *Store) Put(sha string, content []byte) (added bool, err error) {
 }
 
 // Get returns the content stored under sha, read from the pack. It returns an
-// error if the SHA is absent.
+// error if the SHA is absent, or if the returned content fails the content-
+// integrity check (see verifyContentHasher) against its claimed key.
 func (s *Store) Get(sha string) ([]byte, error) {
 	e, ok := s.byID[sha]
 	if !ok {
@@ -247,14 +261,18 @@ func (s *Store) Get(sha string) ([]byte, error) {
 		// Any error — including io.EOF from a short read on a truncated/corrupt
 		// pack tail — must not decode a partial buffer. packF is also opened
 		// write-only for appends, so reopen read-only for ReadAt.
-		return s.getViaReopen(e)
+		return s.getViaReopen(sha, e)
 	}
-	return decodeRecord(buf)
+	content, err := decodeRecord(buf)
+	if err != nil {
+		return nil, err
+	}
+	return s.verifyContent(sha, content)
 }
 
 // getViaReopen reads a blob record by reopening the pack read-only. (The append
 // handle is write-only, so ReadAt on it can fail on some platforms.)
-func (s *Store) getViaReopen(e entry) ([]byte, error) {
+func (s *Store) getViaReopen(sha string, e entry) ([]byte, error) {
 	f, err := os.Open(filepath.Join(s.dir, packName))
 	if err != nil {
 		return nil, err
@@ -264,7 +282,49 @@ func (s *Store) getViaReopen(e entry) ([]byte, error) {
 	if _, err := f.ReadAt(buf, e.packOff); err != nil {
 		return nil, err
 	}
-	return decodeRecord(buf)
+	content, err := decodeRecord(buf)
+	if err != nil {
+		return nil, err
+	}
+	return s.verifyContent(sha, content)
+}
+
+// verifyContent re-hashes content with s.hasher and asserts it equals sha,
+// mirroring diskstore.ContentStore.Verify's parity-safety rationale (see
+// verifyContentHasher): unlike the sibling served content store, the CAS pack is
+// a plain append-only file, not content-addressed at the storage-format level —
+// Put trusts its caller-supplied sha, and Get previously returned whatever bytes
+// the length framing pointed at with no check that they still hash to the key.
+// Bit-rot or partial disk corruption in blobs.pack's content region that leaves
+// the length framing intact would otherwise be returned as valid content. A nil
+// s.hasher (MOEDEX_VERIFY_CONTENT unset to a falsy value) skips the check.
+func (s *Store) verifyContent(sha string, content []byte) ([]byte, error) {
+	if s.hasher == nil {
+		return content, nil
+	}
+	if got := s.hasher(content); got != sha {
+		return nil, fmt.Errorf("blobstore: content corruption: blob keyed %s hashes to %s (%d bytes) — wrong-or-corrupt content, refusing to return", sha, got, len(content))
+	}
+	return content, nil
+}
+
+// verifyContentHasher returns the content-integrity hasher Store.Get uses to
+// re-verify retrieved content against its claimed SHA key, or nil to disable
+// verification. Gated by the SAME MOEDEX_VERIFY_CONTENT env var as the served
+// content store's default-on verification (diskstore.OpenContentStoreVerified /
+// server.contentHasher in internal/server/dedup.go), so one operator-facing flag
+// controls content-integrity verification consistently across both the CAS pack
+// and its served-side counterpart. Unset (default) verifies; a falsy value
+// ("0"/"false"/"no"/"off", any case) disables it — e.g. for a very large CAS
+// where the cost of re-hashing every Get is unwelcome and the operator trusts the
+// store by other means.
+func verifyContentHasher() func([]byte) string {
+	switch os.Getenv("MOEDEX_VERIFY_CONTENT") {
+	case "0", "false", "no", "off", "FALSE", "No", "Off":
+		return nil
+	default:
+		return contentKey
+	}
 }
 
 // decodeRecord parses one pack record (shaLen+sha, contentLen+content) and

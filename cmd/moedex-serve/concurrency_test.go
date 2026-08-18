@@ -23,7 +23,7 @@ func TestWithConcurrencyLimitRejectsOverflow(t *testing.T) {
 		<-release
 		w.WriteHeader(http.StatusOK)
 	})
-	h := withConcurrencyLimit(slow, 1, m)
+	h := withConcurrencyLimit(slow, 1, m.searchRejected, "too many concurrent searches")
 
 	done1 := make(chan *httptest.ResponseRecorder, 1)
 	go func() { done1 <- doGet(t, h, "/search?q=x", "") }()
@@ -55,7 +55,7 @@ func TestWithConcurrencyLimitAllowsUpToCapacity(t *testing.T) {
 		<-release
 		w.WriteHeader(http.StatusOK)
 	})
-	h := withConcurrencyLimit(slow, 2, m)
+	h := withConcurrencyLimit(slow, 2, m.searchRejected, "too many concurrent searches")
 
 	done := make(chan *httptest.ResponseRecorder, 2)
 	go func() { done <- doGet(t, h, "/search?q=a", "") }()
@@ -80,7 +80,7 @@ func TestWithConcurrencyLimitZeroDisables(t *testing.T) {
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	h := withConcurrencyLimit(inner, 0, m)
+	h := withConcurrencyLimit(inner, 0, m.searchRejected, "too many concurrent searches")
 	if rec := doGet(t, h, "/search?q=x", ""); rec.Code != http.StatusOK {
 		t.Errorf("disabled limiter: status = %d, want 200", rec.Code)
 	}

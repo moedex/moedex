@@ -60,6 +60,7 @@ type metrics struct {
 	reloads        *expvar.Map // by result: "ok" | "fail"
 	dur            *histogram
 	searchRejected *expvar.Int // /search requests rejected by withConcurrencyLimit
+	mcpRejected    *expvar.Int // /mcp requests rejected by withConcurrencyLimit
 }
 
 var defaultBuckets = []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10}
@@ -74,6 +75,7 @@ func newMetrics() *metrics {
 		reloads:        expvar.NewMap("moedex_reloads_total"),
 		dur:            newHistogram(defaultBuckets),
 		searchRejected: expvar.NewInt("moedex_http_search_rejected_total"),
+		mcpRejected:    expvar.NewInt("moedex_http_mcp_rejected_total"),
 	}
 }
 
@@ -87,6 +89,7 @@ func newUnpublishedMetrics() *metrics {
 		reloads:        new(expvar.Map).Init(),
 		dur:            newHistogram(defaultBuckets),
 		searchRejected: new(expvar.Int),
+		mcpRejected:    new(expvar.Int),
 	}
 }
 
@@ -98,7 +101,6 @@ func (m *metrics) observe(code int, seconds float64) {
 
 func (m *metrics) incPanic()               { m.panics.Add(1) }
 func (m *metrics) incReload(result string) { m.reloads.Add(result, 1) }
-func (m *metrics) incSearchRejected()      { m.searchRejected.Add(1) }
 
 // codeClass buckets an HTTP status into the Prometheus-conventional class label.
 func codeClass(code int) string {
@@ -188,6 +190,10 @@ func rankMetricsHandler(holder *rankHolder, m *metrics) http.HandlerFunc {
 
 		writeCounterMap(w, "moedex_reloads_total",
 			"Total ranker reloads by result.", "result", m.reloads)
+
+		fmt.Fprintf(w, "# HELP moedex_http_mcp_rejected_total Total /mcp requests rejected by the concurrency limiter.\n")
+		fmt.Fprintf(w, "# TYPE moedex_http_mcp_rejected_total counter\n")
+		fmt.Fprintf(w, "moedex_http_mcp_rejected_total %d\n", m.mcpRejected.Value())
 
 		buckets, count, sum := m.dur.snapshot()
 		fmt.Fprintf(w, "# HELP moedex_http_request_duration_seconds HTTP request latency.\n")

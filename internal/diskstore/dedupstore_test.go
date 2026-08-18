@@ -2,6 +2,7 @@ package diskstore
 
 import (
 	"context"
+	"encoding/binary"
 	"path/filepath"
 	"testing"
 
@@ -293,5 +294,56 @@ func TestIsDedupedRejectsLegacy(t *testing.T) {
 	}
 	if IsDeduped(path) {
 		t.Error("IsDeduped reported true for a MOEDEX03 shard")
+	}
+}
+
+// TestParseDedupedHeaderRejectsImplausibleBlobCount is the MOEDEX05
+// counterpart of TestParseHeaderRejectsImplausibleBlobCount (diskstore.go):
+// numBlobs is an attacker-controlled header field that used to be handed
+// straight to loadDedupedBlobs' make([]index.BlobData, n) before a single
+// blob record was read. A numBlobs claiming far more content-less blob
+// records than the BLOB SECTION's actual bytes could ever encode (each
+// record needs >= minDedupedBlobRecordSize bytes) must be rejected by
+// parseDedupedHeader itself.
+func TestParseDedupedHeaderRejectsImplausibleBlobCount(t *testing.T) {
+	const blobSectionLen = 16 // fits at most two 8-byte content-less records
+	const dataLen = headerSizeV5 + blobSectionLen
+	b := make([]byte, dataLen)
+	copy(b[0:8], magicDeduped)
+	binary.LittleEndian.PutUint32(b[8:12], formatVersionV5)
+	binary.LittleEndian.PutUint64(b[16:24], 5_000_000)                   // numBlobs: implausible for a 16-byte section
+	binary.LittleEndian.PutUint64(b[24:32], 0)                           // numTrigrams
+	binary.LittleEndian.PutUint64(b[32:40], headerSizeV5)                // blobOff
+	binary.LittleEndian.PutUint64(b[40:48], headerSizeV5+blobSectionLen) // postOff
+
+	_, err := parseDedupedHeader(b)
+	if err == nil {
+		t.Fatal("parseDedupedHeader accepted a numBlobs the blob section could not possibly hold")
+	}
+	if !contains(err.Error(), "blob count") {
+		t.Errorf("parseDedupedHeader err = %q, want substring %q", err, "blob count")
+	}
+}
+
+// TestParseDedupedHeaderRejectsImplausibleTrigramCount is the
+// loadMmapDeduped/walkPostings counterpart: numTrigrams used to size a
+// postings map directly off the untrusted header field.
+func TestParseDedupedHeaderRejectsImplausibleTrigramCount(t *testing.T) {
+	const postSectionLen = 22 // fits at most two 11-byte trigram records
+	const dataLen = headerSizeV5 + postSectionLen
+	b := make([]byte, dataLen)
+	copy(b[0:8], magicDeduped)
+	binary.LittleEndian.PutUint32(b[8:12], formatVersionV5)
+	binary.LittleEndian.PutUint64(b[16:24], 0)            // numBlobs
+	binary.LittleEndian.PutUint64(b[24:32], 5_000_000)    // numTrigrams: implausible for a 22-byte section
+	binary.LittleEndian.PutUint64(b[32:40], headerSizeV5) // blobOff
+	binary.LittleEndian.PutUint64(b[40:48], headerSizeV5) // postOff
+
+	_, err := parseDedupedHeader(b)
+	if err == nil {
+		t.Fatal("parseDedupedHeader accepted a numTrigrams the postings section could not possibly hold")
+	}
+	if !contains(err.Error(), "trigram count") {
+		t.Errorf("parseDedupedHeader err = %q, want substring %q", err, "trigram count")
 	}
 }

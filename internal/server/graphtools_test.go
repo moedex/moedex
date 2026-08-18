@@ -222,6 +222,168 @@ func TestImpactAnalysisReturnsTransitiveDependentsForFile(t *testing.T) {
 	}
 }
 
+// TestImpactAnalysisFindsTargetOnlyNodeAsFileRoot pins F-35: an edge target
+// that has no enclosing named symbol (e.g. httpgraph.go's httpNodeOffset
+// falling back to an HTTP handler literal's own raw byte offset when no
+// function/method encloses a module-scope route registration) is never a
+// SOURCE of any edge, so it is absent from diskgraph.Graph.Keys(). Without
+// buildCatalog also folding in edge TARGETS, that node carries no catalog
+// entry, so rootsForFile(its file) -- and therefore impact_analysis(file=...)
+// -- silently returns zero roots and misses every caller in the blast radius.
+func TestImpactAnalysisFindsTargetOnlyNodeAsFileRoot(t *testing.T) {
+	dir := t.TempDir()
+	callerContent := []byte("package fixture\nfunc Caller() { CallHandler() }\n")
+	// A module-scope route registration with no enclosing function: the
+	// literal itself has no name, so a real extractor (see
+	// internal/graph/httproute/extract.go's emitOwned) would leave
+	// SymbolStart at -1 and fall back to the literal's own start offset.
+	handlerContent := []byte("app.get('/orders', (req, res) => { doWork() })\n")
+
+	ix := index.New()
+	ix.AddFile("fixture", "caller.go", filepath.Join(dir, "caller.go"), "caller-sha", callerContent)
+	ix.AddFile("fixture", "handler.js", filepath.Join(dir, "handler.js"), "handler-sha", handlerContent)
+	if err := diskstore.Save(ix, filepath.Join(dir, "shard-0000.idx")); err != nil {
+		t.Fatalf("save shard: %v", err)
+	}
+
+	callerOffset := uint64(strings.Index(string(callerContent), "Caller"))
+	handlerOffset := uint64(strings.Index(string(handlerContent), "app.get"))
+
+	b := diskgraph.NewBuilder()
+	if err := b.AddEdge(diskgraph.Key{BlobSHA: "caller-sha", SymbolOffset: callerOffset}, diskgraph.Edge{
+		Type:         diskgraph.EdgeHTTPCalls,
+		TargetBlob:   "handler-sha",
+		TargetOffset: handlerOffset,
+		Confidence:   graph.Verified,
+		Evidence:     graph.Evidence{BlobSHA: "caller-sha", ByteOffset: callerOffset, ByteLength: 6},
+	}); err != nil {
+		t.Fatalf("AddEdge: %v", err)
+	}
+	if err := b.Save(GraphPath(dir)); err != nil {
+		t.Fatalf("save graph fixture: %v", err)
+	}
+
+	tools, err := OpenGraphTools(dir)
+	if err != nil {
+		t.Fatalf("OpenGraphTools: %v", err)
+	}
+	t.Cleanup(func() { _ = tools.Close() })
+
+	tool := graphHandler(t, tools, "impact_analysis")
+	result, _ := callGraphTool(t, tool, `{"file":"handler.js","depth":1}`)
+	if len(result.Nodes) == 0 {
+		t.Fatalf("impact_analysis(file=handler.js) found no roots; a target-only node with no enclosing symbol is unreachable via rootsForFile (F-35)")
+	}
+	foundCaller := false
+	for _, edge := range result.Edges {
+		if edge.Type == "http_calls" {
+			foundCaller = true
+		}
+	}
+	if !foundCaller {
+		t.Fatalf("impact_analysis(file=handler.js) edges = %+v, want the caller's http_calls edge into the handler", result.Edges)
+	}
+}
+
+// TestOpenGraphToolsDegradesWhenGraphSidecarMissing pins F-02: a shard dir with
+// no corpus-graph.graph on disk (unbuilt, or built by an older moedex-index that
+// predates this feature) must still let OpenGraphTools succeed, exactly like
+// moedex-index build/refresh treats a graph build failure as a non-fatal
+// warning and Reload keeps serving the old (possibly absent) graph rather than
+// failing. A hard error here propagates straight to a fatal daemon-boot exit in
+// cmd/moedex-serve, taking every navigation and search tool down over an
+// optional sidecar.
+func TestOpenGraphToolsDegradesWhenGraphSidecarMissing(t *testing.T) {
+	dir := t.TempDir()
+	ix := index.New()
+	ix.AddFile("fixture", "leaf.go", filepath.Join(dir, "leaf.go"), "leaf-sha", []byte("package fixture\nfunc Leaf() {}\n"))
+	if err := diskstore.Save(ix, filepath.Join(dir, "shard-0000.idx")); err != nil {
+		t.Fatalf("save shard: %v", err)
+	}
+	// Deliberately no graph builder run here: GraphPath(dir) does not exist.
+
+	tools, err := OpenGraphTools(dir)
+	if err != nil {
+		t.Fatalf("OpenGraphTools with missing graph sidecar must degrade, not fail: %v", err)
+	}
+	t.Cleanup(func() { _ = tools.Close() })
+
+	// Every registered tool must still answer (not panic, not transport-error)
+	// with a graceful "no graph" result rather than crashing the caller.
+	for _, tool := range tools.Tools() {
+		args := `{}`
+		switch tool.Name() {
+		case "trace_calls", "trace_hierarchy", "trace_queries", "trace_renders":
+			args = `{"symbol":"Leaf"}`
+		case "trace_consumers":
+			args = `{"name":"Leaf"}`
+		case "impact_analysis":
+			args = `{"symbol":"Leaf"}`
+		}
+		got, callErr := tool.Call(context.Background(), json.RawMessage(args))
+		if callErr != nil {
+			t.Fatalf("%s Call returned transport error on a graphless toolset: %v", tool.Name(), callErr)
+		}
+		if isErr, _ := got["isError"].(bool); !isErr {
+			t.Fatalf("%s on a graphless toolset = %#v, want a graceful isError result", tool.Name(), got)
+		}
+	}
+
+	// Graph-fused search annotation must also degrade to "no annotation" rather
+	// than erroring, matching the documented Neighbors contract.
+	neighbors, err := tools.Neighbors(context.Background(), []contextwin.ContextBlock{{AbsPath: filepath.Join(dir, "leaf.go"), StartLine: 1, EndLine: 2}}, 1)
+	if err != nil || neighbors != nil {
+		t.Fatalf("Neighbors on a graphless toolset = (%v, %v), want (nil, nil)", neighbors, err)
+	}
+}
+
+// TestGraphToolsetReloadReportsOpenFailureWithoutSwapping pins half of F-23:
+// when the NEW generation fails to build, Reload must report that failure
+// through its FIRST (openErr) return value and must leave the old generation
+// installed and serving -- a genuinely failed reload, not a live-but-leaky
+// one.
+func TestGraphToolsetReloadReportsOpenFailureWithoutSwapping(t *testing.T) {
+	fixture := newGraphFixture(t)
+
+	// Reload against a directory with no shards and no graph sidecar at all:
+	// openGraphSnapshot must fail before ever touching g.cur.
+	badDir := t.TempDir()
+	openErr, closeErr := fixture.tools.Reload(badDir)
+	if openErr == nil {
+		t.Fatal("Reload against an unopenable dir returned no openErr")
+	}
+	if closeErr != nil {
+		t.Fatalf("Reload against an unopenable dir returned a closeErr (%v); the swap never happened, so nothing should have been closed", closeErr)
+	}
+
+	// The old generation must still be the one being served: a query that only
+	// the original fixture graph can answer still works.
+	result, _ := callGraphTool(t, graphHandler(t, fixture.tools, "trace_calls"), `{"symbol":"Root","hops":1}`)
+	if len(result.Nodes) == 0 {
+		t.Fatalf("trace_calls after a failed Reload returned no nodes; the old generation was not kept serving")
+	}
+}
+
+// TestGraphToolsetReloadSwapsInNewGenerationOnSuccess pins the other half of
+// F-23: a clean Reload reports success on both return values and the NEW
+// generation is what subsequent calls see.
+func TestGraphToolsetReloadSwapsInNewGenerationOnSuccess(t *testing.T) {
+	fixture := newGraphFixture(t)
+
+	openErr, closeErr := fixture.tools.Reload(fixture.dir)
+	if openErr != nil {
+		t.Fatalf("Reload openErr = %v, want nil", openErr)
+	}
+	if closeErr != nil {
+		t.Fatalf("Reload closeErr = %v, want nil (releasing the retired-but-valid old generation should not fail)", closeErr)
+	}
+
+	result, _ := callGraphTool(t, graphHandler(t, fixture.tools, "trace_calls"), `{"symbol":"Root","hops":1}`)
+	if len(result.Nodes) == 0 {
+		t.Fatalf("trace_calls after a successful Reload returned no nodes; the new generation was not installed")
+	}
+}
+
 func TestGraphToolInputValidation(t *testing.T) {
 	fixture := newGraphFixture(t)
 	tests := []struct {

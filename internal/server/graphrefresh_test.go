@@ -426,6 +426,82 @@ func edgesFrom(records []graphRecord, sha string) []graphRecord {
 	return out
 }
 
+// TestRefreshGraphCarriesNamelessEdgesForward is F-01's regression gate.
+// Edges from the whole-corpus passes (HTTP, manifest, hierarchy, injection,
+// queries, renders, and — outside this build — LSP calls and SIMILAR_TO) carry
+// no symbol name, so the incremental carry-forward loop's `sweep.eligible[name]`
+// eligibility check — meant to catch a name that no longer exists anywhere in
+// the corpus — used to reject every one of them unconditionally, since the
+// empty string is never an eligible name. A delta touching any unrelated blob
+// therefore dropped every EXTENDS/IMPLEMENTS/CONTAINS_METHOD/etc. edge in the
+// corpus, forever. This pins a C# EXTENDS edge surviving a refresh that never
+// touches either endpoint.
+func TestRefreshGraphCarriesNamelessEdgesForward(t *testing.T) {
+	dir := t.TempDir()
+	files := []graphFile{
+		{repo: "hier", path: "Bar.cs", content: "public class Bar { }\n"},
+		{repo: "hier", path: "Foo.cs", content: "public class Foo : Bar { }\n"},
+		{repo: "hier", path: "other.go", content: "package other\n\nfunc Other() {}\n"},
+	}
+	writeGraphShards(t, dir, files, 3)
+	path, report, err := BuildGraph(dir)
+	if err != nil {
+		t.Fatalf("initial build: %v", err)
+	}
+	if report.Hierarchy.ExtendsEdges == 0 {
+		t.Fatal("fixture produced no EXTENDS edge to begin with")
+	}
+	wantExtends := countEdgeType(readGraph(t, path), diskgraph.EdgeExtends)
+	if wantExtends == 0 {
+		t.Fatal("initial graph holds no EXTENDS edge")
+	}
+	for _, r := range readGraph(t, path) {
+		if r.edge.Type == diskgraph.EdgeExtends && r.edge.Name != "" {
+			t.Fatalf("EXTENDS edge unexpectedly carries a symbol name: %+v", r)
+		}
+	}
+
+	// Touch a file that names neither Foo nor Bar, so the delta's dirty-name
+	// computation never marks either type stale and the EXTENDS edge between
+	// them is a pure carry-forward candidate.
+	files[2].content += "\n// touched\n"
+	writeGraphShards(t, dir, files, 3)
+
+	refreshed, stats, err := RefreshGraph(dir)
+	if err != nil {
+		t.Fatalf("refresh: %v", err)
+	}
+	if stats.FullRebuild || stats.Unchanged {
+		t.Fatalf("expected a delta refresh, got %+v", stats)
+	}
+
+	gotExtends := countEdgeType(readGraph(t, refreshed), diskgraph.EdgeExtends)
+	if gotExtends != wantExtends {
+		t.Fatalf("EXTENDS edges after refresh = %d, want %d; a nameless edge was dropped by an incremental refresh that never touched either endpoint", gotExtends, wantExtends)
+	}
+
+	// And it agrees with a full rebuild, exactly like every other delta case.
+	full := copyShards(t, dir)
+	fullPath, _, err := BuildGraph(full)
+	if err != nil {
+		t.Fatalf("full rebuild: %v", err)
+	}
+	requireSameGraph(t, "incremental vs full rebuild",
+		withoutGenerations(readGraph(t, refreshed)),
+		withoutGenerations(readGraph(t, fullPath)))
+}
+
+// countEdgeType counts records of the given type.
+func countEdgeType(records []graphRecord, want diskgraph.EdgeType) int {
+	n := 0
+	for _, r := range records {
+		if r.edge.Type == want {
+			n++
+		}
+	}
+	return n
+}
+
 // TestRefreshGraphUnchangedCorpusRewritesNothing checks the cheapest
 // case: identical content means an identical graph, so the file on disk is
 // already the answer and must not be churned (which would reset every edge's
@@ -570,5 +646,75 @@ func TestRefreshGraphIsFasterThanFullRebuild(t *testing.T) {
 	// real rather than bookkeeping.
 	if deltaTime >= fullTime {
 		t.Fatalf("delta refresh took %s, full rebuild took %s", deltaTime, fullTime)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// computeParallel — panic recovery and fail-fast (F-33, F-34)
+// ---------------------------------------------------------------------------
+
+// TestComputeParallelHappyPath checks computeParallel preserves input order
+// and runs every item through fn when nothing fails, before the failure-path
+// tests below exercise the recovery/fail-fast behavior.
+func TestComputeParallelHappyPath(t *testing.T) {
+	items := []string{"a", "b", "c", "d", "e"}
+	got, err := computeParallel(items, 4, func(name string) (string, error) {
+		return name + "!", nil
+	})
+	if err != nil {
+		t.Fatalf("computeParallel: %v", err)
+	}
+	want := []string{"a!", "b!", "c!", "d!", "e!"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("results = %v, want %v", got, want)
+	}
+}
+
+// TestComputeParallelRecoversPanic pins F-33: a panic anywhere inside fn's
+// call graph must not crash the caller. Before the fix, computeEdgesParallel's
+// worker loop called computeEdgesForName with no recover() at all, so a panic
+// while processing any one name — reachable transitively through every
+// language extractor in the corpus — would take down the whole
+// moedex-index build/refresh process instead of surfacing as an error.
+func TestComputeParallelRecoversPanic(t *testing.T) {
+	items := []string{"safe-1", "boom", "safe-2"}
+	_, err := computeParallel(items, 4, func(name string) (int, error) {
+		if name == "boom" {
+			panic("simulated extractor panic")
+		}
+		return len(name), nil
+	})
+	if err == nil {
+		t.Fatal("computeParallel: want an error from the recovered panic, got nil")
+	}
+	if !strings.Contains(err.Error(), "boom") {
+		t.Fatalf("error %q does not name the offending item", err.Error())
+	}
+	if !strings.Contains(err.Error(), "simulated extractor panic") {
+		t.Fatalf("error %q does not carry the panic value", err.Error())
+	}
+}
+
+// TestComputeParallelFailsFast pins F-34: once one item's call errors, workers
+// must stop STARTING new items instead of draining the whole remaining queue
+// to completion before the error is inspected. workers=1 makes the shared
+// work channel's FIFO drain order deterministic, so every item queued after
+// the failing one is provably never invoked — before the fix, all of them
+// would have run to completion regardless.
+func TestComputeParallelFailsFast(t *testing.T) {
+	items := []string{"first", "second", "third", "fourth", "fifth"}
+	var invoked []string
+	_, err := computeParallel(items, 1, func(name string) (struct{}, error) {
+		invoked = append(invoked, name)
+		if name == "first" {
+			return struct{}{}, fmt.Errorf("boom on %s", name)
+		}
+		return struct{}{}, nil
+	})
+	if err == nil {
+		t.Fatal("computeParallel: want an error, got nil")
+	}
+	if !reflect.DeepEqual(invoked, []string{"first"}) {
+		t.Fatalf("invoked = %v, want only [first] — items queued after the failing one ran anyway", invoked)
 	}
 }

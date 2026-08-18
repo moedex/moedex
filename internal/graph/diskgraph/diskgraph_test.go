@@ -366,6 +366,19 @@ func TestOpenRejectsForeignFormats(t *testing.T) {
 		{"future version", func(b []byte) { binary.LittleEndian.PutUint32(b[8:12], 99) }, "unsupported version"},
 		{"bad header size", func(b []byte) { binary.LittleEndian.PutUint32(b[12:16], 96) }, "unsupported header size"},
 		{"shuffled sections", func(b []byte) { binary.LittleEndian.PutUint64(b[64:72], 0) }, "corrupt section offsets"},
+		// Regression for the eager-make-from-untrusted-count gap in parse:
+		// blobCount/nameCount are attacker-controlled header fields used
+		// directly to size make(map[string]uint32, n) / make([]string, 0, n)
+		// before a single table entry is read. A corrupted count claiming far
+		// more table entries than the blob/name table's actual bytes could
+		// ever encode must be rejected before that allocation happens, not
+		// discovered only once readTableEntry runs out of data. 5,000,000 is
+		// chosen well above what this tiny fixture's table could hold, while
+		// staying far below the ~4e9 scale the real finding reproduced (an
+		// ~82GB allocation attempt) so the red phase cannot itself stress the
+		// host running the test.
+		{"implausible blob count", func(b []byte) { binary.LittleEndian.PutUint64(b[16:24], 5_000_000) }, "blob count"},
+		{"implausible name count", func(b []byte) { binary.LittleEndian.PutUint64(b[24:32], 5_000_000) }, "name count"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			corrupt := append([]byte(nil), good...)

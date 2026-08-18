@@ -77,6 +77,7 @@ func main() {
 	tlsKey := flag.String("tls-key", os.Getenv("MOEDEX_TLS_KEY"), "TLS private key file; serve -http over HTTPS (requires -tls-cert)")
 	requestTimeout := flag.Duration("request-timeout", 30*time.Second, "per-request HTTP timeout on -http (503 on expiry; the underlying scan observes cancellation and aborts promptly)")
 	searchMaxConcurrency := flag.Int("search-max-concurrency", envOrInt("MOEDEX_SEARCH_MAX_CONCURRENCY", defaultSearchMaxConcurrency), "cap concurrent in-flight /search requests on -http; each one scans the full corpus and can pin a core for up to -request-timeout. 0 disables the cap. Mirrors the MCP server's request-concurrency guard.")
+	mcpMaxConcurrency := flag.Int("mcp-max-concurrency", envOrInt("MOEDEX_MCP_MAX_CONCURRENCY", defaultMCPMaxConcurrency), "cap concurrent in-flight /mcp requests on -mcp-http; each one runs a ranked search + context assembly and can pin a core for up to -request-timeout. 0 disables the cap. Mirrors -search-max-concurrency.")
 	showVersion := flag.Bool("version", false, "print build identity (name, commit, dense capability) and exit")
 	flag.Parse()
 
@@ -127,6 +128,7 @@ func main() {
 			topK:           *topK,
 			embedKind:      *embedKind,
 			onnxRuntime:    *onnxRuntime,
+			maxConcurrency: *mcpMaxConcurrency,
 		}
 		if err := runMCPHTTP(cfg); err != nil {
 			fmt.Fprintf(os.Stderr, "moedex-serve: %v\n", err)
@@ -187,19 +189,37 @@ func openRankCorpus(ctx context.Context, shardDir string, topK int, embedKind, o
 		fmt.Fprintln(os.Stderr, "moedex-serve: dense arm disabled; ranking lexical+symbol")
 	}
 
-	rc, err := server.OpenRank(ctx, shardDir, cfg)
-	if err != nil && dense {
-		// Dense build failed (service down, bad model, etc.): degrade to lexical.
-		fmt.Fprintf(os.Stderr, "moedex-serve: dense arm failed (%v); falling back to lexical+symbol\n", err)
-		cfg.Emb = nil
-		rc, err = server.OpenRank(ctx, shardDir, cfg)
-	}
+	rc, cfg, err := openRankOrDegrade(ctx, shardDir, cfg)
 	if err != nil {
 		return nil, cfg, err
 	}
 	fmt.Fprintf(os.Stderr, "moedex-serve: corpus ranker ready — %d blobs, %d docs, %d symbol blobs, %d dense chunks (%s) in %s\n",
 		rc.NumBlobs(), rc.NumDocs(), rc.NumSymbolBlobs(), rc.DenseChunks(), denseSource(rc), time.Since(start).Round(time.Millisecond))
 	return rc, cfg, nil
+}
+
+// openRankOrDegrade calls server.OpenRank(ctx, shardDir, cfg) and, when it
+// fails while cfg configures a dense arm, retries once with the dense arm
+// stripped -- lexical+symbol ranking has no external dependency, so a dense
+// arm failure (embed service down, bad model, transient network hiccup)
+// should never by itself keep the whole corpus from opening.
+//
+// It returns the RankConfig actually used to produce the returned corpus
+// (identical to cfg on a clean open; a copy with Emb cleared after a
+// fallback) so the caller decides whether to keep serving degraded. cfg is
+// passed by value and is never mutated, so a caller that discards this
+// return value and reuses its own cfg on a later call (as the SIGHUP reload
+// paths below do -- see F-22) gets a fresh attempt at the dense arm every
+// time, rather than staying degraded forever after one transient failure.
+func openRankOrDegrade(ctx context.Context, shardDir string, cfg server.RankConfig) (*server.RankCorpus, server.RankConfig, error) {
+	rc, err := server.OpenRank(ctx, shardDir, cfg)
+	if err != nil && cfg.Emb != nil {
+		// Dense build failed (service down, bad model, etc.): degrade to lexical.
+		fmt.Fprintf(os.Stderr, "moedex-serve: dense arm failed (%v); falling back to lexical+symbol\n", err)
+		cfg.Emb = nil
+		rc, err = server.OpenRank(ctx, shardDir, cfg)
+	}
+	return rc, cfg, err
 }
 
 // denseSource reports where the dense vectors came from, for the boot/reload log.
@@ -285,13 +305,23 @@ func runMCP(shardDir string, topK int, embedKind, onnxRuntime string) error {
 		for range hup {
 			t0 := time.Now()
 			fmt.Fprintln(os.Stderr, "moedex-serve: SIGHUP — rebuilding ranked corpus")
-			nrc, err := server.OpenRank(ctx, shardDir, cfg)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "moedex-serve: reload failed (%v); keeping current ranker\n", err)
-				continue
+			nrc, _, rankErr := openRankOrDegrade(ctx, shardDir, cfg)
+			if rankErr != nil {
+				fmt.Fprintf(os.Stderr, "moedex-serve: reload failed (%v); keeping current ranker\n", rankErr)
 			}
-			if err := graphTools.Reload(shardDir); err != nil {
-				fmt.Fprintf(os.Stderr, "moedex-serve: graph reload failed (%v); keeping current graph\n", err)
+
+			// Attempted regardless of the rank-corpus outcome above: rankHolder
+			// and GraphToolset are independently refcounted and hot-swappable, so
+			// a rank-corpus rebuild failure must not skip an unrelated,
+			// otherwise-successful graph-sidecar refresh (F-21).
+			if openErr, closeErr := graphTools.Reload(shardDir); openErr != nil {
+				fmt.Fprintf(os.Stderr, "moedex-serve: graph reload failed (%v); keeping current graph\n", openErr)
+			} else if closeErr != nil {
+				fmt.Fprintf(os.Stderr, "moedex-serve: graph reload succeeded but releasing the previous generation failed (%v)\n", closeErr)
+			}
+
+			if rankErr != nil {
+				continue
 			}
 			old := holder.swap(nrc)
 			go old.retire()
@@ -326,6 +356,7 @@ type mcpHTTPConfig struct {
 	topK           int
 	embedKind      string
 	onnxRuntime    string
+	maxConcurrency int
 }
 
 // runMCPHTTP is the warm SHARED agent daemon: it builds the ranked corpus once and
@@ -334,7 +365,10 @@ type mcpHTTPConfig struct {
 // stdio process and re-paying the ~40s cold load (the daemon pays it once per
 // process lifetime). The same refcounted hot-swap as the retrieval daemon keeps
 // it serving the old generation while a SIGHUP rebuilds the new one, and the same
-// hardening chain (recover/log/timeout/auth — see middleware.go) wraps the mux.
+// hardening chain (recover/log/timeout/auth — see middleware.go) wraps the mux,
+// and /mcp is additionally wrapped in withConcurrencyLimit (cfg.maxConcurrency)
+// the same way /search is on the retrieval daemon, since a burst of agent
+// sessions is exactly the CPU-bound-scan concern that guard exists for.
 // /mcp requires the bearer token when one is configured; /healthz and /metrics
 // stay open.
 func runMCPHTTP(cfg mcpHTTPConfig) error {
@@ -389,7 +423,13 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 		_, _ = w.Write([]byte("ok\n"))
 	})
 	mux.Handle("/metrics", rankMetricsHandler(holder, m))
-	mux.Handle("/mcp", mcpSrv.HTTPHandler())
+	// /mcp is wrapped in withConcurrencyLimit exactly as /search is on the
+	// retrieval daemon: mcp.Server.HTTPHandler does not bound concurrency
+	// itself (see its doc comment), and each search_context call is a
+	// CPU-bound ranking + context-assembly pass, so unbounded fan-in from many
+	// agent sessions (or one large JSON-RPC batch) is the same
+	// resource-exhaustion vector /search already guards against.
+	mux.Handle("/mcp", withConcurrencyLimit(mcpSrv.HTTPHandler(), cfg.maxConcurrency, m.mcpRejected, "too many concurrent mcp requests"))
 
 	srv := &http.Server{
 		Addr:              effAddr,
@@ -418,14 +458,24 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 		for range hup {
 			start := time.Now()
 			slog.Info("reload requested (SIGHUP)")
-			nrc, err := server.OpenRank(ctx, cfg.shardDir, rankCfg)
-			if err != nil {
+			nrc, _, rankErr := openRankOrDegrade(ctx, cfg.shardDir, rankCfg)
+			if rankErr != nil {
 				m.incReload("fail")
-				slog.Error("reload failed; keeping current ranker", "err", err.Error())
-				continue
+				slog.Error("rank corpus reload failed; keeping current ranker", "err", rankErr.Error())
 			}
-			if err := graphTools.Reload(cfg.shardDir); err != nil {
-				slog.Error("graph reload failed; keeping current graph", "err", err.Error())
+
+			// Attempted regardless of the rank-corpus outcome above: rankHolder
+			// and GraphToolset are independently refcounted and hot-swappable, so
+			// a rank-corpus rebuild failure must not skip an unrelated,
+			// otherwise-successful graph-sidecar refresh (F-21).
+			if openErr, closeErr := graphTools.Reload(cfg.shardDir); openErr != nil {
+				slog.Error("graph reload failed; keeping current graph", "err", openErr.Error())
+			} else if closeErr != nil {
+				slog.Error("graph reload succeeded but releasing the previous generation failed", "err", closeErr.Error())
+			}
+
+			if rankErr != nil {
+				continue
 			}
 			old := holder.swap(nrc)
 			go old.retire()
@@ -561,7 +611,7 @@ func newHTTPMux(holder *corpusHolder, m *metrics, searchMaxConcurrency int) *htt
 		snap := holder.acquire()
 		defer snap.release()
 		handleSearch(snap.c, w, r)
-	}), searchMaxConcurrency, m))
+	}), searchMaxConcurrency, m.searchRejected, "too many concurrent searches"))
 	return mux
 }
 

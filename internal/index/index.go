@@ -153,6 +153,15 @@ func (ix *Index) Selective() bool {
 // AddFile indexes content identified by sha under (repo, rel, abs). Files
 // sharing a SHA are deduplicated: the content is indexed once and the new
 // FileRef is appended to the existing blob.
+//
+// AddFile panics if ix was built by RestoreLazy: such an index's
+// Postings/PostingCount/Trigrams read exclusively from the lazy
+// PostingProvider (see the pp-first checks in Postings/PostingCount/Trigrams
+// below), so postings written here would never be visible through those
+// reads — a silent under-approximation of matches, which this package must
+// never produce. There is currently no call site that needs incremental
+// AddFile on a lazily-loaded index; if one arises, it needs a provider that
+// can merge in-memory additions, not a bare write into ix.postings.
 func (ix *Index) AddFile(repo, rel, abs, sha string, content []byte) {
 	ix.addFile(repo, rel, abs, sha, content, true)
 }
@@ -161,11 +170,16 @@ func (ix *Index) AddFile(repo, rel, abs, sha string, content []byte) {
 // without building trigram postings. It is for derived offline passes that need
 // Index's blob iteration contract (for example embed.BuildStore) but will never
 // query the temporary index. Normal searchable indices must use AddFile.
+//
+// Like AddFile, it panics if ix was built by RestoreLazy (see AddFile's doc).
 func (ix *Index) AddFileUnindexed(repo, rel, abs, sha string, content []byte) {
 	ix.addFile(repo, rel, abs, sha, content, false)
 }
 
 func (ix *Index) addFile(repo, rel, abs, sha string, content []byte, postings bool) {
+	if ix.pp != nil {
+		panic("index: AddFile unsupported on a lazily-loaded (RestoreLazy) index")
+	}
 	ref := FileRef{Repo: repo, RelPath: rel, AbsPath: abs}
 	if id, ok := ix.bySHA[sha]; ok {
 		ix.blobs[id].Files = append(ix.blobs[id].Files, ref)

@@ -237,6 +237,70 @@ func TestDenseArmContributes(t *testing.T) {
 	}
 }
 
+// TestDenseArmDropsBlobOutOfRangeForIndex pins F-31's fix: unlike the
+// lexical/symbol/path arms (whose candidate blob IDs are structurally bounded
+// by r.ix.NumBlobs() because they are built by scanning r.ix itself), the
+// dense arm's blob IDs come from an external embed.Store — e.g. one built
+// against a different or larger index than the Ranker is now using. Before the
+// fix, denseArm handed such an out-of-range blob straight to fuse(), and
+// Rank/Features would then nil-pointer-dereference calling r.ix.Blob(id).Files
+// (or .Content). The fix must drop any dense hit r.ix cannot resolve, both at
+// its source (denseArm) and end-to-end through Rank.
+func TestDenseArmDropsBlobOutOfRangeForIndex(t *testing.T) {
+	// Build the embedding store over a 2-blob index -- blob 1 ("beta gamma delta
+	// epsilon") is the store's exact-match top hit for the query below.
+	storeIx := buildIndex(
+		"alpha alpha database here",
+		"beta gamma delta epsilon",
+	)
+	emb := fakeEmbedder{dim: 16}
+	store, err := embed.BuildStore(context.Background(), storeIx, emb, 100, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The Ranker's actual index has only ONE blob (id 0). Blob id 1 -- which the
+	// store above will confidently surface for this query -- is out of range for
+	// THIS index, reproducing "a store built against a different/larger index".
+	ix := buildIndex("alpha alpha database here")
+	ti := tokenindex.Build(ix)
+	r := New(ix, ti, store, emb, Config{DenseMinQueryTerms: -1})
+
+	// denseArm itself must never hand back the out-of-range blob.
+	dense, err := r.denseArm(context.Background(), "beta gamma delta epsilon")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range dense {
+		if s.blob >= uint64(ix.NumBlobs()) {
+			t.Errorf("denseArm returned out-of-range blob %d (index has %d blobs)", s.blob, ix.NumBlobs())
+		}
+	}
+
+	// End-to-end: Rank must not panic and must never surface a candidate whose
+	// blob r.ix cannot resolve (the actual crash site was r.ix.Blob(c.blob).Files).
+	res, err := r.Rank(context.Background(), "beta gamma delta epsilon", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, out := range res {
+		if out.Blob >= uint64(ix.NumBlobs()) {
+			t.Errorf("Rank returned out-of-range blob %d (index has %d blobs)", out.Blob, ix.NumBlobs())
+		}
+	}
+
+	// Features shares fuse() with Rank, so it must be equally safe.
+	feats, err := r.Features(context.Background(), "beta gamma delta epsilon")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range feats {
+		if f.Blob >= uint64(ix.NumBlobs()) {
+			t.Errorf("Features returned out-of-range blob %d (index has %d blobs)", f.Blob, ix.NumBlobs())
+		}
+	}
+}
+
 // TestSymbolArmRaisesDefiner checks the third RRF arm: a blob that DEFINES a
 // func named like the query term ranks at or above a blob that merely mentions
 // the word in prose, the symbol arm raised the definer's fused Score, and it
