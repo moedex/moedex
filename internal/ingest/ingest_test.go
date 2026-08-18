@@ -153,6 +153,41 @@ privacy_levels:
 	}
 }
 
+func TestRepoAIPrivacyDirectoryOverrideWithoutTrailingSlashStillRestricts(t *testing.T) {
+	// A directory-scoped override authored without the trailing slash (a
+	// typo an operator can easily make in hand-written YAML) must still
+	// restrict every file beneath that directory. It must not silently
+	// become a no-op that only an exact path match (which can never occur,
+	// since a directory is never itself a git blob path) would satisfy.
+	dir := gitRepo(t, map[string][]byte{
+		AIPrivacyFileName: []byte(`global_privacy_level: 3
+privacy_levels:
+  - path: /secrets
+    privacy_level: 1
+`),
+		"public.txt":              []byte("searchable\n"),
+		"secrets/token.txt":       []byte("restricted child\n"),
+		"secrets/nested/deep.txt": []byte("restricted grandchild\n"),
+		"secrets-named.txt":       []byte("not beneath restricted folder\n"),
+	})
+
+	files, err := Repo("no-trailing-slash", dir)
+	if err != nil {
+		t.Fatalf("Repo: %v", err)
+	}
+	m := byRel(files)
+	for _, restricted := range []string{AIPrivacyFileName, "secrets/token.txt", "secrets/nested/deep.txt"} {
+		if _, ok := m[restricted]; ok {
+			t.Errorf("Restricted path should not be indexed: %s", restricted)
+		}
+	}
+	for _, allowed := range []string{"public.txt", "secrets-named.txt"} {
+		if _, ok := m[allowed]; !ok {
+			t.Errorf("allowed path should be indexed: %s", allowed)
+		}
+	}
+}
+
 func TestRepoAIPrivacyMalformedPolicyFailsClosed(t *testing.T) {
 	cases := map[string]string{
 		"unknown field": `global_privacy_level: 3
