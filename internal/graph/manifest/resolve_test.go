@@ -277,6 +277,40 @@ func TestResolveProjectReferenceAcrossRepos(t *testing.T) {
 	}
 }
 
+func TestResolveProjectReferenceEscapedTierAggregatesContestedRepos(t *testing.T) {
+	b := NewBuilder()
+	// Two repos share the base directory name "core", and both hold a project
+	// file at the same repo-relative path, so an escaped ProjectReference of
+	// "core/src/Acme.Core/Acme.Core.csproj" is genuinely ambiguous between them.
+	addTo(t, b, "platform/core", "src/Acme.Core/Acme.Core.csproj", "core-blob", coreCSProj)
+	addTo(t, b, "vendor/core", "src/Acme.Core/Acme.Core.csproj", "fork-blob", coreCSProj)
+	source := `<Project><ItemGroup>
+	<ProjectReference Include="..\..\..\core\src\Acme.Core\Acme.Core.csproj" />
+</ItemGroup></Project>`
+	addTo(t, b, "platform/billing", "src/Billing/Billing.csproj", "billing-blob", source)
+
+	edges, report := b.Resolve()
+	if len(edges) != 2 {
+		t.Fatalf("edges = %#v, want one per repo sharing the base directory \"core\": both candidacies must survive, not just whichever repo was added first", edges)
+	}
+	targets := map[string]bool{}
+	for _, edge := range edges {
+		targets[edge.TargetRepo()] = true
+		if !edge.Contested {
+			t.Errorf("edge to %s: Contested = false, want true", edge.TargetRepo())
+		}
+		if edge.Confidence != ContestedConfidence {
+			t.Errorf("edge to %s: Confidence = %v, want %v", edge.TargetRepo(), edge.Confidence, ContestedConfidence)
+		}
+	}
+	if !targets["platform/core"] || !targets["vendor/core"] {
+		t.Errorf("targets = %v, want both platform/core and vendor/core", targets)
+	}
+	if report.Contested != 1 || report.Resolved != 1 || report.Edges != 2 {
+		t.Errorf("report = %+v, want 1 contested declaration resolved to 2 edges", report)
+	}
+}
+
 func TestResolveProjectReferenceFallsBackToFileName(t *testing.T) {
 	b := NewBuilder()
 	addTo(t, b, "platform/core", "Acme.Core.csproj", "core-blob", coreCSProj)
