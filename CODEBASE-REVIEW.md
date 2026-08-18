@@ -41,8 +41,9 @@ Tracks the codebase-review-fixes effort across every wave run against this repor
 | Wave | Findings in scope | Fixed | Skipped | Unresolved conflicts |
 | --- | --- | ---: | ---: | ---: |
 | high | F-01, F-02, F-03, F-04, F-05, F-06, F-07, F-08, F-09, F-10, F-11 | 11 | 0 | 0 |
+| medium | F-12, F-13, F-14, F-15, F-16, F-17, F-18, F-19, F-20, F-21, F-22, F-23, F-24, F-25, F-26, F-27, F-28, F-29, F-30, F-31, F-32, F-35 | 21 | 0 | 1 |
 
-**Totals so far:** 11 fixed · 0 skipped · 0 unresolved conflicts, out of 40 findings. All 11 High-severity findings are fixed; the 24 Medium and 5 Low findings have not yet had a remediation wave run against them.
+**Totals so far:** 32 fixed · 0 skipped · 1 unresolved conflict, out of 40 findings. All 11 High-severity findings are fixed; 21 of 24 Medium-severity findings are fixed (1 unresolved conflict: F-24 on `review-fix/2026-08-18/unit-11`, needs manual merge; F-33 and F-34 have not yet had a remediation wave run against them); the 5 Low-severity findings have not yet had a remediation wave run against them.
 
 ## Coverage
 
@@ -265,6 +266,8 @@ _`internal/server/graphtools.go:137` · lane: resilience · confidence: confirme
 
 _`cmd/moedex-serve/main.go:288` · also at `cmd/moedex-serve/main.go:421` · lane: resilience · confidence: confirmed_
 
+**Status.** Fixed — commit `81b3b85` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** In both runMCP's and runMCPHTTP's SIGHUP handler, `graphTools.Reload(shardDir)` is only called if `server.OpenRank` succeeds; on any OpenRank error the handler does `continue` before ever attempting the graph reload. The two subsystems (rankHolder/RankCorpus and GraphToolset) are independently refcounted and hot-swappable — there is no structural reason a rank-corpus rebuild failure should block an unrelated, otherwise-successful graph-sidecar refresh.
 
 **Trigger.** A SIGHUP arrives while the shard dir has a valid, refreshed graph sidecar (built via `moedex-index build_graph_once`/refresh) but `server.OpenRank` fails for any reason (e.g. the configured dense/embedding backend is transiently down — an explicitly anticipated failure mode per the surrounding comments).
@@ -276,6 +279,8 @@ _`cmd/moedex-serve/main.go:288` · also at `cmd/moedex-serve/main.go:421` · lan
 #### F-22 — SIGHUP reload has no dense-arm degrade-to-lexical fallback, unlike boot, so a transient embed-service hiccup aborts the whole refresh
 
 _`cmd/moedex-serve/main.go:190` · also at `cmd/moedex-serve/main.go:288`, `cmd/moedex-serve/main.go:421` · lane: resilience · confidence: confirmed_
+
+**Status.** Fixed — commit `81b3b85` on `codebase-review-fixes/2026-08-18` · tests added: yes.
 
 **Problem.** openRankCorpus (used only at process boot) explicitly retries `server.OpenRank` with `cfg.Emb = nil` if the first attempt fails while dense was configured ("Dense build failed (service down, bad model, etc.): degrade to lexical"). The SIGHUP reload handlers in runMCP and runMCPHTTP call `server.OpenRank(ctx, shardDir, cfg)` exactly once with the boot-resolved `cfg` and, on any error, just log-and-`continue` — they never reuse the same degrade-to-lexical retry that boot has.
 
@@ -289,6 +294,8 @@ _`cmd/moedex-serve/main.go:190` · also at `cmd/moedex-serve/main.go:288`, `cmd/
 
 _`cmd/moedex-serve/main.go:293` · also at `cmd/moedex-serve/main.go:427`, `internal/server/graphtools.go:338-352` · lane: resilience / architecture · corroborated by: chunk-06__resilience, chunk-34__architecture · confidence: confirmed_
 
+**Status.** Fixed — commit `81b3b85` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** `GraphToolset.Reload` (internal/server/graphtools.go:338-352) swaps `g.cur` to the newly-opened generation FIRST, and only afterward waits for the old generation's readers and calls `old.close()`, returning that close's error. So a non-nil return from Reload does not mean the reload failed — the new graph is already live — it means releasing the PREVIOUS generation's mmap/symbol resources failed. Both SIGHUP handlers in main.go log this as `"graph reload failed (%v); keeping current graph"`, which is false: the graph has already been swapped. Separately: In both SIGHUP handlers, when server.OpenRank fails the code correctly `continue`s and leaves everything on the old generation. When graphTools.Reload fails immediately afterward, the code only logs ('graph reload failed ...; keeping current graph') and falls through to `holder.swap(nrc)` anyway — swapping in the new RankCorpus generation (new blob content, potentially new/changed file SHAs) while GraphToolset keeps serving its old generation's node/byPath catalog built from the previous corpus content.
 
 **Trigger.** `old.close()` (diskgraph.Graph.Close + SymbolCorpus.Close, both backed by syscall.Munmap) errors on a SIGHUP reload — e.g. a munmap failure on the outgoing generation. Also: A SIGHUP reload where server.OpenRank(ctx, shardDir, cfg) succeeds but graphTools.Reload(shardDir) fails on the same shard directory — e.g. the graph sidecar (corpus-graph.graph) is transiently missing, mid-write, or corrupt while the shard set itself is valid. Given the graph layer is explicitly under active, phased construction right now (new cmd/moedex-index/build_graph_once.go and build_graph_tool.go in this working tree suggest graph-sidecar generation is being decoupled into its own step), a skew between when shards refresh and when the graph sidecar is regenerated is a realistic near-term operational sequence, not just a hypothetical.
@@ -301,6 +308,8 @@ _`cmd/moedex-serve/main.go:293` · also at `cmd/moedex-serve/main.go:427`, `inte
 
 _`cmd/moedex-serve/reload.go:34` · also at `cmd/moedex-serve/reload.go:79` · lane: resilience · confidence: likely_
 
+**Status.** Fixed on `review-fix/2026-08-18/unit-11`, unmerged — conflicts with unit-10's changes to `cmd/moedex-serve/reload_test.go` (both units add test content to the same file); needs manual merge.
+
 **Problem.** `func (s *corpusSnapshot) retire() { s.wg.Wait(); _ = s.c.Close() }` and the equivalent `rankSnapshot.retire()` throw away the error from Close(). Corpus.Close()/RankCorpus.Close() can genuinely return a non-nil error (they propagate syscall.Munmap's return value from internal/diskstore's mmapRegion.Close), and unlike the reload build failure path (which increments `moedex_reloads_total{result="fail"}` and logs), a retire-time Close failure produces no log line and no metric.
 
 **Trigger.** Munmap on the retired generation's shard(s) or shared content store fails (e.g. an OS-level munmap error) during a SIGHUP-triggered hot-swap — the same repeated-SIGHUP refresh pattern the daemon is designed around over its long-running lifetime.
@@ -312,6 +321,8 @@ _`cmd/moedex-serve/reload.go:34` · also at `cmd/moedex-serve/reload.go:79` · l
 #### F-12 — blobstore.Store.Get never verifies retrieved content against its SHA key
 
 _`internal/blobstore/blobstore.go:229` · also at `internal/blobstore/compact.go (bakes unverified content into a fresh pack)` · lane: binary-format-safety · confidence: confirmed_
+
+**Status.** Fixed — commit `8407679` on `codebase-review-fixes/2026-08-18` · tests added: yes.
 
 **Problem.** Unlike the sibling MOECONT1 served content store (self-verifying by default via OpenContentStoreVerified, per ADR 0004's explicit two-silent-failure-risk guard), the CAS's Store.Get never re-hashes returned content against its claimed SHA. Content-region corruption in blobs.pack that leaves the length framing intact is silently returned as valid.
 
@@ -327,6 +338,8 @@ _`internal/blobstore/blobstore.go:229` · also at `internal/blobstore/compact.go
 
 _`internal/blobstore/blobstore.go:114` · also at `internal/blobstore/blobstore.go:195-198 — Has() only checks map membership, so it reports true for entries whose backing file is gone`, `internal/blobstore/compact.go:132-137 — CompactCAS's 'every live SHA is in the source pack' SACRED check calls Has(), so it passes even when the pack is actually missing` · lane: binary-format-safety · confidence: confirmed_
 
+**Status.** Fixed — commit `8407679` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** Open() first calls loadIndex(), which fully parses blobs.idx into s.byID/s.order/s.packPos (with correct bounds-checking against the index's own packBytes field). It then os.Stat()s blobs.pack; in the `os.IsNotExist(err)` branch it treats this as simply "fresh store" and falls straight through to creating a new pack via O_CREATE, with no check that len(s.byID) (or s.packPos) is already non-zero from the index it just loaded. The parallel case a few lines below (`fi.Size() < s.packPos`) DOES correctly treat a too-short pack as corrupt, but the symmetric case — pack completely absent while the index claims blobs — is not checked at all.
 
 **Trigger.** blobs.idx is present and references one or more blobs (e.g. from a prior successful Flush/Close), but blobs.pack has been deleted or is missing from casDir at Open time — for example an operator manually removing what looks like a large redundant file, a restore/copy that brings back blobs.idx but not blobs.pack, or any directory-level tooling that doesn't treat the pair atomically the way this package's own writeIndex/Flush do.
@@ -338,6 +351,8 @@ _`internal/blobstore/blobstore.go:114` · also at `internal/blobstore/blobstore.
 #### F-13 — Full/forced CAS export writes directly into the live shard directory with no staging+swap
 
 _`internal/blobstore/export_deduped.go:70` · also at `internal/blobstore/export.go`, `internal/blobstore/export_shared.go` · lane: resilience · confidence: confirmed_
+
+**Status.** Fixed — commit `12fd4d5` on `codebase-review-fixes/2026-08-18` · tests added: yes.
 
 **Problem.** ExportShardDir/ExportDedupedShardDir write shard files and the manifest directly into the live target directory with no staging-dir/atomic-swap, unlike every other rewriting operation in this package (RefreshDedupedShardDir, CompactCAS, CompactDedupedShardDir), all of which have a matching RecoverInterruptedXXX. Worse, ExportDedupedShardDir writes manifest.json (the documented completeness marker) before blobs.dat, inverting the package's own stated ordering rule. The documented `cas-export -deduped -force` workflow deletes the live dir up front.
 
@@ -353,6 +368,8 @@ _`internal/blobstore/export_deduped.go:70` · also at `internal/blobstore/export
 
 _`internal/corpus/managed_sync.go:218` · also at `internal/corpus/managed.go:42` · lane: resilience · confidence: likely_
 
+**Status.** Fixed — commit `8da5481` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** SyncManaged/InitManaged run a long check-then-act sequence (load lock, check working-tree cleanliness, compute a plan, run many git mutations, atomically rewrite corpus.lock.json, then git commit) with no lock file, flock, or pidfile anywhere in the package or its cmd/moedex-corpus driver to prevent two concurrent sync/init invocations against the same corpus root. The package's own doc comment ("mutations are serialized below that boundary") only holds within a single process.
 
 **Trigger.** An operator manually running the raw moedex-corpus binary while a timer-driven sync is already in flight (bypassing systemctl). Downgraded from the original 'two overlapping scheduler ticks' framing since systemd job-merges a second `start` against an already-active oneshot unit, making routine timer-driven overlap impossible; only a manual bypass produces real concurrency.
@@ -366,6 +383,8 @@ _`internal/corpus/managed_sync.go:218` · also at `internal/corpus/managed.go:42
 #### F-15 — LoadBlobs/LoadBlobsDeduped read the entire shard file just to use its small blob-section prefix
 
 _`internal/diskstore/diskstore.go:301` · also at `internal/diskstore/dedupstore.go:281 (LoadBlobsDeduped)` · lane: performance · confidence: confirmed_
+
+**Status.** Fixed — commit `6bbb324` on `codebase-review-fixes/2026-08-18` · tests added: yes.
 
 **Problem.** Both functions os.ReadFile the entire shard file and only then slice off the small blob-section prefix, discarding the postings section they just read -- directly contradicting their own doc comments ("skips the postings section entirely," "never pay[s] the positional-postings heap cost"). This runs once per shard on every OpenRank/BuildSidecars call: daemon boot, SIGHUP reload, and every moedex-index build/refresh. In the deduped format it's worse, since the blob section is tiny by design, so nearly the whole file gets pointlessly read and heap-copied.
 
@@ -381,6 +400,8 @@ _`internal/diskstore/diskstore.go:301` · also at `internal/diskstore/dedupstore
 
 _`internal/embed/onnx_disabled.go:1` · also at `internal/embed/onnx.go:102 — the real NewONNXEmbedderFromFiles that has no counterpart`, `ARCHITECTURE.md:70 — documents the exported surface as "ONNXEmbedder, NewONNXEmbedder, NewONNXEmbedderFromFiles (real only under -tags onnx; a no-op stub otherwise)"` · lane: build-tag-boundary · confidence: confirmed_
 
+**Status.** Fixed — commit `80a07b2` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** onnx.go (built with -tags onnx) exports NewONNXEmbedderFromFiles as part of the package's public surface, but onnx_disabled.go (the !onnx twin) only stubs NewONNXEmbedder, ONNXEmbedder, Embed, Dim, and Close. NewONNXEmbedderFromFiles simply does not exist in the default build. This contradicts ARCHITECTURE.md's own description of the package's exported surface, which explicitly claims a no-op stub exists for it "otherwise" (i.e. in the non-onnx build), and breaks the exact-twin-pair pattern this lens is meant to enforce.
 
 **Trigger.** Any future code added to a file without a `//go:build onnx` constraint that calls embed.NewONNXEmbedderFromFiles (e.g. a CLI flag to A/B a custom encoder path, as research/code-embedders.md and docs/adr/0007 suggest is the intended extension point) will fail to compile in the default build with "undefined: embed.NewONNXEmbedderFromFiles". Today this is latent: the only three call sites (internal/eval/gold_onnx_test.go:220, and the analogous NewONNXEmbedder call sites in cmd/moedex-index/graph_onnx.go, internal/server/graphsimilar_onnx_test.go, internal/eval/gold_densegate_test.go) are all themselves guarded by `//go:build onnx`, so `go build ./...` and `make health` currently pass clean.
@@ -393,6 +414,8 @@ _`internal/embed/onnx_disabled.go:1` · also at `internal/embed/onnx.go:102 — 
 
 _`internal/eval/runner.go:254` · also at `internal/eval/metrics.go:79-98 — RecallAtK returns 0 when numRelevant==0`, `internal/eval/metrics.go:171-189 — NDCGAtK returns 0 when idealDCGAtK==0`, `internal/eval/metrics.go:268-293 — UDCGAtK returns 0 when idealDCGAtK==0 (even if distractors are present and retrieved)`, `internal/eval/metrics.go:42-48 — NewBinaryGold(query) with no docs is a valid call that produces an empty Relevant map`, `internal/eval/reranker_train.go:114-137 — evaluateCrossVal has the identical unconditional per-query append/mean pattern` · lane: testing · confidence: likely_
 
+**Status.** Fixed — commit `6cb41b1` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** finalizeMeans (runner.go:254-271) sums every QueryReport's metric values into the Mean* fields and divides by len(rep.Queries) unconditionally. Every per-query metric function in metrics.go returns exactly 0.0 for a query whose Relevant map has no grade>=1 entry (numRelevant==0 / idealDCGAtK==0). Nothing skips such a query, nothing warns about it, and NumRelevant (already computed per query at runner.go:238) is never used to filter or flag it.
 
 **Trigger.** A GoldQuery with an empty (or all-negative/hard-distractor-only) Relevant map reaches Runner.Evaluate or evaluateCrossVal — e.g. a future call to the public NewBinaryGold(query) that omits the relevant-doc varargs (a one-argument typo), or a copy/paste slip when adding a new query to CorpusGold()/FixtureGold()/TCSslApiGold() that leaves the Relevant map empty. I checked all 111 hand-authored queries across gold_corpus.go, gold_fixture.go, and gold_tcsslapi.go and confirmed none currently has an empty Relevant map, so this has not fired yet.
@@ -404,6 +427,8 @@ _`internal/eval/runner.go:254` · also at `internal/eval/metrics.go:79-98 — Re
 #### F-16 — Manifest dependency resolution silently drops contested candidates and is order-dependent
 
 _`internal/graph/manifest/resolve.go:323` · lane: graph-refresh-consistency · confidence: confirmed_
+
+**Status.** Fixed — commit `c8bdff4` on `codebase-review-fixes/2026-08-18` · tests added: yes.
 
 **Problem.** lookupProject's escaped-ProjectReference tier (used when a <ProjectReference> path walks above its own repo root to name a sibling repo by directory basename) returns the first repo in b.reposByDir[first] with a matching project file, instead of aggregating all matches like every other lookup tier in the file. If two repos share a base directory name and both have a matching project file, the losing repo's candidacy is silently dropped rather than emitted and marked Contested (violating the file's own explicit no-silent-recall-loss design principle), and the winner is decided by Add()-call order -- an artifact of shard/blob iteration order in the caller -- rather than by content.
 
@@ -419,6 +444,8 @@ _`internal/graph/manifest/resolve.go:323` · lane: graph-refresh-consistency · 
 
 _`internal/index/index.go:197` · also at `internal/index/index.go:224 — Postings() always prefers ix.pp over ix.postings when pp is set`, `internal/index/index.go:251 — PostingCount() has the same pp-always-wins priority`, `internal/index/snapshot.go:61 — Restore(blobs, postings) aliases postings directly, including nil`, `internal/index/snapshot.go:76 — RestoreLazy(blobs, pp) leaves ix.postings as the empty map from New()` · lane: correctness · confidence: likely_
 
+**Status.** Fixed — commit `2d4d9fe` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** addFile() unconditionally writes new postings into ix.postings (`ix.postings[t] = append(...)`, line 197), but Index.Postings()/PostingCount()/Trigrams() all check ix.pp first and return early when it is set, never consulting ix.postings. Restore(blobs, nil) — used by internal/server/rankcorpus.go:243 and symbolcorpus.go:123 — leaves ix.postings literally nil, since Restore overwrites New()'s empty map with whatever the caller passed. RestoreLazy (used by diskstore.LoadMmap, the production mmap-serving path) sets ix.pp and leaves ix.postings as an empty, never-consulted map.
 
 **Trigger.** No current call site does this — every production AddFile call site builds via index.New()/NewBuildTarget on a fresh index, and every Restore/RestoreLazy call site (rankcorpus.go, symbolcorpus.go, diskstore.LoadMmap) never calls AddFile afterward. The trigger is hypothetical: any future code path that calls Index.AddFile on an index obtained from RestoreLazy (e.g. an incremental-refresh feature that reuses an already-loaded mmap shard instead of rebuilding from scratch) or from Restore(blobs, nil) would hit this. This is the one unverified link — flagging as 'likely' rather than 'confirmed' because it requires a caller that does not exist today.
@@ -430,6 +457,8 @@ _`internal/index/index.go:197` · also at `internal/index/index.go:224 — Posti
 #### F-17 — internal/corpus is already a transitive dependency of every default-build production binary
 
 _`internal/ingest/source.go:10` · lane: architecture · confidence: confirmed_
+
+**Status.** Fixed — commit `2665fe6` on `codebase-review-fixes/2026-08-18` · tests added: yes.
 
 **Problem.** internal/ingest/source.go imports moedex/internal/corpus directly (to call IsManagedRoot/LoadCatalog/LoadLock/DefaultHost). internal/ingest carries no build tag and is imported by cmd/moedex, cmd/moedex-mcp, cmd/moedex-index, cmd/scale, internal/blobstore, and internal/parity (which internal/server/rankcorpus.go also imports untagged). `go list -deps` confirms internal/corpus is a transitive dependency of the default builds of moedex, moedex-mcp, moedex-index, scale, moedex-serve, and moedex-parity -- only cmd/moedex-corpus (the intended importer) and cmd/moedex-nav come out clean. This directly contradicts the explicit invariant stated in CLAUDE.md, ARCHITECTURE.md ('never imported by internal/* or the daemon'), and internal/corpus/runner.go's own package doc.
 
@@ -445,6 +474,8 @@ _`internal/ingest/source.go:10` · lane: architecture · confidence: confirmed_
 
 _`internal/navigate/lsp.go:719` · also at `internal/navigate/lsp.go:128,175-191,632,952-972` · lane: resilience · confidence: confirmed_
 
+**Status.** Fixed — commit `3d1132b` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** docFor() never removes entries from c.docs, and textDocument/didClose is advertised in capabilities but never actually sent to the server.
 
 **Trigger.** Completely normal long-lived daemon operation -- any root queried at least once per 10-minute IdleTTL window, which prevents the pool from ever evicting and restarting that server.
@@ -459,6 +490,8 @@ _`internal/navigate/lsp.go:719` · also at `internal/navigate/lsp.go:128,175-191
 
 _`internal/parity/compare.go:132` · also at `internal/parity/run.go:239-248 — rg.run() error path leaves rgSets[i] as its nil zero value instead of a distinguishable value`, `internal/parity/run.go:262 — adjudicate() is called with the run-wide rgAvail flag for every query, not a per-query one`, `internal/parity/report.go:192-198,273-300 — writeQuirks renders the misclassified query under 'Justified engine quirks... not a retrieval error'`, `internal/parity/run.go:331-335 — runZoekt() also treats the same nil rgSets[i] as 'ripgrep found zero matches' truth for the Zoekt differential` · lane: testing · confidence: confirmed_
 
+**Status.** Fixed — commit `980936d` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** adjudicate() decides OK vs VEngineQuirk using only the run-wide `rgAvail` bool (true iff the rg binary was found at all). It has no signal that one specific query's own rg.run() call failed: run.go's rg phase leaves rgSets[i] at its nil zero value on error and records the failure only in a separate rgErrs slice, never threading that per-query failure into adjudicate's rgAvail parameter. compare.go's own comment on the rgAvail==false branch (lines 140-147) explicitly flags this exact risk ('If rg availability ever became per-query, this verdict would need its own gate rather than relying on the run-wide guard') but the per-query case is not actually gated.
 
 **Trigger.** One of the parallel rg.run() calls in run.go (RGParallel workers, one query each) exhausts its 3 retries (oracle_ripgrep.go's newRipgrep/run) and returns an error while rg itself is available and every other query succeeds — a plausible transient fork/exec or resource hiccup when running thousands of rg subprocesses in parallel. That query's slot in rgSets stays nil while rgAvail (the run-wide flag) is still true.
@@ -470,6 +503,8 @@ _`internal/parity/compare.go:132` · also at `internal/parity/run.go:239-248 —
 #### F-19 — parity.Rebuild silently and permanently drops a repo on any non-privacy ingest error
 
 _`internal/parity/manifest.go:473` · lane: testing · confidence: confirmed_
+
+**Status.** Fixed — commit `827ce88` on `codebase-review-fixes/2026-08-18` · tests added: yes.
 
 **Problem.** Rebuild() (used by `moedex-index refresh` in production) treats any non-privacy error from ingest.Repo identically to 'repo genuinely removed from disk' -- silently dropping the repo's content and manifest entry with no field, no log call, and no way for an operator to distinguish a transient git/I/O failure from an actual removal. This is asymmetric with Build()'s equivalent path, which records the same failure class visibly in b.Skipped.
 
@@ -485,6 +520,8 @@ _`internal/parity/manifest.go:473` · lane: testing · confidence: confirmed_
 
 _`internal/rank/ranker.go:390` · also at `internal/rank/ranker.go:410-411 — same unchecked r.ix.Blob(...) feeding lexicalSpans`, `internal/rank/ranker.go:430 — Features() chains r.ix.Blob(c.blob).Files with no nil check`, `internal/rank/ranker.go:764 — lexicalSpans dereferences b.Content assuming b != nil`, `internal/contextwin/contextwin.go:160-167 — the downstream consumer DOES defend against exactly this ("index.Blob panics on an out-of-range ID, so bounds-check first"), but Rank() would already have panicked before contextwin ever receives the RankedResult` · lane: correctness · confidence: likely_
 
+**Status.** Fixed — commit `71d8705` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** Candidate blob IDs from the lexical, symbol, and path arms are all structurally bounded by r.ix.NumBlobs(): buildPathIndex/buildSymbolIndex build their postings by iterating `for id := 0; id < r.ix.NumBlobs(); id++`, and candidateBlobs/tokenCandidateBlobs pull from r.ix/r.ti. The dense arm is the exception — denseArm's blob IDs come directly from `r.store.Search(...)`'s Chunk.Blob field, an external structure not derived from r.ix at query time. fuse(), Rank(), and Features() never validate a candidate's blob ID against r.ix.NumBlobs() before calling r.ix.Blob(id) and dereferencing the result (`b.Files`, `b.Content`), even though index.Index.Blob (internal/index/index.go:215-220) explicitly returns nil for an out-of-range ID rather than panicking itself — the panic happens at the caller's subsequent field access. contextwin.go's own comment ("index.Blob panics on an out-of-range ID, so bounds-check first") shows the codebase is aware of this exact hazard and defends against it one layer downstream, but Rank()/Features() build the RankedResult/BlobFeatures value (dereferencing the field) before that defense is ever reached.
 
 **Trigger.** Ranker.SetDense (or rank.New) installed with an embed.Store whose Chunk.Blob values are not all < r.ix.NumBlobs() — e.g. a store built against a different/larger index than the one passed to New/SetDense. Neither SetDense's contract nor Rank/Features validates this. Today's two production callers (cmd/moedex-mcp/main.go, internal/server/rankcorpus.go's OpenRank) always build the store from the exact same ix passed to New, so the mismatch is not currently exercised — this is the unverified link. A corrupted on-disk embedding sidecar (MDXE) with a garbled per-chunk Blob field would also reach this path, since OpenRank's .meta staleness check (internal/server/rankcorpus.go:369-389) validates aggregate fingerprint/model/NumBlobs/geometry, not individual chunk Blob values.
@@ -496,6 +533,8 @@ _`internal/rank/ranker.go:390` · also at `internal/rank/ranker.go:410-411 — s
 #### F-32 — C# I-prefix heuristic misclassifies any locally-defined class matching I[A-Z]* as an interface, emitting a wrong edge type to the trace_hierarchy MCP tool
 
 _`internal/server/graphhierarchy.go:388` · also at `internal/server/graphhierarchy.go:181 — csExtractInheritance calls csInferEdgeType per super with no positional or resolved-kind cross-check` · lane: correctness · confidence: confirmed_
+
+**Status.** Fixed — commit `151c12c` on `codebase-review-fixes/2026-08-18` · tests added: yes.
 
 **Problem.** csInferEdgeType classifies every C# base-list entry purely by whether its name starts with 'I' followed by another capital letter, with no use of base-list position (only slot 0 can ever be a base class) and no cross-check against the resolved definition. symbol.Kind (internal/symbol/symbol.go) has only one bucket, `Type`, for 'struct, interface, alias, ...', so nothing else in the pipeline records whether a given locally-defined type is actually declared with the `class`/`struct`/`record` keyword vs `interface` — the name-prefix guess is the only signal used, and it is never corrected even when the super resolves to a local symbol whose actual declaration text is available.
 
@@ -533,6 +572,8 @@ _`internal/server/graphrefresh.go:260` · also at `internal/server/graphrefresh.
 
 _`internal/server/graphtools.go:161` · also at `internal/server/graphtools.go:168 — s.symbols.corpus.Symbols(shard, id), a private-field call that could already be s.symbols.Merged().Symbols(shard, id)`, `internal/server/symbolcorpus.go:59-63 — SymbolCorpus's unexported idxs/corpus fields`, `internal/server/symbolcorpus.go:153 — Merged(), the documented accessor, correctly used instead by symbolcorpus_test.go:137-151 but bypassed by graphtools.go` · lane: architecture · confidence: confirmed_
 
+**Status.** Fixed — commit `81b3b85` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** graphSnapshot.buildCatalog (graphtools.go:159-203) iterates `s.symbols.idxs` and calls `s.symbols.corpus.Symbols(...)` directly on SymbolCorpus's unexported fields, rather than through SymbolCorpus's documented public surface (Merged(), NumShards(), References(), Definitions(), Locate()). SymbolCorpus's own header comment (symbolcorpus.go:1-23) describes its job as 'builds one symbol index per shard and merges them into a single cross-shard byName lookup... resolves shard-qualified refs back to repo/path/line' — it does not mention being used as a generic per-shard-blob enumerator for a second consumer's catalog-building pass. One of the two reaches (`.corpus.Symbols`) has a trivial fix via the existing Merged() accessor (used correctly in symbolcorpus_test.go); the other (`.idxs`, needed to enumerate every blob in every shard) has no public equivalent at all, because SymbolCorpus's real API only supports name-keyed lookups, not raw shard enumeration.
 
 **Trigger.** Any future change to SymbolCorpus's internal representation made by someone relying only on its documented contract (e.g. dropping per-shard *index.Index retention after the merge, which its own doc comment invites by describing shard-level independence) — a reasonable refactor motivated purely by SymbolCorpus's stated job.
@@ -545,6 +586,8 @@ _`internal/server/graphtools.go:161` · also at `internal/server/graphtools.go:1
 
 _`internal/server/httpgraph.go:28` · also at `internal/graph/httproute/extract.go:211,217-223 — SymbolStart is left at -1 when no owner is passed and Enclosing() finds nothing`, `internal/server/graphtools.go:193-198 — buildCatalog only catalogs diskgraph.Keys() (edge sources), never target-only keys`, `internal/server/graphtools.go:815-827 — rootsForFile can only return nodes already in s.nodes` · lane: correctness · confidence: likely_
 
+**Status.** Fixed — commit `81b3b85` on `codebase-review-fixes/2026-08-18` · tests added: yes.
+
 **Problem.** addHTTPCallEdges keys the HTTP_CALLS edge's target at edge.Handler.SymbolStart, falling back to the raw literal's own byte offset (edge.Handler.Start) via httpNodeOffset when the handler has no enclosing symbol (SymbolStart == -1, per extract.go). When that fallback fires, the target node is a raw-evidence key that is never a diskgraph.Keys() source (nothing calls the route-registration literal itself) and never a symbol.BuildMulti entry, so it never lands in graphSnapshot.nodes.
 
 **Trigger.** A route registration with no enclosing named function/method — e.g. a top-level Express `app.get('/x', ...)` call in module scope, or a C# minimal-API `app.MapGet(...)` lambda outside any method — so extract.go's emitOwned leaves owner nil and Enclosing() finds nothing, producing SymbolStart=-1 for the handler side. This path is exercised by the fallback code in httpNodeOffset but not by any test (httpgraph_test.go's fixture uses a named Go handler function, so TargetOffset there is a real symbol NameStart and resolves fine).
@@ -556,6 +599,8 @@ _`internal/server/httpgraph.go:28` · also at `internal/graph/httproute/extract.
 #### F-20 — Manifest DEPENDS_ON edges key their source and target nodes inconsistently (and a second, distinct bug: leaf-dependency manifests never become graph nodes at all)
 
 _`internal/server/manifestsidecar.go:106` · also at `internal/server/manifestsidecar.go:129` · lane: correctness · confidence: confirmed_
+
+**Status.** Fixed — commit `40e5892` on `codebase-review-fixes/2026-08-18` · tests added: yes.
 
 **Problem.** A DEPENDS_ON edge's target is keyed at the raw, non-zero identity-declaration offset (resolved.Target.Offset) while the same function forces the source side to the canonical whole-file key manifestNodeOffset (0). The same manifest file thus gets two different graph node identities depending on its role, and graphtools.go's traversal does exact-key matching. Verification additionally found the finding's own cited test fixture (a pure-leaf target manifest with no outgoing dependencies) fails for a SEPARATE, unaddressed reason: addManifestEdges never calls builder.AddNode for a pure dependency target, so that blob never becomes a graph node at any offset regardless of the keying fix.
 
