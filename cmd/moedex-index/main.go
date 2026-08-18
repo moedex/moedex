@@ -217,7 +217,7 @@ func buildSidecars(dir string) string {
 		built = append(built, "token", "symbol")
 	}
 	if _, stats, err := buildGraph(dir); err != nil {
-		fmt.Fprintf(os.Stderr, "moedex-index: warning: build graph: %v\n", err)
+		fmt.Fprintf(os.Stderr, "moedex-index: WARNING: build graph failed — %s will keep serving its PRIOR graph generation (or none) until this is fixed and a build/refresh succeeds; run `moedex-index doctor -shard-dir %s` to confirm: %v\n", dir, dir, err)
 	} else {
 		built = append(built, "graph")
 		printGraphStats(stats)
