@@ -51,6 +51,12 @@ type graphSnapshot struct {
 	// what lets a search_context block — which knows only a path and a line range —
 	// be anchored to graph nodes without a reverse scan. See anchorsFor.
 	byPath map[string][]locatedNode
+
+	// Lazy indices for discovery tools (built on first access via sync.Once).
+	repoOnce   sync.Once
+	repoFiles  map[string]map[string]*index.Blob // repo → relpath → blob
+	schemaOnce sync.Once
+	schemaInfo *discoverySchema
 }
 
 // locatedNode is one graph node placed at a 1-based line of a file.
@@ -333,6 +339,12 @@ func (g *GraphToolset) Tools() []mcp.ToolHandler {
 		&graphTool{owner: g, name: "trace_renders"},
 		&graphTool{owner: g, name: "impact_analysis"},
 		g.ClusterTool(),
+		&discoveryTool{owner: g, name: "list_repos"},
+		&discoveryTool{owner: g, name: "graph_schema"},
+		&discoveryTool{owner: g, name: "read_source"},
+		&discoveryTool{owner: g, name: "graph_neighbors"},
+		&discoveryTool{owner: g, name: "list_symbols"},
+		&discoveryTool{owner: g, name: "file_tree"},
 	}
 }
 

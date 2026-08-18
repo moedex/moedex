@@ -12,6 +12,7 @@ import (
 	"moedex/internal/graph/cluster"
 	"moedex/internal/graph/diskgraph"
 	"moedex/internal/index"
+	"moedex/internal/mcp"
 )
 
 func TestListClustersToolReturnsCommunitiesAndSingletons(t *testing.T) {
@@ -52,10 +53,17 @@ func TestListClustersToolReturnsCommunitiesAndSingletons(t *testing.T) {
 	}
 	defer tools.Close()
 	registered := tools.Tools()
-	if got := registered[len(registered)-1].Name(); got != "list_clusters" {
-		t.Fatalf("last registered graph tool = %q, want list_clusters", got)
+	var clusterTool mcp.ToolHandler
+	for _, tool := range registered {
+		if tool.Name() == "list_clusters" {
+			clusterTool = tool
+			break
+		}
 	}
-	result, err := registered[len(registered)-1].Call(context.Background(), json.RawMessage(`{}`))
+	if clusterTool == nil {
+		t.Fatal("list_clusters tool not registered")
+	}
+	result, err := clusterTool.Call(context.Background(), json.RawMessage(`{}`))
 	if err != nil {
 		t.Fatal(err)
 	}
