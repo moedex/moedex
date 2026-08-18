@@ -179,7 +179,19 @@ func LiteralWithStats(ctx context.Context, ix *index.Index, q string) ([]Match, 
 			// bytes.Equal is SIMD-optimized in the stdlib on amd64 and arm64.
 			// Guard the upper bound; the positional intersection guarantees the
 			// begin-gram fits, but a malformed/truncated end could overrun.
-			if pos := p.Offset; pos+len(qb) <= len(b.Content) && bytes.Equal(b.Content[pos:pos+len(qb)], qb) {
+			//
+			// Bound the candidate to a single line before trusting bytes.Equal
+			// against the raw, unsplit blob content: the begin/end-gram
+			// intersection only proves the two grams land at the right relative
+			// offsets, not that nothing between them crosses a real line break.
+			// A query containing a raw '\n' (the only way qb[pos:pos+len(qb)] can
+			// straddle two lines and still byte-compare equal) must never match —
+			// ripgrep's line-oriented default never lets a single line's content
+			// contain '\n', so any candidate span containing one is rejected here
+			// rather than reported against whichever line pos happens to start.
+			if pos := p.Offset; pos+len(qb) <= len(b.Content) &&
+				bytes.IndexByte(b.Content[pos:pos+len(qb)], '\n') < 0 &&
+				bytes.Equal(b.Content[pos:pos+len(qb)], qb) {
 				matches = appendRefs(matches, b, b.LineOf(pos))
 			}
 		}
