@@ -1,4 +1,4 @@
-package corpus
+package catalog
 
 import (
 	"fmt"
@@ -73,14 +73,14 @@ func (l Lock) Validate(host string) error {
 		}
 		previousID = project.ID
 		seenIDs[project.ID] = struct{}{}
-		if err := validateManagedPath(project.PathWithNamespace); err != nil {
+		if err := ValidateManagedPath(project.PathWithNamespace); err != nil {
 			return fmt.Errorf("project %d: %w", project.ID, err)
 		}
 		if other, ok := seenPaths[project.PathWithNamespace]; ok {
 			return fmt.Errorf("duplicate managed corpus path %q for projects %d and %d", project.PathWithNamespace, other, project.ID)
 		}
 		seenPaths[project.PathWithNamespace] = project.ID
-		if err := validateCloneURL(host, project.CloneURL); err != nil {
+		if err := ValidateCloneURL(host, project.CloneURL); err != nil {
 			return fmt.Errorf("project %d: %w", project.ID, err)
 		}
 		if project.DefaultBranch == "" {
@@ -89,7 +89,7 @@ func (l Lock) Validate(host string) error {
 		if err := validRef(project.DefaultBranch); err != nil {
 			return fmt.Errorf("project %d: %w", project.ID, err)
 		}
-		if !validGitObjectID(project.DefaultCommit) {
+		if !ValidGitObjectID(project.DefaultCommit) {
 			return fmt.Errorf("project %d has malformed or absent default commit %q", project.ID, project.DefaultCommit)
 		}
 		switch project.Status {
@@ -102,7 +102,7 @@ func (l Lock) Validate(host string) error {
 		for j := i + 1; j < len(l.Projects); j++ {
 			left := l.Projects[i].PathWithNamespace
 			right := l.Projects[j].PathWithNamespace
-			if managedPathsOverlap(left, right) {
+			if ManagedPathsOverlap(left, right) {
 				return fmt.Errorf("managed corpus paths overlap: %q and %q", left, right)
 			}
 		}
@@ -129,15 +129,17 @@ func LoadLock(root, host string) (Lock, error) {
 
 // WriteLock writes a canonical, fsync-durable acquisition snapshot.
 func WriteLock(root, host string, l Lock) error {
-	return writeLock(root, host, l, nil)
+	return WriteLockWithHook(root, host, l, nil)
 }
 
-func writeLock(root, host string, l Lock, beforeRename func(string) error) error {
+// WriteLockWithHook is WriteLock with an internal fault-injection seam
+// (beforeRename) used by lifecycle tests in internal/corpus.
+func WriteLockWithHook(root, host string, l Lock, beforeRename func(string) error) error {
 	canonicalizeLock(&l)
 	if err := l.Validate(host); err != nil {
 		return fmt.Errorf("validate managed corpus lock: %w", err)
 	}
-	if err := writeCanonicalJSON(LockPath(root), l, beforeRename); err != nil {
+	if err := WriteCanonicalJSON(LockPath(root), l, beforeRename); err != nil {
 		return fmt.Errorf("write managed corpus lock: %w", err)
 	}
 	return nil
@@ -154,7 +156,10 @@ func canonicalizeLock(l *Lock) {
 	sort.Slice(l.Projects, func(i, j int) bool { return l.Projects[i].ID < l.Projects[j].ID })
 }
 
-func validateManagedPath(value string) error {
+// ValidateManagedPath rejects a managed corpus path that is unsafe to join
+// onto a root directory (absolute, containing "..", escaping into the
+// ManagedDirName/.git reserved names, and so on).
+func ValidateManagedPath(value string) error {
 	if value == "" || value != strings.TrimSpace(value) || strings.HasPrefix(value, "-") || path.IsAbs(value) ||
 		value == "." || value == ".." || path.Clean(value) != value ||
 		strings.Contains(value, "\\") || strings.ContainsFunc(value, unicode.IsControl) {
@@ -172,7 +177,9 @@ func validateManagedPath(value string) error {
 	return nil
 }
 
-func validateCloneURL(host, raw string) error {
+// ValidateCloneURL rejects a clone URL that doesn't point at the pinned host,
+// looks like a flag, or carries embedded credentials.
+func ValidateCloneURL(host, raw string) error {
 	if raw == "" || raw != strings.TrimSpace(raw) || strings.HasPrefix(raw, "-") ||
 		strings.ContainsFunc(raw, unicode.IsControl) {
 		return fmt.Errorf("invalid clone URL")
@@ -215,7 +222,9 @@ func validateCloneURL(host, raw string) error {
 	return nil
 }
 
-func validGitObjectID(value string) bool {
+// ValidGitObjectID reports whether value is a well-formed SHA-1 or SHA-256
+// git object ID (hex-encoded, the right length — no further parsing).
+func ValidGitObjectID(value string) bool {
 	if len(value) != 40 && len(value) != 64 {
 		return false
 	}
@@ -227,6 +236,22 @@ func validGitObjectID(value string) bool {
 	return true
 }
 
-func managedPathsOverlap(left, right string) bool {
+// ManagedPathsOverlap reports whether one managed corpus path is a directory
+// ancestor of the other (e.g. "g/repo" and "g/repo/nested").
+func ManagedPathsOverlap(left, right string) bool {
 	return strings.HasPrefix(left, right+"/") || strings.HasPrefix(right, left+"/")
+}
+
+// validRef rejects a branch/ref that looks like a flag rather than a name.
+// This intentionally duplicates internal/corpus's own validRef (used there to
+// guard `git fetch origin <ref>`) rather than importing internal/corpus: this
+// package must stay leaf-level (no os/exec, no Runner) so that a read-only
+// caller like internal/ingest can depend on it without pulling in corpus's
+// full glab/git shell-out surface. The check itself is a single stable rule
+// ("does this look like a flag?"), so keeping two copies costs little.
+func validRef(ref string) error {
+	if strings.HasPrefix(ref, "-") {
+		return fmt.Errorf("ref %q looks like a flag", ref)
+	}
+	return nil
 }
