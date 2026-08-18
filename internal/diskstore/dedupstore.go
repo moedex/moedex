@@ -36,6 +36,7 @@ import (
 	"bufio"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"os"
 
 	"moedex/internal/index"
@@ -162,8 +163,18 @@ type dedupedHeader struct {
 }
 
 func parseDedupedHeader(data []byte) (dedupedHeader, error) {
-	if len(data) < headerSizeV5 {
-		return dedupedHeader{}, fmt.Errorf("diskstore: deduped file too small (%d bytes)", len(data))
+	return parseDedupedHeaderSized(data, uint64(len(data)))
+}
+
+// parseDedupedHeaderSized is the MOEDEX05 analogue of parseHeaderSized: it
+// parses the header out of data (which must hold at least headerSizeV5
+// bytes) and validates section offsets against totalSize -- the real file
+// size -- rather than len(data), so LoadBlobsDeduped can validate and locate
+// the blob section from just a header-sized read, without ever
+// materializing the postings section.
+func parseDedupedHeaderSized(data []byte, totalSize uint64) (dedupedHeader, error) {
+	if uint64(len(data)) < headerSizeV5 {
+		return dedupedHeader{}, fmt.Errorf("diskstore: deduped file too small (%d bytes)", totalSize)
 	}
 	if string(data[0:8]) != magicDeduped {
 		return dedupedHeader{}, fmt.Errorf("diskstore: bad deduped magic %q", data[0:8])
@@ -177,13 +188,13 @@ func parseDedupedHeader(data []byte) (dedupedHeader, error) {
 		blobOff:     binary.LittleEndian.Uint64(data[32:40]),
 		postOff:     binary.LittleEndian.Uint64(data[40:48]),
 	}
-	if h.blobOff > uint64(len(data)) || h.postOff > uint64(len(data)) || h.blobOff > h.postOff {
+	if h.blobOff > totalSize || h.postOff > totalSize || h.blobOff > h.postOff {
 		return dedupedHeader{}, fmt.Errorf("diskstore: corrupt deduped section offsets")
 	}
 	if err := checkSectionCount(h.numBlobs, minDedupedBlobRecordSize, h.postOff-h.blobOff, "deduped blob count"); err != nil {
 		return dedupedHeader{}, err
 	}
-	if err := checkSectionCount(h.numTrigrams, minTrigramRecordSize, uint64(len(data))-h.postOff, "deduped trigram count"); err != nil {
+	if err := checkSectionCount(h.numTrigrams, minTrigramRecordSize, totalSize-h.postOff, "deduped trigram count"); err != nil {
 		return dedupedHeader{}, err
 	}
 	return h, nil
@@ -289,14 +300,39 @@ func LoadMmapDeduped(path string, cs *ContentStore) (*index.Index, *mmapRegion, 
 // section entirely — the deduped analogue of LoadBlobs for the corpus ranker.
 // result[i] is the blob with shard-local ID i. As with LoadMmapDeduped, content
 // aliases the content-store mmap and is valid only while cs is open.
+//
+// This reads only the fixed header and the [blobOff,postOff) byte range off
+// disk — never the (often much larger) postings section — so its I/O cost
+// scales with the blob section's size, not the shard's total size.
 func LoadBlobsDeduped(path string, cs *ContentStore) ([]index.BlobData, error) {
-	data, err := os.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	hdr, err := parseDedupedHeader(data)
+	defer f.Close()
+	fi, err := f.Stat()
 	if err != nil {
 		return nil, err
 	}
-	return loadDedupedBlobs(data[hdr.blobOff:hdr.postOff], int(hdr.numBlobs), cs)
+	size := fi.Size()
+	if size < 0 {
+		return nil, fmt.Errorf("diskstore: invalid file size %d", size)
+	}
+	n := headerSizeV5
+	if int64(n) > size {
+		n = int(size)
+	}
+	hdrBuf := make([]byte, n)
+	if _, err := io.ReadFull(f, hdrBuf); err != nil {
+		return nil, fmt.Errorf("diskstore: read deduped header: %w", err)
+	}
+	hdr, err := parseDedupedHeaderSized(hdrBuf, uint64(size))
+	if err != nil {
+		return nil, err
+	}
+	blobSec := make([]byte, hdr.postOff-hdr.blobOff)
+	if _, err := f.ReadAt(blobSec, int64(hdr.blobOff)); err != nil {
+		return nil, fmt.Errorf("diskstore: read deduped blob section: %w", err)
+	}
+	return loadDedupedBlobs(blobSec, int(hdr.numBlobs), cs)
 }

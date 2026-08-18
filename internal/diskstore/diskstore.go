@@ -297,16 +297,51 @@ func postEnd(data []byte, hdr header) uint64 {
 // concatenates LoadBlobs across shards into one content index (with global IDs)
 // and builds BM25/symbol stats over it, never paying the positional-postings
 // heap cost that Load would. result[i] is the blob with shard-local ID i.
+//
+// This reads only the header and the [blobOff,postOff) byte range off disk —
+// never the (often much larger) postings section — so its I/O cost scales
+// with the blob section's size, not the shard's total size.
 func LoadBlobs(path string) ([]index.BlobData, error) {
-	data, err := os.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	hdr, err := parseHeader(data)
+	defer f.Close()
+	hdr, err := readHeader(f)
 	if err != nil {
 		return nil, err
 	}
-	return loadBlobs(data[hdr.blobOff:hdr.postOff], int(hdr.numBlobs))
+	blobSec := make([]byte, hdr.postOff-hdr.blobOff)
+	if _, err := f.ReadAt(blobSec, int64(hdr.blobOff)); err != nil {
+		return nil, fmt.Errorf("diskstore: read blob section: %w", err)
+	}
+	return loadBlobs(blobSec, int(hdr.numBlobs))
+}
+
+// readHeader reads and parses the header of an open MOEDEX03/04 shard,
+// validating section offsets against the file's actual (stat'd) size without
+// reading the rest of the file. It reads at most headerSizeV4 bytes — enough
+// for either format's fixed header — leaving the file's read cursor
+// positioned after those bytes (callers that need a specific section use
+// ReadAt with an absolute offset, not further sequential reads).
+func readHeader(f *os.File) (header, error) {
+	fi, err := f.Stat()
+	if err != nil {
+		return header{}, err
+	}
+	size := fi.Size()
+	if size < 0 {
+		return header{}, fmt.Errorf("diskstore: invalid file size %d", size)
+	}
+	n := headerSizeV4
+	if int64(n) > size {
+		n = int(size)
+	}
+	hdrBuf := make([]byte, n)
+	if _, err := io.ReadFull(f, hdrBuf); err != nil {
+		return header{}, fmt.Errorf("diskstore: read header: %w", err)
+	}
+	return parseHeaderSized(hdrBuf, uint64(size))
 }
 
 // LoadMmap memory-maps a file written by Save and returns an index whose
@@ -442,8 +477,21 @@ type header struct {
 }
 
 func parseHeader(data []byte) (header, error) {
-	if len(data) < headerSize {
-		return header{}, fmt.Errorf("diskstore: file too small (%d bytes)", len(data))
+	return parseHeaderSized(data, uint64(len(data)))
+}
+
+// parseHeaderSized parses a shard header out of data (which must hold at
+// least the header bytes for whichever format is detected) and validates the
+// section offsets against totalSize -- the size of the file the header
+// describes. parseHeader is the common case, where a caller has already read
+// the whole file/mmap into data, so totalSize == uint64(len(data)).
+// LoadBlobs/LoadBlobsDeduped instead read only a header-sized prefix off
+// disk and pass the real (stat'd) file size as totalSize, so a header can be
+// validated -- and the blob section's byte range computed -- without ever
+// materializing the (potentially much larger) postings section.
+func parseHeaderSized(data []byte, totalSize uint64) (header, error) {
+	if uint64(len(data)) < headerSize {
+		return header{}, fmt.Errorf("diskstore: file too small (%d bytes)", totalSize)
 	}
 	switch string(data[0:8]) {
 	case magic:
@@ -456,19 +504,19 @@ func parseHeader(data []byte) (header, error) {
 			blobOff:     binary.LittleEndian.Uint64(data[32:40]),
 			postOff:     binary.LittleEndian.Uint64(data[40:48]),
 		}
-		if h.blobOff > uint64(len(data)) || h.postOff > uint64(len(data)) || h.blobOff > h.postOff {
+		if h.blobOff > totalSize || h.postOff > totalSize || h.blobOff > h.postOff {
 			return header{}, fmt.Errorf("diskstore: corrupt section offsets")
 		}
 		if err := checkSectionCount(h.numBlobs, minBlobRecordSize, h.postOff-h.blobOff, "blob count"); err != nil {
 			return header{}, err
 		}
-		if err := checkSectionCount(h.numTrigrams, minTrigramRecordSize, uint64(len(data))-h.postOff, "trigram count"); err != nil {
+		if err := checkSectionCount(h.numTrigrams, minTrigramRecordSize, totalSize-h.postOff, "trigram count"); err != nil {
 			return header{}, err
 		}
 		return h, nil
 	case magicSelective:
-		if len(data) < headerSizeV4 {
-			return header{}, fmt.Errorf("diskstore: selective file too small (%d bytes)", len(data))
+		if uint64(len(data)) < headerSizeV4 {
+			return header{}, fmt.Errorf("diskstore: selective file too small (%d bytes)", totalSize)
 		}
 		if v := binary.LittleEndian.Uint32(data[8:12]); v != formatVersionV4 {
 			return header{}, fmt.Errorf("diskstore: unsupported version %d", v)
@@ -482,14 +530,14 @@ func parseHeader(data []byte) (header, error) {
 			selOff:      binary.LittleEndian.Uint64(data[48:56]),
 			selCount:    binary.LittleEndian.Uint64(data[56:64]),
 		}
-		if h.blobOff > uint64(len(data)) || h.postOff > uint64(len(data)) ||
-			h.selOff > uint64(len(data)) || h.blobOff > h.postOff || h.postOff > h.selOff {
+		if h.blobOff > totalSize || h.postOff > totalSize ||
+			h.selOff > totalSize || h.blobOff > h.postOff || h.postOff > h.selOff {
 			return header{}, fmt.Errorf("diskstore: corrupt section offsets")
 		}
-		// selOff is already bounds-checked above, so len(data)-selOff cannot
+		// selOff is already bounds-checked above, so totalSize-selOff cannot
 		// underflow; dividing (rather than multiplying selCount*N) cannot overflow
 		// either, unlike the multiply-then-compare this replaces.
-		if h.selCount > (uint64(len(data))-h.selOff)/trigram.N {
+		if h.selCount > (totalSize-h.selOff)/trigram.N {
 			return header{}, fmt.Errorf("diskstore: corrupt selection section")
 		}
 		if err := checkSectionCount(h.numBlobs, minBlobRecordSize, h.postOff-h.blobOff, "blob count"); err != nil {
