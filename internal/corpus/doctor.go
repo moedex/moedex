@@ -295,34 +295,40 @@ func doctorManagedCleanliness(ctx context.Context, r Runner, root string, lock L
 		}
 	}
 
-	// Ignore untracked files outside Moedex-owned paths. Finder metadata and
-	// similar superproject-root noise cannot enter ingestion (which is driven by
-	// the lock and git ls-files), while staged/tracked changes remain fatal.
-	res, err := r.RunEnv(ctx, gitEnv, "git", "-C", root, "status", "--porcelain", "--untracked-files=no")
-	if err != nil || !res.Ok() {
-		return failInspect(commandFailureDetail(err, res, "could not inspect work tree"))
+	state, err := probeManagedStage(ctx, r, root)
+	if err != nil {
+		return failInspect(redactDiagnostic(err.Error()))
 	}
-	if len(res.Stdout) != 0 {
+	if state == managedDirty {
 		return failDirty()
 	}
 
-	// Untracked files are not benign inside Moedex-owned metadata or an indexed
-	// submodule: preserve them as local work and stop before sync can advance.
-	res, err = r.RunEnv(ctx, gitEnv, "git", "-C", root, "status", "--porcelain", "--untracked-files=all", "--", ".gitmodules", ManagedDirName)
-	if err != nil || !res.Ok() {
-		return failInspect(commandFailureDetail(err, res, "could not inspect managed metadata"))
-	}
-	if len(res.Stdout) != 0 {
-		return failDirty()
-	}
+	// Untracked files are not benign inside an indexed submodule: preserve them
+	// as local work and stop before sync can advance. Unlike probeManagedStage
+	// above, this is unconditional per project — a submodule's own worktree is
+	// never part of what stageManagedSync stages, so any output here is real,
+	// unstaged local work regardless of whether the superproject index itself
+	// is clean or holds a resumable stage.
 	for _, project := range lock.Projects {
 		dest := filepath.Join(root, filepath.FromSlash(project.PathWithNamespace))
-		res, err = r.RunEnv(ctx, gitEnv, "git", "-C", dest, "status", "--porcelain", "--untracked-files=all")
+		res, err := r.RunEnv(ctx, gitEnv, "git", "-C", dest, "status", "--porcelain", "--untracked-files=all")
 		if err != nil || !res.Ok() {
 			return failInspect(commandFailureDetail(err, res, "could not inspect a managed submodule worktree"))
 		}
 		if len(res.Stdout) != 0 {
 			return failDirty()
+		}
+	}
+
+	if state == managedStagedResumable {
+		// A prior sync's `git add` completed but it never reached `git commit`
+		// (signal, deadline, OOM, reboot). That is safe and self-healing — the
+		// next sync commits it — so it must not block ExecStartPre in the
+		// shipped systemd unit the way a genuinely dirty tree does.
+		return Check{
+			Name:   "managed recoverable cleanliness",
+			Status: StatusOK,
+			Detail: "a staged snapshot from an interrupted sync is pending — the next sync commits it automatically",
 		}
 	}
 	return Check{Name: "managed recoverable cleanliness", Status: StatusOK, Detail: "tracked snapshot and managed submodule worktrees are clean"}

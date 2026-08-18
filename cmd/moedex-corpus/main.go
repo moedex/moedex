@@ -25,8 +25,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
 	"sync"
+	"syscall"
+	"time"
 
 	"moedex/internal/corpus"
 	"moedex/internal/version"
@@ -70,20 +73,20 @@ func usage() {
 	fmt.Fprint(os.Stderr, `moedex-corpus — set up and keep fresh the moedex live corpus.
 
 Usage:
-  moedex-corpus doctor [-corpus DIR] [-groups FILE] [-no-banner]
+  moedex-corpus doctor [-corpus DIR] [-groups FILE] [-timeout DUR] [-no-banner]
       Diagnose local managed-corpus integrity plus separate glab authentication,
       GitLab/VPN reachability, and Git clone/fetch transport checks.
 
-  moedex-corpus init [-corpus DIR] [-groups FILE] [-concurrency N] [-no-banner]
+  moedex-corpus init [-corpus DIR] [-groups FILE] [-concurrency N] [-timeout DUR] [-no-banner]
       Create a new Moedex-owned Git superproject at an empty/new destination,
       add curated projects as stable-ID submodules, and commit the first lock.
 
-  moedex-corpus clone [-corpus DIR] [-groups FILE] [-concurrency N] [-dry-run] [-no-banner]
+  moedex-corpus clone [-corpus DIR] [-groups FILE] [-concurrency N] [-timeout DUR] [-dry-run] [-no-banner]
       Shallow-clone (--depth 1) every curated project into the corpus tree, many
       at once. Idempotent: existing repos are skipped (freshen them with sync).
       Without -groups, the built-in curated allowlist is used.
 
-  moedex-corpus sync [-corpus DIR] [-groups FILE] [-concurrency N] [-prune] [-dry-run] [-no-banner]
+  moedex-corpus sync [-corpus DIR] [-groups FILE] [-concurrency N] [-timeout DUR] [-prune] [-dry-run] [-no-banner]
       Managed roots reconcile stable project IDs and commit a locked submodule
       snapshot. Unmanaged roots retain the independent-clone compatibility path.
       With -prune, remove projects absent after a complete enumeration.
@@ -92,8 +95,46 @@ Usage:
       Print the group allowlist derived from the top-level dirs of an existing
       mirror (one group per line, to stdout) — commit it as the default list.
 
+Every subcommand above stops cleanly on SIGINT/SIGTERM and gives up after
+-timeout (a generous per-subcommand default; 0 disables it) so a hung glab/git
+call fails loudly instead of blocking an unattended run forever.
+
 The tool only ever talks to `+corpus.DefaultHost+`.
 `)
+}
+
+// Default -timeout values, one per subcommand. doctor only makes a handful of
+// quick API/reachability probes; init/clone/sync fan out over the whole
+// curated corpus (many repos, real network transfer) so they get a much more
+// generous bound. All are overridable with -timeout; 0 disables the deadline
+// entirely (signal handling still applies).
+const (
+	defaultDoctorTimeout = 2 * time.Minute
+	defaultInitTimeout   = 2 * time.Hour
+	defaultCloneTimeout  = 2 * time.Hour
+	defaultSyncTimeout   = 45 * time.Minute
+)
+
+// signalContext returns a context that is canceled on SIGINT/SIGTERM — so an
+// operator kill, `systemctl stop`, or a reboot's shutdown signal lands as an
+// ordinary, catchable cancellation that every glab/git subprocess call
+// (Runner.Run/RunEnv -> exec.CommandContext) observes and unwinds from
+// cleanly, rather than the process being torn down mid-operation with no
+// chance to report what happened. When timeout > 0 the context is
+// additionally bounded by it, so a stalled network call cannot block the
+// process forever even absent any signal — the concrete gap this closes for
+// an unattended, hourly systemd-timer job. Callers must defer the returned
+// stop func.
+func signalContext(timeout time.Duration) (context.Context, func()) {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	if timeout <= 0 {
+		return ctx, stop
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	return ctx, func() {
+		cancel()
+		stop()
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -105,6 +146,7 @@ func runInit(args []string) error {
 	corpusDir := fs.String("corpus", "", "new managed corpus root (default: $MOEDEX_CORPUS or ~/"+corpus.DefaultCorpusDirName+")")
 	groupsPath := fs.String("groups", "", "group allowlist file (default: built-in curated list)")
 	concurrency := fs.Int("concurrency", corpus.DefaultConcurrency(), "max parallel Git operations (Moe's tentacles)")
+	timeout := fs.Duration("timeout", defaultInitTimeout, "give up the whole run after this long (0 disables the deadline); also stops cleanly on SIGINT/SIGTERM")
 	noBanner := fs.Bool("no-banner", false, "suppress the Moe banner")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -122,7 +164,8 @@ func runInit(args []string) error {
 		return err
 	}
 	cfg := corpus.Config{Host: corpus.DefaultHost, Root: root, Groups: groups, Concurrency: *concurrency}
-	ctx := context.Background()
+	ctx, stop := signalContext(*timeout)
+	defer stop()
 	r := corpus.ExecRunner{}
 	if rep := corpus.Doctor(ctx, r, cfg); !rep.OK() {
 		printReport(rep)
@@ -161,6 +204,7 @@ func runDoctor(args []string) error {
 	fs := flag.NewFlagSet("doctor", flag.ContinueOnError)
 	corpusDir := fs.String("corpus", "", "corpus root (default: $MOEDEX_CORPUS or ~/"+corpus.DefaultCorpusDirName+")")
 	groupsPath := fs.String("groups", "", "group allowlist file (default: built-in curated list)")
+	timeout := fs.Duration("timeout", defaultDoctorTimeout, "give up the whole run after this long (0 disables the deadline); also stops cleanly on SIGINT/SIGTERM")
 	noBanner := fs.Bool("no-banner", false, "suppress the Moe banner")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -179,7 +223,9 @@ func runDoctor(args []string) error {
 	}
 	cfg := corpus.Config{Host: corpus.DefaultHost, Root: root, Groups: groups, Concurrency: corpus.DefaultConcurrency()}
 
-	rep := corpus.Doctor(context.Background(), corpus.ExecRunner{}, cfg)
+	ctx, stop := signalContext(*timeout)
+	defer stop()
+	rep := corpus.Doctor(ctx, corpus.ExecRunner{}, cfg)
 	printReport(rep)
 	if !rep.OK() {
 		return fmt.Errorf("preflight failed — fix the item(s) marked %s above, then re-run `moedex-corpus doctor`", markFail)
@@ -326,6 +372,7 @@ func runClone(args []string) error {
 	groupsPath := fs.String("groups", "", "group allowlist file (default: built-in curated list)")
 	concurrency := fs.Int("concurrency", corpus.DefaultConcurrency(), "max parallel clones (Moe's tentacles)")
 	dryRun := fs.Bool("dry-run", false, "list what would be cloned/skipped without running git")
+	timeout := fs.Duration("timeout", defaultCloneTimeout, "give up the whole run after this long (0 disables the deadline); also stops cleanly on SIGINT/SIGTERM")
 	noBanner := fs.Bool("no-banner", false, "suppress the Moe banner")
 	rf := addReindexFlags(fs)
 	if err := fs.Parse(args); err != nil {
@@ -348,7 +395,8 @@ func runClone(args []string) error {
 	}
 	cfg := corpus.Config{Host: corpus.DefaultHost, Root: root, Groups: groups, Concurrency: *concurrency}
 
-	ctx := context.Background()
+	ctx, stop := signalContext(*timeout)
+	defer stop()
 	r := corpus.ExecRunner{}
 
 	// Fail fast on a broken setup — the same checks as `doctor`.
@@ -467,6 +515,7 @@ func runSync(args []string) error {
 	concurrency := fs.Int("concurrency", corpus.DefaultConcurrency(), "max parallel git operations (Moe's tentacles)")
 	prune := fs.Bool("prune", false, "remove local repos that are gone from the server (default: keep + report)")
 	dryRun := fs.Bool("dry-run", false, "show the plan (clone/update/missing) without running git")
+	timeout := fs.Duration("timeout", defaultSyncTimeout, "give up the whole run after this long (0 disables the deadline); also stops cleanly on SIGINT/SIGTERM")
 	noBanner := fs.Bool("no-banner", false, "suppress the Moe banner")
 	rf := addReindexFlags(fs)
 	if err := fs.Parse(args); err != nil {
@@ -489,7 +538,8 @@ func runSync(args []string) error {
 	}
 	cfg := corpus.Config{Host: corpus.DefaultHost, Root: root, Groups: groups, Concurrency: *concurrency}
 
-	ctx := context.Background()
+	ctx, stop := signalContext(*timeout)
+	defer stop()
 	r := corpus.ExecRunner{}
 
 	if rep := corpus.Doctor(ctx, r, cfg); !rep.OK() {

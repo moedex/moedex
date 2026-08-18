@@ -5,7 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 
 	"moedex/internal/corpus"
 )
@@ -147,6 +149,75 @@ func TestDisplayTentacles(t *testing.T) {
 				t.Errorf("displayTentacles(%d, %d) = %d, want %d", tc.concurrency, tc.total, got, tc.want)
 			}
 		})
+	}
+}
+
+// TestSignalContextDeadline is the regression for F-06: every runXxx path
+// used to hand context.Background() (no deadline, ever) straight through to
+// exec.CommandContext for every glab/git subprocess call, so a stalled
+// network call blocked the process forever. signalContext must give the
+// returned context a deadline when asked, and must not impose one when the
+// caller passes 0 (an explicit opt-out).
+func TestSignalContextDeadline(t *testing.T) {
+	t.Run("timeout imposes a deadline", func(t *testing.T) {
+		ctx, stop := signalContext(50 * time.Millisecond)
+		defer stop()
+		deadline, ok := ctx.Deadline()
+		if !ok {
+			t.Fatal("signalContext(50ms) context has no deadline, want one")
+		}
+		if until := time.Until(deadline); until <= 0 || until > 50*time.Millisecond {
+			t.Fatalf("deadline is %v from now, want in (0, 50ms]", until)
+		}
+		select {
+		case <-ctx.Done():
+		case <-time.After(2 * time.Second):
+			t.Fatal("context never fired despite its deadline elapsing")
+		}
+	})
+
+	t.Run("zero timeout disables the deadline", func(t *testing.T) {
+		ctx, stop := signalContext(0)
+		defer stop()
+		if _, ok := ctx.Deadline(); ok {
+			t.Fatal("signalContext(0) context has a deadline, want none")
+		}
+		select {
+		case <-ctx.Done():
+			t.Fatal("context fired with no deadline and no signal")
+		default:
+		}
+	})
+
+	t.Run("stop cancels immediately", func(t *testing.T) {
+		ctx, stop := signalContext(time.Hour)
+		stop()
+		select {
+		case <-ctx.Done():
+		default:
+			t.Fatal("calling stop did not cancel the context")
+		}
+	})
+}
+
+// TestSignalContextCancelsOnSIGTERM is the regression for F-05: main.go had
+// no os/signal handling anywhere, so a kill (systemd stop, OOM, reboot)
+// landing mid-operation tore the process down with no chance for any
+// in-flight git/glab subprocess call, or the managed-sync add/commit
+// sequence, to observe the cancellation and unwind cleanly. signalContext
+// must route SIGTERM into the returned context instead of leaving the
+// default (process-terminating) disposition in place.
+func TestSignalContextCancelsOnSIGTERM(t *testing.T) {
+	ctx, stop := signalContext(time.Minute)
+	defer stop()
+
+	if err := syscall.Kill(os.Getpid(), syscall.SIGTERM); err != nil {
+		t.Fatalf("sending SIGTERM to self: %v", err)
+	}
+	select {
+	case <-ctx.Done():
+	case <-time.After(5 * time.Second):
+		t.Fatal("context was not canceled after SIGTERM — the test process would otherwise have been killed by the default disposition")
 	}
 }
 
