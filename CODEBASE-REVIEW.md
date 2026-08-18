@@ -41,9 +41,9 @@ Tracks the codebase-review-fixes effort across every wave run against this repor
 | Wave | Findings in scope | Fixed | Skipped | Unresolved conflicts |
 | --- | --- | ---: | ---: | ---: |
 | high | F-01, F-02, F-03, F-04, F-05, F-06, F-07, F-08, F-09, F-10, F-11 | 11 | 0 | 0 |
-| medium | F-12, F-13, F-14, F-15, F-16, F-17, F-18, F-19, F-20, F-21, F-22, F-23, F-24, F-25, F-26, F-27, F-28, F-29, F-30, F-31, F-32, F-35 | 21 | 0 | 1 |
+| medium | F-12, F-13, F-14, F-15, F-16, F-17, F-18, F-19, F-20, F-21, F-22, F-23, F-24, F-25, F-26, F-27, F-28, F-29, F-30, F-31, F-32, F-33, F-34, F-35 | 24 | 0 | 0 |
 
-**Totals so far:** 32 fixed · 0 skipped · 1 unresolved conflict, out of 40 findings. All 11 High-severity findings are fixed; 21 of 24 Medium-severity findings are fixed (1 unresolved conflict: F-24 on `review-fix/2026-08-18/unit-11`, needs manual merge; F-33 and F-34 have not yet had a remediation wave run against them); the 5 Low-severity findings have not yet had a remediation wave run against them.
+**Totals so far:** 35 fixed · 0 skipped · 0 unresolved conflicts, out of 40 findings. All 11 High-severity and all 24 Medium-severity findings in scope for this run are fixed (F-24's merge conflict with unit-10 in `cmd/moedex-serve/reload_test.go`, and unit-18's F-33/F-34 fix — both initially missed by the automated integrator — were resolved and merged manually afterward); the 5 Low-severity findings have not yet had a remediation wave run against them.
 
 ## Coverage
 
@@ -308,7 +308,7 @@ _`cmd/moedex-serve/main.go:293` · also at `cmd/moedex-serve/main.go:427`, `inte
 
 _`cmd/moedex-serve/reload.go:34` · also at `cmd/moedex-serve/reload.go:79` · lane: resilience · confidence: likely_
 
-**Status.** Fixed on `review-fix/2026-08-18/unit-11`, unmerged — conflicts with unit-10's changes to `cmd/moedex-serve/reload_test.go` (both units add test content to the same file); needs manual merge.
+**Status.** Fixed — commit `a7e5069` on `review-fix/2026-08-18/unit-11`, merged into `codebase-review-fixes/2026-08-18` at `2ae36f1` (manual conflict resolution: both unit-10 and unit-11 appended independent test functions to `cmd/moedex-serve/reload_test.go`; resolved by closing HEAD's dangling function before appending unit-11's) · tests added: yes.
 
 **Problem.** `func (s *corpusSnapshot) retire() { s.wg.Wait(); _ = s.c.Close() }` and the equivalent `rankSnapshot.retire()` throw away the error from Close(). Corpus.Close()/RankCorpus.Close() can genuinely return a non-nil error (they propagate syscall.Munmap's return value from internal/diskstore's mmapRegion.Close), and unlike the reload build failure path (which increments `moedex_reloads_total{result="fail"}` and logs), a retire-time Close failure produces no log line and no metric.
 
@@ -548,6 +548,8 @@ _`internal/server/graphhierarchy.go:388` · also at `internal/server/graphhierar
 
 _`internal/server/graphrefresh.go:268` · also at `internal/server/graphrefresh.go:219-227 — rebuildAll (full corpus build) drives the same unrecovered worker pool`, `internal/mcp/mcp.go:386 — contrast: the MCP request dispatcher recovers panics per call`, `cmd/moedex-serve/middleware.go:70 — contrast: the HTTP layer recovers panics per request` · lane: resilience · confidence: likely_
 
+**Status.** Fixed — commit `07ea467` on `review-fix/2026-08-18/unit-18`, merged into `codebase-review-fixes/2026-08-18` at `f358f63` · tests added: yes.
+
 **Problem.** The worker goroutine in computeEdgesParallel calls s.computeEdgesForName(names[i], generation) with no recover(). computeEdgesForName transitively calls candidates.GenerateCandidates, graphverify.Verify (regex/pattern classification), and symbol.Corpus.Enclosing across every language-specific extractor in the corpus; none of that call graph is guarded by a recover anywhere in the codebase. A panic in any one of the (now up to GOMAXPROCS concurrently in-flight) names is unrecovered, so the Go runtime terminates the entire process immediately, without running the deferred cleanup registered in RefreshGraphSidecar's own goroutine (sweep.Close(), previous.Close()) and without ever reaching saveGraphSidecar.
 
 **Trigger.** Any panic (nil deref, index-out-of-range, etc.) triggered by processing one of the (potentially tens of thousands of) exported names in a large, heterogeneous corpus, while computeEdgesParallel's worker pool is fanning that name's computation out across GOMAXPROCS goroutines during a full or incremental graph rebuild.
@@ -559,6 +561,8 @@ _`internal/server/graphrefresh.go:268` · also at `internal/server/graphrefresh.
 #### F-34 — computeEdgesParallel does not fail fast: once one name's computation returns an error, every other already-dispatched and still-queued name keeps running to completion before the error is even inspected, discarding all of that work
 
 _`internal/server/graphrefresh.go:260` · also at `internal/server/graphrefresh.go:278-283 — errs is only scanned after wg.Wait() returns, i.e. after every name has finished` · lane: resilience · confidence: confirmed_
+
+**Status.** Fixed — commit `07ea467` on `review-fix/2026-08-18/unit-18`, merged into `codebase-review-fixes/2026-08-18` at `f358f63` · tests added: yes.
 
 **Problem.** The worker loop `for i := range work { results[i], errs[i] = s.computeEdgesForName(names[i], generation) }` never checks whether any other worker has already recorded an error; the shared `work` channel is drained to completion by every worker regardless. computeEdgesParallel only inspects `errs` after `wg.Wait()`, and on finding any non-nil error it discards `results` entirely (`return nil, err`).
 
