@@ -131,9 +131,13 @@ type LSP struct {
 
 	nextID atomic.Int64
 
-	mu      sync.Mutex // guards pending, docs, rootURI, closed, inited
+	mu      sync.Mutex // guards pending, docs, docSeq, rootURI, closed, inited
 	pending map[int64]chan rpcResponse
 	docs    map[string]*docState // didOpen state, one entry per file
+	// docSeq is a monotonic per-server counter stamped onto docState.lastUse by
+	// every docFor call, giving evictLRUDocsLocked a total order of "most
+	// recently touched" without needing wall-clock time (F-18).
+	docSeq  uint64
 	rootURI string
 	closed  bool
 
@@ -196,6 +200,19 @@ type docState struct {
 	// notify leaves the last known-good baseline intact and the next attempt
 	// re-diffs from it (never silently corrupting the server's buffer).
 	synced []byte
+
+	// lastUse and inFlight are guarded by LSP.mu (NOT ds.mu — they track this
+	// docState's place in the server's document set, not its sync content) and
+	// exist for the F-18 LRU cap:
+	//   - lastUse is the docSeq stamp from the most recent docFor call, giving
+	//     evictLRUDocsLocked a recency order.
+	//   - inFlight counts callers currently between docFor and their matching
+	//     releaseDoc. A docState with inFlight>0 is never evicted — closing that
+	//     window is what stops a caller's already-in-hand pointer from racing a
+	//     freshly created docState for the same path into two didOpens for one
+	//     URI with no didClose between them.
+	lastUse  uint64
+	inFlight int
 }
 
 // --- JSON-RPC wire types (subset of LSP we use) -----------------------------
@@ -748,16 +765,130 @@ func parseSyncKind(raw json.RawMessage) int {
 	return 1
 }
 
-// docFor returns the docState for a file, creating it on first use.
+// maxOpenDocs bounds how many per-file docStates a single server keeps live
+// at once (F-18). Before this cap existed, docFor never removed entries and
+// nothing ever sent textDocument/didClose, so a pooled server's c.docs — and
+// the buffers the external language-server process mirrors for each one —
+// grew for the server's entire lifetime, which ordinary daemon operation (any
+// root queried at least once per IdleTTL window) can make effectively
+// unbounded. 512 is generous enough that a single navigation session over one
+// repo rarely triggers eviction, while still capping worst case memory to a
+// bounded number of full-text file copies instead of "every file this server
+// has ever seen".
+const maxOpenDocs = 512
+
+// docVictim is one docState evicted by evictLRUDocsLocked, carried out past
+// the c.mu critical section so its textDocument/didClose can be sent without
+// holding c.mu across a stdin write — the same lesson F-10 applied to the
+// request path, applied here to eviction.
+type docVictim struct {
+	path string
+	ds   *docState
+}
+
+// docFor returns the docState for a file, creating it on first use, and marks
+// it in-flight so it cannot be evicted until the caller's matching
+// releaseDoc. Every docFor call site pairs with exactly one releaseDoc, called
+// after the ds.mu-guarded section that follows docFor (F-18).
+//
+// Each call also stamps a fresh recency counter and, when the live doc count
+// exceeds maxOpenDocs, evicts the least-recently-touched eligible docs (never
+// abs itself, never one still in-flight elsewhere).
 func (c *LSP) docFor(abs string) *docState {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	ds := c.docs[abs]
 	if ds == nil {
 		ds = &docState{}
 		c.docs[abs] = ds
 	}
+	c.docSeq++
+	ds.lastUse = c.docSeq
+	ds.inFlight++
+	victims := c.evictLRUDocsLocked(abs)
+	c.mu.Unlock()
+
+	c.closeVictims(victims)
 	return ds
+}
+
+// releaseDoc marks the caller done with a docState obtained from docFor,
+// making it eligible for LRU eviction again (F-18). Call it after releasing
+// ds.mu, never before — see docFor.
+func (c *LSP) releaseDoc(ds *docState) {
+	c.mu.Lock()
+	ds.inFlight--
+	c.mu.Unlock()
+}
+
+// evictLRUDocsLocked removes the least-recently-touched docs from c.docs
+// until at most maxOpenDocs remain, skipping except (the path the caller just
+// touched) and any docState currently in-flight elsewhere. Must be called
+// with c.mu held; it deletes victims from the map under the lock and returns
+// them so the caller can send didClose AFTER unlocking (F-18, mirroring how
+// Pool's sweepIdleLocked/pickLRULocked hand victims back for the caller to
+// close post-unlock).
+//
+// Skipping in-flight docs is not an optimization — it is what makes eviction
+// safe: a caller sitting between docFor and its own use of the returned
+// pointer must never have that exact docState vanish out from under it, or a
+// second, freshly created docState for the same path could send its own
+// didOpen before the first caller's didOpen/didChange has even happened,
+// putting two opens on the wire for one URI with no didClose between them.
+func (c *LSP) evictLRUDocsLocked(except string) []docVictim {
+	var victims []docVictim
+	for len(c.docs) > maxOpenDocs {
+		var (
+			oldestPath string
+			oldest     *docState
+			oldestSeq  uint64
+		)
+		for p, ds := range c.docs {
+			if p == except || ds.inFlight > 0 {
+				continue
+			}
+			if oldest == nil || ds.lastUse < oldestSeq {
+				oldestPath, oldest, oldestSeq = p, ds, ds.lastUse
+			}
+		}
+		if oldest == nil {
+			// Soft overshoot: every other doc is in-flight right now. Preserve
+			// liveness rather than evict something in use; a later docFor call
+			// (once one of them finishes) tries again — the same acceptable
+			// transient overshoot Pool.pickLRULocked documents for MaxServers.
+			break
+		}
+		delete(c.docs, oldestPath)
+		victims = append(victims, docVictim{path: oldestPath, ds: oldest})
+	}
+	return victims
+}
+
+// closeVictims sends textDocument/didClose for each evicted docState that had
+// actually been opened — mirroring an editor closing a tab: the server drops
+// its buffer for that URI, and the file's next query docFor's a brand new
+// docState and re-didOpens from current content. Best-effort and bounded by
+// bestEffortNotifyTimeout like the other fire-and-forget cleanup notifies
+// (Close's "exit", call()'s $/cancelRequest) — an eviction must never stall a
+// caller behind a wedged server.
+func (c *LSP) closeVictims(victims []docVictim) {
+	for _, v := range victims {
+		v.ds.mu.Lock()
+		opened := v.ds.opened
+		v.ds.mu.Unlock()
+		if !opened {
+			continue
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), bestEffortNotifyTimeout)
+		err := c.notify(ctx, "textDocument/didClose", map[string]any{
+			"textDocument": map[string]any{"uri": pathToURI(v.path)},
+		})
+		cancel()
+		if err != nil {
+			c.log.Debug("lsp notify didClose failed", "path", v.path, "err", err.Error())
+		} else {
+			c.log.Debug("lsp notify didClose", "path", v.path)
+		}
+	}
 }
 
 // ensureFresh makes the server's buffer for file reflect the current working
@@ -772,6 +903,7 @@ func (c *LSP) ensureFresh(ctx context.Context, file string) error {
 		return fmt.Errorf("navigate: abs path: %w", err)
 	}
 	ds := c.docFor(abs)
+	defer c.releaseDoc(ds)
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
@@ -926,6 +1058,7 @@ func (c *LSP) SetOverlay(ctx context.Context, file string, content []byte) error
 		return fmt.Errorf("navigate: abs path: %w", err)
 	}
 	ds := c.docFor(abs)
+	defer c.releaseDoc(ds)
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 	ds.overlay = append([]byte(nil), content...)
@@ -972,6 +1105,7 @@ func (c *LSP) NotifyChanged(ctx context.Context, paths ...string) error {
 			watched = append(watched, map[string]any{"uri": pathToURI(abs), "type": 2})
 		}
 		ds.mu.Unlock()
+		c.releaseDoc(ds)
 		if err != nil {
 			return err
 		}
@@ -990,6 +1124,7 @@ func (c *LSP) DropOverlay(ctx context.Context, file string) error {
 		return fmt.Errorf("navigate: abs path: %w", err)
 	}
 	ds := c.docFor(abs)
+	defer c.releaseDoc(ds)
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 	if !ds.hasOverlay {
