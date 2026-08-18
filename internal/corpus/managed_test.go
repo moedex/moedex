@@ -692,6 +692,84 @@ func TestManagedFailureBoundariesPreserveRecoverableCommittedSnapshot(t *testing
 	}
 }
 
+// TestManagedSyncResumesInterruptedCommitInsteadOfWedging is the regression
+// for F-05: a kill (signal, deadline, OOM, reboot) landing between
+// stageManagedSync's `git add` and the follow-up `git commit` used to leave
+// the superproject index staged but uncommitted forever. That state failed
+// doctor's cleanliness check closed with a manual-only fix, and since the
+// shipped systemd unit runs `doctor` as ExecStartPre, every subsequent hourly
+// sync was wedged behind it before sync ever got a chance to run. The fault
+// injection below models the exact boundary: stageManagedSync's `git add`
+// completes and the commit that would follow it never does.
+func TestManagedSyncResumesInterruptedCommitInsteadOfWedging(t *testing.T) {
+	fixture := newManagedGitFixture(t)
+	root := filepath.Join(t.TempDir(), "managed")
+	cfg := Config{Host: DefaultHost, Root: root, Groups: []string{"g"}, Concurrency: 1}
+	if _, err := InitManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}); err != nil {
+		t.Fatal(err)
+	}
+	updatedCommit := commitManagedFixture(t, &fixture, "interrupted update\n", false)
+
+	faulty := &managedFaultRunner{Runner: ExecRunner{}, operation: "commit"}
+	if _, err := syncManaged(t.Context(), faulty, cfg, []Project{fixture.Project}, ManagedSyncOptions{EnumerationComplete: true}, managedSyncHooks{}); err == nil {
+		t.Fatal("interrupted sync unexpectedly succeeded")
+	}
+
+	// Confirm the fault injection actually modeled the trigger: the
+	// superproject index holds staged, uncommitted content.
+	if status := runFixtureGit(t, "-C", root, "status", "--porcelain", "--untracked-files=no"); strings.TrimSpace(status) == "" {
+		t.Fatal("interrupted sync left no staged content — fault injection did not reach the add/commit boundary")
+	}
+
+	lock, err := LoadLock(root, DefaultHost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if check := doctorManagedCleanliness(t.Context(), ExecRunner{}, root, lock); check.Status != StatusOK {
+		t.Fatalf("doctor cleanliness = %+v, want OK — a staged-only stage from an interrupted sync must not fail-close doctor (it gates ExecStartPre)", check)
+	}
+
+	// The next real sync (no fault injection this time) must resume and
+	// finish the interrupted commit on its own, leaving a clean, consistent,
+	// fully committed snapshot — no manual fix required.
+	if _, err := SyncManaged(t.Context(), ExecRunner{}, cfg, []Project{fixture.Project}, ManagedSyncOptions{EnumerationComplete: true}); err != nil {
+		t.Fatalf("resuming the interrupted sync failed: %v", err)
+	}
+	assertLockedCommit(t, root, fixture.Project.ID, updatedCommit, LockStatusCurrent)
+	assertRecoverableCommittedSnapshot(t, root)
+	if status := runFixtureGit(t, "-C", root, "status", "--porcelain", "--untracked-files=all"); strings.TrimSpace(status) != "" {
+		t.Fatalf("resumed managed corpus is not fully clean: %q", status)
+	}
+}
+
+// TestManagedStagedOnly pins the exact porcelain-parsing rule behind the F-05
+// fix: a listing counts as "staged only" (safe to resume as a commit) only
+// when every line's worktree-status column (the second byte) is blank — any
+// unstaged or untracked change anywhere disqualifies the whole listing.
+
+
+func TestManagedStagedOnly(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want bool
+	}{
+		{"empty listing", "", true},
+		{"single staged add", "A  path/one\n", true},
+		{"staged add and staged modify", "A  path/one\nM  path/two\n", true},
+		{"staged then further modified", "MM path/one\n", false},
+		{"untracked file", "?? path/one\n", false},
+		{"staged plus unrelated untracked", "A  path/one\n?? path/two\n", false},
+		{"unstaged modify only", " M path/one\n", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := managedStagedOnly([]byte(tc.in)); got != tc.want {
+				t.Errorf("managedStagedOnly(%q) = %v, want %v", tc.in, got, tc.want)
+			}
+		})
+	}
+}
 func TestManagedFailureAtCloneLeavesMarkedRootAndNoUserDeletion(t *testing.T) {
 	fixture := newManagedGitFixture(t)
 	root := filepath.Join(t.TempDir(), "managed")
