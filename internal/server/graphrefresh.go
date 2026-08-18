@@ -111,21 +111,55 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 	stats.Generation = previous.Generation() + 1
 
 	carried := make(map[string][]carriedGraphEdge)
+	var carriedUnnamed []carriedGraphEdge
 	for node := 0; node < previous.NumNodes(); node++ {
-		_, first, count, ok := previous.NodeAt(node)
+		key, first, count, ok := previous.NodeAt(node)
 		if !ok {
 			break
 		}
 		for i := first; i < first+count; i++ {
 			name := previous.EdgeName(i)
-			if _, stale := dirty[name]; stale {
+			if name != "" {
+				// A per-name edge from the candidates.GenerateCandidates sweep:
+				// carry it forward unless the delta marked its name dirty, or the
+				// name no longer exists anywhere in the corpus to regenerate.
+				if _, stale := dirty[name]; stale {
+					continue
+				}
+				if _, ok := sweep.eligible[name]; !ok {
+					stats.EdgesDropped++
+					continue
+				}
+				carried[name] = append(carried[name], carriedGraphEdge{node: uint32(node), edge: uint32(i)})
 				continue
 			}
-			if _, ok := sweep.eligible[name]; !ok {
+			// An edge from one of the whole-corpus passes (HTTP, manifest,
+			// hierarchy, injection, queries, renders, LSP calls, similarity) —
+			// none of these have a symbol name, so the per-name dirty/eligible
+			// check above can never keep them. The six tag-independent passes
+			// are always regenerated fresh below (see addWholeCorpusEdges), so
+			// their previous copies are neither carried nor dropped here: they
+			// are simply superseded. LSP-call and SIMILAR_TO edges need runtime
+			// resources (a language-server pool, an embedder) this incremental
+			// path does not have, so they are carried forward instead, but only
+			// when neither endpoint's blob was removed by this delta — an
+			// unmodified pair of blobs cannot have produced a different edge.
+			edge, ok := previous.EdgeAt(i)
+			if !ok {
+				continue
+			}
+			if edge.Type != diskgraph.EdgeCalls && edge.Type != diskgraph.EdgeSimilarTo {
+				continue
+			}
+			if _, gone := removed[key.BlobSHA]; gone {
 				stats.EdgesDropped++
 				continue
 			}
-			carried[name] = append(carried[name], carriedGraphEdge{node: uint32(node), edge: uint32(i)})
+			if _, gone := removed[edge.TargetBlob]; gone {
+				stats.EdgesDropped++
+				continue
+			}
+			carriedUnnamed = append(carriedUnnamed, carriedGraphEdge{node: uint32(node), edge: uint32(i)})
 		}
 	}
 
@@ -178,6 +212,34 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 		}
 	}
 
+	// Carry forward the LSP-call / SIMILAR_TO edges whose endpoints this delta
+	// left untouched — see the loop above for why these two families alone are
+	// carried rather than regenerated.
+	for _, c := range carriedUnnamed {
+		key, _, _, ok := previous.NodeAt(int(c.node))
+		if !ok {
+			return "", stats, fmt.Errorf("server: graph refresh lost node %d of the previous graph", c.node)
+		}
+		edge, ok := previous.EdgeAt(int(c.edge))
+		if !ok {
+			return "", stats, fmt.Errorf("server: graph refresh lost edge %d of the previous graph", c.edge)
+		}
+		if err := builder.AddEdge(key, edge); err != nil {
+			return "", stats, err
+		}
+		stats.EdgesCarried++
+	}
+
+	// The six tag-independent whole-corpus passes are cheap pure functions of
+	// the current corpus and never consult the previous graph, so they are
+	// always regenerated fresh here instead of being diffed — see
+	// addWholeCorpusEdges.
+	before := builder.NumEdges()
+	if _, err := sweep.addWholeCorpusEdges(builder, emit.seen); err != nil {
+		return "", stats, err
+	}
+	stats.EdgesRecomputed += int(builder.NumEdges() - before)
+
 	path, err = saveGraph(builder, dir)
 	return path, stats, err
 }
@@ -216,23 +278,19 @@ func openPreviousGraph(dir string) (*diskgraph.Graph, string) {
 	return g, ""
 }
 
+// rebuildAll is the from-scratch fallback RefreshGraph takes when there is no
+// usable previous graph to diff against. It calls the exact same buildAllEdges
+// pass BuildGraphWithOptions does — every edge family, not just the per-name
+// sweep — so this path and a full BuildGraph produce the same graph, as the
+// package doc for RefreshGraph promises.
 func (s *graphSweep) rebuildAll(dir string, stats *GraphRefreshStats) (string, error) {
 	builder := diskgraph.NewBuilder()
 	builder.SetGeneration(stats.Generation)
 	s.recordCorpusRoster(builder)
-
-	results, err := s.computeEdgesParallel(s.names, stats.Generation)
-	if err != nil {
-		return "", err
-	}
-
 	emit := newGraphEmitter(builder)
-	for _, batch := range results {
-		for i := range batch {
-			if err := emit.Add(batch[i].Key, batch[i].Edge); err != nil {
-				return "", err
-			}
-		}
+
+	if _, err := s.buildAllEdges(builder, emit, stats.Generation, GraphBuildOptions{}); err != nil {
+		return "", err
 	}
 
 	stats.NamesRecomputed = len(s.names)

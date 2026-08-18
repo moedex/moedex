@@ -149,34 +149,56 @@ func BuildGraphWithOptions(dir string, opts GraphBuildOptions) (path string, rep
 	sweep.recordCorpusRoster(builder)
 	emit := newGraphEmitter(builder)
 
-	edgeResults, err := sweep.computeEdgesParallel(sweep.names, diskgraph.FirstGeneration)
+	report, err = sweep.buildAllEdges(builder, emit, diskgraph.FirstGeneration, opts)
 	if err != nil {
 		return "", report, err
 	}
 
+	path, err = saveGraph(builder, dir)
+	return path, report, err
+}
+
+// buildAllEdges runs every edge-generation pass this package knows about
+// against s and appends the results to builder through emit: the per-name
+// sweep (plus the definition nodes it discovers), the optional tagged
+// LSP-call and SIMILAR_TO passes, and every whole-corpus pass (HTTP routes,
+// manifest dependencies, type hierarchy, DI injection, EF queries, Angular
+// renders).
+//
+// BuildGraphWithOptions calls this for a full build; RefreshGraph's
+// rebuildAll fallback calls it too, so a from-scratch incremental rebuild can
+// never diverge from a full build on which edge families it produces — the
+// two are meant to be identical, and now share the one function that decides
+// what "every edge type" means.
+func (s *graphSweep) buildAllEdges(builder *diskgraph.Builder, emit *graphEmitter, generation uint64, opts GraphBuildOptions) (report GraphBuildReport, err error) {
+	edgeResults, err := s.computeEdgesParallel(s.names, generation)
+	if err != nil {
+		return report, err
+	}
+
 	crossRelevant := make(map[string]bool)
-	for i, name := range sweep.names {
-		for _, definition := range sweep.merged.Definitions(name) {
-			if definition.Shard < 0 || definition.Shard >= len(sweep.idxs) {
-				return "", report, fmt.Errorf("server: graph definition %q references unknown shard %d", name, definition.Shard)
+	for i, name := range s.names {
+		for _, definition := range s.merged.Definitions(name) {
+			if definition.Shard < 0 || definition.Shard >= len(s.idxs) {
+				return report, fmt.Errorf("server: graph definition %q references unknown shard %d", name, definition.Shard)
 			}
-			blob := sweep.idxs[definition.Shard].Blob(definition.Blob)
+			blob := s.idxs[definition.Shard].Blob(definition.Blob)
 			if blob == nil {
-				return "", report, fmt.Errorf("server: graph definition %q references an unknown blob", name)
+				return report, fmt.Errorf("server: graph definition %q references an unknown blob", name)
 			}
 			if definition.Start < 0 {
-				return "", report, fmt.Errorf("server: graph definition %q has a negative byte offset", name)
+				return report, fmt.Errorf("server: graph definition %q has a negative byte offset", name)
 			}
 			if err := builder.AddNode(diskgraph.Key{BlobSHA: blob.SHA, SymbolOffset: uint64(definition.Start)}); err != nil {
-				return "", report, err
+				return report, err
 			}
 		}
 		for j := range edgeResults[i] {
 			if err := emit.Add(edgeResults[i][j].Key, edgeResults[i][j].Edge); err != nil {
-				return "", report, err
+				return report, err
 			}
 		}
-		generated := candidates.GenerateCandidates(sweep.corpus, name)
+		generated := candidates.GenerateCandidates(s.corpus, name)
 		for _, candidate := range generated {
 			if candidate.CrossShard() {
 				crossRelevant[name] = true
@@ -184,60 +206,65 @@ func BuildGraphWithOptions(dir string, opts GraphBuildOptions) (path string, rep
 			}
 		}
 	}
-	if err := addLSPCallEdges(context.Background(), builder, sweep.merged, sweep.idxs, emit.seen, crossRelevant, opts); err != nil {
-		return "", report, err
+	if err := addLSPCallEdges(context.Background(), builder, s.merged, s.idxs, emit.seen, crossRelevant, opts); err != nil {
+		return report, err
 	}
-	if err := addSimilarToEdges(context.Background(), builder, sweep.merged, sweep.idxs, emit.seen, opts); err != nil {
-		return "", report, err
+	if err := addSimilarToEdges(context.Background(), builder, s.merged, s.idxs, emit.seen, opts); err != nil {
+		return report, err
 	}
 
-	httpShards := make([]httproute.Shard, len(sweep.idxs))
-	for i, shardPath := range sweep.paths {
-		httpShards[i] = httproute.Shard{Name: filepath.Base(shardPath), Index: sweep.idxs[i], Symbols: sweep.symbols[i]}
-	}
-	httpReport, err := addHTTPCallEdges(builder, httproute.NewCorpus(httpShards...), emit.seen)
+	report, err = s.addWholeCorpusEdges(builder, emit.seen)
 	if err != nil {
-		return "", report, err
+		return report, err
 	}
+	report.Nodes = builder.NumNodes()
+	report.Edges = builder.NumEdges()
+	return report, nil
+}
 
-	manifestReport, err := addManifestEdges(builder, emit.seen, sweep.idxs)
+// addWholeCorpusEdges runs every graph pass that scans the whole shard set
+// rather than one symbol name at a time: HTTP routes, manifest dependencies,
+// type hierarchy, DI injection, EF queries, and Angular renders. Every one of
+// these is a pure function of the CURRENT corpus content and never consults
+// the previous graph, so RefreshGraph's incremental delta path calls this
+// directly against the live sweep too — regenerating these families fresh on
+// every refresh is simpler, and strictly more correct, than trying to diff
+// them edge by edge the way the per-name sweep does.
+func (s *graphSweep) addWholeCorpusEdges(builder *diskgraph.Builder, seen map[persistedGraphEdge]struct{}) (report GraphBuildReport, err error) {
+	httpShards := make([]httproute.Shard, len(s.idxs))
+	for i, shardPath := range s.paths {
+		httpShards[i] = httproute.Shard{Name: filepath.Base(shardPath), Index: s.idxs[i], Symbols: s.symbols[i]}
+	}
+	report.HTTP, err = addHTTPCallEdges(builder, httproute.NewCorpus(httpShards...), seen)
 	if err != nil {
-		return "", report, err
+		return report, err
 	}
 
-	hierarchyReport, err := addHierarchyEdges(builder, sweep, emit.seen)
+	report.Manifest, err = addManifestEdges(builder, seen, s.idxs)
 	if err != nil {
-		return "", report, err
+		return report, err
 	}
 
-	injectionReport, err := addInjectionEdges(builder, sweep, emit.seen)
+	report.Hierarchy, err = addHierarchyEdges(builder, s, seen)
 	if err != nil {
-		return "", report, err
+		return report, err
 	}
 
-	queriesReport, err := addQueryEdges(builder, sweep, emit.seen)
+	report.Injection, err = addInjectionEdges(builder, s, seen)
 	if err != nil {
-		return "", report, err
+		return report, err
 	}
 
-	renderReport, err := addRenderEdges(builder, sweep, emit.seen)
+	report.Queries, err = addQueryEdges(builder, s, seen)
 	if err != nil {
-		return "", report, err
+		return report, err
 	}
 
-	report = GraphBuildReport{
-		Nodes:     builder.NumNodes(),
-		Edges:     builder.NumEdges(),
-		HTTP:      httpReport,
-		Manifest:  manifestReport,
-		Hierarchy: hierarchyReport,
-		Injection: injectionReport,
-		Queries:   queriesReport,
-		Renders:   renderReport,
+	report.Renders, err = addRenderEdges(builder, s, seen)
+	if err != nil {
+		return report, err
 	}
-
-	path, err = saveGraph(builder, dir)
-	return path, report, err
+	return report, nil
 }
 
 // ---------------------------------------------------------------------------
