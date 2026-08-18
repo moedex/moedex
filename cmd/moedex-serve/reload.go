@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 
 	"moedex/internal/contextwin"
@@ -31,7 +32,14 @@ type corpusSnapshot struct {
 func (s *corpusSnapshot) release() { s.wg.Done() }
 
 // retire waits for in-flight queries to finish, then unmaps the old corpus.
-func (s *corpusSnapshot) retire() { s.wg.Wait(); _ = s.c.Close() }
+// Close() genuinely can fail (a munmap or fd-release error on the retired
+// shard(s)/content store); unlike the reload-build failure path, nothing else
+// observes retire(), so a swallowed error here would leave the mapping/fd
+// leaked with zero operator-visible signal. Log it instead of discarding it.
+func (s *corpusSnapshot) retire() {
+	s.wg.Wait()
+	logRetireCloseErr("corpus", s.c.Close())
+}
 
 // corpusHolder hot-swaps a *server.Corpus for the -http retrieval daemon.
 type corpusHolder struct {
@@ -76,7 +84,24 @@ type rankSnapshot struct {
 }
 
 func (s *rankSnapshot) release() { s.wg.Done() }
-func (s *rankSnapshot) retire()  { s.wg.Wait(); _ = s.rc.Close() } // drain readers, then release mmap
+
+// retire drains readers, then releases the shared content-store mmap. See
+// corpusSnapshot.retire for why the Close() error must not be discarded.
+func (s *rankSnapshot) retire() {
+	s.wg.Wait()
+	logRetireCloseErr("rank_corpus", s.rc.Close())
+}
+
+// logRetireCloseErr surfaces a retire-time Close() failure: the retired
+// generation's mmap mapping and/or file descriptor is otherwise never
+// actually released, with no log line and no metric to say so. label
+// distinguishes the corpus vs rank-corpus close path in the shared log
+// stream. A nil err (the overwhelmingly common case) logs nothing.
+func logRetireCloseErr(label string, err error) {
+	if err != nil {
+		slog.Error("retire: close failed", "component", label, "err", err.Error())
+	}
+}
 
 // rankHolder hot-swaps a *server.RankCorpus and satisfies mcp.ContextSearcher, so
 // the MCP server delegates every search to the current generation.
