@@ -1,9 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -138,5 +142,47 @@ func TestRankHolderSwap(t *testing.T) {
 	}
 	if len(win.Blocks) == 0 {
 		t.Error("expected a context block for BetaRank after swap")
+	}
+}
+
+// withCapturedSlog temporarily redirects the slog default logger to a buffer
+// for the duration of fn, then restores the previous default. Returns the
+// captured output.
+func withCapturedSlog(fn func()) string {
+	prev := slog.Default()
+	defer slog.SetDefault(prev)
+
+	var buf bytes.Buffer
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	fn()
+	return buf.String()
+}
+
+// TestLogRetireCloseErr_Logs is the regression test for F-24: retire() used to
+// discard the outgoing generation's Close() error entirely (`_ =
+// s.c.Close()`), so a genuine munmap/fd-release failure during a SIGHUP
+// hot-swap produced no log line and no operator-visible signal at all. This
+// pins the fix — a non-nil Close() error must actually reach the log.
+func TestLogRetireCloseErr_Logs(t *testing.T) {
+	wantErr := errors.New("munmap: invalid argument")
+	out := withCapturedSlog(func() {
+		logRetireCloseErr("corpus", wantErr)
+	})
+	if !strings.Contains(out, wantErr.Error()) {
+		t.Errorf("retire close error was not logged: log output = %q, want it to contain %q", out, wantErr.Error())
+	}
+	if !strings.Contains(out, "corpus") {
+		t.Errorf("log output missing component label: log output = %q", out)
+	}
+}
+
+// TestLogRetireCloseErr_NilIsSilent guards the common case: a clean Close()
+// (nil error, the overwhelming majority of retires) must not spam the log.
+func TestLogRetireCloseErr_NilIsSilent(t *testing.T) {
+	out := withCapturedSlog(func() {
+		logRetireCloseErr("corpus", nil)
+	})
+	if out != "" {
+		t.Errorf("expected no log output for a nil Close() error, got %q", out)
 	}
 }
