@@ -69,8 +69,8 @@ func main() {
 	isRegex := flag.Bool("regex", false, "treat -q as a regular expression (default: literal)")
 	limit := flag.Int("limit", 0, "cap matches printed/returned (0 = no cap)")
 	topK := flag.Int("top-k", 20, "default ranked results per MCP query")
-	embedKind := flag.String("embed", envOr("MOEDEX_EMBED", "auto"), "dense embedder for -mcp: auto|onnx|http|none (auto = onnx if -onnx-runtime/ONNXRUNTIME_LIB_PATH set, else http if MOEDEX_EMBED_URL set, else none)")
-	onnxRuntime := flag.String("onnx-runtime", os.Getenv("ONNXRUNTIME_LIB_PATH"), "path to the ONNX Runtime shared library (in-process embedder; requires -tags onnx build)")
+	embedKind := flag.String("embed", envOr("MOEDEX_EMBED", "auto"), "dense embedder for -mcp: auto|onnx|http|none (auto = onnx when a configured or standard runtime is found, else http if MOEDEX_EMBED_URL set, else none)")
+	onnxRuntime := flag.String("onnx-runtime", embed.ResolveONNXRuntimePath(""), "path to the ONNX Runtime shared library (in-process embedder; auto-discovers standard Homebrew/system paths; requires -tags onnx build)")
 	buildEmbeddings := flag.Bool("build-embeddings", false, "build/refresh the corpus embedding sidecar for -shard-dir, then exit (out-of-band dense refresh; requires -embed onnx|http). Run this before reloading the warm daemon so it never re-embeds the corpus inline.")
 	authToken := flag.String("auth-token", "", "if set (or MOEDEX_AUTH_TOKEN), require `Authorization: Bearer <token>` on -http (except /healthz, /metrics)")
 	tlsCert := flag.String("tls-cert", os.Getenv("MOEDEX_TLS_CERT"), "TLS certificate file; serve -http over HTTPS (requires -tls-key)")
@@ -504,9 +504,10 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 // requested embedder could not be constructed.
 func configureDenseArm(cfg *server.RankConfig, shardDir, kind, onnxRuntime string) (bool, error) {
 	url := os.Getenv("MOEDEX_EMBED_URL")
+	onnxRuntime = embed.ResolveONNXRuntimePath(onnxRuntime)
 	if kind == "auto" {
 		switch {
-		case onnxRuntime != "":
+		case embed.ONNXCompiled && onnxRuntime != "":
 			kind = "onnx"
 		case url != "":
 			kind = "http"

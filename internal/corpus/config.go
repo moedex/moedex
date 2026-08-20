@@ -21,7 +21,7 @@ const DefaultHost = catalog.DefaultHost
 // DefaultCorpusDirName is the corpus root under the user's home directory when
 // neither an explicit path nor MOEDEX_CORPUS is given. It matches the engine's
 // default corpus location.
-const DefaultCorpusDirName = "TCGitlab"
+const DefaultCorpusDirName = catalog.DefaultCorpusDirName
 
 // DefaultConcurrency caps parallel git operations (clone/pull). Moe has eight
 // tentacles, but we keep some headroom for the rest of the machine.

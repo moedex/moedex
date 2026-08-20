@@ -733,7 +733,7 @@ The parity tests in `internal/search` and the `internal/parity` harness require
 the `rg` (ripgrep) binary on `PATH`; the Zoekt differential additionally needs
 `zoekt-index`/`zoekt` (install via `make setup`, skipped gracefully if absent).
 `make verify`/`make parity` index the corpus at `MOEDEX_CORPUS` (default
-`~/TCGitlab`).
+`~/.moedex-managed`).
 
 ### `moedex` — one-shot search CLI
 

@@ -19,7 +19,7 @@ write_stub() {
 }
 
 write_stub moedex-corpus 'printf "corpus %s\n" "$*" >> "$TRACE"; [ "${FAIL_STAGE:-}" != sync ]'
-write_stub moedex-index 'printf "index %s\n" "$*" >> "$TRACE"; case "${1:-}" in cas-refresh) [ "${FAIL_STAGE:-}" != cas-refresh ];; cas-export) [ "${FAIL_STAGE:-}" != cas-export ];; esac'
+write_stub moedex-index '[ "${REQUIRE_ONNX_ENV:-0}" != 1 ] || [ -n "${ONNXRUNTIME_LIB_PATH:-}" ]; printf "index %s\n" "$*" >> "$TRACE"; case "${1:-}" in cas-refresh) [ "${FAIL_STAGE:-}" != cas-refresh ];; cas-export) [ "${FAIL_STAGE:-}" != cas-export ];; refresh) [ "${FAIL_STAGE:-}" != refresh ];; esac'
 write_stub moedex-serve 'printf "serve %s\n" "$*" >> "$TRACE"'
 write_stub launchctl 'printf "launchctl %s\n" "$*" >> "$TRACE"; if [ "${FAIL_FIRST_BOOTSTRAP:-0}" = 1 ] && [ "${1:-}" = bootstrap ] && [ ! -f "$TRACE.bootstrap-failed" ]; then : > "$TRACE.bootstrap-failed"; exit 5; fi'
 write_stub uname 'printf "Darwin\n"'
@@ -59,6 +59,8 @@ new_fixture() {
   printf '{}\n' > "$case_dir/corpus/.moedex/corpus.json"
   printf '{}\n' > "$case_dir/cas/blobmanifest.json"
   printf '{}\n' > "$case_dir/shards/manifest.json"
+  printf 'deduped fixture\n' > "$case_dir/shards/blobs.dat"
+  printf 'runtime fixture\n' > "$case_dir/libonnxruntime.dylib"
   printf 'keep-serving\n' > "$case_dir/shards/live-sentinel"
   : > "$TRACE"
 }
@@ -70,6 +72,8 @@ run_refresh() {
     PATH="$BIN:$PATH" \
     TRACE="$TRACE" \
     FAIL_STAGE="${FAIL_STAGE:-}" \
+    REQUIRE_ONNX_ENV=1 \
+    ONNXRUNTIME_LIB_PATH="$case_dir/libonnxruntime.dylib" \
     MOEDEX_CORPUS="$case_dir/corpus" \
     MOEDEX_CAS_DIR="$case_dir/cas" \
     MOEDEX_SHARD_DIR="$case_dir/shards" \
@@ -90,13 +94,23 @@ printf '%s\n' \
   "index doctor -shard-dir $success/shards" \
   "index cas-refresh -cas-dir $success/cas -corpus $success/corpus" \
   "index cas-export -deduped -cas-dir $success/cas -shard-dir $success/shards" \
-  "serve -build-embeddings -shard-dir $success/shards -embed onnx -onnx-runtime /opt/homebrew/lib/libonnxruntime.dylib" \
+  "serve -build-embeddings -shard-dir $success/shards -embed onnx -onnx-runtime $success/libonnxruntime.dylib" \
   "launchctl print gui/$(id -u)/com.moedex.serve" \
   "launchctl kill -HUP gui/$(id -u)/com.moedex.serve" > "$expected"
 cmp -s "$expected" "$TRACE" || {
   diff -u "$expected" "$TRACE" >&2 || true
   fail "refresh stages ran out of order"
 }
+
+# An existing inlined build uses its atomic refresh path. It must not be forced
+# through `cas-export -deduped`, which refuses a non-empty incompatible layout.
+inline="$TMP/inline"
+new_fixture "$inline"
+rm "$inline/shards/blobs.dat"
+run_refresh "$inline" >/dev/null
+assert_contains "$TRACE" "index refresh -shard-dir $inline/shards -corpus $inline/corpus"
+assert_not_contains "$TRACE" "index cas-refresh"
+assert_not_contains "$TRACE" "index cas-export"
 
 # A managed sync failure stops before CAS/index/sidecars/reload and leaves the
 # currently served directory untouched.
@@ -147,6 +161,7 @@ render_cas="$render_case/cas-managed"
 render_shards="$render_case/shards-managed"
 mkdir -p "$render_home" "$render_corpus/.moedex" "$render_cas" "$render_shards"
 printf '{}\n' > "$render_corpus/.moedex/corpus.json"
+printf 'runtime fixture\n' > "$render_case/libonnxruntime.dylib"
 env HOME="$render_home" PATH="$BIN:$PATH" TRACE="$TRACE" \
   FAIL_FIRST_BOOTSTRAP=1 \
   BINDIR="$BIN" \
@@ -154,6 +169,7 @@ env HOME="$render_home" PATH="$BIN:$PATH" TRACE="$TRACE" \
   MOEDEX_CORPUS="$render_corpus" \
   MOEDEX_CAS_DIR="$render_cas" \
   MOEDEX_SHARD_DIR="$render_shards" \
+  ONNXRUNTIME_LIB_PATH="$render_case/libonnxruntime.dylib" \
   bash "$REPO/scripts/install-macos.sh" > "$render_case/install.log" 2>&1
 serve_plist="$render_home/Library/LaunchAgents/com.moedex.serve.plist"
 refresh_plist="$render_home/Library/LaunchAgents/com.moedex.refresh.plist"
@@ -165,6 +181,7 @@ esac
 assert_plist_value "$refresh_plist" 'EnvironmentVariables:MOEDEX_CORPUS' "$render_corpus"
 assert_plist_value "$refresh_plist" 'EnvironmentVariables:MOEDEX_CAS_DIR' "$render_cas"
 assert_plist_value "$refresh_plist" 'EnvironmentVariables:MOEDEX_SHARD_DIR' "$render_shards"
+assert_plist_value "$refresh_plist" 'EnvironmentVariables:ONNXRUNTIME_LIB_PATH' "$render_case/libonnxruntime.dylib"
 assert_plist_value "$refresh_plist" 'StartCalendarInterval:Hour' '14'
 assert_plist_value "$refresh_plist" 'StartCalendarInterval:Minute' '10'
 assert_contains "$render_case/install.log" 'bootstrap failed while the prior job may still be unloading; retrying for up to 10 seconds'

@@ -57,7 +57,7 @@ import (
 func TestCorpusGoldGate(t *testing.T) {
 	ix, n, perRepo, ok := BuildGoldCorpusIndex()
 	if !ok {
-		t.Skip("gold corpus absent (set MOEDEX_CORPUS_ROOT or place repos under ~/TCGitlab)")
+		t.Skip("gold corpus absent (set MOEDEX_CORPUS_ROOT/MOEDEX_CORPUS or populate ~/.moedex-managed)")
 	}
 	gold := CorpusGold()
 	t.Logf("pooled index: %d files; per-repo kept = %v; %d gold queries", n, perRepo, len(gold))

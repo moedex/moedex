@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"moedex/internal/corpus/catalog"
 	"moedex/internal/index"
 	"moedex/internal/parity"
 	"moedex/internal/version"
@@ -34,7 +35,7 @@ func main() {
 	def := os.Getenv("MOEDEX_CORPUS")
 	if def == "" {
 		if home, err := os.UserHomeDir(); err == nil {
-			def = filepath.Join(home, "TCGitlab")
+			def = filepath.Join(home, catalog.DefaultCorpusDirName)
 		}
 	}
 	corpus := flag.String("corpus", def, "corpus root (every git repo beneath it is indexed)")

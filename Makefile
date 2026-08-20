@@ -5,7 +5,7 @@
 # exits non-zero on any hard-gate failure; exit 0 means the DoD is met.
 
 # Corpus root: override with `make verify MOEDEX_CORPUS=/path`.
-MOEDEX_CORPUS ?= $(HOME)/TCGitlab
+MOEDEX_CORPUS ?= $(HOME)/.moedex-managed
 export MOEDEX_CORPUS
 
 SEED       ?= 20260622

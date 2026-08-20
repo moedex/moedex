@@ -39,6 +39,8 @@
     <string>@CAS_DIR@</string>
     <key>MOEDEX_SHARD_DIR</key>
     <string>@SHARD_DIR@</string>
+    <key>ONNXRUNTIME_LIB_PATH</key>
+    <string>@ONNX_LIB@</string>
   </dict>
 
   <!-- Daily at 14:10 local time. RunAtLoad is false so installing it never kicks a heavy

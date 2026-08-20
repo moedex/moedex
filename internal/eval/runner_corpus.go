@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"moedex/internal/corpus/catalog"
 	"moedex/internal/index"
 	"moedex/internal/ingest"
 )
@@ -81,11 +82,15 @@ func goldCorpusRepos() []CorpusRepo {
 }
 
 // CorpusRoot resolves the root directory that holds the gold-corpus repos.
-// MOEDEX_CORPUS_ROOT overrides; otherwise ~/TCGitlab. Returns ("", false) when no
-// usable root exists, so callers can t.Skip cleanly (mirrors the corpus-absent
-// skip in TestTCSslApiMeasurement).
+// MOEDEX_CORPUS_ROOT overrides MOEDEX_CORPUS. Otherwise the managed-corpus
+// default is preferred, with ~/TCGitlab retained as a read-only compatibility
+// fallback for older developer machines. Returns ("", false) when no usable
+// root exists so callers can t.Skip cleanly.
 func CorpusRoot() (string, bool) {
-	if root := os.Getenv("MOEDEX_CORPUS_ROOT"); root != "" {
+	for _, root := range []string{os.Getenv("MOEDEX_CORPUS_ROOT"), os.Getenv("MOEDEX_CORPUS")} {
+		if root == "" {
+			continue
+		}
 		if _, err := os.Stat(root); err == nil {
 			return root, true
 		}
@@ -95,11 +100,13 @@ func CorpusRoot() (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	root := filepath.Join(home, "TCGitlab")
-	if _, err := os.Stat(root); err != nil {
-		return "", false
+	for _, name := range []string{catalog.DefaultCorpusDirName, "TCGitlab"} {
+		root := filepath.Join(home, name)
+		if _, err := os.Stat(root); err == nil {
+			return root, true
+		}
 	}
-	return root, true
+	return "", false
 }
 
 // BuildPooledIndex ingests each repo under root, keeps only the files its Keep

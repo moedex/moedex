@@ -22,7 +22,7 @@ import (
 func TestCorpusDenseGateSweep(t *testing.T) {
 	ix, _, _, ok := BuildGoldCorpusIndex()
 	if !ok {
-		t.Skip("gold corpus absent (set MOEDEX_CORPUS_ROOT or place repos under ~/TCGitlab)")
+		t.Skip("gold corpus absent (set MOEDEX_CORPUS_ROOT/MOEDEX_CORPUS or populate ~/.moedex-managed)")
 	}
 	emb, err := embed.NewONNXEmbedder(os.Getenv("ONNXRUNTIME_LIB_PATH"))
 	if err != nil {

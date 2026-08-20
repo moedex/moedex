@@ -20,7 +20,7 @@
 #   scripts/install-macos.sh            # do it
 #   scripts/install-macos.sh --dry-run  # show what it WOULD do, change nothing
 #
-# Env overrides: BINDIR (default ~/.local/bin), MOEDEX_CORPUS (default ~/.moedex),
+# Env overrides: BINDIR (default ~/.local/bin), MOEDEX_CORPUS (default ~/.moedex-managed),
 # MOEDEX_INDEX_DIR (default ~/.moedex-index), MOEDEX_CAS_DIR (default
 # $MOEDEX_INDEX_DIR/cas), MOEDEX_SHARD_DIR (default $MOEDEX_INDEX_DIR/shards),
 # ONNXRUNTIME_LIB_PATH.
@@ -33,7 +33,7 @@ DRY_RUN=0
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 BINDIR="${BINDIR:-$HOME/.local/bin}"
 INDEX_DIR="${MOEDEX_INDEX_DIR:-$HOME/.moedex-index}"
-CORPUS="${MOEDEX_CORPUS:-$HOME/.moedex}"
+CORPUS="${MOEDEX_CORPUS:-$HOME/.moedex-managed}"
 CAS_DIR="${MOEDEX_CAS_DIR:-$INDEX_DIR/cas}"
 SHARD_DIR="${MOEDEX_SHARD_DIR:-$INDEX_DIR/shards}"
 LAUNCH_AGENTS="$HOME/Library/LaunchAgents"

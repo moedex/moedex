@@ -77,7 +77,7 @@ memory is unmapped); `Close` is idempotent.
 | `-limit` | `0` | cap matches printed/returned (`0` = no cap) |
 | `-top-k` | `20` | default ranked results per MCP query |
 | `-embed` | `$MOEDEX_EMBED` (`auto`) | dense embedder for `-mcp`: `auto`\|`onnx`\|`http`\|`none` |
-| `-onnx-runtime` | `$ONNXRUNTIME_LIB_PATH` | path to the ONNX Runtime shared library (in-process embedder; requires an `-tags onnx` build) |
+| `-onnx-runtime` | `$ONNXRUNTIME_LIB_PATH`, then standard Homebrew/system paths | path to the ONNX Runtime shared library (in-process embedder; requires an `-tags onnx` build) |
 | `-auth-token` | `$MOEDEX_AUTH_TOKEN` | if set, require `Authorization: Bearer <token>` on `-http` (except `/healthz`, `/metrics`) |
 | `-tls-cert` | `$MOEDEX_TLS_CERT` | TLS certificate file; serve `-http` over HTTPS (requires `-tls-key`) |
 | `-tls-key` | `$MOEDEX_TLS_KEY` | TLS private key file; serve `-http` over HTTPS (requires `-tls-cert`) |
@@ -390,7 +390,7 @@ ranking is pure lexical (BM25) + symbol arm with zero external dependencies. The
 
 | `-embed` | Behavior |
 |----------|----------|
-| `auto` (default) | `onnx` if `-onnx-runtime`/`ONNXRUNTIME_LIB_PATH` is set, else `http` if `MOEDEX_EMBED_URL` is set, else `none` |
+| `auto` (default) | `onnx` if a configured or standard Homebrew/system runtime is found, else `http` if `MOEDEX_EMBED_URL` is set, else `none` |
 | `onnx` | in-process embedder (requires an `-tags onnx` build — see below) |
 | `http` | external OpenAI/ollama-style embeddings endpoint |
 | `none` | dense arm disabled (lexical + symbol only) |

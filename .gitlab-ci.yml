@@ -56,7 +56,8 @@ health:
 # Runs on scheduled pipelines, tags, and any MR touching internal/query,
 # internal/search, or internal/parity (CLAUDE.md: those packages "must keep
 # make verify green"). Needs a self-hosted runner tagged `moedex-corpus` with:
-#   * the corpus checked out at $MOEDEX_CORPUS (default ~/TCGitlab if unset),
+#   * the managed corpus checked out at $MOEDEX_CORPUS (default
+#     ~/.moedex-managed if unset),
 #   * ripgrep (`rg`) on PATH,
 #   * enough disk for the .parity-work scratch dir.
 parity:

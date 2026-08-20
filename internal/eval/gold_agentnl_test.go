@@ -19,7 +19,7 @@ import (
 func TestCorpusAgentNLGap(t *testing.T) {
 	ix, _, _, ok := BuildGoldCorpusIndex()
 	if !ok {
-		t.Skip("gold corpus absent (set MOEDEX_CORPUS_ROOT or place repos under ~/TCGitlab)")
+		t.Skip("gold corpus absent (set MOEDEX_CORPUS_ROOT/MOEDEX_CORPUS or populate ~/.moedex-managed)")
 	}
 	const k, topK = 5, 20
 	ctx := context.Background()

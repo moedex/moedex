@@ -39,6 +39,9 @@ const (
 	LockFileName = "corpus.lock.json"
 	// RefPolicyDefault selects only the enumerated default branch in schema v1.
 	RefPolicyDefault = "default"
+	// DefaultCorpusDirName is the managed corpus root beneath the user's home
+	// directory when no explicit path or environment override is supplied.
+	DefaultCorpusDirName = ".moedex-managed"
 )
 
 // DefaultHost is the ONLY GitLab host a managed corpus may be pinned to. It

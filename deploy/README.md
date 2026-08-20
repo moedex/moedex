@@ -407,7 +407,8 @@ can `systemctl reload`, or wrap in sudo):
 - **`parity` stage** — `make parity` (full-corpus ripgrep parity) ONLY on
   **scheduled pipelines or tags**. Requires a **self-hosted runner** tagged
   `moedex-corpus` that has:
-  - the corpus on disk at `$MOEDEX_CORPUS` (defaults to `~/TCGitlab` if unset),
+  - the managed corpus on disk at `$MOEDEX_CORPUS` (defaults to
+    `~/.moedex-managed` if unset),
   - **ripgrep (`rg`)** installed,
   - disk headroom for the `.parity-work` scratch dir.
   Publishes `PARITY-REPORT.md` as an artifact.

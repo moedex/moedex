@@ -123,10 +123,8 @@ func NewONNXEmbedderFromFiles(runtimePath, modelPath, tokenizerPath string, inpu
 }
 
 func initRuntime(runtimePath string) error {
-	if runtimePath != "" {
+	if runtimePath = ResolveONNXRuntimePath(runtimePath); runtimePath != "" {
 		ort.SetSharedLibraryPath(runtimePath)
-	} else if p, ok := os.LookupEnv("ONNXRUNTIME_LIB_PATH"); ok {
-		ort.SetSharedLibraryPath(p)
 	}
 	if err := ort.InitializeEnvironment(); err != nil {
 		return fmt.Errorf("embed/onnx: init runtime: %w", err)

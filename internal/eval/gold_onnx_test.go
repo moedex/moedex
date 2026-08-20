@@ -53,7 +53,7 @@ const minDenseNDCG = 0.85
 func TestCorpusONNXMeasurement(t *testing.T) {
 	ix, n, perRepo, ok := BuildGoldCorpusIndex()
 	if !ok {
-		t.Skip("gold corpus absent (set MOEDEX_CORPUS_ROOT or place repos under ~/TCGitlab)")
+		t.Skip("gold corpus absent (set MOEDEX_CORPUS_ROOT/MOEDEX_CORPUS or populate ~/.moedex-managed)")
 	}
 	emb, err := embed.NewONNXEmbedder(os.Getenv("ONNXRUNTIME_LIB_PATH"))
 	if err != nil {
@@ -214,7 +214,7 @@ func TestCorpusCodeModelMeasurement(t *testing.T) {
 
 	ix, n, perRepo, ok := BuildGoldCorpusIndex()
 	if !ok {
-		t.Skip("gold corpus absent (set MOEDEX_CORPUS_ROOT or place repos under ~/TCGitlab)")
+		t.Skip("gold corpus absent (set MOEDEX_CORPUS_ROOT/MOEDEX_CORPUS or populate ~/.moedex-managed)")
 	}
 	// RoBERTa-style code models have no token_type_ids.
 	emb, err := embed.NewONNXEmbedderFromFiles(os.Getenv("ONNXRUNTIME_LIB_PATH"), modelPath, tokPath,
