@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"moedex/internal/contextwin"
+	"moedex/internal/graph"
 	"moedex/internal/index"
 	"moedex/internal/rank"
 )
@@ -484,6 +485,11 @@ func toolDescriptor() map[string]interface{} {
 					"maximum":     MaxGraphDepth,
 					"description": fmt.Sprintf("Graph annotation radius in hops (optional, default %d). Each result block carries a \"neighbors\" field with the callers, callees, consumers, publishers, dependencies, and semantic siblings of the symbols it contains — no second graph tool call needed. 0 disables the annotation.", DefaultGraphDepth),
 				},
+				"min_confidence": map[string]interface{}{
+					"type":        "string",
+					"enum":        []string{"Candidate", "Pattern", "Verified", "Proven"},
+					"description": "Minimum graph-edge confidence included in annotations (optional, default Pattern). Edges below the floor are excluded before traversal.",
+				},
 			},
 			"required": []string{"query"},
 		},
@@ -499,7 +505,8 @@ type callParams struct {
 		Format      string `json:"format"`
 		// GraphDepth is a pointer so an omitted argument (DefaultGraphDepth) is
 		// distinguishable from an explicit 0 (annotation off).
-		GraphDepth *int `json:"graph_depth"`
+		GraphDepth    *int   `json:"graph_depth"`
+		MinConfidence string `json:"min_confidence"`
 	} `json:"arguments"`
 }
 
@@ -541,12 +548,16 @@ func (s *Server) callTool(ctx context.Context, raw json.RawMessage) (map[string]
 	if depth < 0 || depth > MaxGraphDepth {
 		return textResult(fmt.Sprintf("graph_depth must be between 0 and %d", MaxGraphDepth), true), nil
 	}
+	minConfidence, err := graph.ParseMinConfidence(p.Arguments.MinConfidence)
+	if err != nil {
+		return textResult(err.Error(), true), nil
+	}
 
 	win, err := s.searcher.SearchContext(ctx, p.Arguments.Query, p.Arguments.TokenBudget, p.Arguments.TopK)
 	if err != nil {
 		return nil, err
 	}
-	neighbors, err := s.annotate(ctx, win.Blocks, depth)
+	neighbors, err := s.annotate(ctx, win.Blocks, depth, minConfidence)
 	if err != nil {
 		return nil, err
 	}
@@ -564,11 +575,17 @@ func (s *Server) callTool(ctx context.Context, raw json.RawMessage) (map[string]
 // A length mismatch is a contract violation in the annotator, not a partial
 // result, so it surfaces as an error rather than silently mis-attributing one
 // block's neighborhood to another.
-func (s *Server) annotate(ctx context.Context, blocks []contextwin.ContextBlock, depth int) ([]BlockNeighbors, error) {
+func (s *Server) annotate(ctx context.Context, blocks []contextwin.ContextBlock, depth int, minConfidence graph.ConfidenceTier) ([]BlockNeighbors, error) {
 	if s.graph == nil || depth <= 0 || len(blocks) == 0 {
 		return nil, nil
 	}
-	neighbors, err := s.graph.Neighbors(ctx, blocks, depth)
+	var neighbors []BlockNeighbors
+	var err error
+	if aware, ok := s.graph.(ConfidenceGraphAnnotator); ok {
+		neighbors, err = aware.NeighborsWithConfidence(ctx, blocks, depth, minConfidence)
+	} else {
+		neighbors, err = s.graph.Neighbors(ctx, blocks, depth)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("graph annotation: %w", err)
 	}
@@ -610,12 +627,14 @@ func formatWindow(win contextwin.ContextWindow, neighbors []BlockNeighbors) stri
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "%d context block(s), ~%d tokens", len(win.Blocks), win.TokenEstimate)
-	if win.Truncated {
-		b.WriteString(" (truncated to fit budget)")
-	}
+	writeWindowStatus(&b, win)
 	b.WriteString("\n")
 	for i, blk := range win.Blocks {
-		fmt.Fprintf(&b, "\n--- %s:%d-%d (score %.4f) ---\n", blk.RelPath, blk.StartLine, blk.EndLine, blk.Score)
+		fmt.Fprintf(&b, "\n--- %s:%d-%d (score %.4f)", blk.RelPath, blk.StartLine, blk.EndLine, blk.Score)
+		if blk.Clipped {
+			b.WriteString(" [clipped]")
+		}
+		b.WriteString(" ---\n")
 		if line := renderNeighbors(neighborsAt(neighbors, i)); line != "" {
 			b.WriteString(line)
 			b.WriteString("\n")
@@ -638,6 +657,7 @@ type structuredSummary struct {
 	Blocks        int  `json:"blocks"`
 	TokenEstimate int  `json:"token_estimate"`
 	Truncated     bool `json:"truncated"`
+	Clipped       bool `json:"clipped"`
 }
 
 type structuredBlock struct {
@@ -657,6 +677,7 @@ type structuredBlock struct {
 	Lexical           float64 `json:"lexical"`
 	Dense             float64 `json:"dense"` // 0 when the dense arm did not fire (treat as "arm absent")
 	Text              string  `json:"text"`
+	Clipped           bool    `json:"clipped"`
 	// Neighbors is the block's graph neighborhood (phase 14). It is nil — and the
 	// field omitted — when the response is un-annotated (no graph wired or
 	// graph_depth=0); a block whose symbols have no edges carries a PRESENT
@@ -696,6 +717,7 @@ func newStructuredWindow(win contextwin.ContextWindow, corpusRoot string, neighb
 			Blocks:        len(win.Blocks),
 			TokenEstimate: win.TokenEstimate,
 			Truncated:     win.Truncated,
+			Clipped:       win.Clipped,
 		},
 		Blocks: make([]structuredBlock, 0, len(win.Blocks)),
 	}
@@ -712,6 +734,7 @@ func newStructuredWindow(win contextwin.ContextWindow, corpusRoot string, neighb
 			Lexical:           blk.Lexical,
 			Dense:             blk.Dense,
 			Text:              blk.Text,
+			Clipped:           blk.Clipped,
 			Neighbors:         neighborsAt(neighbors, i),
 		})
 	}
@@ -724,13 +747,25 @@ func newStructuredWindow(win contextwin.ContextWindow, corpusRoot string, neighb
 // clients that ignore structuredContent functional.
 func structuredResult(win contextwin.ContextWindow, corpusRoot string, neighbors []BlockNeighbors) map[string]interface{} {
 	summary := fmt.Sprintf("%d context block(s), ~%d tokens", len(win.Blocks), win.TokenEstimate)
-	if win.Truncated {
-		summary += " (truncated to fit budget)"
-	}
+	var status strings.Builder
+	writeWindowStatus(&status, win)
+	summary += status.String()
 	if n := totalNeighbors(neighbors); n > 0 {
 		summary += fmt.Sprintf(", %d graph neighbor(s)", n)
 	}
 	return StructuredResult(summary, newStructuredWindow(win, corpusRoot, neighbors), false)
+}
+
+// writeWindowStatus appends independent labels for narrowed source and omitted
+// lower-ranked candidates. Keeping them separate prevents "truncated" from
+// ambiguously covering both conditions.
+func writeWindowStatus(b *strings.Builder, win contextwin.ContextWindow) {
+	if win.Clipped {
+		b.WriteString(" (source clipped to fit budget)")
+	}
+	if win.Truncated {
+		b.WriteString(" (lower-ranked context omitted to fit budget)")
+	}
 }
 
 // totalNeighbors counts every annotated neighbor across every block.

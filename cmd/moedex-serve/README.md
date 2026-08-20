@@ -289,13 +289,21 @@ The boot line reports the shape, e.g.:
 {
   "name": "search_context",
   "arguments": {"query": "csr validation", "token_budget": 4000, "top_k": 10,
-                "format": "structured", "graph_depth": 1}
+                "format": "structured", "graph_depth": 1,
+                "min_confidence": "Pattern"}
 }
 ```
 
-Only `query` is required; `token_budget`, `top_k`, `format`, and `graph_depth` are
+Only `query` is required; `token_budget`, `top_k`, `format`, `graph_depth`, and
+`min_confidence` are
 optional (`top_k` defaults to `-top-k`). An empty query is reported as a tool-level
 error rather than a protocol error.
+
+The token estimate is a hard upper bound: `token_estimate` never exceeds the
+requested `token_budget`. If the best symbol/source block is too large it is narrowed
+around the highest-ranked salient line and reports `clipped: true` on both the block
+and summary. `truncated: true` has the separate meaning that lower-ranked candidate
+blocks were omitted; both flags can be true in one response.
 
 ### Graph-fused results
 
@@ -315,6 +323,7 @@ depends on:
 Each neighbor carries its node `id` (usable directly with `trace_calls` /
 `impact_analysis`), symbol, kind, repo/path/line, the `edge` type and `direction`
 that reached it, the hop count, and the edge's confidence `{tier, score}`.
+Text renders this as `Symbol [Tier] (repo/path:line)`.
 
 `graph_depth` controls the radius: **1** by default (the direct neighborhood), up to
 10, and **0 turns the annotation off**. Each lane traverses in one fixed direction, so
@@ -322,8 +331,15 @@ that reached it, the hop count, and the edge's confidence `{tier, score}`.
 formats carry it — `text` as one `[graph] ...` line under each block header,
 `structured` as a typed `neighbors` object per block.
 
+`min_confidence` accepts `Candidate`, `Pattern`, `Verified`, or `Proven` and defaults
+to `Pattern`. The same argument is available on every standalone traversal tool.
+Edges below the floor are removed before traversal, so they cannot appear or bridge
+to a later node. Candidate evidence remains available for explicit diagnostics.
+
 Two deliberate limits, so a short answer is never mistaken for a small neighborhood:
-buckets are capped (a trimmed block sets `truncated: true`), and incoming
+buckets retain at most 25 neighbors and expose `bucket_totals` with the true
+pre-cap count for all six lanes. The compatibility `truncated` flag is derived from
+those totals; text omissions render as `+N more (of M total)`. Incoming
 reference/import edges are not annotated at all — that is the highest-volume edge
 class in the graph, and `impact_analysis` is the tool for that question. A block whose
 symbols have no edges gets a present, empty annotation, so "annotation off" and
@@ -332,6 +348,32 @@ symbols have no edges gets a present, empty annotation, so "annotation off" and
 The annotation needs the `corpus-graph.graph` sidecar that `moedex-index` writes
 beside the shards; without it (e.g. the single-repo `moedex-mcp`), `graph_depth` is
 accepted and inert.
+
+### Standalone graph tools and clusters
+
+Standalone `GraphNode` results include `hops` and are ordered by hop, confidence,
+same-repository/shared-directory proximity to the root, symbol, then stable node ID.
+All standalone graph traversals default to the same `Pattern` confidence floor.
+
+`list_clusters` never computes Louvain while serving. Graph build/refresh writes the
+generation-bound `corpus-graph.clusters.json` sidecar from only Verified/Proven
+`calls`, `http_calls`, `imports`, and manifest `depends_on` edges. A summary call is
+`{"offset":0,"limit":50}`; a member call is
+`{"cluster_id":1,"offset":0,"limit":50}`. Limits default to 50 and max at 200.
+The default build cap is 250,000 eligible nodes, configurable with
+`MOEDEX_GRAPH_CLUSTER_MAX_NODES`; absent, stale, or over-cap sidecars return an
+explicit unavailable envelope with counts and rebuild/configuration guidance.
+
+Rebuild and verify these artifacts with:
+
+```sh
+go run ./cmd/moedex-index graph -shard-dir /path/to/shards
+make graph-eval
+MOEDEX_GRAPH_EVAL_SHARDS=/path/to/shards MOEDEX_GRAPH_GOLD=/path/to/reviewed-gold.json make graph-eval-private
+```
+
+The hermetic graph gate is also part of `make health`; the private command requires
+at least 30 reviewed records and committed mechanical floors in its mounted gold file.
 
 The MCP server applies hardening defaults: a 30 s per-call timeout, 8-way handler
 concurrency, a 1 MiB cap on a single JSON-RPC message, and an 8 KiB cap on the

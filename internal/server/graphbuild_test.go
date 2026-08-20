@@ -118,3 +118,38 @@ func TestBuildGraphFromDedupedShards(t *testing.T) {
 		t.Fatalf("deduped Caller adjacency = %#v", edges)
 	}
 }
+
+func TestBuildGraphSuppressesRawCandidateOccurrences(t *testing.T) {
+	dir := t.TempDir()
+	definition := []byte("package target\n\nfunc ProcessOrder() {}\n")
+	noise := []byte("package notes\n\n// ProcessOrder() is mentioned only in a comment.\n")
+	ix := index.New()
+	ix.AddFile("target", "target.go", "/target/target.go", "definition-sha", definition)
+	ix.AddFile("notes", "notes.go", "/notes/notes.go", "noise-sha", noise)
+	if err := diskstore.Save(ix, filepath.Join(dir, "shard-0000.idx")); err != nil {
+		t.Fatal(err)
+	}
+	path, report, err := BuildGraph(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Counts.SuppressedRawCandidates == 0 {
+		t.Fatalf("build report did not record raw Candidate suppression: %+v", report.Counts)
+	}
+	g, err := diskgraph.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	definitionKey := diskgraph.Key{BlobSHA: "definition-sha", SymbolOffset: uint64(strings.Index(string(definition), "ProcessOrder"))}
+	foundDefinition := false
+	for _, key := range g.Keys() {
+		if key.BlobSHA == "noise-sha" {
+			t.Fatalf("raw Candidate occurrence minted graph node %+v", key)
+		}
+		foundDefinition = foundDefinition || key == definitionKey
+	}
+	if !foundDefinition {
+		t.Fatalf("suppression dropped definition target %+v", definitionKey)
+	}
+}

@@ -84,7 +84,7 @@ func (d *doctorReport) add(lvl level, section, format string, a ...any) {
 		d.crit++
 	}
 }
-func (d *doctorReport) ok(s, f string, a ...any)   { d.add(lvlOK, s, f, a...) }
+func (d *doctorReport) ok(s, f string, a ...any)    { d.add(lvlOK, s, f, a...) }
 func (d *doctorReport) warnf(s, f string, a ...any) { d.add(lvlWarn, s, f, a...) }
 func (d *doctorReport) critf(s, f string, a ...any) { d.add(lvlCrit, s, f, a...) }
 
@@ -302,6 +302,18 @@ func checkShardDir(d *doctorReport, dir string) {
 		d.warnf(section, "graph sidecar (generation %d, %d node(s), %d edge(s)) is STALE — a shard was rewritten more recently than the graph, which means the last build/refresh's graph rebuild failed silently (see its stderr) and the daemon is serving a prior-generation graph; re-run the refresh and check for a \"warning: build graph\" line", info.GraphGeneration, info.GraphNodes, info.GraphEdges)
 	default:
 		d.ok(section, "graph sidecar generation %d: %d node(s), %d edge(s)", info.GraphGeneration, info.GraphNodes, info.GraphEdges)
+	}
+	if info.GraphExists && info.GraphOpenErr == "" {
+		switch {
+		case !info.ClusterExists:
+			d.warnf(section, "no cluster sidecar (%s) — list_clusters will report unavailable until graph rebuild/refresh", server.ClusterFileName)
+		case info.ClusterOpenErr != "":
+			d.warnf(section, "cluster sidecar unavailable: %s", info.ClusterOpenErr)
+		case info.ClusterStatus == "over_cap":
+			d.warnf(section, "cluster sidecar over cap: %d eligible node(s), %d edge(s), cap %d — raise MOEDEX_GRAPH_CLUSTER_MAX_NODES and rebuild if clustering is required", info.ClusterEligibleNodes, info.ClusterEligibleEdges, info.ClusterCap)
+		default:
+			d.ok(section, "cluster sidecar %s: %d eligible node(s), %d edge(s), cap %d", info.ClusterStatus, info.ClusterEligibleNodes, info.ClusterEligibleEdges, info.ClusterCap)
+		}
 	}
 }
 

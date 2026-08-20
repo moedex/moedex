@@ -23,6 +23,7 @@ package contextwin
 import (
 	"bytes"
 	"sort"
+	"unicode/utf8"
 
 	"moedex/internal/index"
 	"moedex/internal/rank"
@@ -51,6 +52,7 @@ type ContextBlock struct {
 	Score     float64 // fused score, inherited from the result that contributed this block
 	Lexical   float64 // BM25 component of that result (raw, pre-fusion)
 	Dense     float64 // dense cosine component of that result (0 when no dense arm ran)
+	Clipped   bool    // true when Text was narrowed to honor the token budget
 }
 
 // ContextWindow is the assembled, token-budgeted answer.
@@ -58,6 +60,7 @@ type ContextWindow struct {
 	Blocks        []ContextBlock
 	TokenEstimate int
 	Truncated     bool // true if the budget cut off lower-ranked blocks
+	Clipped       bool // true if at least one returned block's source was narrowed
 }
 
 // Options tunes assembly. TokenBudget caps the whole window; ContextLines is the
@@ -91,6 +94,8 @@ type candidate struct {
 	lexical, dense         float64 // per-arm scores of the contributing result (track score)
 	order                  int     // index of the originating result (lower = earlier)
 	blob                   uint64  // originating blob ID (for symbol scoping)
+	salientLine            int     // highest-ranked salient line retained through merging
+	salientOrder           int     // originating result order for salient-line tie breaking
 }
 
 // Assemble turns ranked results into a token-budgeted, deduplicated,
@@ -128,11 +133,10 @@ type candidate struct {
 //
 // Budget / truncation rule: blocks are emitted best-first (Score desc; ties
 // broken by originating result order, then file path, then start line — fully
-// deterministic). A block is emitted while the running TokenEstimate plus the
-// block's own token cost stays within TokenBudget. The FIRST emitted block is
-// always allowed even if it alone exceeds the budget (so the window is never
-// empty when results exist); subsequent over-budget blocks are skipped and any
-// skip sets Truncated = true.
+// deterministic). If the best block alone exceeds TokenBudget it is clipped
+// around its highest-ranked salient line. Subsequent over-budget blocks are
+// skipped and any skip sets Truncated = true. Clipping is reported separately
+// because it narrows returned source while truncation omits candidates.
 //
 // Token formula: tokens(text) = ceil(len(text) / 4). TokenEstimate is the sum
 // over emitted blocks' Text.
@@ -171,19 +175,21 @@ func Assemble(ix *index.Index, results []rank.RankedResult, opts Options) Contex
 		}
 		ref := res.Files[0]
 		for _, span := range res.LineSpans {
-			start, end := expandSpanScoped(lines, blob.Content, res.Blob, span, ctxLines, opts.EnclosingBytes)
+			start, end := expandSpanScoped(lines, blob.Content, res.Blob, span, ctxLines, budget, opts.EnclosingBytes)
 			c := candidate{
-				repo:      ref.Repo,
-				relPath:   ref.RelPath,
-				absPath:   ref.AbsPath,
-				startLine: start,
-				endLine:   end,
-				content:   blob.Content,
-				score:     res.Score,
-				lexical:   res.Lexical,
-				dense:     res.Dense,
-				order:     order,
-				blob:      res.Blob,
+				repo:         ref.Repo,
+				relPath:      ref.RelPath,
+				absPath:      ref.AbsPath,
+				startLine:    start,
+				endLine:      end,
+				content:      blob.Content,
+				score:        res.Score,
+				lexical:      res.Lexical,
+				dense:        res.Dense,
+				order:        order,
+				blob:         res.Blob,
+				salientLine:  clamp(span.StartLine, 1, len(lines)),
+				salientOrder: order,
 			}
 			if _, seen := byFile[c.absPath]; !seen {
 				fileOrder = append(fileOrder, c.absPath)
@@ -217,6 +223,12 @@ func Assemble(ix *index.Index, results []rank.RankedResult, opts Options) Contex
 	for _, c := range merged {
 		text := sliceLines(c.content, c.startLine, c.endLine)
 		cost := estimateTokens(text)
+		clipped := false
+		if len(win.Blocks) == 0 && cost > budget {
+			text, c.startLine, c.endLine = clipAroundSalient(c, budget*charsPerToken)
+			cost = estimateTokens(text)
+			clipped = true
+		}
 		if len(win.Blocks) > 0 && win.TokenEstimate+cost > budget {
 			// Intentionally continue, not break: a later, lower-scored, smaller
 			// candidate may still fit in the remainder of the budget even though
@@ -237,8 +249,10 @@ func Assemble(ix *index.Index, results []rank.RankedResult, opts Options) Contex
 			Score:     c.score,
 			Lexical:   c.lexical,
 			Dense:     c.dense,
+			Clipped:   clipped,
 		})
 		win.TokenEstimate += cost
+		win.Clipped = win.Clipped || clipped
 	}
 	return win
 }
@@ -302,7 +316,7 @@ func clamp(v, lo, hi int) int {
 // The byte offset queried is the start of the span's first line (clamped),
 // because the symbol layer keys on definition ranges and the span's opening line
 // is the most reliable anchor inside the enclosing definition.
-func expandSpanScoped(lines [][]byte, content []byte, blob uint64, span rank.LineSpan, ctxLines int, enc func(uint64, int) (int, int, bool)) (int, int) {
+func expandSpanScoped(lines [][]byte, content []byte, blob uint64, span rank.LineSpan, ctxLines, tokenBudget int, enc func(uint64, int) (int, int, bool)) (int, int) {
 	if enc != nil {
 		n := len(lines)
 		startLine := clamp(span.StartLine, 1, n)
@@ -318,10 +332,85 @@ func expandSpanScoped(lines [][]byte, content []byte, blob uint64, span rank.Lin
 			if eLine < sLine {
 				eLine = sLine
 			}
-			return sLine, eLine
+			// Very large enclosing symbols are worse agent context than the existing
+			// local brace/indent expansion. Fall back before budget clipping when the
+			// symbol alone costs more than twice the whole requested window.
+			scopeCost := estimateTokens(sliceLines(content, sLine, eLine))
+			if scopeCost <= tokenBudget || scopeCost-tokenBudget <= tokenBudget {
+				return sLine, eLine
+			}
 		}
 	}
 	return expandSpan(lines, span, ctxLines)
+}
+
+// clipAroundSalient returns a contiguous source slice no larger than maxBytes,
+// anchored on c.salientLine. It admits only complete neighboring lines. When
+// the salient line itself is too large, it returns a UTF-8-safe prefix of that
+// line. maxBytes is positive for every normalized token budget.
+func clipAroundSalient(c candidate, maxBytes int) (text string, startLine, endLine int) {
+	lines := splitLines(c.content)
+	if len(lines) == 0 || maxBytes <= 0 {
+		return "", c.salientLine, c.salientLine
+	}
+	salient := clamp(c.salientLine, c.startLine, c.endLine)
+	line := lines[salient-1]
+	if len(line)+1 > maxBytes {
+		prefix := utf8Prefix(line, maxBytes)
+		return string(prefix), salient, salient
+	}
+
+	start, end := salient, salient
+	used := len(line) + 1 // sliceLines terminates every complete line with '\n'.
+	leftOpen, rightOpen := start > c.startLine, end < c.endLine
+	for leftOpen || rightOpen {
+		progress := false
+		if leftOpen {
+			cost := len(lines[start-2]) + 1
+			if used+cost <= maxBytes {
+				start--
+				used += cost
+				progress = true
+			} else {
+				leftOpen = false
+			}
+			if start <= c.startLine {
+				leftOpen = false
+			}
+		}
+		if rightOpen {
+			cost := len(lines[end]) + 1
+			if used+cost <= maxBytes {
+				end++
+				used += cost
+				progress = true
+			} else {
+				rightOpen = false
+			}
+			if end >= c.endLine {
+				rightOpen = false
+			}
+		}
+		if !progress && !leftOpen && !rightOpen {
+			break
+		}
+	}
+	return sliceLines(c.content, start, end), start, end
+}
+
+// utf8Prefix returns the longest valid UTF-8 prefix no longer than max bytes.
+func utf8Prefix(src []byte, max int) []byte {
+	if max >= len(src) {
+		return src
+	}
+	if max <= 0 {
+		return nil
+	}
+	end := max
+	for end > 0 && !utf8.Valid(src[:end]) {
+		end--
+	}
+	return src[:end]
 }
 
 // lineStartByte returns the byte offset of the first byte of the given 1-based
@@ -508,10 +597,12 @@ func mergeFile(cands []candidate) []candidate {
 			if b.endLine > a.endLine {
 				a.endLine = b.endLine
 			}
-			if b.score > a.score {
+			if b.score > a.score || (b.score == a.score && b.salientOrder < a.salientOrder) {
 				a.score = b.score
 				a.lexical = b.lexical
 				a.dense = b.dense
+				a.salientLine = b.salientLine
+				a.salientOrder = b.salientOrder
 			}
 			if b.order < a.order {
 				a.order = b.order

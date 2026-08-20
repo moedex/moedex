@@ -16,9 +16,15 @@ type stubAnnotator struct {
 	calls     int
 	gotDepth  int
 	gotBlocks int
+	gotMin    graph.ConfidenceTier
 	ret       []BlockNeighbors
 	retNil    bool
 	err       error
+}
+
+func (s *stubAnnotator) NeighborsWithConfidence(ctx context.Context, blocks []contextwin.ContextBlock, depth int, minConfidence graph.ConfidenceTier) ([]BlockNeighbors, error) {
+	s.gotMin = minConfidence
+	return s.Neighbors(ctx, blocks, depth)
 }
 
 func (s *stubAnnotator) Neighbors(_ context.Context, blocks []contextwin.ContextBlock, depth int) ([]BlockNeighbors, error) {
@@ -73,6 +79,9 @@ func TestSearchContextAnnotatesBlocksWithGraphNeighborsByDefault(t *testing.T) {
 	if ann.calls != 1 || ann.gotDepth != DefaultGraphDepth || ann.gotBlocks != 1 {
 		t.Fatalf("annotator calls=%d depth=%d blocks=%d, want 1/%d/1", ann.calls, ann.gotDepth, ann.gotBlocks, DefaultGraphDepth)
 	}
+	if ann.gotMin != graph.Pattern {
+		t.Errorf("default min confidence = %s, want Pattern", ann.gotMin)
+	}
 	for _, want := range []string{
 		`"neighbors":`,
 		`"anchors":["Root"]`,
@@ -122,6 +131,19 @@ func TestSearchContextGraphDepthIsForwardedAndBounded(t *testing.T) {
 		if !strings.Contains(body, `"isError":true`) || !strings.Contains(body, "graph_depth must be between") {
 			t.Errorf("%s was accepted: %s", bad, body)
 		}
+	}
+}
+
+func TestSearchContextConfidenceFloorIsForwardedAndValidated(t *testing.T) {
+	ann := &stubAnnotator{}
+	s := NewServer(oneBlockSearcher(), WithGraphAnnotator(ann))
+	callSearch(t, s, `{"query":"Root","min_confidence":"Candidate"}`)
+	if ann.gotMin != graph.Candidate {
+		t.Errorf("min_confidence forwarded as %s, want Candidate", ann.gotMin)
+	}
+	body := callSearch(t, s, `{"query":"Root","min_confidence":"candidate"}`)
+	if !strings.Contains(body, `"isError":true`) || !strings.Contains(body, "min_confidence must be") {
+		t.Fatalf("invalid min_confidence accepted: %s", body)
 	}
 }
 
@@ -179,7 +201,7 @@ func TestSearchContextTextFormatRendersNeighborLine(t *testing.T) {
 	s := NewServer(oneBlockSearcher(), WithGraphAnnotator(&stubAnnotator{}))
 
 	body := callSearch(t, s, `{"query":"Root"}`)
-	if !strings.Contains(body, `[graph] callers: Caller (fixture/caller.go:2)`) {
+	if !strings.Contains(body, `[graph] callers: Caller [Pattern] (fixture/caller.go:2)`) {
 		t.Fatalf("text rendering missing the graph line: %s", body)
 	}
 	// The line sits between the block header and the code, so the code is never
@@ -204,10 +226,11 @@ func TestRenderNeighborsTrimsLongBucketsHonestly(t *testing.T) {
 	for i := 0; i < maxRenderedNeighbors+3; i++ {
 		n.Callers = append(n.Callers, Neighbor{Symbol: string(rune('A' + i)), Edge: "calls", Direction: DirectionIn, Hops: 1})
 	}
+	n.BucketTotals["callers"] = 30
 	n.Truncated = true
 
 	line := renderNeighbors(&n)
-	if !strings.Contains(line, "+3 more") {
+	if !strings.Contains(line, "+25 more (of 30 total)") {
 		t.Errorf("rendered line hides the dropped neighbors: %s", line)
 	}
 	if !strings.Contains(line, "(buckets trimmed)") {
@@ -239,5 +262,15 @@ func TestSortAndTrimNeighborsAreDeterministic(t *testing.T) {
 	}
 	if _, trimmed := TrimNeighbors(long[:MaxNeighborsPerBucket]); trimmed {
 		t.Error("an exactly-full bucket must not report truncation")
+	}
+
+	proximity := []Neighbor{
+		{ID: "cross:1", Symbol: "Alpha", Hops: 1, Confidence: graph.ConfidenceOf(graph.Pattern), ProximityDepth: 9},
+		{ID: "shallow:1", Symbol: "Beta", Hops: 1, Confidence: graph.ConfidenceOf(graph.Pattern), ProximitySameRepo: true, ProximityDepth: 1},
+		{ID: "deep:1", Symbol: "Zulu", Hops: 1, Confidence: graph.ConfidenceOf(graph.Pattern), ProximitySameRepo: true, ProximityDepth: 3},
+	}
+	SortNeighbors(proximity)
+	if got := []string{proximity[0].ID, proximity[1].ID, proximity[2].ID}; got[0] != "deep:1" || got[1] != "shallow:1" || got[2] != "cross:1" {
+		t.Fatalf("proximity sort = %v, want same repo then deepest shared directory", got)
 	}
 }

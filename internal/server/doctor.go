@@ -8,6 +8,7 @@ import (
 
 	"moedex/internal/diskstore"
 	"moedex/internal/embed"
+	"moedex/internal/graph/cluster"
 	"moedex/internal/graph/diskgraph"
 )
 
@@ -44,6 +45,13 @@ type ShardDirInfo struct {
 	// this signature: fresh shards next to an older graph — the silent-staleness
 	// failure mode this check exists to catch.
 	GraphStale bool
+
+	ClusterExists        bool
+	ClusterOpenErr       string
+	ClusterStatus        string
+	ClusterEligibleNodes int
+	ClusterEligibleEdges int
+	ClusterCap           int
 }
 
 // RefreshCommand returns the refresh subcommand that matches this dir's layout, so
@@ -100,6 +108,17 @@ func InspectShardDir(dir string) (ShardDirInfo, error) {
 			info.GraphNodes = g.NumNodes()
 			info.GraphEdges = g.NumEdges()
 			_ = g.Close()
+		}
+		if _, err := os.Stat(ClusterPath(dir)); err == nil {
+			info.ClusterExists = true
+			if sidecar, err := cluster.Load(ClusterPath(dir), info.GraphGeneration); err != nil {
+				info.ClusterOpenErr = err.Error()
+			} else {
+				info.ClusterStatus = sidecar.Status
+				info.ClusterEligibleNodes = sidecar.EligibleNodes
+				info.ClusterEligibleEdges = sidecar.EligibleEdges
+				info.ClusterCap = sidecar.Cap
+			}
 		}
 		for _, p := range paths {
 			if sfi, err := os.Stat(p); err == nil && sfi.ModTime().After(graphInfo.ModTime()) {

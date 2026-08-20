@@ -343,8 +343,7 @@ func TestTokenBudgetTruncates(t *testing.T) {
 	}
 }
 
-// First block is always admitted even if it alone exceeds the budget.
-func TestFirstBlockAdmittedOverBudget(t *testing.T) {
+func TestFirstBlockClippedToBudget(t *testing.T) {
 	body := strings.Repeat("y", 1000) + "\n" // ~250 tokens, far over budget
 	ix, id := indexOne(t, "r", "big.txt", "/abs/big.txt", body)
 	res := []rank.RankedResult{{
@@ -355,10 +354,108 @@ func TestFirstBlockAdmittedOverBudget(t *testing.T) {
 	}}
 	win := Assemble(ix, res, Options{TokenBudget: 5, ContextLines: 0})
 	if len(win.Blocks) != 1 {
-		t.Fatalf("first block should be admitted even over budget, got %d blocks", len(win.Blocks))
+		t.Fatalf("first block should be clipped rather than omitted, got %d blocks", len(win.Blocks))
 	}
 	if win.Truncated {
 		t.Errorf("only block emitted -> nothing dropped -> Truncated should be false")
+	}
+	if !win.Clipped || !win.Blocks[0].Clipped {
+		t.Fatalf("oversized first block should report clipping: %+v", win)
+	}
+	if win.TokenEstimate > 5 {
+		t.Fatalf("TokenEstimate = %d, exceeds budget 5", win.TokenEstimate)
+	}
+	if win.Blocks[0].Text == "" {
+		t.Fatal("clipped first block must remain non-empty")
+	}
+}
+
+func TestLargeEnclosingSymbolFallsBackBeforeClipping(t *testing.T) {
+	var src strings.Builder
+	for i := 1; i <= 400; i++ {
+		if i == 200 {
+			src.WriteString("salient_call()\n")
+		} else {
+			src.WriteString("short line\n")
+		}
+	}
+	ix, id := indexOne(t, "r", "large.go", "/abs/large.go", src.String())
+	res := []rank.RankedResult{{
+		Blob: id, Files: []index.FileRef{ref("r", "large.go", "/abs/large.go")}, Score: 1,
+		LineSpans: []rank.LineSpan{span(200, 200)},
+	}}
+	win := Assemble(ix, res, Options{
+		TokenBudget: 20, ContextLines: 1,
+		EnclosingBytes: func(uint64, int) (int, int, bool) { return 0, len(src.String()), true },
+	})
+	if len(win.Blocks) != 1 {
+		t.Fatalf("blocks = %d, want 1", len(win.Blocks))
+	}
+	if win.Blocks[0].Clipped {
+		t.Fatalf("400-line symbol should fall back to the small heuristic window before clipping: %+v", win.Blocks[0])
+	}
+	if !strings.Contains(win.Blocks[0].Text, "salient_call()") {
+		t.Fatalf("fallback lost salient line: %q", win.Blocks[0].Text)
+	}
+	if win.TokenEstimate > 20 {
+		t.Fatalf("TokenEstimate = %d, exceeds budget 20", win.TokenEstimate)
+	}
+}
+
+func TestClippingCentersOnHighestRankedMergedSalientLine(t *testing.T) {
+	src := "low\n" + strings.Repeat("middle line\n", 20) + "HIGH-SALIENT\n"
+	ix, id := indexOne(t, "r", "merged.txt", "/abs/merged.txt", src)
+	files := []index.FileRef{ref("r", "merged.txt", "/abs/merged.txt")}
+	res := []rank.RankedResult{
+		{Blob: id, Files: files, Score: 0.1, LineSpans: []rank.LineSpan{span(1, 1)}},
+		{Blob: id, Files: files, Score: 1.0, LineSpans: []rank.LineSpan{span(22, 22)}},
+	}
+	win := Assemble(ix, res, Options{
+		TokenBudget:    4,
+		ContextLines:   50,
+		EnclosingBytes: func(uint64, int) (int, int, bool) { return 0, len(src), true },
+	})
+	if len(win.Blocks) != 1 || !win.Blocks[0].Clipped {
+		t.Fatalf("expected one clipped merged block: %+v", win)
+	}
+	if !strings.Contains(win.Blocks[0].Text, "HIGH-SALIENT") {
+		t.Fatalf("clipping was not anchored on highest-ranked salient line: %q", win.Blocks[0].Text)
+	}
+}
+
+func TestOneLineUTF8OverflowClipsAtRuneBoundary(t *testing.T) {
+	body := strings.Repeat("🙂", 20) + "\n"
+	ix, id := indexOne(t, "r", "utf8.txt", "/abs/utf8.txt", body)
+	win := Assemble(ix, []rank.RankedResult{{
+		Blob: id, Files: []index.FileRef{ref("r", "utf8.txt", "/abs/utf8.txt")}, Score: 1,
+		LineSpans: []rank.LineSpan{span(1, 1)},
+	}}, Options{TokenBudget: 3, ContextLines: 1})
+	if len(win.Blocks) != 1 || win.Blocks[0].Text == "" {
+		t.Fatalf("expected one non-empty block: %+v", win)
+	}
+	if strings.ToValidUTF8(win.Blocks[0].Text, "") != win.Blocks[0].Text {
+		t.Fatalf("clipped text is not valid UTF-8: %q", win.Blocks[0].Text)
+	}
+	if win.TokenEstimate > 3 {
+		t.Fatalf("TokenEstimate = %d, exceeds budget 3", win.TokenEstimate)
+	}
+}
+
+func TestClippingAndTruncationAreIndependent(t *testing.T) {
+	large := strings.Repeat("first block ", 100) + "\n"
+	small := "second block\n"
+	ix := index.New()
+	ix.AddFile("r", "large.txt", "/abs/large.txt", sha(large), []byte(large))
+	ix.AddFile("r", "small.txt", "/abs/small.txt", sha(small), []byte(small))
+	win := Assemble(ix, []rank.RankedResult{
+		{Blob: 0, Files: []index.FileRef{ref("r", "large.txt", "/abs/large.txt")}, Score: 1, LineSpans: []rank.LineSpan{span(1, 1)}},
+		{Blob: 1, Files: []index.FileRef{ref("r", "small.txt", "/abs/small.txt")}, Score: .5, LineSpans: []rank.LineSpan{span(1, 1)}},
+	}, Options{TokenBudget: 5, ContextLines: 1})
+	if !win.Clipped || !win.Truncated {
+		t.Fatalf("window should report both clipping and omitted candidates: %+v", win)
+	}
+	if win.TokenEstimate > 5 {
+		t.Fatalf("TokenEstimate = %d, exceeds budget 5", win.TokenEstimate)
 	}
 }
 

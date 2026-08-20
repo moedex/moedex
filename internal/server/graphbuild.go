@@ -19,11 +19,13 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"moedex/internal/diskstore"
 	"moedex/internal/embed"
 	"moedex/internal/graph/candidates"
+	"moedex/internal/graph/cluster"
 	"moedex/internal/graph/diskgraph"
 	"moedex/internal/graph/httproute"
 	"moedex/internal/graph/manifest"
@@ -101,6 +103,18 @@ type GraphBuildReport struct {
 	Injection InjectionReport
 	Queries   QueriesReport
 	Renders   RenderReport
+	Cluster   cluster.BuildReport
+	Counts    GraphBuildCounts
+}
+
+// GraphBuildCounts makes graph construction auditable by source shape,
+// confidence, relationship, and enclosing-symbol resolution.
+type GraphBuildCounts struct {
+	SourceClassification    map[string]int `json:"source_classification"`
+	Confidence              map[string]int `json:"confidence"`
+	EdgeType                map[string]int `json:"edge_type"`
+	Enclosing               map[string]int `json:"enclosing"`
+	SuppressedRawCandidates int            `json:"suppressed_raw_candidates"`
 }
 
 // BuildGraph generates, verifies, and persists the graph for every exported
@@ -155,6 +169,12 @@ func BuildGraphWithOptions(dir string, opts GraphBuildOptions) (path string, rep
 	}
 
 	path, err = saveGraph(builder, dir)
+	if err == nil {
+		report.Cluster, err = buildClusterSidecar(dir)
+	}
+	if err == nil {
+		report.Counts, err = measureGraphBuildCounts(dir, int(sweep.suppressedRawCandidates.Load()))
+	}
 	return path, report, err
 }
 
@@ -177,22 +197,10 @@ func (s *graphSweep) buildAllEdges(builder *diskgraph.Builder, emit *graphEmitte
 	}
 
 	crossRelevant := make(map[string]bool)
+	if err := s.addDefinitionNodes(builder); err != nil {
+		return report, err
+	}
 	for i, name := range s.names {
-		for _, definition := range s.merged.Definitions(name) {
-			if definition.Shard < 0 || definition.Shard >= len(s.idxs) {
-				return report, fmt.Errorf("server: graph definition %q references unknown shard %d", name, definition.Shard)
-			}
-			blob := s.idxs[definition.Shard].Blob(definition.Blob)
-			if blob == nil {
-				return report, fmt.Errorf("server: graph definition %q references an unknown blob", name)
-			}
-			if definition.Start < 0 {
-				return report, fmt.Errorf("server: graph definition %q has a negative byte offset", name)
-			}
-			if err := builder.AddNode(diskgraph.Key{BlobSHA: blob.SHA, SymbolOffset: uint64(definition.Start)}); err != nil {
-				return report, err
-			}
-		}
 		for j := range edgeResults[i] {
 			if err := emit.Add(edgeResults[i][j].Key, edgeResults[i][j].Edge); err != nil {
 				return report, err
@@ -220,6 +228,27 @@ func (s *graphSweep) buildAllEdges(builder *diskgraph.Builder, emit *graphEmitte
 	report.Nodes = builder.NumNodes()
 	report.Edges = builder.NumEdges()
 	return report, nil
+}
+
+func (s *graphSweep) addDefinitionNodes(builder *diskgraph.Builder) error {
+	for _, name := range s.names {
+		for _, definition := range s.merged.Definitions(name) {
+			if definition.Shard < 0 || definition.Shard >= len(s.idxs) {
+				return fmt.Errorf("server: graph definition %q references unknown shard %d", name, definition.Shard)
+			}
+			blob := s.idxs[definition.Shard].Blob(definition.Blob)
+			if blob == nil {
+				return fmt.Errorf("server: graph definition %q references an unknown blob", name)
+			}
+			if definition.Start < 0 {
+				return fmt.Errorf("server: graph definition %q has a negative byte offset", name)
+			}
+			if err := builder.AddNode(diskgraph.Key{BlobSHA: blob.SHA, SymbolOffset: uint64(definition.Start)}); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // addWholeCorpusEdges runs every graph pass that scans the whole shard set
@@ -297,6 +326,8 @@ type graphSweep struct {
 
 	closers []io.Closer
 	content io.Closer
+
+	suppressedRawCandidates atomic.Int64
 }
 
 // openGraphSweep loads dir's shard set and derives everything a graph pass needs
@@ -441,6 +472,41 @@ func saveGraph(builder *diskgraph.Builder, dir string) (string, error) {
 	return path, nil
 }
 
+func measureGraphBuildCounts(dir string, suppressed int) (counts GraphBuildCounts, err error) {
+	counts = GraphBuildCounts{
+		SourceClassification: make(map[string]int), Confidence: make(map[string]int),
+		EdgeType: make(map[string]int), Enclosing: make(map[string]int),
+		SuppressedRawCandidates: suppressed,
+	}
+	snapshot, err := openGraphSnapshotWithClusters(dir, false)
+	if err != nil {
+		return counts, err
+	}
+	defer func() {
+		if closeErr := snapshot.close(); err == nil {
+			err = closeErr
+		}
+	}()
+	snapshot.graph.EachEdge(func(source diskgraph.Key, edge diskgraph.Edge) bool {
+		meta := snapshot.nodes[source]
+		classification := "symbol"
+		enclosing := "resolved"
+		if meta.Symbol == "" {
+			classification = strings.ToLower(meta.Kind)
+			if classification == "" {
+				classification = "unknown"
+			}
+			enclosing = "unresolved"
+		}
+		counts.SourceClassification[classification]++
+		counts.Confidence[edge.Confidence.String()]++
+		counts.EdgeType[edge.Type.String()]++
+		counts.Enclosing[enclosing]++
+		return true
+	})
+	return counts, nil
+}
+
 // graphKeyEdge is a resolved key/edge pair ready for the emitter.
 type graphKeyEdge struct {
 	Key  diskgraph.Key
@@ -464,11 +530,17 @@ func (s *graphSweep) computeEdgesForName(name string, generation uint64) ([]grap
 		}
 
 		sourceOffset := uint64(sc.Source.Start)
+		resolvedEnclosing := false
 		if enclosing, ok := s.merged.Enclosing(sc.Source.Shard, sc.Source.Blob, sc.Source.Start); ok {
 			if enclosing.NameStart < 0 {
 				return nil, fmt.Errorf("server: enclosing symbol %q has a negative byte offset", enclosing.Name)
 			}
 			sourceOffset = uint64(enclosing.NameStart)
+			resolvedEnclosing = true
+		}
+		if sc.Confidence == graphverify.Candidate && !resolvedEnclosing {
+			s.suppressedRawCandidates.Add(1)
+			continue
 		}
 		out = append(out, graphKeyEdge{
 			Key: diskgraph.Key{BlobSHA: sourceBlob.SHA, SymbolOffset: sourceOffset},

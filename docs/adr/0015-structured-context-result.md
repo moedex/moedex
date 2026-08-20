@@ -43,18 +43,22 @@ contract byte-for-byte.
 
   ```json
   {
-    "summary": { "blocks": 3, "token_estimate": 740, "truncated": false },
+    "summary": { "blocks": 3, "token_estimate": 740, "truncated": false, "clipped": false },
     "blocks": [
       {
         "blob": 12407715319,
         "repo": "...", "rel_path": "internal/auth/refresh.go", "abs_path": "...",
         "start_line": 88, "end_line": 121,
-        "score": 0.0312, "lexical": 7.41, "dense": 0.83,
+        "score": 0.0312, "lexical": 7.41, "dense": 0.83, "clipped": false,
         "text": "func (s *Session) Refresh(...) ..."
       }
     ]
   }
   ```
+
+  `clipped` means returned source was narrowed around its salient line to honor
+  the hard token budget. `truncated` remains reserved for omitted lower-ranked
+  candidates; both can be true independently.
 
 - To make `lexical`/`dense`/`blob` available at serialization, thread them onto
   the assembled block. `contextwin.Assemble` already copies `Score` from the

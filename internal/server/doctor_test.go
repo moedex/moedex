@@ -154,6 +154,9 @@ func TestInspectShardDir_Graph(t *testing.T) {
 	if info.GraphNodes == 0 || info.GraphEdges == 0 {
 		t.Errorf("GraphNodes=%d GraphEdges=%d, want both > 0 (Foo calls Bar)", info.GraphNodes, info.GraphEdges)
 	}
+	if !info.ClusterExists || info.ClusterOpenErr != "" || info.ClusterStatus == "" {
+		t.Errorf("cluster sidecar info = exists=%v err=%q status=%q", info.ClusterExists, info.ClusterOpenErr, info.ClusterStatus)
+	}
 
 	// Simulate the silent failure F-07 describes: the shard set is rebuilt
 	// (newer mtime) but the graph rebuild fails, so the graph on disk is the

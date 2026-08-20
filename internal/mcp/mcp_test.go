@@ -136,10 +136,11 @@ func TestToolsCallStructuredFormat(t *testing.T) {
 	fs := &fakeSearcher{win: contextwin.ContextWindow{
 		Blocks: []contextwin.ContextBlock{
 			{Blob: 42, Repo: "r", RelPath: "a.go", AbsPath: "/abs/a.go", StartLine: 3, EndLine: 5,
-				Text: "func A() {}\n", Score: 1.5, Lexical: 7.4, Dense: 0.8},
+				Text: "func A() {}\n", Score: 1.5, Lexical: 7.4, Dense: 0.8, Clipped: true},
 		},
 		TokenEstimate: 4,
 		Truncated:     true,
+		Clipped:       true,
 	}}
 	s := NewServer(fs)
 	resps := drive(t, s, map[string]interface{}{
@@ -157,16 +158,20 @@ func TestToolsCallStructuredFormat(t *testing.T) {
 	}
 	// Text fallback (content) must still be present for clients that ignore structuredContent.
 	content := res["content"].([]interface{})
-	if _, ok := content[0].(map[string]interface{})["text"].(string); !ok {
+	fallback, ok := content[0].(map[string]interface{})["text"].(string)
+	if !ok {
 		t.Error("structured result missing text fallback in content")
+	}
+	if !strings.Contains(fallback, "source clipped") || !strings.Contains(fallback, "lower-ranked context omitted") {
+		t.Errorf("combined clipping/truncation labels missing from %q", fallback)
 	}
 	sc, ok := res["structuredContent"].(map[string]interface{})
 	if !ok {
 		t.Fatalf("missing structuredContent, got %T", res["structuredContent"])
 	}
 	summary := sc["summary"].(map[string]interface{})
-	if summary["blocks"].(float64) != 1 || summary["truncated"].(bool) != true {
-		t.Errorf("summary = %+v, want blocks=1 truncated=true", summary)
+	if summary["blocks"].(float64) != 1 || summary["truncated"].(bool) != true || summary["clipped"].(bool) != true {
+		t.Errorf("summary = %+v, want blocks=1 truncated=true clipped=true", summary)
 	}
 	blocks := sc["blocks"].([]interface{})
 	if len(blocks) != 1 {
@@ -182,6 +187,9 @@ func TestToolsCallStructuredFormat(t *testing.T) {
 	}
 	if blk["rel_path"].(string) != "a.go" || blk["start_line"].(float64) != 3 || blk["end_line"].(float64) != 5 {
 		t.Errorf("block location = %+v, want a.go:3-5", blk)
+	}
+	if clipped, ok := blk["clipped"].(bool); !ok || !clipped {
+		t.Errorf("structured block clipped = %v, want true", blk["clipped"])
 	}
 }
 

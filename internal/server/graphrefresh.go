@@ -38,7 +38,9 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"moedex/internal/graph"
 	"moedex/internal/graph/candidates"
+	"moedex/internal/graph/cluster"
 	"moedex/internal/graph/diskgraph"
 )
 
@@ -62,6 +64,8 @@ type GraphRefreshStats struct {
 	EdgesRecomputed int
 	EdgesCarried    int
 	EdgesDropped    int
+	Cluster         cluster.BuildReport
+	Counts          GraphBuildCounts
 }
 
 // RefreshGraph rebuilds dir's graph incrementally against the graph already
@@ -101,12 +105,20 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 
 	added, removed := sweep.contentDelta(previous)
 	stats.BlobsAdded, stats.BlobsRemoved = len(added), len(removed)
-	if len(added) == 0 && len(removed) == 0 {
+	legacyRawCandidates := sweep.hasRawCandidateSources(previous)
+	if len(added) == 0 && len(removed) == 0 && !legacyRawCandidates {
 		stats.Unchanged = true
 		stats.Generation = previous.Generation()
 		stats.NamesCarried = len(sweep.names)
 		stats.EdgesCarried = previous.NumEdges()
-		return GraphPath(dir), stats, nil
+		stats.Cluster, err = ensureClusterSidecar(dir, previous.Generation())
+		if err == nil {
+			stats.Counts, err = measureGraphBuildCounts(dir, 0)
+		}
+		return GraphPath(dir), stats, err
+	}
+	if legacyRawCandidates {
+		stats.Reason = "legacy raw Candidate edges require cleanup"
 	}
 
 	dirty := sweep.dirtyNames(previous, added, removed)
@@ -130,6 +142,15 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 				}
 				if _, ok := sweep.eligible[name]; !ok {
 					stats.EdgesDropped++
+					continue
+				}
+				edge, ok := previous.EdgeAt(i)
+				if !ok {
+					continue
+				}
+				if edge.Confidence == graph.Candidate && !sweep.sourceResolvesToSymbol(key) {
+					stats.EdgesDropped++
+					sweep.suppressedRawCandidates.Add(1)
 					continue
 				}
 				carried[name] = append(carried[name], carriedGraphEdge{node: uint32(node), edge: uint32(i)})
@@ -184,6 +205,9 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 	builder := diskgraph.NewBuilder()
 	builder.SetGeneration(stats.Generation)
 	sweep.recordCorpusRoster(builder)
+	if err := sweep.addDefinitionNodes(builder); err != nil {
+		return "", stats, err
+	}
 	emit := newGraphEmitter(builder)
 	for _, name := range sweep.names {
 		if edges, stale := recomputedByName[name]; stale {
@@ -243,7 +267,46 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 	stats.EdgesRecomputed += int(builder.NumEdges() - before)
 
 	path, err = saveGraph(builder, dir)
+	if err == nil {
+		stats.Cluster, err = buildClusterSidecar(dir)
+	}
+	if err == nil {
+		stats.Counts, err = measureGraphBuildCounts(dir, int(sweep.suppressedRawCandidates.Load()))
+	}
 	return path, stats, err
+}
+
+func (s *graphSweep) sourceResolvesToSymbol(key diskgraph.Key) bool {
+	if key.SymbolOffset > uint64(^uint(0)>>1) {
+		return false
+	}
+	for _, site := range s.sites[key.BlobSHA] {
+		if _, ok := s.merged.Enclosing(site.shard, site.blob, int(key.SymbolOffset)); ok {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *graphSweep) hasRawCandidateSources(previous *diskgraph.Graph) bool {
+	resolved := make(map[diskgraph.Key]bool)
+	checked := make(map[diskgraph.Key]bool)
+	found := false
+	previous.EachEdge(func(source diskgraph.Key, edge diskgraph.Edge) bool {
+		if edge.Confidence != graph.Candidate {
+			return true
+		}
+		if !checked[source] {
+			resolved[source] = s.sourceResolvesToSymbol(source)
+			checked[source] = true
+		}
+		if !resolved[source] {
+			found = true
+			return false
+		}
+		return true
+	})
+	return found
 }
 
 type carriedGraphEdge struct {
@@ -298,7 +361,14 @@ func (s *graphSweep) rebuildAll(dir string, stats *GraphRefreshStats) (string, e
 	stats.NamesRecomputed = len(s.names)
 	stats.EdgesRecomputed = int(builder.NumEdges())
 	stats.BlobsAdded = len(s.identity)
-	return saveGraph(builder, dir)
+	path, err := saveGraph(builder, dir)
+	if err == nil {
+		stats.Cluster, err = buildClusterSidecar(dir)
+	}
+	if err == nil {
+		stats.Counts, err = measureGraphBuildCounts(dir, int(s.suppressedRawCandidates.Load()))
+	}
+	return path, err
 }
 
 // computeEdgesParallel fans out computeEdgesForName across GOMAXPROCS workers.

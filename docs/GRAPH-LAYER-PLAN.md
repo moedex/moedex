@@ -174,6 +174,19 @@ evidence blob SHA and stores its 64-bit byte offset and length; graph MCP result
 render confidence as `{tier, score}` and evidence as
 `{blob_sha, byte_offset, byte_length}`.
 
+### Graph-quality gate
+
+`make health` includes a checked-in multi-language graph corpus whose gold records
+invoke production MCP handlers, score their emitted node and edge order (Recall,
+Precision, MRR, NDCG, and UDCG), group edge precision by confidence tier, and run a
+paired `search_context` budget case for every record. `make graph-eval` runs that
+hermetic tier directly. The self-hosted tier uses `make graph-eval-private` with
+`MOEDEX_GRAPH_EVAL_SHARDS` and a reviewed, mounted `MOEDEX_GRAPH_GOLD` file containing
+at least 30 queries, explicit coverage tags for the required graph scenarios,
+reviewed hard-distractor labels, and mechanically derived floors. Candidate precision and UDCG
+remain logged watches; Pattern/Verified/Proven precision and aggregate
+Recall/MRR/NDCG are hard gates.
+
 ### Service clustering — **delivered (phase 7)**
 
 [`internal/graph/cluster`](../internal/graph/cluster) applies deterministic
@@ -183,10 +196,17 @@ cosine metric for `SIMILAR_TO`) supply edge weight, and definitions with no usab
 communities. Stable cluster ordering and dominant repository/namespace labels
 make repeated responses reproducible.
 
-`moedex-serve` exposes the result as `list_clusters` on both stdio and HTTP MCP
-surfaces. It returns `[{cluster_id, label, member_count, members}]`, including
-symbol and source metadata for each member, and caches the computation per
-hot-reloadable graph generation.
+Graph build/refresh precomputes a versioned, generation-bound
+`corpus-graph.clusters.json` sidecar from Verified/Proven `calls`, `http_calls`,
+`imports`, and manifest `depends_on` edges only. Unrelated singleton nodes are not
+materialized. The default eligible-node cap is 250,000
+(`MOEDEX_GRAPH_CLUSTER_MAX_NODES`); an over-cap build persists counts and status but
+never partial communities.
+
+`moedex-serve` exposes paginated sidecar reads as `list_clusters` on both stdio and
+HTTP MCP surfaces. `{offset?,limit?}` returns summaries without members;
+`{cluster_id,offset?,limit?}` returns one cluster's member page (default 50, maximum
+200). Missing, stale, and over-cap sidecars return explicit unavailable results.
 
 ## Bridge architecture: trigram-accelerated graph construction
 
@@ -283,6 +303,9 @@ handles — the endgame of having search and graph in the same engine.
 - **`graph_depth`** (default 1, `0` disables, max 10) is the per-call control. It is a
   *pointer* in the argument struct, so an omitted argument and an explicit `0` are
   distinguishable rather than colliding on Go's zero value.
+- **`min_confidence`** defaults to Pattern and is applied before traversal on
+  `search_context` and every standalone graph traversal. Candidate edges remain
+  available only when explicitly requested and cannot bridge a default traversal.
 - **The join is positional.** A context block knows a path and a 1-based line range;
   the node catalog knows where every graph node lives. A path→nodes index built once
   per graph generation resolves one to the other, trying the absolute path first, then
@@ -297,8 +320,9 @@ handles — the endgame of having search and graph in the same engine.
   lands.
 - **Stated scope, not silent scope.** Incoming reference/import edges are deliberately
   not annotated — the highest-volume edge class in the graph, and `impact_analysis`
-  already owns that question. Buckets are capped with a `truncated` flag rather than
-  quietly trimmed. A block whose symbols have no edges gets a **present, empty**
+  already owns that question. Buckets retain true pre-cap `bucket_totals`; the
+  compatibility `truncated` flag is derived from those totals and text reports
+  `+N more (of M total)`. A block whose symbols have no edges gets a **present, empty**
   annotation, so "graph off" and "nothing found" never look alike.
 - **One sweep per hop, not one per block.** The sidecar stores forward adjacency only,
   so reverse lanes have to scan. `diskgraph.EachEdge` (new) makes that scan a linear,

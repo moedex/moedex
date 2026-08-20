@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -11,6 +12,10 @@ import (
 	"testing"
 
 	"moedex/internal/contextwin"
+	"moedex/internal/diskstore"
+	"moedex/internal/graph"
+	"moedex/internal/graph/diskgraph"
+	"moedex/internal/index"
 	"moedex/internal/mcp"
 )
 
@@ -33,6 +38,14 @@ func neighborSymbols(list []mcp.Neighbor) []string {
 		out = append(out, n.Symbol)
 	}
 	return out
+}
+
+func TestDependencyBucketIncludesManifestDependsOnAndCandidateEvidence(t *testing.T) {
+	for _, edgeType := range []diskgraph.EdgeType{diskgraph.EdgeDependsOn, diskgraph.EdgeCandidate} {
+		if !isDependencyEdge(edgeType) {
+			t.Errorf("%s is not classified as a dependency edge", edgeType)
+		}
+	}
 }
 
 func TestNeighborsAnnotateCallersAndCalleesOfASearchHit(t *testing.T) {
@@ -68,6 +81,25 @@ func TestNeighborsAnnotateCallersAndCalleesOfASearchHit(t *testing.T) {
 	}
 	if callee := got[0].Callees[0]; callee.Direction != mcp.DirectionOut || callee.Edge != "calls" {
 		t.Errorf("callee relationship = %+v, want an outgoing calls edge", callee)
+	}
+}
+
+func TestCandidateDependencyRequiresExplicitCandidateFloor(t *testing.T) {
+	fixture := newGraphFixture(t)
+	blocks := []contextwin.ContextBlock{blockFor(fixture.dir, "root.go", 2)}
+	defaults, err := fixture.tools.Neighbors(context.Background(), blocks, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := neighborSymbols(defaults[0].DependsOn); len(got) != 0 {
+		t.Fatalf("default Pattern floor exposed Candidate dependency: %v", got)
+	}
+	explicit, err := fixture.tools.NeighborsWithConfidence(context.Background(), blocks, 1, graph.Candidate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := neighborSymbols(explicit[0].DependsOn), []string{"Orphan"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("explicit Candidate dependencies = %v, want %v", got, want)
 	}
 }
 
@@ -135,6 +167,51 @@ func TestNeighborsForASymbolWithNoEdgesIsPresentAndEmpty(t *testing.T) {
 	for _, bucket := range []string{"callers", "callees", "consumers", "publishers", "depends_on", "similar_to"} {
 		if !strings.Contains(string(raw), `"`+bucket+`":[]`) {
 			t.Errorf("empty %s did not serialize as []: %s", bucket, raw)
+		}
+	}
+}
+
+func TestNeighborBucketTotalsAreCapturedBeforeStorageCap(t *testing.T) {
+	dir := t.TempDir()
+	ix := index.New()
+	targetContent := []byte("package fixture\nfunc Target() {}\n")
+	ix.AddFile("fixture", "target.go", filepath.Join(dir, "target.go"), "target-sha", targetContent)
+	target := diskgraph.Key{BlobSHA: "target-sha", SymbolOffset: uint64(strings.Index(string(targetContent), "Target"))}
+	builder := diskgraph.NewBuilder()
+	for i := 0; i < mcp.MaxNeighborsPerBucket+5; i++ {
+		name := fmt.Sprintf("Caller%02d", i)
+		content := []byte("package fixture\nfunc " + name + "() { Target() }\n")
+		sha := fmt.Sprintf("caller-%02d-sha", i)
+		rel := fmt.Sprintf("callers/caller-%02d.go", i)
+		ix.AddFile("fixture", rel, filepath.Join(dir, rel), sha, content)
+		source := diskgraph.Key{BlobSHA: sha, SymbolOffset: uint64(strings.Index(string(content), name))}
+		if err := builder.AddEdge(source, diskgraph.Edge{Type: diskgraph.EdgeCalls,
+			TargetBlob: target.BlobSHA, TargetOffset: target.SymbolOffset, Confidence: graph.Pattern,
+			Evidence: graph.Evidence{BlobSHA: sha, ByteOffset: source.SymbolOffset, ByteLength: 1}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := diskstore.Save(ix, filepath.Join(dir, "shard-0000.idx")); err != nil {
+		t.Fatal(err)
+	}
+	if err := builder.Save(GraphPath(dir)); err != nil {
+		t.Fatal(err)
+	}
+	tools, err := OpenGraphTools(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tools.Close()
+	got, err := tools.Neighbors(context.Background(), []contextwin.ContextBlock{blockFor(dir, "target.go", 2)}, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got[0].Callers) != mcp.MaxNeighborsPerBucket || got[0].BucketTotals["callers"] != mcp.MaxNeighborsPerBucket+5 || !got[0].Truncated {
+		t.Fatalf("capped callers = %d, totals=%v truncated=%v", len(got[0].Callers), got[0].BucketTotals, got[0].Truncated)
+	}
+	for _, bucket := range []string{"callers", "callees", "consumers", "publishers", "depends_on", "similar_to"} {
+		if _, ok := got[0].BucketTotals[bucket]; !ok {
+			t.Errorf("bucket_totals missing %q: %v", bucket, got[0].BucketTotals)
 		}
 	}
 }
@@ -285,6 +362,13 @@ func TestSearchContextResponseCarriesGraphNeighbors(t *testing.T) {
 		if !strings.Contains(annotated, want) {
 			t.Errorf("search_context response missing %s: %s", want, annotated)
 		}
+	}
+	if strings.Contains(annotated, `"symbol":"Orphan"`) {
+		t.Errorf("default Pattern floor exposed Candidate neighbor: %s", annotated)
+	}
+	candidate := call(`{"query":"Root","format":"structured","graph_depth":3,"min_confidence":"Candidate"}`)
+	if !strings.Contains(candidate, `"symbol":"Orphan"`) {
+		t.Errorf("explicit Candidate floor did not expose Candidate neighbor: %s", candidate)
 	}
 
 	off := call(`{"query":"Root","format":"structured","graph_depth":0}`)

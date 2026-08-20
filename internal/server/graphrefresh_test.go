@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"moedex/internal/diskstore"
+	"moedex/internal/graph"
 	"moedex/internal/graph/diskgraph"
 	"moedex/internal/index"
 )
@@ -128,6 +129,16 @@ func readGraph(t *testing.T, path string) []graphRecord {
 	return out
 }
 
+func readGraphKeys(t *testing.T, path string) []diskgraph.Key {
+	t.Helper()
+	g, err := diskgraph.Open(path)
+	if err != nil {
+		t.Fatalf("open %s: %v", path, err)
+	}
+	defer g.Close()
+	return append([]diskgraph.Key(nil), g.Keys()...)
+}
+
 // withoutGenerations strips the staleness stamps so two graphs can be compared
 // on their adjacency alone — the property an incremental refresh must preserve.
 func withoutGenerations(records []graphRecord) []graphRecord {
@@ -205,6 +216,9 @@ func TestRefreshGraphEqualsFullRebuild(t *testing.T) {
 	requireSameGraph(t, "incremental vs full rebuild",
 		withoutGenerations(readGraph(t, deltaPath)),
 		withoutGenerations(readGraph(t, fullPath)))
+	if got, want := readGraphKeys(t, deltaPath), readGraphKeys(t, fullPath); !reflect.DeepEqual(got, want) {
+		t.Fatalf("incremental node keys differ from full rebuild:\n got  %#v\n want %#v", got, want)
+	}
 }
 
 // TestRefreshGraphRecomputesOnlyChangedBlobNames is the phase's headline
@@ -540,6 +554,46 @@ func TestRefreshGraphUnchangedCorpusRewritesNothing(t *testing.T) {
 		t.Fatal("graph was rewritten despite identical corpus content")
 	}
 	requireSameGraph(t, "untouched graph", readGraph(t, path), beforeRecords)
+}
+
+func TestRefreshGraphUnchangedCorpusRemovesLegacyRawCandidates(t *testing.T) {
+	dir := t.TempDir()
+	sourceContent := []byte("package source\n\n// Target is mentioned outside a named symbol.\n")
+	targetContent := []byte("package target\n\nfunc Target() {}\n")
+	files := []graphFile{
+		{repo: "source", path: "source.go", content: string(sourceContent)},
+		{repo: "target", path: "target.go", content: string(targetContent)},
+	}
+	writeGraphShards(t, dir, files, 2)
+
+	sourceSHA := diskstore.GitBlobSHA1(sourceContent)
+	targetSHA := diskstore.GitBlobSHA1(targetContent)
+	sourceOffset := uint64(strings.Index(string(sourceContent), "Target"))
+	targetOffset := uint64(strings.Index(string(targetContent), "Target"))
+	builder := diskgraph.NewBuilder()
+	builder.AddCorpusEntry(sourceSHA + "\x00.go")
+	builder.AddCorpusEntry(targetSHA + "\x00.go")
+	if err := builder.AddEdge(diskgraph.Key{BlobSHA: sourceSHA, SymbolOffset: sourceOffset}, diskgraph.Edge{
+		Type: diskgraph.EdgeCalls, TargetBlob: targetSHA, TargetOffset: targetOffset,
+		Confidence: graph.Candidate, Name: "Target", Generation: diskgraph.FirstGeneration,
+		Evidence: graph.Evidence{BlobSHA: sourceSHA, ByteOffset: sourceOffset, ByteLength: uint64(len("Target"))},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := builder.Save(GraphPath(dir)); err != nil {
+		t.Fatal(err)
+	}
+
+	path, stats, err := RefreshGraph(dir)
+	if err != nil {
+		t.Fatalf("refresh legacy graph: %v", err)
+	}
+	if stats.Unchanged || stats.Counts.SuppressedRawCandidates != 1 {
+		t.Fatalf("legacy cleanup stats = %+v, want one suppressed raw Candidate", stats)
+	}
+	if records := readGraph(t, path); len(records) != 0 {
+		t.Fatalf("legacy raw Candidate survived unchanged refresh: %#v", records)
+	}
 }
 
 // TestRefreshGraphFallsBackToFullRebuild covers the two ways a refresh

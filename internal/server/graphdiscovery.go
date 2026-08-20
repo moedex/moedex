@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"moedex/internal/graph"
 	"moedex/internal/graph/diskgraph"
 	"moedex/internal/index"
 	"moedex/internal/mcp"
@@ -77,6 +78,10 @@ func (t *discoveryTool) Descriptor() map[string]interface{} {
 				"type": "integer", "minimum": 1, "maximum": maxGraphDepth,
 				"description": "Maximum traversal depth (default 1).",
 			},
+			"min_confidence": map[string]interface{}{
+				"type": "string", "enum": []string{"Candidate", "Pattern", "Verified", "Proven"},
+				"description": "Minimum edge confidence included before traversal (default Pattern).",
+			},
 		}
 		schema["required"] = []string{"symbol"}
 	case "list_symbols":
@@ -91,8 +96,8 @@ func (t *discoveryTool) Descriptor() map[string]interface{} {
 				"description": "Filter by repository name (exact match).",
 			},
 			"query": map[string]interface{}{
-				"type":      "string",
-				"minLength": 1,
+				"type":        "string",
+				"minLength":   1,
 				"description": "Substring filter on symbol name (case-insensitive).",
 			},
 		}
@@ -177,8 +182,9 @@ func (t *discoveryTool) Call(ctx context.Context, raw json.RawMessage) (map[stri
 
 	case "graph_neighbors":
 		var args struct {
-			Symbol string `json:"symbol"`
-			Hops   *int   `json:"hops"`
+			Symbol        string `json:"symbol"`
+			Hops          *int   `json:"hops"`
+			MinConfidence string `json:"min_confidence"`
 		}
 		if err := decodeGraphArgs(raw, &args); err != nil {
 			return invalidGraphArgs(err), nil
@@ -194,7 +200,11 @@ func (t *discoveryTool) Call(ctx context.Context, raw json.RawMessage) (map[stri
 		if err := validateDepth("hops", hops); err != nil {
 			return invalidGraphArgs(err), nil
 		}
-		result, err := snap.graphNeighbors(ctx, args.Symbol, hops)
+		minConfidence, err := graph.ParseMinConfidence(args.MinConfidence)
+		if err != nil {
+			return invalidGraphArgs(err), nil
+		}
+		result, err := snap.graphNeighbors(ctx, args.Symbol, hops, minConfidence)
 		if err != nil {
 			return nil, err
 		}
@@ -432,9 +442,9 @@ func (s *graphSnapshot) findBlob(repo, path string) (*index.Blob, string, string
 	return nil, "", ""
 }
 
-func (s *graphSnapshot) graphNeighbors(ctx context.Context, symbol string, hops int) (GraphQueryResult, error) {
+func (s *graphSnapshot) graphNeighbors(ctx context.Context, symbol string, hops int, minConfidence graph.ConfidenceTier) (GraphQueryResult, error) {
 	roots := append([]diskgraph.Key(nil), s.bySymbol[symbol]...)
-	return s.traverse(ctx, "graph_neighbors", symbol, roots, hops, true, func(t diskgraph.EdgeType) bool {
+	return s.traverse(ctx, "graph_neighbors", symbol, roots, hops, true, minConfidence, func(t diskgraph.EdgeType) bool {
 		return true
 	})
 }

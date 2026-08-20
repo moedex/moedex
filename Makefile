@@ -26,7 +26,7 @@ BINDIR       ?= $(HOME)/.local/bin
 # and scale (dev, generic name) are intentionally excluded.
 INSTALL_CMDS := moedex moedex-index moedex-corpus moedex-mcp
 
-.PHONY: verify parity setup setup-lsp build vet test roundtrip health clean build-dense test-dense build-simd vet-simd build-lsp test-lsp vet-lsp bench-setops bench-real bench-latency install install-dense install-bins install-finish
+.PHONY: verify parity graph-eval graph-eval-private setup setup-lsp build vet test roundtrip health clean build-dense test-dense build-simd vet-simd build-lsp test-lsp vet-lsp bench-setops bench-real bench-latency install install-dense install-bins install-finish
 
 # Real-index benchmark knobs.
 BENCHOUT  ?= $(CURDIR)/.bench
@@ -40,6 +40,15 @@ verify: health roundtrip parity
 ## health: build + vet + full unit suite (AC-A1/A2/A3).
 health: build vet test
 
+## graph-eval: hermetic production-handler graph quality and context-budget gate.
+graph-eval:
+	go test ./internal/eval -run '^TestHermeticGraphGoldGate$$' -count=1 -v
+
+## graph-eval-private: reviewed >=30-query self-hosted tier. Requires
+## MOEDEX_GRAPH_EVAL_SHARDS and MOEDEX_GRAPH_GOLD.
+graph-eval-private: graph-eval
+	go test ./internal/eval -run '^TestPrivateGraphGoldGate$$' -count=1 -v
+
 build:
 	@echo "=== go build ./... (AC-A1) ==="
 	go build ./...
@@ -50,7 +59,7 @@ vet:
 
 test:
 	@echo "=== go test ./... (AC-A3) ==="
-	go test ./... 2>&1 | tee test.log
+	bash -o pipefail -c 'go test ./... 2>&1 | tee test.log'
 	@if grep -q -- '--- SKIP' test.log; then \
 		echo "WARNING: skipped tests present (env-gated skips are acceptable; see report):"; \
 		grep -- '--- SKIP' test.log || true; \

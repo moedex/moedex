@@ -38,6 +38,23 @@ func TestConfidenceTiers(t *testing.T) {
 	}
 }
 
+func TestParseMinConfidence(t *testing.T) {
+	for input, want := range map[string]ConfidenceTier{
+		"": DefaultMinConfidence, "Candidate": Candidate, "Pattern": Pattern,
+		"Verified": Verified, "Proven": Proven,
+	} {
+		got, err := ParseMinConfidence(input)
+		if err != nil || got != want {
+			t.Errorf("ParseMinConfidence(%q) = %v, %v; want %v, nil", input, got, err, want)
+		}
+	}
+	for _, input := range []string{"candidate", "unknown", " Proven ", "5"} {
+		if _, err := ParseMinConfidence(input); err == nil {
+			t.Errorf("ParseMinConfidence(%q) accepted invalid value", input)
+		}
+	}
+}
+
 func TestEvidenceDereferencesBytesAndSourceLine(t *testing.T) {
 	content := []byte("before\nfunc Caller() { Target() }\nafter\n")
 	evidence := Evidence{BlobSHA: "caller-sha", ByteOffset: 23, ByteLength: 6}

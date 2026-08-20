@@ -90,6 +90,8 @@ func main() {
 		err = runCheck(os.Args[2:])
 	case "refresh":
 		err = runRefresh(os.Args[2:])
+	case "graph":
+		err = runGraph(os.Args[2:])
 	case "cas-build":
 		err = runCASBuild(os.Args[2:])
 	case "cas-refresh":
@@ -124,6 +126,9 @@ Usage:
   moedex-index build   -corpus ROOT -shard-dir DIR [-shard-bytes N] [-force] [-v]
   moedex-index check   -shard-dir DIR [-corpus ROOT]
   moedex-index refresh -shard-dir DIR [-corpus ROOT] [-keep-backup] [-v]
+  moedex-index graph   -shard-dir DIR
+      Rebuild/refresh only corpus-graph.graph and its generation-bound cluster
+      sidecar from existing shards; no source corpus checkout is required.
   moedex-index doctor  [-shard-dir DIR] [-addr HOST:PORT] [-strict]
       Read-only preflight: binary skew/shadows, shard-dir layout + correct refresh
       command, dense sidecar freshness, daemon + launchd health. Non-zero on a
@@ -242,7 +247,94 @@ func printGraphStats(stats server.GraphRefreshStats) {
 			stats.EdgesRecomputed, stats.EdgesCarried, stats.PreviousGeneration, stats.Generation)
 	}
 	if stats.EdgesDropped > 0 {
-		fmt.Fprintf(os.Stderr, "moedex-index: warning: graph refresh dropped %d prior edge(s) whose name left the sweep\n", stats.EdgesDropped)
+		fmt.Fprintf(os.Stderr, "moedex-index: warning: graph refresh dropped %d stale or suppressed prior edge(s)\n", stats.EdgesDropped)
+	}
+	if stats.Counts.SuppressedRawCandidates > 0 {
+		fmt.Printf("  graph quality: suppressed %d raw Candidate occurrence edge(s)\n", stats.Counts.SuppressedRawCandidates)
+	}
+	if stats.Cluster.Status != "" {
+		fmt.Printf("  clusters: status=%s eligible=%d node(s)/%d edge(s), cap=%d, communities=%d, build=%dms\n",
+			stats.Cluster.Status, stats.Cluster.EligibleNodes, stats.Cluster.EligibleEdges,
+			stats.Cluster.Cap, stats.Cluster.Clusters, stats.Cluster.BuildMillis)
+	}
+	if stats.Counts.EdgeType != nil {
+		fmt.Printf("  graph counts: source={%s} confidence={%s} edge={%s} enclosing={%s}\n",
+			formatCountMap(stats.Counts.SourceClassification), formatCountMap(stats.Counts.Confidence),
+			formatCountMap(stats.Counts.EdgeType), formatCountMap(stats.Counts.Enclosing))
+	}
+}
+
+func formatCountMap(counts map[string]int) string {
+	keys := make([]string, 0, len(counts))
+	for key := range counts {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		parts = append(parts, fmt.Sprintf("%s=%d", key, counts[key]))
+	}
+	return strings.Join(parts, ", ")
+}
+
+func runGraph(args []string) error {
+	fs := newFlagSet("graph")
+	shardDir := fs.String("shard-dir", "", "existing shard directory")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *shardDir == "" {
+		return fmt.Errorf("graph requires -shard-dir")
+	}
+	dir, err := filepath.Abs(*shardDir)
+	if err != nil {
+		return err
+	}
+	if _, err := server.InspectShardDir(dir); err != nil {
+		return err
+	}
+	started := time.Now()
+	stopMemory := startPeakMemoryMonitor()
+	_, stats, err := server.RefreshGraph(dir)
+	peakMemory := stopMemory()
+	if err != nil {
+		return err
+	}
+	printGraphStats(stats)
+	fmt.Printf("  graph resources: elapsed=%s peak_go_runtime=%.2f GiB\n",
+		time.Since(started).Round(time.Millisecond), float64(peakMemory)/(1<<30))
+	return nil
+}
+
+func startPeakMemoryMonitor() func() uint64 {
+	done := make(chan struct{})
+	result := make(chan uint64, 1)
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+		var peak uint64
+		measure := func() {
+			var stats runtime.MemStats
+			runtime.ReadMemStats(&stats)
+			if stats.Sys > peak {
+				peak = stats.Sys
+			}
+		}
+		measure()
+		for {
+			select {
+			case <-ticker.C:
+				measure()
+			case <-done:
+				measure()
+				result <- peak
+				return
+			}
+		}
+	}()
+	return func() uint64 {
+		close(done)
+		return <-result
 	}
 }
 

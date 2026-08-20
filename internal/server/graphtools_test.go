@@ -94,6 +94,8 @@ func newGraphFixture(t *testing.T) graphFixture {
 		{caller, diskgraph.EdgeCalls, root, graph.Pattern, evidence("caller-sha", "Root", true)},
 		{consumer, diskgraph.EdgeConsumes, event, graph.Verified, evidence("consumer-sha", "OrderSubmitted", true)},
 		{publisher, diskgraph.EdgePublishes, event, graph.Pattern, evidence("publisher-sha", "OrderSubmitted", true)},
+		{leaf, diskgraph.EdgeCalls, key("orphan-sha", "Orphan"), graph.Candidate, evidence("leaf-sha", "Leaf", false)},
+		{root, diskgraph.EdgeCandidate, key("orphan-sha", "Orphan"), graph.Candidate, evidence("root-sha", "Root", false)},
 	} {
 		if err := b.AddEdge(edge.source, diskgraph.Edge{
 			Type:         edge.typeID,
@@ -162,7 +164,7 @@ func TestTraceCallsReturnsCallersAndCalleesUpToHops(t *testing.T) {
 	tool := graphHandler(t, fixture.tools, "trace_calls")
 	result, _ := callGraphTool(t, tool, `{"symbol":"Root","hops":1}`)
 
-	if got, want := graphNodeSymbols(result.Nodes), []string{"Caller", "Middle", "Root"}; !reflect.DeepEqual(got, want) {
+	if got, want := graphNodeSymbols(result.Nodes), []string{"Root", "Caller", "Middle"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("trace_calls symbols = %v, want %v", got, want)
 	}
 	if got, want := graphEdgeTypes(result.Edges), []string{"calls", "calls"}; !reflect.DeepEqual(got, want) {
@@ -175,8 +177,74 @@ func TestTraceCallsReturnsCallersAndCalleesUpToHops(t *testing.T) {
 	}
 
 	deeper, _ := callGraphTool(t, tool, `{"symbol":"Root","hops":2}`)
-	if got, want := graphNodeSymbols(deeper.Nodes), []string{"Caller", "Leaf", "Middle", "Root"}; !reflect.DeepEqual(got, want) {
+	if got, want := graphNodeSymbols(deeper.Nodes), []string{"Root", "Caller", "Middle", "Leaf"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("trace_calls two-hop symbols = %v, want %v", got, want)
+	}
+	for _, node := range deeper.Nodes {
+		wantHop := map[string]int{"Root": 0, "Caller": 1, "Middle": 1, "Leaf": 2}[node.Symbol]
+		if node.Hops != wantHop {
+			t.Errorf("%s hops = %d, want %d", node.Symbol, node.Hops, wantHop)
+		}
+	}
+}
+
+func TestStandaloneNodeOrderingUsesAnchorProximityBeforeStableIdentity(t *testing.T) {
+	dir := t.TempDir()
+	type sourceFile struct {
+		repo, rel, sha, symbol, content string
+	}
+	files := []sourceFile{
+		{repo: "anchor", rel: "svc/api/root.go", sha: "root-proximity", symbol: "Root", content: "package api\nfunc Root() {}\n"},
+		{repo: "anchor", rel: "svc/api/deep.go", sha: "deep-proximity", symbol: "Zulu", content: "package api\nfunc Zulu() {}\n"},
+		{repo: "anchor", rel: "svc/other.go", sha: "shallow-proximity", symbol: "Mike", content: "package svc\nfunc Mike() {}\n"},
+		{repo: "other", rel: "svc/api/cross.go", sha: "cross-proximity", symbol: "Alpha", content: "package api\nfunc Alpha() {}\n"},
+	}
+	ix := index.New()
+	keys := make(map[string]diskgraph.Key)
+	for _, file := range files {
+		ix.AddFile(file.repo, file.rel, filepath.Join(dir, file.repo, file.rel), file.sha, []byte(file.content))
+		keys[file.symbol] = diskgraph.Key{BlobSHA: file.sha, SymbolOffset: uint64(strings.Index(file.content, file.symbol))}
+	}
+	if err := diskstore.Save(ix, filepath.Join(dir, "shard-0000.idx")); err != nil {
+		t.Fatal(err)
+	}
+	builder := diskgraph.NewBuilder()
+	for _, target := range []string{"Zulu", "Mike", "Alpha"} {
+		if err := builder.AddEdge(keys["Root"], diskgraph.Edge{
+			Type: diskgraph.EdgeCalls, TargetBlob: keys[target].BlobSHA, TargetOffset: keys[target].SymbolOffset,
+			Confidence: graph.Pattern, Evidence: graph.Evidence{BlobSHA: keys["Root"].BlobSHA, ByteOffset: keys["Root"].SymbolOffset, ByteLength: 1},
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := builder.Save(GraphPath(dir)); err != nil {
+		t.Fatal(err)
+	}
+	tools, err := OpenGraphTools(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tools.Close()
+	result, _ := callGraphTool(t, graphHandler(t, tools, "trace_calls"), `{"symbol":"Root","hops":1}`)
+	got := make([]string, 0, len(result.Nodes))
+	for _, node := range result.Nodes {
+		got = append(got, node.Symbol)
+	}
+	if want := []string{"Root", "Zulu", "Mike", "Alpha"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("standalone node order = %v, want %v", got, want)
+	}
+}
+
+func TestGraphConfidenceFloorFiltersBeforeTraversal(t *testing.T) {
+	fixture := newGraphFixture(t)
+	tool := graphHandler(t, fixture.tools, "trace_calls")
+	defaultResult, _ := callGraphTool(t, tool, `{"symbol":"Root","hops":3}`)
+	if strings.Contains(strings.Join(graphNodeSymbols(defaultResult.Nodes), ","), "Orphan") {
+		t.Fatalf("default Pattern floor exposed Candidate path: %+v", defaultResult.Nodes)
+	}
+	explicit, _ := callGraphTool(t, tool, `{"symbol":"Root","hops":3,"min_confidence":"Candidate"}`)
+	if !strings.Contains(strings.Join(graphNodeSymbols(explicit.Nodes), ","), "Orphan") {
+		t.Fatalf("explicit Candidate floor did not restore Candidate edge: %+v", explicit.Nodes)
 	}
 }
 
@@ -184,7 +252,7 @@ func TestTraceConsumersReturnsEveryPublisherAndConsumer(t *testing.T) {
 	fixture := newGraphFixture(t)
 	result, _ := callGraphTool(t, graphHandler(t, fixture.tools, "trace_consumers"), `{"name":"OrderSubmitted"}`)
 
-	if got, want := graphNodeSymbols(result.Nodes), []string{"OrderConsumer", "OrderSubmitted", "Send"}; !reflect.DeepEqual(got, want) {
+	if got, want := graphNodeSymbols(result.Nodes), []string{"OrderSubmitted", "OrderConsumer", "Send"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("trace_consumers symbols = %v, want %v", got, want)
 	}
 	if got, want := graphEdgeTypes(result.Edges), []string{"consumes", "publishes"}; !reflect.DeepEqual(got, want) {
@@ -200,7 +268,7 @@ func TestImpactAnalysisReturnsTransitiveDependentsForFile(t *testing.T) {
 	tool := graphHandler(t, fixture.tools, "impact_analysis")
 	result, _ := callGraphTool(t, tool, `{"file":"leaf.go","depth":3}`)
 
-	if got, want := graphNodeSymbols(result.Nodes), []string{"Caller", "Leaf", "Middle", "Root"}; !reflect.DeepEqual(got, want) {
+	if got, want := graphNodeSymbols(result.Nodes), []string{"Leaf", "Middle", "Root", "Caller"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("impact_analysis symbols = %v, want %v", got, want)
 	}
 	if len(result.Edges) != 3 {
@@ -268,6 +336,14 @@ func TestImpactAnalysisFindsTargetOnlyNodeAsFileRoot(t *testing.T) {
 		t.Fatalf("OpenGraphTools: %v", err)
 	}
 	t.Cleanup(func() { _ = tools.Close() })
+	snapshot := tools.acquire()
+	if snapshot == nil {
+		t.Fatal("graph snapshot unavailable")
+	}
+	if kind := snapshot.nodes[diskgraph.Key{BlobSHA: "handler-sha", SymbolOffset: handlerOffset}].Kind; kind != "Route" {
+		t.Errorf("raw HTTP target kind = %q, want Route", kind)
+	}
+	snapshot.wg.Done()
 
 	tool := graphHandler(t, tools, "impact_analysis")
 	result, _ := callGraphTool(t, tool, `{"file":"handler.js","depth":1}`)
@@ -394,6 +470,7 @@ func TestGraphToolInputValidation(t *testing.T) {
 		{"trace_calls", `{"symbol":"Root","hops":0}`},
 		{"trace_calls", `{"symbol":"Root","hops":11}`},
 		{"trace_calls", `{"symbol":"Root","extra":true}`},
+		{"trace_calls", `{"symbol":"Root","min_confidence":"candidate"}`},
 		{"trace_consumers", `null`},
 		{"trace_consumers", `{"name":" "}`},
 		{"impact_analysis", `{}`},

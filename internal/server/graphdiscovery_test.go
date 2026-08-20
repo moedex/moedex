@@ -22,7 +22,7 @@ func buildDiscoveryFixture(t *testing.T) *GraphToolset {
 
 	type blob struct {
 		repo, file, sha string
-		content          []byte
+		content         []byte
 	}
 	blobs := []blob{
 		{"accounts", "api.go", "sha-a", []byte("package accounts\n\nfunc AccountAPI() {}\n")},
@@ -242,7 +242,7 @@ func TestReadSourceLineRange(t *testing.T) {
 
 func TestGraphNeighborsReturnsMultipleEdgeTypes(t *testing.T) {
 	tools := buildDiscoveryFixture(t)
-	result := callTool(t, tools, "graph_neighbors", `{"symbol":"AccountAPI"}`)
+	result := callTool(t, tools, "graph_neighbors", `{"symbol":"AccountAPI","min_confidence":"Candidate"}`)
 	if result["isError"] == true {
 		t.Fatalf("unexpected error: %v", result)
 	}

@@ -55,6 +55,14 @@ type GraphAnnotator interface {
 	Neighbors(ctx context.Context, blocks []contextwin.ContextBlock, depth int) ([]BlockNeighbors, error)
 }
 
+// ConfidenceGraphAnnotator is the confidence-aware extension implemented by
+// the production graph toolset. Keeping GraphAnnotator intact preserves custom
+// annotators while allowing search_context to enforce min_confidence before
+// traversal whenever the backend supports it.
+type ConfidenceGraphAnnotator interface {
+	NeighborsWithConfidence(ctx context.Context, blocks []contextwin.ContextBlock, depth int, minConfidence graph.ConfidenceTier) ([]BlockNeighbors, error)
+}
+
 // WithGraphAnnotator fuses the graph layer into search_context: every returned
 // block is annotated with its graph neighborhood (see BlockNeighbors) unless the
 // caller passes graph_depth=0. Without this option search_context behaves exactly
@@ -83,6 +91,11 @@ type Neighbor struct {
 	Anchor     string           `json:"anchor,omitempty"`
 	Confidence graph.Confidence `json:"confidence"`
 	Similarity float64          `json:"similarity,omitempty"`
+
+	// Proximity fields are computed relative to the annotated context block and
+	// used only for deterministic ranking. They are not part of the MCP payload.
+	ProximitySameRepo bool `json:"-"`
+	ProximityDepth    int  `json:"-"`
 }
 
 // BlockNeighbors is the graph neighborhood of one context block, bucketed by the
@@ -119,6 +132,9 @@ type BlockNeighbors struct {
 	Publishers []Neighbor `json:"publishers"`
 	DependsOn  []Neighbor `json:"depends_on"`
 	SimilarTo  []Neighbor `json:"similar_to"`
+	// BucketTotals records the number discovered before the per-bucket storage
+	// cap. Every one of the six bucket names is always present.
+	BucketTotals map[string]int `json:"bucket_totals"`
 	// Truncated reports that at least one bucket hit MaxNeighborsPerBucket and
 	// was trimmed, so a short list is never mistaken for a small neighborhood.
 	Truncated bool `json:"truncated,omitempty"`
@@ -135,6 +151,10 @@ func NewBlockNeighbors() BlockNeighbors {
 		Publishers: []Neighbor{},
 		DependsOn:  []Neighbor{},
 		SimilarTo:  []Neighbor{},
+		BucketTotals: map[string]int{
+			"callers": 0, "callees": 0, "consumers": 0,
+			"publishers": 0, "depends_on": 0, "similar_to": 0,
+		},
 	}
 }
 
@@ -160,7 +180,11 @@ func (n *BlockNeighbors) buckets() []struct {
 func (n *BlockNeighbors) Total() int {
 	total := 0
 	for _, b := range n.buckets() {
-		total += len(b.list)
+		bucketTotal := n.BucketTotals[b.label]
+		if bucketTotal < len(b.list) {
+			bucketTotal = len(b.list)
+		}
+		total += bucketTotal
 	}
 	return total
 }
@@ -176,6 +200,12 @@ func SortNeighbors(list []Neighbor) {
 		}
 		if a.Confidence.Score != b.Confidence.Score {
 			return a.Confidence.Score > b.Confidence.Score
+		}
+		if a.ProximitySameRepo != b.ProximitySameRepo {
+			return a.ProximitySameRepo
+		}
+		if a.ProximityDepth != b.ProximityDepth {
+			return a.ProximityDepth > b.ProximityDepth
 		}
 		if a.Symbol != b.Symbol {
 			return a.Symbol < b.Symbol
@@ -214,8 +244,12 @@ func renderNeighbors(n *BlockNeighbors) string {
 			names = append(names, renderNeighbor(nb))
 		}
 		part := bucket.label + ": " + strings.Join(names, ", ")
-		if more := len(bucket.list) - len(shown); more > 0 {
-			part += fmt.Sprintf(", +%d more", more)
+		total := n.BucketTotals[bucket.label]
+		if total < len(bucket.list) {
+			total = len(bucket.list)
+		}
+		if more := total - len(shown); more > 0 {
+			part += fmt.Sprintf(", +%d more (of %d total)", more, total)
 		}
 		parts = append(parts, part)
 	}
@@ -226,13 +260,14 @@ func renderNeighbors(n *BlockNeighbors) string {
 	return line
 }
 
-// renderNeighbor names one neighbor as "Symbol (repo/path:line)", degrading to
+// renderNeighbor names one neighbor as "Symbol [Tier] (repo/path:line)", degrading to
 // whatever identity is actually known rather than fabricating a location.
 func renderNeighbor(n Neighbor) string {
 	name := n.Symbol
 	if name == "" {
 		name = n.ID
 	}
+	name += " [" + n.Confidence.Tier.String() + "]"
 	where := n.RelPath
 	if n.Repo != "" && where != "" {
 		where = n.Repo + "/" + where

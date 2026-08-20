@@ -20,6 +20,7 @@ import (
 	"sync"
 
 	"moedex/internal/graph"
+	"moedex/internal/graph/cluster"
 	"moedex/internal/graph/diskgraph"
 	"moedex/internal/index"
 	"moedex/internal/mcp"
@@ -58,6 +59,9 @@ type graphSnapshot struct {
 	repoFiles  map[string]map[string]*index.Blob // repo → relpath → blob
 	schemaOnce sync.Once
 	schemaInfo *discoverySchema
+
+	clusters   *cluster.Sidecar
+	clusterErr error
 }
 
 // locatedNode is one graph node placed at a 1-based line of a file.
@@ -90,6 +94,7 @@ type GraphNode struct {
 	BlobSHA      string           `json:"blob_sha"`
 	SymbolOffset uint64           `json:"symbol_offset"`
 	Confidence   graph.Confidence `json:"confidence"`
+	Hops         int              `json:"hops"`
 	Locations    []GraphLocation  `json:"locations"`
 }
 
@@ -153,6 +158,10 @@ func OpenGraphTools(dir string) (*GraphToolset, error) {
 }
 
 func openGraphSnapshot(dir string) (*graphSnapshot, error) {
+	return openGraphSnapshotWithClusters(dir, true)
+}
+
+func openGraphSnapshotWithClusters(dir string, loadClusters bool) (*graphSnapshot, error) {
 	g, err := diskgraph.Open(GraphPath(dir))
 	if err != nil {
 		return nil, fmt.Errorf("server: open graph: %w", err)
@@ -171,6 +180,9 @@ func openGraphSnapshot(dir string) (*graphSnapshot, error) {
 		byPath:   make(map[string][]locatedNode),
 	}
 	s.buildCatalog()
+	if loadClusters {
+		s.clusters, s.clusterErr = cluster.Load(ClusterPath(dir), g.Generation())
+	}
 	return s, nil
 }
 
@@ -221,10 +233,23 @@ func (s *graphSnapshot) buildCatalog() {
 	// entirely absent from s.graph.Keys() (which enumerates sources only).
 	// Fold every edge target in too, so it is addressable -- and locatable via
 	// rootsForFile -- the same way a source-only raw-evidence node already is.
-	s.graph.EachEdge(func(_ diskgraph.Key, edge diskgraph.Edge) bool {
+	s.graph.EachEdge(func(source diskgraph.Key, edge diskgraph.Edge) bool {
 		target := diskgraph.Key{BlobSHA: edge.TargetBlob, SymbolOffset: edge.TargetOffset}
 		if _, ok := s.nodes[target]; !ok {
 			s.nodes[target] = nodeMetadata{Locations: s.locationsForKey(target)}
+		}
+		switch edge.Type {
+		case diskgraph.EdgeDependsOn:
+			s.assignRawKind(source, "File")
+			s.assignRawKind(target, "File")
+		case diskgraph.EdgeHTTPCalls:
+			s.assignRawKind(source, "Occurrence")
+			s.assignRawKind(target, "Route")
+		case diskgraph.EdgeUnknown:
+			// Preserve unknown for malformed/unsupported records.
+		default:
+			s.assignRawKind(source, "Occurrence")
+			s.assignRawKind(target, "Occurrence")
 		}
 		return true
 	})
@@ -232,6 +257,18 @@ func (s *graphSnapshot) buildCatalog() {
 		sort.Slice(s.bySymbol[name], func(i, j int) bool { return keyID(s.bySymbol[name][i]) < keyID(s.bySymbol[name][j]) })
 	}
 	s.buildPathIndex()
+}
+
+func (s *graphSnapshot) assignRawKind(key diskgraph.Key, kind string) {
+	meta := s.nodes[key]
+	if meta.Symbol != "" {
+		return
+	}
+	priority := map[string]int{"": 0, "Occurrence": 1, "Route": 2, "File": 3}
+	if priority[kind] > priority[meta.Kind] {
+		meta.Kind = kind
+		s.nodes[key] = meta
+	}
 }
 
 // buildPathIndex inverts the node catalog's locations into a file -> nodes
@@ -493,6 +530,12 @@ func (t *graphTool) Descriptor() map[string]interface{} {
 			map[string]interface{}{"required": []string{"symbol"}},
 		}
 	}
+	if properties, ok := schema["properties"].(map[string]interface{}); ok {
+		properties["min_confidence"] = map[string]interface{}{
+			"type": "string", "enum": []string{"Candidate", "Pattern", "Verified", "Proven"},
+			"description": "Minimum edge confidence included before traversal (default Pattern).",
+		}
+	}
 	return map[string]interface{}{
 		"name":        t.name,
 		"description": description,
@@ -508,14 +551,16 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 	defer snap.wg.Done()
 
 	var (
-		result GraphQueryResult
-		err    error
+		result        GraphQueryResult
+		err           error
+		minConfidence = graph.DefaultMinConfidence
 	)
 	switch t.name {
 	case "trace_calls":
 		var args struct {
-			Symbol string `json:"symbol"`
-			Hops   *int   `json:"hops"`
+			Symbol        string `json:"symbol"`
+			Hops          *int   `json:"hops"`
+			MinConfidence string `json:"min_confidence"`
 		}
 		if err := decodeGraphArgs(raw, &args); err != nil {
 			return invalidGraphArgs(err), nil
@@ -531,10 +576,14 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 		if err := validateDepth("hops", hops); err != nil {
 			return invalidGraphArgs(err), nil
 		}
-		result, err = snap.traceCalls(ctx, args.Symbol, hops)
+		if minConfidence, err = graph.ParseMinConfidence(args.MinConfidence); err != nil {
+			return invalidGraphArgs(err), nil
+		}
+		result, err = snap.traceCalls(ctx, args.Symbol, hops, minConfidence)
 	case "trace_consumers":
 		var args struct {
-			Name string `json:"name"`
+			Name          string `json:"name"`
+			MinConfidence string `json:"min_confidence"`
 		}
 		if err := decodeGraphArgs(raw, &args); err != nil {
 			return invalidGraphArgs(err), nil
@@ -543,11 +592,15 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 		if err := validateGraphString("name", args.Name); err != nil {
 			return invalidGraphArgs(err), nil
 		}
-		result, err = snap.traceConsumers(ctx, args.Name)
+		if minConfidence, err = graph.ParseMinConfidence(args.MinConfidence); err != nil {
+			return invalidGraphArgs(err), nil
+		}
+		result, err = snap.traceConsumers(ctx, args.Name, minConfidence)
 	case "trace_hierarchy":
 		var args struct {
-			Symbol string `json:"symbol"`
-			Hops   *int   `json:"hops"`
+			Symbol        string `json:"symbol"`
+			Hops          *int   `json:"hops"`
+			MinConfidence string `json:"min_confidence"`
 		}
 		if err := decodeGraphArgs(raw, &args); err != nil {
 			return invalidGraphArgs(err), nil
@@ -563,11 +616,15 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 		if err := validateDepth("hops", hops); err != nil {
 			return invalidGraphArgs(err), nil
 		}
-		result, err = snap.traceHierarchy(ctx, args.Symbol, hops)
+		if minConfidence, err = graph.ParseMinConfidence(args.MinConfidence); err != nil {
+			return invalidGraphArgs(err), nil
+		}
+		result, err = snap.traceHierarchy(ctx, args.Symbol, hops, minConfidence)
 	case "trace_queries":
 		var args struct {
-			Symbol string `json:"symbol"`
-			Hops   *int   `json:"hops"`
+			Symbol        string `json:"symbol"`
+			Hops          *int   `json:"hops"`
+			MinConfidence string `json:"min_confidence"`
 		}
 		if err := decodeGraphArgs(raw, &args); err != nil {
 			return invalidGraphArgs(err), nil
@@ -583,11 +640,15 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 		if err := validateDepth("hops", hops); err != nil {
 			return invalidGraphArgs(err), nil
 		}
-		result, err = snap.traceQueries(ctx, args.Symbol, hops)
+		if minConfidence, err = graph.ParseMinConfidence(args.MinConfidence); err != nil {
+			return invalidGraphArgs(err), nil
+		}
+		result, err = snap.traceQueries(ctx, args.Symbol, hops, minConfidence)
 	case "trace_renders":
 		var args struct {
-			Symbol string `json:"symbol"`
-			Hops   *int   `json:"hops"`
+			Symbol        string `json:"symbol"`
+			Hops          *int   `json:"hops"`
+			MinConfidence string `json:"min_confidence"`
 		}
 		if err := decodeGraphArgs(raw, &args); err != nil {
 			return invalidGraphArgs(err), nil
@@ -603,12 +664,16 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 		if err := validateDepth("hops", hops); err != nil {
 			return invalidGraphArgs(err), nil
 		}
-		result, err = snap.traceRenders(ctx, args.Symbol, hops)
+		if minConfidence, err = graph.ParseMinConfidence(args.MinConfidence); err != nil {
+			return invalidGraphArgs(err), nil
+		}
+		result, err = snap.traceRenders(ctx, args.Symbol, hops, minConfidence)
 	case "impact_analysis":
 		var args struct {
-			File   *string `json:"file"`
-			Symbol *string `json:"symbol"`
-			Depth  *int    `json:"depth"`
+			File          *string `json:"file"`
+			Symbol        *string `json:"symbol"`
+			Depth         *int    `json:"depth"`
+			MinConfidence string  `json:"min_confidence"`
 		}
 		if err := decodeGraphArgs(raw, &args); err != nil {
 			return invalidGraphArgs(err), nil
@@ -635,7 +700,10 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 		if err := validateDepth("depth", depth); err != nil {
 			return invalidGraphArgs(err), nil
 		}
-		result, err = snap.impactAnalysis(ctx, file, symbol, depth)
+		if minConfidence, err = graph.ParseMinConfidence(args.MinConfidence); err != nil {
+			return invalidGraphArgs(err), nil
+		}
+		result, err = snap.impactAnalysis(ctx, file, symbol, depth, minConfidence)
 	default:
 		return nil, fmt.Errorf("server: unknown graph tool %q", t.name)
 	}
@@ -700,53 +768,55 @@ func graphStructuredResult(result GraphQueryResult) map[string]interface{} {
 	)
 }
 
-func (s *graphSnapshot) traceCalls(ctx context.Context, symbol string, hops int) (GraphQueryResult, error) {
+func (s *graphSnapshot) traceCalls(ctx context.Context, symbol string, hops int, minConfidence graph.ConfidenceTier) (GraphQueryResult, error) {
 	roots := append([]diskgraph.Key(nil), s.bySymbol[symbol]...)
-	return s.traverse(ctx, "trace_calls", symbol, roots, hops, true, func(t diskgraph.EdgeType) bool {
+	return s.traverse(ctx, "trace_calls", symbol, roots, hops, true, minConfidence, func(t diskgraph.EdgeType) bool {
 		return t == diskgraph.EdgeCalls
 	})
 }
 
-func (s *graphSnapshot) traceConsumers(ctx context.Context, name string) (GraphQueryResult, error) {
+func (s *graphSnapshot) traceConsumers(ctx context.Context, name string, minConfidence graph.ConfidenceTier) (GraphQueryResult, error) {
 	roots := append([]diskgraph.Key(nil), s.bySymbol[name]...)
 	conf := rootsWithConfidence(roots)
+	distances := rootsWithDistance(roots)
 	relations := make(map[string]graphRelation)
 	wanted := keySet(roots)
 	incoming, err := s.incoming(ctx, wanted, func(t diskgraph.EdgeType) bool {
 		return t == diskgraph.EdgePublishes || t == diskgraph.EdgeConsumes
-	})
+	}, minConfidence)
 	if err != nil {
 		return GraphQueryResult{}, err
 	}
 	for _, rel := range incoming {
 		addRelation(relations, rel)
 		conf[rel.Source] = maxTier(conf[rel.Source], rel.Confidence)
+		distances[rel.Source] = 1
 	}
-	return s.makeResult("trace_consumers", name, 1, conf, relations), nil
+	return s.makeResult("trace_consumers", name, 1, conf, distances, roots, relations), nil
 }
 
-func (s *graphSnapshot) traceHierarchy(ctx context.Context, symbol string, hops int) (GraphQueryResult, error) {
+func (s *graphSnapshot) traceHierarchy(ctx context.Context, symbol string, hops int, minConfidence graph.ConfidenceTier) (GraphQueryResult, error) {
 	roots := append([]diskgraph.Key(nil), s.bySymbol[symbol]...)
-	return s.traverse(ctx, "trace_hierarchy", symbol, roots, hops, true, func(t diskgraph.EdgeType) bool {
+	return s.traverse(ctx, "trace_hierarchy", symbol, roots, hops, true, minConfidence, func(t diskgraph.EdgeType) bool {
 		return t == diskgraph.EdgeExtends || t == diskgraph.EdgeImplements || t == diskgraph.EdgeContainsMethod || t == diskgraph.EdgeInjects
 	})
 }
 
-func (s *graphSnapshot) traceQueries(ctx context.Context, symbol string, hops int) (GraphQueryResult, error) {
+func (s *graphSnapshot) traceQueries(ctx context.Context, symbol string, hops int, minConfidence graph.ConfidenceTier) (GraphQueryResult, error) {
 	roots := append([]diskgraph.Key(nil), s.bySymbol[symbol]...)
-	return s.traverse(ctx, "trace_queries", symbol, roots, hops, true, func(t diskgraph.EdgeType) bool {
+	return s.traverse(ctx, "trace_queries", symbol, roots, hops, true, minConfidence, func(t diskgraph.EdgeType) bool {
 		return t == diskgraph.EdgeQueries
 	})
 }
 
-func (s *graphSnapshot) traceRenders(ctx context.Context, symbol string, hops int) (GraphQueryResult, error) {
+func (s *graphSnapshot) traceRenders(ctx context.Context, symbol string, hops int, minConfidence graph.ConfidenceTier) (GraphQueryResult, error) {
 	roots := append([]diskgraph.Key(nil), s.bySymbol[symbol]...)
-	return s.traverse(ctx, "trace_renders", symbol, roots, hops, true, func(t diskgraph.EdgeType) bool {
+	return s.traverse(ctx, "trace_renders", symbol, roots, hops, true, minConfidence, func(t diskgraph.EdgeType) bool {
 		return t == diskgraph.EdgeRenders
 	})
 }
 
-func (s *graphSnapshot) impactAnalysis(ctx context.Context, file, symbol string, depth int) (GraphQueryResult, error) {
+func (s *graphSnapshot) impactAnalysis(ctx context.Context, file, symbol string, depth int, minConfidence graph.ConfidenceTier) (GraphQueryResult, error) {
 	query := symbol
 	var roots []diskgraph.Key
 	if file != "" {
@@ -755,7 +825,7 @@ func (s *graphSnapshot) impactAnalysis(ctx context.Context, file, symbol string,
 	} else {
 		roots = append([]diskgraph.Key(nil), s.bySymbol[symbol]...)
 	}
-	return s.traverse(ctx, "impact_analysis", query, roots, depth, false, func(diskgraph.EdgeType) bool { return true })
+	return s.traverse(ctx, "impact_analysis", query, roots, depth, false, minConfidence, func(diskgraph.EdgeType) bool { return true })
 }
 
 func (s *graphSnapshot) traverse(
@@ -764,9 +834,11 @@ func (s *graphSnapshot) traverse(
 	roots []diskgraph.Key,
 	depth int,
 	bothDirections bool,
+	minConfidence graph.ConfidenceTier,
 	allow func(diskgraph.EdgeType) bool,
 ) (GraphQueryResult, error) {
 	confidence := rootsWithConfidence(roots)
+	distances := rootsWithDistance(roots)
 	visited := keySet(roots)
 	frontier := append([]diskgraph.Key(nil), roots...)
 	relations := make(map[string]graphRelation)
@@ -781,7 +853,7 @@ func (s *graphSnapshot) traverse(
 				continue
 			}
 			for _, edge := range s.graph.Edges(key) {
-				if !allow(edge.Type) {
+				if edge.Confidence < minConfidence || !allow(edge.Type) {
 					continue
 				}
 				rel := relationFrom(key, edge)
@@ -790,11 +862,14 @@ func (s *graphSnapshot) traverse(
 				confidence[rel.Target] = maxTier(confidence[rel.Target], pathConfidence)
 				if !visited[rel.Target] {
 					nextSet[rel.Target] = true
+					if old, ok := distances[rel.Target]; !ok || level+1 < old {
+						distances[rel.Target] = level + 1
+					}
 				}
 			}
 		}
 
-		incoming, err := s.incoming(ctx, keySet(frontier), allow)
+		incoming, err := s.incoming(ctx, keySet(frontier), allow, minConfidence)
 		if err != nil {
 			return GraphQueryResult{}, err
 		}
@@ -804,6 +879,9 @@ func (s *graphSnapshot) traverse(
 			confidence[rel.Source] = maxTier(confidence[rel.Source], pathConfidence)
 			if !visited[rel.Source] {
 				nextSet[rel.Source] = true
+				if old, ok := distances[rel.Source]; !ok || level+1 < old {
+					distances[rel.Source] = level + 1
+				}
 			}
 		}
 		frontier = sortedKeys(nextSet)
@@ -811,13 +889,13 @@ func (s *graphSnapshot) traverse(
 			visited[key] = true
 		}
 	}
-	return s.makeResult(tool, query, depth, confidence, relations), nil
+	return s.makeResult(tool, query, depth, confidence, distances, roots, relations), nil
 }
 
 // incoming scans the mmap adjacency records without retaining a reverse graph.
 // The sweep is one allocation-free linear pass (diskgraph.EachEdge) rather than a
 // per-node lookup, because search_context now runs it on every ranked query.
-func (s *graphSnapshot) incoming(ctx context.Context, targets map[diskgraph.Key]bool, allow func(diskgraph.EdgeType) bool) ([]graphRelation, error) {
+func (s *graphSnapshot) incoming(ctx context.Context, targets map[diskgraph.Key]bool, allow func(diskgraph.EdgeType) bool, minConfidence graph.ConfidenceTier) ([]graphRelation, error) {
 	if len(targets) == 0 {
 		return nil, nil
 	}
@@ -834,7 +912,7 @@ func (s *graphSnapshot) incoming(ctx context.Context, targets map[diskgraph.Key]
 				return false
 			}
 		}
-		if !allow(edge.Type) {
+		if edge.Confidence < minConfidence || !allow(edge.Type) {
 			return true
 		}
 		rel := relationFrom(source, edge)
@@ -864,7 +942,7 @@ func addRelation(dst map[string]graphRelation, rel graphRelation) {
 	}
 }
 
-func (s *graphSnapshot) makeResult(tool, query string, depth int, confidence map[diskgraph.Key]graph.ConfidenceTier, relations map[string]graphRelation) GraphQueryResult {
+func (s *graphSnapshot) makeResult(tool, query string, depth int, confidence map[diskgraph.Key]graph.ConfidenceTier, distances map[diskgraph.Key]int, roots []diskgraph.Key, relations map[string]graphRelation) GraphQueryResult {
 	result := GraphQueryResult{
 		Tool:  tool,
 		Query: query,
@@ -888,6 +966,7 @@ func (s *graphSnapshot) makeResult(tool, query string, depth int, confidence map
 			BlobSHA:      key.BlobSHA,
 			SymbolOffset: key.SymbolOffset,
 			Confidence:   graph.ConfidenceOf(tier),
+			Hops:         distances[key],
 			Locations:    locations,
 		})
 	}
@@ -901,7 +980,28 @@ func (s *graphSnapshot) makeResult(tool, query string, depth int, confidence map
 			Similarity: rel.Similarity,
 		})
 	}
-	sort.Slice(result.Nodes, func(i, j int) bool { return result.Nodes[i].ID < result.Nodes[j].ID })
+	rootLocations := s.locationsForKeys(roots)
+	sort.Slice(result.Nodes, func(i, j int) bool {
+		a, b := result.Nodes[i], result.Nodes[j]
+		if a.Hops != b.Hops {
+			return a.Hops < b.Hops
+		}
+		if a.Confidence.Score != b.Confidence.Score {
+			return a.Confidence.Score > b.Confidence.Score
+		}
+		aSame, aDepth := graphLocationProximity(a.Locations, rootLocations)
+		bSame, bDepth := graphLocationProximity(b.Locations, rootLocations)
+		if aSame != bSame {
+			return aSame
+		}
+		if aDepth != bDepth {
+			return aDepth > bDepth
+		}
+		if a.Symbol != b.Symbol {
+			return a.Symbol < b.Symbol
+		}
+		return a.ID < b.ID
+	})
 	sort.Slice(result.Edges, func(i, j int) bool {
 		if result.Edges[i].Source != result.Edges[j].Source {
 			return result.Edges[i].Source < result.Edges[j].Source
@@ -920,10 +1020,44 @@ func (s *graphSnapshot) makeResult(tool, query string, depth int, confidence map
 	return result
 }
 
+func (s *graphSnapshot) locationsForKeys(keys []diskgraph.Key) []GraphLocation {
+	var out []GraphLocation
+	for _, key := range keys {
+		locations := s.nodes[key].Locations
+		if locations == nil {
+			locations = s.locationsForKey(key)
+		}
+		out = mergeLocations(out, locations)
+	}
+	return out
+}
+
+func graphLocationProximity(locations, anchors []GraphLocation) (sameRepo bool, prefixDepth int) {
+	for _, loc := range locations {
+		for _, anchor := range anchors {
+			if loc.Repo != "" && loc.Repo == anchor.Repo {
+				sameRepo = true
+			}
+			if depth := sharedDirectoryPrefixDepth(loc.Path, anchor.Path); depth > prefixDepth {
+				prefixDepth = depth
+			}
+		}
+	}
+	return sameRepo, prefixDepth
+}
+
 func rootsWithConfidence(roots []diskgraph.Key) map[diskgraph.Key]graph.ConfidenceTier {
 	out := make(map[diskgraph.Key]graph.ConfidenceTier, len(roots))
 	for _, root := range roots {
 		out[root] = graph.Proven
+	}
+	return out
+}
+
+func rootsWithDistance(roots []diskgraph.Key) map[diskgraph.Key]int {
+	out := make(map[diskgraph.Key]int, len(roots))
+	for _, root := range roots {
+		out[root] = 0
 	}
 	return out
 }

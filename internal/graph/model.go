@@ -20,7 +20,32 @@ const (
 	Verified
 	// Proven is an LSP-confirmed or manifest-declared relationship.
 	Proven
+
+	// DefaultMinConfidence is the agent-facing graph floor used when a tool
+	// invocation omits min_confidence. Candidate evidence remains available for
+	// explicit diagnostics but is not traversed by default.
+	DefaultMinConfidence = Pattern
 )
+
+// ParseMinConfidence parses the public min_confidence spelling. The empty
+// string selects DefaultMinConfidence; accepted non-empty values intentionally
+// match the exact tier names emitted by String and JSON.
+func ParseMinConfidence(value string) (ConfidenceTier, error) {
+	switch value {
+	case "":
+		return DefaultMinConfidence, nil
+	case "Candidate":
+		return Candidate, nil
+	case "Pattern":
+		return Pattern, nil
+	case "Verified":
+		return Verified, nil
+	case "Proven":
+		return Proven, nil
+	default:
+		return 0, fmt.Errorf("min_confidence must be one of Candidate, Pattern, Verified, or Proven")
+	}
+}
 
 // Valid reports whether t is one of the four defined confidence tiers.
 func (t ConfidenceTier) Valid() bool { return t <= Proven }

@@ -15,6 +15,29 @@ import (
 	"moedex/internal/server"
 )
 
+func TestRunGraphRebuildsMissingClusterSidecarFromExistingShards(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	root := t.TempDir()
+	initRepo(t, filepath.Join(root, "repo"), map[string]string{
+		"main.go": "package repo\nfunc Root() { Target() }\nfunc Target() {}\n",
+	})
+	shardDir := filepath.Join(t.TempDir(), "shards")
+	if err := runBuild([]string{"-corpus", root, "-shard-dir", shardDir}); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(server.ClusterPath(shardDir)); err != nil {
+		t.Fatal(err)
+	}
+	if err := runGraph([]string{"-shard-dir", shardDir}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(server.ClusterPath(shardDir)); err != nil {
+		t.Fatalf("graph-only refresh did not regenerate cluster sidecar: %v", err)
+	}
+}
+
 func TestManagedDefaultBuildUsesNamespaceIdentityAndExcludesSuperproject(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")

@@ -85,6 +85,15 @@ func TestBuildGraphPersistsProvenPackageDependency(t *testing.T) {
 	if got.Evidence.ByteLength != uint64(len("Acme.Core")) {
 		t.Errorf("Evidence.ByteLength = %d, want %d", got.Evidence.ByteLength, len("Acme.Core"))
 	}
+	snapshot, err := openGraphSnapshot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer snapshot.close()
+	snapshot.ensureSchema()
+	if snapshot.schemaInfo.NodeKinds["File"] == 0 || snapshot.schemaInfo.NodeKinds["unknown"] != 0 {
+		t.Errorf("manifest node kinds = %+v, want File nodes and no unexplained unknowns", snapshot.schemaInfo.NodeKinds)
+	}
 }
 
 func TestBuildGraphPersistsGoModuleDependency(t *testing.T) {

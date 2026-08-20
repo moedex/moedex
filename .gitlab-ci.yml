@@ -80,6 +80,28 @@ parity:
       - PARITY-REPORT.md
     expire_in: 30 days
 
+# --- graph-eval: reviewed private graph quality (self-hosted) -------------
+graph-eval:
+  stage: parity
+  tags:
+    - moedex-corpus
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - internal/graph/**/*
+        - internal/contextwin/**/*
+        - internal/mcp/**/*
+        - internal/server/**/*
+        - internal/eval/**/*
+        - cmd/moedex-serve/**/*
+        - cmd/moedex-index/**/*
+        - Makefile
+        - .gitlab-ci.yml
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  script:
+    - go run ./cmd/moedex-index graph -shard-dir "$MOEDEX_GRAPH_EVAL_SHARDS"
+    - make graph-eval-private
+
 # --- images: optional manual build + push of both images ------------------
 # Requires a runner with Docker available (docker-in-docker service or a
 # docker-socket runner). Pushes to the project's container registry.

@@ -18,6 +18,8 @@ package server
 
 import (
 	"context"
+	"path"
+	"strings"
 
 	"moedex/internal/contextwin"
 	"moedex/internal/graph"
@@ -72,7 +74,7 @@ func isSimilarEdge(t diskgraph.EdgeType) bool   { return t == diskgraph.EdgeSimi
 func isDependencyEdge(t diskgraph.EdgeType) bool {
 	switch t {
 	case diskgraph.EdgeImports, diskgraph.EdgeUsesType, diskgraph.EdgeReferences,
-		diskgraph.EdgeCandidate, diskgraph.EdgePublishes, diskgraph.EdgeConsumes,
+		diskgraph.EdgeCandidate, diskgraph.EdgeDependsOn, diskgraph.EdgePublishes, diskgraph.EdgeConsumes,
 		diskgraph.EdgeInjects, diskgraph.EdgeQueries, diskgraph.EdgeRenders:
 		return true
 	}
@@ -99,6 +101,12 @@ type visitKey struct {
 // block list, or a closed toolset yield nil — "leave the response un-annotated" —
 // rather than an error, because a missing graph must never fail a search.
 func (g *GraphToolset) Neighbors(ctx context.Context, blocks []contextwin.ContextBlock, depth int) ([]mcp.BlockNeighbors, error) {
+	return g.NeighborsWithConfidence(ctx, blocks, depth, graph.DefaultMinConfidence)
+}
+
+// NeighborsWithConfidence applies minConfidence before traversal, so a weak
+// edge can neither be returned nor act as a bridge to a later node.
+func (g *GraphToolset) NeighborsWithConfidence(ctx context.Context, blocks []contextwin.ContextBlock, depth int, minConfidence graph.ConfidenceTier) ([]mcp.BlockNeighbors, error) {
 	if depth <= 0 || len(blocks) == 0 {
 		return nil, nil
 	}
@@ -110,10 +118,10 @@ func (g *GraphToolset) Neighbors(ctx context.Context, blocks []contextwin.Contex
 		return nil, nil
 	}
 	defer snap.wg.Done()
-	return snap.neighbors(ctx, blocks, depth)
+	return snap.neighbors(ctx, blocks, depth, minConfidence)
 }
 
-func (s *graphSnapshot) neighbors(ctx context.Context, blocks []contextwin.ContextBlock, depth int) ([]mcp.BlockNeighbors, error) {
+func (s *graphSnapshot) neighbors(ctx context.Context, blocks []contextwin.ContextBlock, depth int, minConfidence graph.ConfidenceTier) ([]mcp.BlockNeighbors, error) {
 	out := make([]mcp.BlockNeighbors, len(blocks))
 	found := make([][numNeighborBuckets][]mcp.Neighbor, len(blocks))
 
@@ -162,7 +170,7 @@ func (s *graphSnapshot) neighbors(ctx context.Context, blocks []contextwin.Conte
 			}
 			for key, reaching := range frontier[b] {
 				for _, edge := range s.graph.Edges(key) {
-					if !spec.allow(edge.Type) {
+					if edge.Confidence < minConfidence || !spec.allow(edge.Type) {
 						continue
 					}
 					rel := relationFrom(key, edge)
@@ -182,7 +190,7 @@ func (s *graphSnapshot) neighbors(ctx context.Context, blocks []contextwin.Conte
 			}
 		}
 		if len(targets) > 0 {
-			relations, err := s.incoming(ctx, targets, isReverseEdge)
+			relations, err := s.incoming(ctx, targets, isReverseEdge, minConfidence)
 			if err != nil {
 				return nil, err
 			}
@@ -219,6 +227,17 @@ func (s *graphSnapshot) neighbors(ctx context.Context, blocks []contextwin.Conte
 	}
 
 	for i := range out {
+		for bucket := range found[i] {
+			for j := range found[i][bucket] {
+				setNeighborProximity(&found[i][bucket][j], blocks[i])
+			}
+		}
+		out[i].BucketTotals["callers"] = len(found[i][bucketCallers])
+		out[i].BucketTotals["callees"] = len(found[i][bucketCallees])
+		out[i].BucketTotals["consumers"] = len(found[i][bucketConsumers])
+		out[i].BucketTotals["publishers"] = len(found[i][bucketPublishers])
+		out[i].BucketTotals["depends_on"] = len(found[i][bucketDependsOn])
+		out[i].BucketTotals["similar_to"] = len(found[i][bucketSimilarTo])
 		out[i].Callers = finishBucket(found[i][bucketCallers], &out[i].Truncated)
 		out[i].Callees = finishBucket(found[i][bucketCallees], &out[i].Truncated)
 		out[i].Consumers = finishBucket(found[i][bucketConsumers], &out[i].Truncated)
@@ -227,6 +246,24 @@ func (s *graphSnapshot) neighbors(ctx context.Context, blocks []contextwin.Conte
 		out[i].SimilarTo = finishBucket(found[i][bucketSimilarTo], &out[i].Truncated)
 	}
 	return out, nil
+}
+
+func setNeighborProximity(neighbor *mcp.Neighbor, block contextwin.ContextBlock) {
+	neighbor.ProximitySameRepo = neighbor.Repo != "" && neighbor.Repo == block.Repo
+	neighbor.ProximityDepth = sharedDirectoryPrefixDepth(block.RelPath, neighbor.RelPath)
+}
+
+func sharedDirectoryPrefixDepth(left, right string) int {
+	leftDir, rightDir := path.Dir(strings.TrimPrefix(left, "./")), path.Dir(strings.TrimPrefix(right, "./"))
+	if leftDir == "." || rightDir == "." {
+		return 0
+	}
+	lp, rp := strings.Split(leftDir, "/"), strings.Split(rightDir, "/")
+	depth := 0
+	for depth < len(lp) && depth < len(rp) && lp[depth] == rp[depth] {
+		depth++
+	}
+	return depth
 }
 
 // offer records one discovered neighbor for every block whose path reached it,

@@ -857,8 +857,13 @@ all backed by the same hot-swappable mmap'd `corpus-graph.graph` generation (SIG
 reloads it with the ranker). `search_context` results are **graph-fused**: each block
 carries a `neighbors` field with its callers, callees, consumers, publishers,
 dependencies, and semantic siblings, controlled per call by `graph_depth` (default 1,
-`0` disables). Both the `text` and `structured` output formats carry it — text as one
+`0` disables) and `min_confidence` (default Pattern). Edges below the confidence
+floor are excluded before traversal. Both the `text` and `structured` output formats carry it — text as one
 `[graph] ...` line under each block header, `structured` as a typed per-block object.
+Context blocks and summaries expose `clipped` independently from `truncated`, and
+the reported token estimate is always within the requested budget. Cluster requests
+page a generation-matched `corpus-graph.clusters.json` built during graph refresh;
+they never run Louvain on the serving path.
 
 ### `scale` — corpus sizing tool
 
