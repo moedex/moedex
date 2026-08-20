@@ -170,6 +170,8 @@ env HOME="$render_home" PATH="$BIN:$PATH" TRACE="$TRACE" \
   MOEDEX_CAS_DIR="$render_cas" \
   MOEDEX_SHARD_DIR="$render_shards" \
   ONNXRUNTIME_LIB_PATH="$render_case/libonnxruntime.dylib" \
+  MOEDEX_ONNX_INTRA_OP_THREADS=6 \
+  MOEDEX_ONNX_INTER_OP_THREADS=1 \
   bash "$REPO/scripts/install-macos.sh" > "$render_case/install.log" 2>&1
 serve_plist="$render_home/Library/LaunchAgents/com.moedex.serve.plist"
 refresh_plist="$render_home/Library/LaunchAgents/com.moedex.refresh.plist"
@@ -182,6 +184,12 @@ assert_plist_value "$refresh_plist" 'EnvironmentVariables:MOEDEX_CORPUS' "$rende
 assert_plist_value "$refresh_plist" 'EnvironmentVariables:MOEDEX_CAS_DIR' "$render_cas"
 assert_plist_value "$refresh_plist" 'EnvironmentVariables:MOEDEX_SHARD_DIR' "$render_shards"
 assert_plist_value "$refresh_plist" 'EnvironmentVariables:ONNXRUNTIME_LIB_PATH' "$render_case/libonnxruntime.dylib"
+assert_plist_value "$refresh_plist" 'EnvironmentVariables:MOEDEX_ONNX_INTRA_OP_THREADS' '6'
+assert_plist_value "$refresh_plist" 'EnvironmentVariables:MOEDEX_ONNX_INTER_OP_THREADS' '1'
+case "$serve_args" in
+  *'-onnx-intra-op-threads 6'*'-onnx-inter-op-threads 1'*) : ;;
+  *) fail "serve plist does not render ONNX thread tuning" ;;
+esac
 assert_plist_value "$refresh_plist" 'StartCalendarInterval:Hour' '14'
 assert_plist_value "$refresh_plist" 'StartCalendarInterval:Minute' '10'
 assert_contains "$render_case/install.log" 'bootstrap failed while the prior job may still be unloading; retrying for up to 10 seconds'

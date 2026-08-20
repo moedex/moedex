@@ -28,12 +28,27 @@ type ONNXEmbedder struct{}
 // NewONNXEmbedder always fails in the default build.
 func NewONNXEmbedder(runtimePath string) (*ONNXEmbedder, error) { return nil, errNoONNX }
 
+func NewONNXEmbedderWithOptions(runtimePath string, options ONNXOptions) (*ONNXEmbedder, error) {
+	if err := options.validate(); err != nil {
+		return nil, err
+	}
+	return nil, errNoONNX
+}
+
 // NewONNXEmbedderFromFiles always fails in the default build. See onnx.go for
 // the real implementation, which loads an arbitrary HF encoder export from disk.
 func NewONNXEmbedderFromFiles(runtimePath, modelPath, tokenizerPath string, inputNames []string, dim, maxSeq int) (*ONNXEmbedder, error) {
 	return nil, errNoONNX
 }
 
+func NewONNXEmbedderFromFilesWithOptions(runtimePath, modelPath, tokenizerPath string, inputNames []string, dim, maxSeq int, options ONNXOptions) (*ONNXEmbedder, error) {
+	if err := options.validate(); err != nil {
+		return nil, err
+	}
+	return nil, errNoONNX
+}
+
 func (*ONNXEmbedder) Embed(context.Context, []string) ([]Vector, error) { return nil, errNoONNX }
 func (*ONNXEmbedder) Dim() int                                          { return 0 }
 func (*ONNXEmbedder) Close() error                                      { return nil }
+func (*ONNXEmbedder) Options() ONNXOptions                              { return ONNXOptions{} }

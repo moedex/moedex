@@ -74,12 +74,22 @@ type ONNXEmbedder struct {
 	inputNames []string // model input order; may omit token_type_ids (RoBERTa)
 	dim        int
 	maxSeq     int
+	options    ONNXOptions
 }
 
 // NewONNXEmbedder loads the bundled code embedder (embedded in the binary).
 // runtimePath points at the ONNX Runtime shared library; empty falls back to
 // ONNXRUNTIME_LIB_PATH or the binding's own discovery.
 func NewONNXEmbedder(runtimePath string) (*ONNXEmbedder, error) {
+	return NewONNXEmbedderWithOptions(runtimePath, ONNXOptions{})
+}
+
+// NewONNXEmbedderWithOptions loads the bundled embedder with explicit ONNX
+// Runtime CPU pool sizing. Zero-valued thread counts retain runtime defaults.
+func NewONNXEmbedderWithOptions(runtimePath string, options ONNXOptions) (*ONNXEmbedder, error) {
+	if err := options.validate(); err != nil {
+		return nil, err
+	}
 	tk, err := pretrained.FromReader(bytes.NewReader(onnxTokenizerData))
 	if err != nil {
 		return nil, fmt.Errorf("embed/onnx: load tokenizer: %w", err)
@@ -87,12 +97,20 @@ func NewONNXEmbedder(runtimePath string) (*ONNXEmbedder, error) {
 	if err := initRuntime(runtimePath); err != nil {
 		return nil, err
 	}
-	session, err := ort.NewDynamicAdvancedSessionWithONNXData(onnxModelData, bundledInputNames, []string{outputName}, nil)
+	sessionOptions, err := newSessionOptions(options)
+	if err != nil {
+		_ = ort.DestroyEnvironment()
+		return nil, err
+	}
+	if sessionOptions != nil {
+		defer sessionOptions.Destroy()
+	}
+	session, err := ort.NewDynamicAdvancedSessionWithONNXData(onnxModelData, bundledInputNames, []string{outputName}, sessionOptions)
 	if err != nil {
 		_ = ort.DestroyEnvironment()
 		return nil, fmt.Errorf("embed/onnx: create session: %w", err)
 	}
-	return &ONNXEmbedder{tk: *tk, session: session, inputNames: bundledInputNames, dim: bundledDim, maxSeq: bundledMaxSeq}, nil
+	return &ONNXEmbedder{tk: *tk, session: session, inputNames: bundledInputNames, dim: bundledDim, maxSeq: bundledMaxSeq, options: options}, nil
 }
 
 // NewONNXEmbedderFromFiles loads an encoder ONNX + tokenizer.json from disk.
@@ -100,6 +118,15 @@ func NewONNXEmbedder(runtimePath string) (*ONNXEmbedder, error) {
 // RoBERTa, which has no token_type_ids); dim is the hidden size; maxSeq caps the
 // sequence length. The output must be last_hidden_state [batch, seq, dim].
 func NewONNXEmbedderFromFiles(runtimePath, modelPath, tokenizerPath string, inputNames []string, dim, maxSeq int) (*ONNXEmbedder, error) {
+	return NewONNXEmbedderFromFilesWithOptions(runtimePath, modelPath, tokenizerPath, inputNames, dim, maxSeq, ONNXOptions{})
+}
+
+// NewONNXEmbedderFromFilesWithOptions is NewONNXEmbedderFromFiles with explicit
+// ONNX Runtime CPU pool sizing.
+func NewONNXEmbedderFromFilesWithOptions(runtimePath, modelPath, tokenizerPath string, inputNames []string, dim, maxSeq int, options ONNXOptions) (*ONNXEmbedder, error) {
+	if err := options.validate(); err != nil {
+		return nil, err
+	}
 	tkData, err := os.ReadFile(tokenizerPath)
 	if err != nil {
 		return nil, fmt.Errorf("embed/onnx: read tokenizer %s: %w", tokenizerPath, err)
@@ -114,12 +141,53 @@ func NewONNXEmbedderFromFiles(runtimePath, modelPath, tokenizerPath string, inpu
 	if maxSeq <= 0 {
 		maxSeq = bundledMaxSeq
 	}
-	session, err := ort.NewDynamicAdvancedSession(modelPath, inputNames, []string{outputName}, nil)
+	sessionOptions, err := newSessionOptions(options)
+	if err != nil {
+		_ = ort.DestroyEnvironment()
+		return nil, err
+	}
+	if sessionOptions != nil {
+		defer sessionOptions.Destroy()
+	}
+	session, err := ort.NewDynamicAdvancedSession(modelPath, inputNames, []string{outputName}, sessionOptions)
 	if err != nil {
 		_ = ort.DestroyEnvironment()
 		return nil, fmt.Errorf("embed/onnx: create session from %s: %w", modelPath, err)
 	}
-	return &ONNXEmbedder{tk: *tk, session: session, inputNames: inputNames, dim: dim, maxSeq: maxSeq}, nil
+	return &ONNXEmbedder{tk: *tk, session: session, inputNames: inputNames, dim: dim, maxSeq: maxSeq, options: options}, nil
+}
+
+func newSessionOptions(options ONNXOptions) (*ort.SessionOptions, error) {
+	if options == (ONNXOptions{}) {
+		return nil, nil
+	}
+	sessionOptions, err := ort.NewSessionOptions()
+	if err != nil {
+		return nil, fmt.Errorf("embed/onnx: create session options: %w", err)
+	}
+	if err := sessionOptions.SetIntraOpNumThreads(options.IntraOpThreads); err != nil {
+		_ = sessionOptions.Destroy()
+		return nil, fmt.Errorf("embed/onnx: set intra-op threads: %w", err)
+	}
+	if err := sessionOptions.SetInterOpNumThreads(options.InterOpThreads); err != nil {
+		_ = sessionOptions.Destroy()
+		return nil, fmt.Errorf("embed/onnx: set inter-op threads: %w", err)
+	}
+	if options.InterOpThreads > 1 {
+		if err := sessionOptions.SetExecutionMode(ort.ExecutionModeParallel); err != nil {
+			_ = sessionOptions.Destroy()
+			return nil, fmt.Errorf("embed/onnx: enable parallel graph execution: %w", err)
+		}
+	}
+	return sessionOptions, nil
+}
+
+// Options reports the CPU pool settings used to create this session.
+func (e *ONNXEmbedder) Options() ONNXOptions {
+	if e == nil {
+		return ONNXOptions{}
+	}
+	return e.options
 }
 
 func initRuntime(runtimePath string) error {

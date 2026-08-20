@@ -13,7 +13,45 @@ import (
 	"moedex/internal/ingest"
 	"moedex/internal/parity"
 	"moedex/internal/server"
+	indexsnapshot "moedex/internal/snapshot"
 )
+
+func TestSnapshotBuildPublishesDirectlyServableGeneration(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	root := t.TempDir()
+	initRepo(t, filepath.Join(root, "repo"), map[string]string{
+		"main.go": "package repo\nfunc Root() { Target() }\nfunc Target() {}\n",
+	})
+	indexDir := filepath.Join(t.TempDir(), "index")
+	if err := runSnapshotBuild([]string{"-corpus", root, "-index-dir", indexDir, "-id", "fixture-1"}); err != nil {
+		t.Fatal(err)
+	}
+	manifest, snapshotRoot, err := indexsnapshot.Current(indexDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manifest.ID != "fixture-1" || manifest.Sequence != 1 {
+		t.Fatalf("manifest identity = %+v", manifest)
+	}
+	shardDir := filepath.Join(snapshotRoot, filepath.FromSlash(manifest.ServingRoot))
+	if _, err := os.Stat(server.GraphPath(shardDir)); err != nil {
+		t.Fatalf("snapshot graph missing: %v", err)
+	}
+	if _, err := os.Stat(server.ClusterPath(shardDir)); err != nil {
+		t.Fatalf("snapshot clusters missing: %v", err)
+	}
+	corpus, err := server.Open(shardDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer corpus.Close()
+	matches, _, err := corpus.Literal(context.Background(), "Target")
+	if err != nil || len(matches) == 0 {
+		t.Fatalf("snapshot search returned %d match(es): %v", len(matches), err)
+	}
+}
 
 func TestRunGraphRebuildsMissingClusterSidecarFromExistingShards(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {

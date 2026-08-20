@@ -782,6 +782,11 @@ lexical + symbol + path ranking with zero external dependencies.
 moedex-index build   -corpus ROOT -shard-dir DIR [-shard-bytes N] [-force] [-v]
 moedex-index check   -shard-dir DIR [-corpus ROOT]
 moedex-index refresh -shard-dir DIR [-corpus ROOT] [-keep-backup] [-v]
+moedex-index snapshot-migrate  -index-dir DIR -shard-dir LEGACY [-id SNAPSHOT]
+moedex-index snapshot-build    -index-dir DIR -corpus ROOT [-id SNAPSHOT] [-dense]
+moedex-index snapshot-list     [-index-dir DIR]
+moedex-index snapshot-inspect  [-index-dir DIR] [-id SNAPSHOT]
+moedex-index snapshot-rollback [-index-dir DIR] -id SNAPSHOT
 ```
 
 `build` indexes every git repo under `-corpus` into byte-sized `shard-NNNN.idx`
@@ -829,11 +834,13 @@ re-exporting from the CAS; pass either or both flags.
 moedex-serve -shard-dir DIR -http :8080          # retrieval HTTP API (GET /search)
 moedex-serve -shard-dir DIR -q PATTERN [-regex]  # one-shot retrieval query
 moedex-serve -shard-dir DIR -mcp                 # ranked agent context (MCP/stdio)
+moedex-serve -index-dir DIR -mcp-http :8081      # resolve immutable DIR/CURRENT
 ```
 
 | Flag | Default | Meaning |
 |---|---|---|
 | `-shard-dir` | `MOEDEX_SHARD_DIR` | directory of prebuilt `*.idx` shards (required) |
+| `-index-dir` | `MOEDEX_INDEX_DIR` | immutable snapshot root selected by `CURRENT`; mutually exclusive with `-shard-dir` |
 | `-http` | _(unset)_ | serve the retrieval HTTP API on this address |
 | `-mcp` | `false` | serve ranked agent context over MCP (stdio) |
 | `-q` | _(unset)_ | one-shot retrieval query |
@@ -841,6 +848,8 @@ moedex-serve -shard-dir DIR -mcp                 # ranked agent context (MCP/std
 | `-top-k` | `20` | default ranked results per MCP query |
 | `-embed` | `auto` | dense embedder for `-mcp`: `auto`/`onnx`/`http`/`none` |
 | `-onnx-runtime` | `ONNXRUNTIME_LIB_PATH` | path to the ONNX Runtime shared library (in-process embedder; needs `-tags onnx`) |
+| `-onnx-intra-op-threads` | `MOEDEX_ONNX_INTRA_OP_THREADS` (`0`) | ONNX threads within operators; zero keeps runtime default |
+| `-onnx-inter-op-threads` | `MOEDEX_ONNX_INTER_OP_THREADS` (`0`) | ONNX threads across graph operators; zero keeps runtime default |
 | `-auth-token` | `MOEDEX_AUTH_TOKEN` | require `Authorization: Bearer <token>` on `-http` (except `/healthz`, `/metrics`) |
 | `-tls-cert` / `-tls-key` | _(unset)_ | serve `-http` over HTTPS (set together) |
 | `-request-timeout` | `30s` | per-request HTTP timeout on `-http` |

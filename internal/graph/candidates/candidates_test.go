@@ -124,6 +124,46 @@ func fromShard(edges []Edge, shard int) []Edge {
 	return out
 }
 
+func TestPreparedNameBatchesEqualWholeGeneration(t *testing.T) {
+	c := build(t, orders, billing, shipping, vendor)
+	want := GenerateCandidates(c, "ProcessOrder")
+	p := PrepareName(c, "ProcessOrder")
+	if p == nil {
+		t.Fatal("PrepareName returned nil")
+	}
+	if p.NumDefinitions() != 2 {
+		t.Fatalf("NumDefinitions = %d, want 2", p.NumDefinitions())
+	}
+	if !p.CrossShard() {
+		t.Fatal("CrossShard = false, want true")
+	}
+
+	var got []Edge
+	for start := 0; start < p.NumSources(); start++ {
+		got = append(got, p.Generate(start, start+1)...)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("batched generation differs from whole generation:\n got %+v\nwant %+v", got, want)
+	}
+}
+
+func TestPreparedNameRangeClampingAndNil(t *testing.T) {
+	if got := PrepareName(nil, "ProcessOrder"); got != nil {
+		t.Fatalf("PrepareName(nil) = %#v, want nil", got)
+	}
+	c := build(t, orders, billing)
+	p := PrepareName(c, "ProcessOrder")
+	if p == nil {
+		t.Fatal("PrepareName returned nil")
+	}
+	if got, want := p.Generate(-10, p.NumSources()+10), GenerateCandidates(c, "ProcessOrder"); !reflect.DeepEqual(got, want) {
+		t.Fatalf("clamped generation differs:\n got %+v\nwant %+v", got, want)
+	}
+	if got := p.Generate(p.NumSources(), p.NumSources()+1); got != nil {
+		t.Fatalf("out-of-range Generate = %+v, want nil", got)
+	}
+}
+
 // TestGenerateCandidates_FindsCrossShardReferences is the phase-3 proof: a symbol
 // defined in one shard and referenced in two others yields candidate edges from
 // every referencing shard to the definition — including from a shard whose

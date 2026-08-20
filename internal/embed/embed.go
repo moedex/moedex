@@ -412,6 +412,13 @@ type BuildStats struct {
 	Embedded int // DISTINCT new texts actually sent to the embedder
 }
 
+// BuildProgress reports completed distinct embedding inputs. Total excludes
+// reused chunks and duplicate texts, matching BuildStats.Embedded.
+type BuildProgress struct {
+	Embedded int
+	Total    int
+}
+
 // BuildStore chunks every blob in ix, embeds the chunks via e, and returns a
 // populated Store. It batches calls to e.Embed. (Contract-frozen signature; it is
 // exactly BuildStoreIncremental with no reuse — a full embed.)
@@ -431,6 +438,13 @@ func BuildStore(ctx context.Context, ix *index.Index, e Embedder, linesPerChunk,
 // The returned store always carries content keys (format v2), so it can in turn
 // seed the NEXT incremental build.
 func BuildStoreIncremental(ctx context.Context, ix *index.Index, e Embedder, linesPerChunk, overlap int, reuse map[ChunkKey]Vector) (*Store, BuildStats, error) {
+	return BuildStoreIncrementalWithProgress(ctx, ix, e, linesPerChunk, overlap, reuse, nil)
+}
+
+// BuildStoreIncrementalWithProgress is BuildStoreIncremental with a callback at
+// preparation completion and after each inference batch. The callback runs
+// synchronously and must return promptly.
+func BuildStoreIncrementalWithProgress(ctx context.Context, ix *index.Index, e Embedder, linesPerChunk, overlap int, reuse map[ChunkKey]Vector, progress func(BuildProgress)) (*Store, BuildStats, error) {
 	var (
 		chunks  []Chunk
 		keys    []ChunkKey
@@ -474,6 +488,9 @@ func BuildStoreIncremental(ctx context.Context, ix *index.Index, e Embedder, lin
 
 	// Embed the distinct misses in batches.
 	embedVecs := make([]Vector, len(embedTexts))
+	if progress != nil {
+		progress(BuildProgress{Total: len(embedTexts)})
+	}
 	for start := 0; start < len(embedTexts); start += buildBatchSize {
 		end := start + buildBatchSize
 		if end > len(embedTexts) {
@@ -493,6 +510,9 @@ func BuildStoreIncremental(ctx context.Context, ix *index.Index, e Embedder, lin
 				return nil, stats, fmt.Errorf("embed: inconsistent vector dim %d (want %d)", len(v), s.dim)
 			}
 			embedVecs[start+i] = normalize(v)
+		}
+		if progress != nil {
+			progress(BuildProgress{Embedded: end, Total: len(embedTexts)})
 		}
 	}
 	// A reuse-only build (every chunk reused) embeds nothing; take the dim from the

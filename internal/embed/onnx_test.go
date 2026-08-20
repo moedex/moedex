@@ -4,10 +4,61 @@ package embed
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"os"
+	"runtime"
 	"testing"
 )
+
+func TestONNXEmbedderThreadOptions(t *testing.T) {
+	options := ONNXOptions{IntraOpThreads: 2, InterOpThreads: 2}
+	e, err := NewONNXEmbedderWithOptions(os.Getenv("ONNXRUNTIME_LIB_PATH"), options)
+	if err != nil {
+		t.Skipf("onnx runtime unavailable (set ONNXRUNTIME_LIB_PATH): %v", err)
+	}
+	defer e.Close()
+	if got := e.Options(); got != options {
+		t.Fatalf("Options = %+v, want %+v", got, options)
+	}
+	if _, err := e.Embed(context.Background(), []string{"func tunedRuntime() error { return nil }"}); err != nil {
+		t.Fatalf("Embed with explicit thread options: %v", err)
+	}
+}
+
+// BenchmarkONNXEmbedderThreadCounts makes the machine-specific tuning lever
+// measurable with the same 64-input batch shape used by corpus builds. Run with
+// ONNXRUNTIME_LIB_PATH set and -benchtime=3x (or longer for calibration).
+func BenchmarkONNXEmbedderThreadCounts(b *testing.B) {
+	texts := make([]string, 64)
+	for i := range texts {
+		texts[i] = fmt.Sprintf("func ProcessItem%d(ctx context.Context, value string) error { return repository.Save(ctx, value) }", i)
+	}
+	threadCounts := []int{0, max(1, runtime.GOMAXPROCS(0)/2), runtime.GOMAXPROCS(0)}
+	seen := map[int]bool{}
+	for _, threads := range threadCounts {
+		if seen[threads] {
+			continue
+		}
+		seen[threads] = true
+		b.Run(fmt.Sprintf("intra_%d", threads), func(b *testing.B) {
+			e, err := NewONNXEmbedderWithOptions(os.Getenv("ONNXRUNTIME_LIB_PATH"), ONNXOptions{
+				IntraOpThreads: threads,
+				InterOpThreads: 1,
+			})
+			if err != nil {
+				b.Skipf("onnx runtime unavailable: %v", err)
+			}
+			defer e.Close()
+			b.ResetTimer()
+			for range b.N {
+				if _, err := e.Embed(context.Background(), texts); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}
 
 // TestONNXEmbedderSemantics exercises the real in-process model. It needs the
 // ONNX Runtime shared library; set ONNXRUNTIME_LIB_PATH (or rely on a system

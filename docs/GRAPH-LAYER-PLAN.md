@@ -350,3 +350,7 @@ These are Codegraph integrations that share its MCP server but are not code-grap
 - **Trigram-first, verify-second.** Every edge discovery starts with a cheap trigram candidate query, then applies the cheapest verifier that reaches the desired confidence tier.
 - **Mmap'd like postings.** The graph adjacency file follows the existing `diskstore` pattern — built offline, served via mmap, never enters the Go heap.
 - **Rebuild with the index.** `moedex-index refresh` rebuilds postings, symbols, tokens, and graph together. No separate graph build pipeline.
+- **Bounded hot-name scheduling.** Candidate sources are prepared once per name,
+  then high-frequency names are split into deterministic source batches of about
+  32K candidate pairs. The shared largest-first queue reports its heaviest name
+  before work and active batches every 30 seconds, avoiding the old one-core tail.

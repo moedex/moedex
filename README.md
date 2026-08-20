@@ -54,6 +54,21 @@ go run ./cmd/moedex-serve \
 curl 'http://127.0.0.1:8080/search?q=SearchContext'
 ```
 
+An existing servable directory can be promoted into an immutable atomic index
+snapshot, then served through its `CURRENT` pointer:
+
+```sh
+moedex-index snapshot-migrate -index-dir /path/to/index -shard-dir /path/to/shards
+moedex-serve -index-dir /path/to/index -mcp-http 127.0.0.1:8081
+```
+
+`snapshot-list`, `snapshot-inspect`, and `snapshot-rollback` inspect or switch
+complete generations without rewriting their artifacts.
+
+New generations can also be built directly in private staging and published in
+one switch with `moedex-index snapshot-build -corpus ROOT -index-dir DIR`; add
+`-dense` to an ONNX-tagged indexer to include vectors before publication.
+
 The daemon also serves ranked, deduplicated, token-budgeted context through MCP
 over stdio (`-mcp`) or Streamable HTTP (`-mcp-http 127.0.0.1:8081`). See the
 [`moedex-serve` guide](cmd/moedex-serve/README.md) for its modes, flags, HTTP

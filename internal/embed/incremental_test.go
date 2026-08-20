@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/binary"
+	"fmt"
 	"math"
 	"os"
 	"path/filepath"
@@ -85,6 +86,30 @@ func TestIncremental_NilReuseEmbedsEverythingWithKeys(t *testing.T) {
 		if !reflect.DeepEqual(s.vectors[i], want) {
 			t.Fatalf("chunk %d vector mismatch", i)
 		}
+	}
+}
+
+func TestIncrementalProgressStartsAtZeroAndCompletes(t *testing.T) {
+	e := newFakeEmbedder(16)
+	files := make(map[string]string, buildBatchSize+3)
+	for i := 0; i < buildBatchSize+3; i++ {
+		name := fmt.Sprintf("%03d.go", i)
+		files[name] = fmt.Sprintf("package p\nfunc F%d() {}\n", i)
+	}
+	ix := buildFileIndex(t, files)
+	var got []BuildProgress
+	_, stats, err := BuildStoreIncrementalWithProgress(context.Background(), ix, e, tcLines, tcOverlap, nil, func(progress BuildProgress) {
+		got = append(got, progress)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []BuildProgress{{Embedded: 0, Total: buildBatchSize + 3}, {Embedded: buildBatchSize, Total: buildBatchSize + 3}, {Embedded: buildBatchSize + 3, Total: buildBatchSize + 3}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("progress = %+v, want %+v", got, want)
+	}
+	if stats.Embedded != buildBatchSize+3 {
+		t.Fatalf("stats = %+v", stats)
 	}
 }
 

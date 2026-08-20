@@ -41,6 +41,10 @@
     <string>@SHARD_DIR@</string>
     <key>ONNXRUNTIME_LIB_PATH</key>
     <string>@ONNX_LIB@</string>
+    <key>MOEDEX_ONNX_INTRA_OP_THREADS</key>
+    <string>@ONNX_INTRA_THREADS@</string>
+    <key>MOEDEX_ONNX_INTER_OP_THREADS</key>
+    <string>@ONNX_INTER_THREADS@</string>
   </dict>
 
   <!-- Daily at 14:10 local time. RunAtLoad is false so installing it never kicks a heavy

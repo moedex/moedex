@@ -26,6 +26,8 @@
 #   MOEDEX_SHARD_DIR      served shard dir         (default ~/.moedex-index/shards)
 #   MOEDEX_CAS_DIR        content-addressable store(default ~/.moedex-index/cas)
 #   ONNXRUNTIME_LIB_PATH  onnx runtime dylib       (default /opt/homebrew/lib/libonnxruntime.dylib)
+#   MOEDEX_ONNX_INTRA_OP_THREADS ONNX operator threads (default runtime-selected)
+#   MOEDEX_ONNX_INTER_OP_THREADS ONNX graph threads    (default runtime-selected)
 #   MOEDEX_EMBED          dense embedder           (default onnx)
 #   MOEDEX_SERVE_BIN      dense moedex-serve       (default ~/.local/bin/moedex-serve)
 #   MOEDEX_INDEX_BIN      moedex-index             (default: ~/go/bin, ~/.local/bin, or PATH)

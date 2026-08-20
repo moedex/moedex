@@ -31,12 +31,15 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"math"
 	"os"
 	"runtime"
 	"runtime/debug"
+	"sort"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"moedex/internal/graph"
 	"moedex/internal/graph/candidates"
@@ -64,6 +67,7 @@ type GraphRefreshStats struct {
 	EdgesRecomputed int
 	EdgesCarried    int
 	EdgesDropped    int
+	Schedule        GraphScheduleStats
 	Cluster         cluster.BuildReport
 	Counts          GraphBuildCounts
 }
@@ -193,13 +197,14 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 		}
 	}
 
-	recomputed, err := sweep.computeEdgesParallel(dirtyNames, stats.Generation)
+	recomputed, schedule, err := sweep.computeEdgesParallel(dirtyNames, stats.Generation)
 	if err != nil {
 		return "", stats, err
 	}
+	stats.Schedule = schedule
 	recomputedByName := make(map[string][]graphKeyEdge, len(dirtyNames))
 	for i, name := range dirtyNames {
-		recomputedByName[name] = recomputed[i]
+		recomputedByName[name] = recomputed[i].Edges
 	}
 
 	builder := diskgraph.NewBuilder()
@@ -354,9 +359,11 @@ func (s *graphSweep) rebuildAll(dir string, stats *GraphRefreshStats) (string, e
 	s.recordCorpusRoster(builder)
 	emit := newGraphEmitter(builder)
 
-	if _, err := s.buildAllEdges(builder, emit, stats.Generation, GraphBuildOptions{}); err != nil {
+	report, err := s.buildAllEdges(builder, emit, stats.Generation, GraphBuildOptions{})
+	if err != nil {
 		return "", err
 	}
+	stats.Schedule = report.Schedule
 
 	stats.NamesRecomputed = len(s.names)
 	stats.EdgesRecomputed = int(builder.NumEdges())
@@ -371,14 +378,220 @@ func (s *graphSweep) rebuildAll(dir string, stats *GraphRefreshStats) (string, e
 	return path, err
 }
 
-// computeEdgesParallel fans out computeEdgesForName across GOMAXPROCS workers.
-// Results are returned in the same order as names for deterministic output.
-// See computeParallel for the panic-recovery and fail-fast behavior this
-// relies on.
-func (s *graphSweep) computeEdgesParallel(names []string, generation uint64) ([][]graphKeyEdge, error) {
-	return computeParallel(names, runtime.GOMAXPROCS(0), func(name string) ([]graphKeyEdge, error) {
-		return s.computeEdgesForName(name, generation)
+const graphCandidateBatchEdges = 32 * 1024
+
+type graphNameResult struct {
+	Edges      []graphKeyEdge
+	CrossShard bool
+}
+
+type graphBatchTask struct {
+	nameIndex  int
+	batchIndex int
+	start      int
+	end        int
+	estimate   uint64
+}
+
+// candidateSourceBatches divides sources into contiguous ranges whose candidate
+// fan-out stays near maxEdges. A source is indivisible because all definitions
+// for it must retain target order, so a name with more definitions than maxEdges
+// has one source per batch.
+func candidateSourceBatches(sources, definitions, maxEdges int) [][2]int {
+	if sources <= 0 || definitions <= 0 {
+		return nil
+	}
+	if maxEdges < 1 {
+		maxEdges = 1
+	}
+	perBatch := maxEdges / definitions
+	if perBatch < 1 {
+		perBatch = 1
+	}
+	ranges := make([][2]int, 0, (sources+perBatch-1)/perBatch)
+	for start := 0; start < sources; start += perBatch {
+		end := start + perBatch
+		if end > sources {
+			end = sources
+		}
+		ranges = append(ranges, [2]int{start, end})
+	}
+	return ranges
+}
+
+// computeEdgesParallel first prepares each name once, then schedules bounded
+// source batches through a shared queue. A common name can therefore occupy many
+// workers instead of becoming the one-core tail of a corpus build. Results are
+// reassembled by name and source range, preserving production ordering exactly.
+func (s *graphSweep) computeEdgesParallel(names []string, generation uint64) ([]graphNameResult, GraphScheduleStats, error) {
+	return s.computeEdgesParallelBatched(names, generation, graphCandidateBatchEdges)
+}
+
+func (s *graphSweep) computeEdgesParallelBatched(names []string, generation uint64, maxBatchEdges int) ([]graphNameResult, GraphScheduleStats, error) {
+	workers := runtime.GOMAXPROCS(0)
+	stats := GraphScheduleStats{Workers: workers, Names: len(names)}
+	prepareStart := time.Now()
+	prepared, err := computeParallel(names, workers, func(name string) (*candidates.PreparedName, error) {
+		return candidates.PrepareName(s.corpus, name), nil
 	})
+	stats.PreparationElapsed = time.Since(prepareStart)
+	if err != nil {
+		return nil, stats, err
+	}
+
+	results := make([]graphNameResult, len(names))
+	parts := make([][][]graphKeyEdge, len(names))
+	var tasks []graphBatchTask
+	for nameIndex, p := range prepared {
+		if p == nil {
+			continue
+		}
+		results[nameIndex].CrossShard = p.CrossShard()
+		ranges := candidateSourceBatches(p.NumSources(), p.NumDefinitions(), maxBatchEdges)
+		parts[nameIndex] = make([][]graphKeyEdge, len(ranges))
+		nameUpperBound := uint64(p.NumSources()) * uint64(p.NumDefinitions())
+		if nameUpperBound > stats.HeaviestNameUpperBound {
+			stats.HeaviestName = names[nameIndex]
+			stats.HeaviestNameUpperBound = nameUpperBound
+			stats.HeaviestNameBatches = len(ranges)
+		}
+		for batchIndex, bounds := range ranges {
+			estimate := uint64(bounds[1]-bounds[0]) * uint64(p.NumDefinitions())
+			stats.CandidateUpperBound += estimate
+			if estimate > stats.LargestBatchUpperBound {
+				stats.LargestBatchUpperBound = estimate
+			}
+			tasks = append(tasks, graphBatchTask{
+				nameIndex: nameIndex, batchIndex: batchIndex,
+				start: bounds[0], end: bounds[1], estimate: estimate,
+			})
+		}
+	}
+	stats.Batches = len(tasks)
+	if stats.Workers > stats.Batches {
+		stats.Workers = stats.Batches
+	}
+	if stats.HeaviestName != "" {
+		log.Printf("server: graph schedule prepared %d names as %d bounded batches on %d workers; heaviest=%q upper_bound=%d batches=%d prepare=%s",
+			stats.Names, stats.Batches, stats.Workers, stats.HeaviestName,
+			stats.HeaviestNameUpperBound, stats.HeaviestNameBatches, stats.PreparationElapsed.Round(time.Millisecond))
+	}
+
+	// Longest batches enter the shared queue first. Stable identity tie-breaks
+	// keep the schedule reproducible while result placement remains independent
+	// of completion order.
+	sort.SliceStable(tasks, func(i, j int) bool {
+		if tasks[i].estimate != tasks[j].estimate {
+			return tasks[i].estimate > tasks[j].estimate
+		}
+		if tasks[i].nameIndex != tasks[j].nameIndex {
+			return tasks[i].nameIndex < tasks[j].nameIndex
+		}
+		return tasks[i].batchIndex < tasks[j].batchIndex
+	})
+	computeStart := time.Now()
+	if err := s.computeGraphBatchTasks(names, prepared, tasks, parts, generation, stats.Workers); err != nil {
+		stats.CandidateComputeElapsed = time.Since(computeStart)
+		return nil, stats, err
+	}
+	stats.CandidateComputeElapsed = time.Since(computeStart)
+
+	for nameIndex := range results {
+		var total int
+		for _, batch := range parts[nameIndex] {
+			total += len(batch)
+		}
+		results[nameIndex].Edges = make([]graphKeyEdge, 0, total)
+		for _, batch := range parts[nameIndex] {
+			results[nameIndex].Edges = append(results[nameIndex].Edges, batch...)
+		}
+	}
+	return results, stats, nil
+}
+
+func (s *graphSweep) computeGraphBatchTasks(names []string, prepared []*candidates.PreparedName, tasks []graphBatchTask, parts [][][]graphKeyEdge, generation uint64, workers int) error {
+	if len(tasks) == 0 {
+		return nil
+	}
+	if workers > len(tasks) {
+		workers = len(tasks)
+	}
+	if workers < 1 {
+		workers = 1
+	}
+
+	work := make(chan graphBatchTask, len(tasks))
+	for _, task := range tasks {
+		work <- task
+	}
+	close(work)
+
+	var (
+		wg        sync.WaitGroup
+		failed    atomic.Bool
+		completed atomic.Int64
+		errOnce   sync.Once
+		firstErr  error
+		activeMu  sync.Mutex
+		active    = make([]string, workers)
+	)
+	progressStop := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				activeMu.Lock()
+				labels := make([]string, 0, len(active))
+				for _, label := range active {
+					if label != "" {
+						labels = append(labels, label)
+					}
+				}
+				activeMu.Unlock()
+				if len(labels) > 6 {
+					labels = labels[:6]
+				}
+				log.Printf("server: graph schedule progress %d/%d batches complete; active=%q",
+					completed.Load(), len(tasks), labels)
+			case <-progressStop:
+				return
+			}
+		}
+	}()
+	wg.Add(workers)
+	for workerID := range workers {
+		go func(workerID int) {
+			defer wg.Done()
+			for task := range work {
+				if failed.Load() {
+					continue
+				}
+				name := names[task.nameIndex]
+				label := fmt.Sprintf("%s sources[%d:%d]", name, task.start, task.end)
+				activeMu.Lock()
+				active[workerID] = label
+				activeMu.Unlock()
+				edges, err := runRecovered(label, func() ([]graphKeyEdge, error) {
+					return s.computeEdgesForPreparedRange(name, prepared[task.nameIndex], task.start, task.end, generation)
+				})
+				activeMu.Lock()
+				active[workerID] = ""
+				activeMu.Unlock()
+				completed.Add(1)
+				if err != nil {
+					errOnce.Do(func() { firstErr = err })
+					failed.Store(true)
+					continue
+				}
+				parts[task.nameIndex][task.batchIndex] = edges
+			}
+		}(workerID)
+	}
+	wg.Wait()
+	close(progressStop)
+	return firstErr
 }
 
 // computeParallel fans fn out across up to workers goroutines, one call per

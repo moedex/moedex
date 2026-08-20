@@ -11,7 +11,10 @@ and answers queries with zero cold-start, in one of five modes:
 | Ranked agent context (HTTP) | `-mcp-http :8081` | MCP over Streamable HTTP at `/mcp` | the same `search_context` tool, loaded once and shared across sessions over the network |
 | Dense sidecar refresh | `-build-embeddings` | stdout/stderr, then exit | builds/refreshes the corpus embedding sidecar for `-shard-dir` out of band, so a warm daemon reload never re-embeds inline |
 
-`-shard-dir` is always required (or `MOEDEX_SHARD_DIR`) for every mode above. With
+Provide either `-shard-dir` (`MOEDEX_SHARD_DIR`) or the atomic snapshot root
+`-index-dir` (`MOEDEX_INDEX_DIR`). The latter resolves `CURRENT` at boot and on
+SIGHUP; the two flags are mutually exclusive. `-build-embeddings` intentionally
+requires `-shard-dir`, because a published snapshot is immutable. With
 none of `-mcp`/`-mcp-http`/`-http`/`-q`/`-build-embeddings`, the process exits with
 usage on stderr. `-version` prints build identity (name, commit, dense capability)
 and exits before any of the above.
@@ -30,6 +33,9 @@ moedex-serve -shard-dir /path/to/shards -mcp
 
 # Ranked agent context over MCP/HTTP — warm shared daemon for coding agents
 moedex-serve -shard-dir /path/to/shards -mcp-http :8081
+
+# The same daemon over an immutable snapshot selected by index/CURRENT
+moedex-serve -index-dir /path/to/index -mcp-http :8081
 
 # Build/refresh the dense embedding sidecar out of band, then exit
 moedex-serve -shard-dir /path/to/shards -build-embeddings -embed onnx
@@ -66,7 +72,8 @@ memory is unmapped); `Close` is idempotent.
 | Flag | Default | Meaning |
 |------|---------|---------|
 | `-config` | _(off)_ | load a `KEY=VALUE` settings file (systemd `EnvironmentFile` format) before flags; **flag > file > env > default** |
-| `-shard-dir` | `$MOEDEX_SHARD_DIR` | directory of prebuilt `*.idx` shards (**required**) |
+| `-shard-dir` | `$MOEDEX_SHARD_DIR` | directory of prebuilt `*.idx` shards (required unless `-index-dir` is used) |
+| `-index-dir` | `$MOEDEX_INDEX_DIR` | immutable snapshot root; resolve `CURRENT` at boot/SIGHUP (mutually exclusive with `-shard-dir`) |
 | `-http` | `$MOEDEX_HTTP_ADDR` | serve the retrieval HTTP API on this address (e.g. `127.0.0.1:8080`) |
 | `-mcp` | `false` | serve ranked agent context over MCP (stdio) |
 | `-mcp-http` | `$MOEDEX_MCP_HTTP_ADDR` | serve the ranked agent-context MCP tool over Streamable HTTP at `/mcp` on this address (e.g. `127.0.0.1:8081`) — the warm shared daemon for coding agents |
@@ -78,6 +85,8 @@ memory is unmapped); `Close` is idempotent.
 | `-top-k` | `20` | default ranked results per MCP query |
 | `-embed` | `$MOEDEX_EMBED` (`auto`) | dense embedder for `-mcp`: `auto`\|`onnx`\|`http`\|`none` |
 | `-onnx-runtime` | `$ONNXRUNTIME_LIB_PATH`, then standard Homebrew/system paths | path to the ONNX Runtime shared library (in-process embedder; requires an `-tags onnx` build) |
+| `-onnx-intra-op-threads` | `$MOEDEX_ONNX_INTRA_OP_THREADS` (`0`) | CPU threads within ONNX operators; `0` keeps the runtime default |
+| `-onnx-inter-op-threads` | `$MOEDEX_ONNX_INTER_OP_THREADS` (`0`) | CPU threads across independent ONNX graph operators; `0` keeps the runtime default |
 | `-auth-token` | `$MOEDEX_AUTH_TOKEN` | if set, require `Authorization: Bearer <token>` on `-http` (except `/healthz`, `/metrics`) |
 | `-tls-cert` | `$MOEDEX_TLS_CERT` | TLS certificate file; serve `-http` over HTTPS (requires `-tls-key`) |
 | `-tls-key` | `$MOEDEX_TLS_KEY` | TLS private key file; serve `-http` over HTTPS (requires `-tls-cert`) |

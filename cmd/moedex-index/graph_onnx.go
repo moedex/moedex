@@ -24,8 +24,19 @@ func buildGraph(dir string) (path string, stats server.GraphRefreshStats, err er
 	if topK == 0 {
 		return server.RefreshGraph(dir)
 	}
+	intraThreads, err := graphIntEnv("MOEDEX_ONNX_INTRA_OP_THREADS", 0)
+	if err != nil {
+		return "", stats, err
+	}
+	interThreads, err := graphIntEnv("MOEDEX_ONNX_INTER_OP_THREADS", 0)
+	if err != nil {
+		return "", stats, err
+	}
 
-	embedder, err := embed.NewONNXEmbedder(os.Getenv("ONNXRUNTIME_LIB_PATH"))
+	embedder, err := embed.NewONNXEmbedderWithOptions(os.Getenv("ONNXRUNTIME_LIB_PATH"), embed.ONNXOptions{
+		IntraOpThreads: intraThreads,
+		InterOpThreads: interThreads,
+	})
 	if err != nil {
 		return "", stats, fmt.Errorf("initialize graph ONNX embedder: %w", err)
 	}
@@ -34,11 +45,22 @@ func buildGraph(dir string) (path string, stats server.GraphRefreshStats, err er
 			err = fmt.Errorf("close graph ONNX embedder: %w", closeErr)
 		}
 	}()
-	path, _, err = server.BuildGraphWithOptions(dir, server.GraphBuildOptions{
+	path, report, err := server.BuildGraphWithOptions(dir, server.GraphBuildOptions{
 		SimilarTopK:      topK,
 		SimilarThreshold: threshold,
 		Embedder:         embedder,
 	})
+	if err == nil {
+		stats.FullRebuild = true
+		stats.Reason = "semantic similarity enabled"
+		stats.Generation = 1
+		stats.NamesEligible = report.Schedule.Names
+		stats.NamesRecomputed = report.Schedule.Names
+		stats.EdgesRecomputed = int(report.Edges)
+		stats.Schedule = report.Schedule
+		stats.Cluster = report.Cluster
+		stats.Counts = report.Counts
+	}
 	return path, stats, err
 }
 

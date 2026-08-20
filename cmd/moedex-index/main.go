@@ -102,6 +102,16 @@ func main() {
 		err = runCASCompact(os.Args[2:])
 	case "doctor":
 		err = runDoctor(os.Args[2:])
+	case "snapshot-list":
+		err = runSnapshotList(os.Args[2:])
+	case "snapshot-inspect":
+		err = runSnapshotInspect(os.Args[2:])
+	case "snapshot-rollback":
+		err = runSnapshotRollback(os.Args[2:])
+	case "snapshot-migrate":
+		err = runSnapshotMigrate(os.Args[2:])
+	case "snapshot-build":
+		err = runSnapshotBuild(os.Args[2:])
 	case "version", "-version", "--version":
 		fmt.Println(version.Line("moedex-index", false))
 		return
@@ -133,6 +143,13 @@ Usage:
       Read-only preflight: binary skew/shadows, shard-dir layout + correct refresh
       command, dense sidecar freshness, daemon + launchd health. Non-zero on a
       critical problem (so a refresh can abort before the destructive swap).
+
+Atomic index snapshots (immutable generations selected by index-dir/CURRENT):
+  moedex-index snapshot-list     [-index-dir DIR]
+  moedex-index snapshot-inspect  [-index-dir DIR] [-id SNAPSHOT]
+  moedex-index snapshot-rollback [-index-dir DIR] -id SNAPSHOT
+  moedex-index snapshot-migrate  [-index-dir DIR] -shard-dir LEGACY [-id SNAPSHOT]
+  moedex-index snapshot-build    [-index-dir DIR] -corpus ROOT [-id SNAPSHOT] [-dense]
 
 Content-addressable store (global cross-shard dedup + per-blob delta):
   moedex-index cas-build   -corpus ROOT -cas-dir DIR
@@ -248,6 +265,14 @@ func printGraphStats(stats server.GraphRefreshStats) {
 	}
 	if stats.EdgesDropped > 0 {
 		fmt.Fprintf(os.Stderr, "moedex-index: warning: graph refresh dropped %d stale or suppressed prior edge(s)\n", stats.EdgesDropped)
+	}
+	if stats.Schedule.Names > 0 {
+		fmt.Printf("  graph schedule: %d name(s) -> %d bounded batch(es) on %d worker(s), largest <=%d candidate(s); heaviest=%q <=%d across %d batch(es); prepare=%s compute=%s\n",
+			stats.Schedule.Names, stats.Schedule.Batches, stats.Schedule.Workers,
+			stats.Schedule.LargestBatchUpperBound, stats.Schedule.HeaviestName,
+			stats.Schedule.HeaviestNameUpperBound, stats.Schedule.HeaviestNameBatches,
+			stats.Schedule.PreparationElapsed.Round(time.Millisecond),
+			stats.Schedule.CandidateComputeElapsed.Round(time.Millisecond))
 	}
 	if stats.Counts.SuppressedRawCandidates > 0 {
 		fmt.Printf("  graph quality: suppressed %d raw Candidate occurrence edge(s)\n", stats.Counts.SuppressedRawCandidates)
@@ -585,14 +610,18 @@ func runRefresh(args []string) error {
 // dir, after a rebuilt dir has been renamed into place. The shard files now live
 // at dir/<basename>, so a later refresh can find them for carry-forward.
 func rewriteManifestPaths(dir string) error {
-	mp := filepath.Join(dir, parity.ManifestName)
+	return rewriteManifestPathsTo(dir, dir)
+}
+
+func rewriteManifestPathsTo(storageDir, recordedDir string) error {
+	mp := filepath.Join(storageDir, parity.ManifestName)
 	m, err := parity.LoadManifest(mp)
 	if err != nil {
 		return err
 	}
-	m.ShardDir = dir
+	m.ShardDir = recordedDir
 	for i := range m.Shards {
-		m.Shards[i].Path = filepath.Join(dir, filepath.Base(m.Shards[i].Path))
+		m.Shards[i].Path = filepath.Join(recordedDir, filepath.Base(m.Shards[i].Path))
 	}
 	return parity.WriteManifest(mp, m)
 }

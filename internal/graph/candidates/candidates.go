@@ -48,8 +48,10 @@
 // corpus-wide. A common short name in a large corpus therefore generates a lot of
 // candidates; that is inherent to recall-complete name-based generation, not a
 // defect, and it is why Options gates a corpus-wide sweep to exported,
-// trigram-length names by default. Generation is read-only and holds no locks, so
-// a caller with a real cost profile can fan out over names concurrently.
+// trigram-length names by default. Preparation and generation are read-only and
+// hold no locks; PreparedName lets an offline caller split one common name into
+// bounded source ranges, so a high-frequency identifier cannot become a
+// one-worker tail.
 //
 // The package is pure standard library, and — like the rest of the engine — never
 // copies blob content: an Edge is a (shard, blob, byte offset) triple resolved
@@ -196,6 +198,137 @@ type Corpus struct {
 	postings []bool
 }
 
+// PreparedName is the reusable source/definition work set for one symbol name.
+// Preparing once and generating bounded source batches avoids rebuilding the
+// corpus-wide occurrence list for every batch of a high-frequency name.
+type PreparedName struct {
+	corpus *Corpus
+	name   string
+	defs   []symbol.ShardRef
+	srcs   []occurrence
+}
+
+// PrepareName resolves name's definitions and source occurrences once. It
+// returns nil when name is empty, unknown, or has no candidate sources.
+func PrepareName(c *Corpus, name string) *PreparedName {
+	if c == nil || name == "" {
+		return nil
+	}
+	defs := c.syms.Definitions(name)
+	if len(defs) == 0 {
+		return nil
+	}
+	srcs := c.occurrences(name)
+	if len(srcs) == 0 {
+		return nil
+	}
+	// The symbol arm is collected before the text arm, so occurrence collection
+	// itself is not position ordered. Sort once here so independently generated
+	// source batches concatenate to the exact whole-name order.
+	sort.SliceStable(srcs, func(i, j int) bool {
+		a, b := srcs[i], srcs[j]
+		if a.site.Shard != b.site.Shard {
+			return a.site.Shard < b.site.Shard
+		}
+		if a.site.Blob != b.site.Blob {
+			return a.site.Blob < b.site.Blob
+		}
+		if a.site.Start != b.site.Start {
+			return a.site.Start < b.site.Start
+		}
+		if a.site.End != b.site.End {
+			return a.site.End < b.site.End
+		}
+		return a.typ < b.typ
+	})
+	return &PreparedName{corpus: c, name: name, defs: defs, srcs: srcs}
+}
+
+// NumSources reports how many distinct source positions were found.
+func (p *PreparedName) NumSources() int {
+	if p == nil {
+		return 0
+	}
+	return len(p.srcs)
+}
+
+// NumDefinitions reports how many definition targets each source may fan out to.
+func (p *PreparedName) NumDefinitions() int {
+	if p == nil {
+		return 0
+	}
+	return len(p.defs)
+}
+
+// CrossShard reports whether any generated candidate can span two shards.
+func (p *PreparedName) CrossShard() bool {
+	if p == nil {
+		return false
+	}
+	defShards := make(map[int]struct{}, len(p.defs))
+	for _, d := range p.defs {
+		defShards[d.Shard] = struct{}{}
+	}
+	for _, src := range p.srcs {
+		if len(defShards) > 1 {
+			return true
+		}
+		if _, same := defShards[src.site.Shard]; !same {
+			return true
+		}
+	}
+	return false
+}
+
+// Generate returns candidates for the half-open source range [start,end). The
+// range is clamped, making it safe for a scheduler to form the final short
+// batch without special casing. Results retain the same deterministic order as
+// GenerateCandidates.
+func (p *PreparedName) Generate(start, end int) []Edge {
+	if p == nil || start >= len(p.srcs) || end <= 0 || start >= end {
+		return nil
+	}
+	if start < 0 {
+		start = 0
+	}
+	if end > len(p.srcs) {
+		end = len(p.srcs)
+	}
+
+	edges := make([]Edge, 0, (end-start)*len(p.defs))
+	for _, src := range p.srcs[start:end] {
+		sourceBlob := p.corpus.Blob(src.site)
+		var evidence graph.Evidence
+		if sourceBlob != nil && src.site.Start >= 0 && src.site.End > src.site.Start {
+			evidence = graph.Evidence{
+				BlobSHA:    sourceBlob.SHA,
+				ByteOffset: uint64(src.site.Start),
+				ByteLength: uint64(src.site.End - src.site.Start),
+			}
+		}
+		for _, d := range p.defs {
+			target := Site{Shard: d.Shard, Blob: d.Blob, Start: d.Start, End: d.End}
+			if samePosition(src.site, target) {
+				continue
+			}
+			edges = append(edges, Edge{
+				Name:       p.name,
+				Source:     src.site,
+				Target:     target,
+				Type:       src.typ,
+				Confidence: graph.Candidate,
+				Evidence:   evidence,
+				sourceBlob: sourceBlob,
+			})
+		}
+	}
+	if len(edges) == 0 {
+		return nil
+	}
+	sortEdges(edges)
+	return edges
+}
+
 // NewCorpus pairs the merged cross-shard symbol index with the per-shard content
 // indices it was merged from. idxs must have one entry per merged shard, in shard
 // ID order; a nil entry is allowed (that shard contributes no trigram
@@ -285,50 +418,8 @@ func (c *Corpus) Text(s Site) []byte {
 // Candidate confidence. A name with D definitions and S occurrences therefore
 // yields up to D*S edges.
 func GenerateCandidates(c *Corpus, name string) []Edge {
-	if c == nil || name == "" {
-		return nil
-	}
-	defs := c.syms.Definitions(name)
-	if len(defs) == 0 {
-		return nil
-	}
-	srcs := c.occurrences(name)
-	if len(srcs) == 0 {
-		return nil
-	}
-
-	edges := make([]Edge, 0, len(srcs)*len(defs))
-	for _, src := range srcs {
-		sourceBlob := c.Blob(src.site)
-		var evidence graph.Evidence
-		if sourceBlob != nil && src.site.Start >= 0 && src.site.End > src.site.Start {
-			evidence = graph.Evidence{
-				BlobSHA:    sourceBlob.SHA,
-				ByteOffset: uint64(src.site.Start),
-				ByteLength: uint64(src.site.End - src.site.Start),
-			}
-		}
-		for _, d := range defs {
-			target := Site{Shard: d.Shard, Blob: d.Blob, Start: d.Start, End: d.End}
-			if samePosition(src.site, target) {
-				continue // a definition is not a use of itself
-			}
-			edges = append(edges, Edge{
-				Name:       name,
-				Source:     src.site,
-				Target:     target,
-				Type:       src.typ,
-				Confidence: graph.Candidate,
-				Evidence:   evidence,
-				sourceBlob: sourceBlob,
-			})
-		}
-	}
-	if len(edges) == 0 {
-		return nil
-	}
-	sortEdges(edges)
-	return edges
+	p := PrepareName(c, name)
+	return p.Generate(0, p.NumSources())
 }
 
 // samePosition reports whether two sites name the same position, comparing

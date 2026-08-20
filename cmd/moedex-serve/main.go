@@ -44,6 +44,7 @@ import (
 	"moedex/internal/mcp"
 	"moedex/internal/search"
 	"moedex/internal/server"
+	indexsnapshot "moedex/internal/snapshot"
 	"moedex/internal/version"
 )
 
@@ -62,6 +63,7 @@ func main() {
 	flag.String("config", "", "load a KEY=VALUE settings file (systemd EnvironmentFile format) before flags; flag > file > env > default")
 
 	shardDir := flag.String("shard-dir", os.Getenv("MOEDEX_SHARD_DIR"), "directory of prebuilt *.idx shards")
+	indexDir := flag.String("index-dir", os.Getenv("MOEDEX_INDEX_DIR"), "atomic snapshot root; resolves CURRENT at boot and on SIGHUP (mutually exclusive with -shard-dir)")
 	httpAddr := flag.String("http", os.Getenv("MOEDEX_HTTP_ADDR"), "if set (or MOEDEX_HTTP_ADDR), serve the retrieval HTTP API on this address (e.g. 127.0.0.1:8080)")
 	mcpMode := flag.Bool("mcp", false, "serve ranked agent context over MCP (stdio); per-session, loads on each launch")
 	mcpHTTPAddr := flag.String("mcp-http", os.Getenv("MOEDEX_MCP_HTTP_ADDR"), "if set (or MOEDEX_MCP_HTTP_ADDR), serve the ranked agent-context MCP tool over HTTP (Streamable HTTP) at /mcp on this address (e.g. 127.0.0.1:8081) — the warm shared daemon for coding agents")
@@ -71,6 +73,8 @@ func main() {
 	topK := flag.Int("top-k", 20, "default ranked results per MCP query")
 	embedKind := flag.String("embed", envOr("MOEDEX_EMBED", "auto"), "dense embedder for -mcp: auto|onnx|http|none (auto = onnx when a configured or standard runtime is found, else http if MOEDEX_EMBED_URL set, else none)")
 	onnxRuntime := flag.String("onnx-runtime", embed.ResolveONNXRuntimePath(""), "path to the ONNX Runtime shared library (in-process embedder; auto-discovers standard Homebrew/system paths; requires -tags onnx build)")
+	onnxIntraThreads := flag.Int("onnx-intra-op-threads", envOrInt("MOEDEX_ONNX_INTRA_OP_THREADS", 0), "ONNX Runtime threads within each operator; 0 keeps the runtime default (or MOEDEX_ONNX_INTRA_OP_THREADS)")
+	onnxInterThreads := flag.Int("onnx-inter-op-threads", envOrInt("MOEDEX_ONNX_INTER_OP_THREADS", 0), "ONNX Runtime threads across independent graph operators; 0 keeps the runtime default (or MOEDEX_ONNX_INTER_OP_THREADS)")
 	buildEmbeddings := flag.Bool("build-embeddings", false, "build/refresh the corpus embedding sidecar for -shard-dir, then exit (out-of-band dense refresh; requires -embed onnx|http). Run this before reloading the warm daemon so it never re-embeds the corpus inline.")
 	authToken := flag.String("auth-token", "", "if set (or MOEDEX_AUTH_TOKEN), require `Authorization: Bearer <token>` on -http (except /healthz, /metrics)")
 	tlsCert := flag.String("tls-cert", os.Getenv("MOEDEX_TLS_CERT"), "TLS certificate file; serve -http over HTTPS (requires -tls-key)")
@@ -80,10 +84,38 @@ func main() {
 	mcpMaxConcurrency := flag.Int("mcp-max-concurrency", envOrInt("MOEDEX_MCP_MAX_CONCURRENCY", defaultMCPMaxConcurrency), "cap concurrent in-flight /mcp requests on -mcp-http; each one runs a ranked search + context assembly and can pin a core for up to -request-timeout. 0 disables the cap. Mirrors -search-max-concurrency.")
 	showVersion := flag.Bool("version", false, "print build identity (name, commit, dense capability) and exit")
 	flag.Parse()
-
+	onnxOptions := embed.ONNXOptions{IntraOpThreads: *onnxIntraThreads, InterOpThreads: *onnxInterThreads}
 	if *showVersion {
 		fmt.Println(version.Line("moedex-serve", embed.ONNXCompiled))
 		return
+	}
+	if *indexDir != "" && *shardDir != "" {
+		fmt.Fprintln(os.Stderr, "moedex-serve: -index-dir and -shard-dir are mutually exclusive")
+		os.Exit(2)
+	}
+	if *indexDir != "" {
+		resolved, err := indexsnapshot.Resolve(*indexDir)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "moedex-serve: resolve -index-dir: %v\n", err)
+			os.Exit(1)
+		}
+		*shardDir = resolved.ShardDir()
+		fmt.Fprintf(os.Stderr, "moedex-serve: snapshot %s -> %s\n", resolved.ID, *shardDir)
+		if *mcpMode || *mcpHTTPAddr != "" {
+			info, inspectErr := server.InspectShardDir(*shardDir)
+			denseReady := inspectErr == nil && info.StoreFresh
+			if !denseReady {
+				switch *embedKind {
+				case "auto":
+					*embedKind = "none"
+					fmt.Fprintln(os.Stderr, "moedex-serve: snapshot has no fresh dense component; auto mode will rank lexical+symbol")
+				case "none":
+				default:
+					fmt.Fprintln(os.Stderr, "moedex-serve: immutable snapshot has no fresh dense component; publish dense vectors with the snapshot or use -embed none")
+					os.Exit(1)
+				}
+			}
+		}
 	}
 
 	// Auth precedence: MOEDEX_AUTH_TOKEN is the base, -auth-token overrides it.
@@ -93,7 +125,7 @@ func main() {
 	}
 
 	if *shardDir == "" {
-		fmt.Fprintln(os.Stderr, "moedex-serve: -shard-dir is required (or set MOEDEX_SHARD_DIR)")
+		fmt.Fprintln(os.Stderr, "moedex-serve: provide -shard-dir/MOEDEX_SHARD_DIR or -index-dir/MOEDEX_INDEX_DIR")
 		os.Exit(2)
 	}
 	if !*mcpMode && *mcpHTTPAddr == "" && *httpAddr == "" && *q == "" && !*buildEmbeddings {
@@ -102,7 +134,11 @@ func main() {
 	}
 
 	if *buildEmbeddings {
-		if err := runBuildEmbeddings(*shardDir, *topK, *embedKind, *onnxRuntime); err != nil {
+		if *indexDir != "" {
+			fmt.Fprintln(os.Stderr, "moedex-serve: -build-embeddings cannot mutate an immutable -index-dir snapshot; build dense artifacts before publishing the snapshot")
+			os.Exit(2)
+		}
+		if err := runBuildEmbeddings(*shardDir, *topK, *embedKind, *onnxRuntime, onnxOptions); err != nil {
 			fmt.Fprintf(os.Stderr, "moedex-serve: %v\n", err)
 			os.Exit(1)
 		}
@@ -110,7 +146,7 @@ func main() {
 	}
 
 	if *mcpMode {
-		if err := runMCP(*shardDir, *topK, *embedKind, *onnxRuntime); err != nil {
+		if err := runMCP(*shardDir, *indexDir, *topK, *embedKind, *onnxRuntime, onnxOptions); err != nil {
 			fmt.Fprintf(os.Stderr, "moedex-serve: %v\n", err)
 			os.Exit(1)
 		}
@@ -121,6 +157,7 @@ func main() {
 		cfg := mcpHTTPConfig{
 			addr:           *mcpHTTPAddr,
 			shardDir:       *shardDir,
+			indexDir:       *indexDir,
 			token:          authTok,
 			tlsCert:        *tlsCert,
 			tlsKey:         *tlsKey,
@@ -128,6 +165,7 @@ func main() {
 			topK:           *topK,
 			embedKind:      *embedKind,
 			onnxRuntime:    *onnxRuntime,
+			onnxOptions:    onnxOptions,
 			maxConcurrency: *mcpMaxConcurrency,
 		}
 		if err := runMCPHTTP(cfg); err != nil {
@@ -176,11 +214,11 @@ func main() {
 // reload path can rebuild with the same settings. The dense arm lights up only
 // when an embedder is configured; embeddings are persisted next to the shards so
 // subsequent boots load instead of re-embedding the whole corpus.
-func openRankCorpus(ctx context.Context, shardDir string, topK int, embedKind, onnxRuntime string) (*server.RankCorpus, server.RankConfig, error) {
+func openRankCorpus(ctx context.Context, shardDir string, topK int, embedKind, onnxRuntime string, onnxOptions embed.ONNXOptions) (*server.RankCorpus, server.RankConfig, error) {
 	start := time.Now()
 	cfg := server.RankConfig{TopK: topK}
 
-	dense, err := configureDenseArm(&cfg, shardDir, embedKind, onnxRuntime)
+	dense, err := configureDenseArm(&cfg, shardDir, embedKind, onnxRuntime, onnxOptions)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "moedex-serve: dense arm setup failed (%v); ranking lexical+symbol\n", err)
 		cfg.Emb, dense = nil, false
@@ -249,17 +287,38 @@ func denseSource(rc *server.RankCorpus) string {
 // the cached store (a quick no-op); a changed shard set invalidates the fingerprint
 // and triggers the re-embed. Requires a configured embedder — -embed none has nothing
 // to build and is reported as an error.
-func runBuildEmbeddings(shardDir string, topK int, embedKind, onnxRuntime string) error {
+func runBuildEmbeddings(shardDir string, topK int, embedKind, onnxRuntime string, onnxOptions embed.ONNXOptions) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	cfg := server.RankConfig{TopK: topK}
-	dense, err := configureDenseArm(&cfg, shardDir, embedKind, onnxRuntime)
+	dense, err := configureDenseArm(&cfg, shardDir, embedKind, onnxRuntime, onnxOptions)
 	if err != nil {
 		return fmt.Errorf("dense arm setup failed: %w", err)
 	}
 	if !dense || cfg.Emb == nil {
 		return fmt.Errorf("no embeddings built: dense arm is off — set -embed onnx with -onnx-runtime <lib> (requires -tags onnx build), or -embed http with MOEDEX_EMBED_URL")
+	}
+	progressStart := time.Now()
+	lastProgress := time.Time{}
+	cfg.EmbeddingProgress = func(progress embed.BuildProgress) {
+		now := time.Now()
+		if progress.Embedded != 0 && progress.Embedded != progress.Total && now.Sub(lastProgress) < 10*time.Second {
+			return
+		}
+		lastProgress = now
+		elapsed := now.Sub(progressStart)
+		rate := 0.0
+		if elapsed > 0 {
+			rate = float64(progress.Embedded) / elapsed.Seconds()
+		}
+		eta := time.Duration(0)
+		if rate > 0 && progress.Embedded < progress.Total {
+			eta = time.Duration(float64(progress.Total-progress.Embedded) / rate * float64(time.Second))
+		}
+		fmt.Fprintf(os.Stderr, "moedex-serve: embedding progress %d/%d (%.1f%%), %.1f texts/s, elapsed=%s eta=%s\n",
+			progress.Embedded, progress.Total, percent(progress.Embedded, progress.Total), rate,
+			elapsed.Round(time.Second), eta.Round(time.Second))
 	}
 
 	t0 := time.Now()
@@ -281,9 +340,16 @@ func runBuildEmbeddings(shardDir string, topK int, embedKind, onnxRuntime string
 	return nil
 }
 
-func runMCP(shardDir string, topK int, embedKind, onnxRuntime string) error {
+func percent(done, total int) float64 {
+	if total == 0 {
+		return 100
+	}
+	return 100 * float64(done) / float64(total)
+}
+
+func runMCP(shardDir, indexDir string, topK int, embedKind, onnxRuntime string, onnxOptions embed.ONNXOptions) error {
 	ctx := context.Background()
-	rc, cfg, err := openRankCorpus(ctx, shardDir, topK, embedKind, onnxRuntime)
+	rc, cfg, err := openRankCorpus(ctx, shardDir, topK, embedKind, onnxRuntime, onnxOptions)
 	if err != nil {
 		return err
 	}
@@ -305,7 +371,12 @@ func runMCP(shardDir string, topK int, embedKind, onnxRuntime string) error {
 		for range hup {
 			t0 := time.Now()
 			fmt.Fprintln(os.Stderr, "moedex-serve: SIGHUP — rebuilding ranked corpus")
-			nrc, _, rankErr := openRankOrDegrade(ctx, shardDir, cfg)
+			reloadDir, resolveErr := resolveReloadDir(indexDir, shardDir, cfg.Emb != nil)
+			if resolveErr != nil {
+				fmt.Fprintf(os.Stderr, "moedex-serve: snapshot resolve failed (%v); keeping current generation\n", resolveErr)
+				continue
+			}
+			nrc, _, rankErr := openRankOrDegrade(ctx, reloadDir, cfg)
 			if rankErr != nil {
 				fmt.Fprintf(os.Stderr, "moedex-serve: reload failed (%v); keeping current ranker\n", rankErr)
 			}
@@ -314,8 +385,15 @@ func runMCP(shardDir string, topK int, embedKind, onnxRuntime string) error {
 			// and GraphToolset are independently refcounted and hot-swappable, so
 			// a rank-corpus rebuild failure must not skip an unrelated,
 			// otherwise-successful graph-sidecar refresh (F-21).
-			if openErr, closeErr := graphTools.Reload(shardDir); openErr != nil {
+			if indexDir != "" && rankErr != nil {
+				continue // do not reload the graph when the rank half cannot open
+			}
+			if openErr, closeErr := graphTools.Reload(reloadDir); openErr != nil {
 				fmt.Fprintf(os.Stderr, "moedex-serve: graph reload failed (%v); keeping current graph\n", openErr)
+				if indexDir != "" {
+					_ = nrc.Close()
+					continue // do not commit the rank half when graph open failed
+				}
 			} else if closeErr != nil {
 				fmt.Fprintf(os.Stderr, "moedex-serve: graph reload succeeded but releasing the previous generation failed (%v)\n", closeErr)
 			}
@@ -349,6 +427,7 @@ func runMCP(shardDir string, topK int, embedKind, onnxRuntime string) error {
 type mcpHTTPConfig struct {
 	addr           string
 	shardDir       string
+	indexDir       string
 	token          string
 	tlsCert        string
 	tlsKey         string
@@ -356,6 +435,7 @@ type mcpHTTPConfig struct {
 	topK           int
 	embedKind      string
 	onnxRuntime    string
+	onnxOptions    embed.ONNXOptions
 	maxConcurrency int
 }
 
@@ -382,7 +462,7 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 	}
 
 	ctx := context.Background()
-	rc, rankCfg, err := openRankCorpus(ctx, cfg.shardDir, cfg.topK, cfg.embedKind, cfg.onnxRuntime)
+	rc, rankCfg, err := openRankCorpus(ctx, cfg.shardDir, cfg.topK, cfg.embedKind, cfg.onnxRuntime, cfg.onnxOptions)
 	if err != nil {
 		return err
 	}
@@ -458,7 +538,12 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 		for range hup {
 			start := time.Now()
 			slog.Info("reload requested (SIGHUP)")
-			nrc, _, rankErr := openRankOrDegrade(ctx, cfg.shardDir, rankCfg)
+			reloadDir, resolveErr := resolveReloadDir(cfg.indexDir, cfg.shardDir, rankCfg.Emb != nil)
+			if resolveErr != nil {
+				slog.Error("snapshot resolve failed; keeping current generation", "err", resolveErr.Error())
+				continue
+			}
+			nrc, _, rankErr := openRankOrDegrade(ctx, reloadDir, rankCfg)
 			if rankErr != nil {
 				m.incReload("fail")
 				slog.Error("rank corpus reload failed; keeping current ranker", "err", rankErr.Error())
@@ -468,8 +553,15 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 			// and GraphToolset are independently refcounted and hot-swappable, so
 			// a rank-corpus rebuild failure must not skip an unrelated,
 			// otherwise-successful graph-sidecar refresh (F-21).
-			if openErr, closeErr := graphTools.Reload(cfg.shardDir); openErr != nil {
+			if cfg.indexDir != "" && rankErr != nil {
+				continue
+			}
+			if openErr, closeErr := graphTools.Reload(reloadDir); openErr != nil {
 				slog.Error("graph reload failed; keeping current graph", "err", openErr.Error())
+				if cfg.indexDir != "" {
+					_ = nrc.Close()
+					continue
+				}
 			} else if closeErr != nil {
 				slog.Error("graph reload succeeded but releasing the previous generation failed", "err", closeErr.Error())
 			}
@@ -498,11 +590,32 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 	}
 }
 
+func resolveReloadDir(indexDir, legacyShardDir string, requireDense bool) (string, error) {
+	if indexDir == "" {
+		return legacyShardDir, nil
+	}
+	resolved, err := indexsnapshot.Resolve(indexDir)
+	if err != nil {
+		return "", err
+	}
+	shardDir := resolved.ShardDir()
+	if requireDense {
+		info, err := server.InspectShardDir(shardDir)
+		if err != nil {
+			return "", err
+		}
+		if !info.StoreFresh {
+			return "", fmt.Errorf("snapshot %q has no fresh dense component", resolved.ID)
+		}
+	}
+	return shardDir, nil
+}
+
 // configureDenseArm picks the dense embedder per `kind` and wires it (plus the
 // persisted embedding cache path) into cfg. Returns dense=false with no error
 // when the dense arm is intentionally off; returns an error only when a
 // requested embedder could not be constructed.
-func configureDenseArm(cfg *server.RankConfig, shardDir, kind, onnxRuntime string) (bool, error) {
+func configureDenseArm(cfg *server.RankConfig, shardDir, kind, onnxRuntime string, onnxOptions embed.ONNXOptions) (bool, error) {
 	url := os.Getenv("MOEDEX_EMBED_URL")
 	onnxRuntime = embed.ResolveONNXRuntimePath(onnxRuntime)
 	if kind == "auto" {
@@ -522,13 +635,14 @@ func configureDenseArm(cfg *server.RankConfig, shardDir, kind, onnxRuntime strin
 		cfg.StorePath = ""
 		return false, nil
 	case "onnx":
-		emb, err := embed.NewONNXEmbedder(onnxRuntime)
+		emb, err := embed.NewONNXEmbedderWithOptions(onnxRuntime, onnxOptions)
 		if err != nil {
 			return false, err
 		}
 		cfg.Emb = emb
 		cfg.EmbedModel = "st-codesearch-distilroberta-onnx"
-		fmt.Fprintf(os.Stderr, "moedex-serve: dense arm = in-process st-codesearch-distilroberta (onnx, code-trained); embedding cache %s\n", cfg.StorePath)
+		fmt.Fprintf(os.Stderr, "moedex-serve: dense arm = in-process st-codesearch-distilroberta (onnx, code-trained; intra-op=%d inter-op=%d, 0=runtime-default); embedding cache %s\n",
+			onnxOptions.IntraOpThreads, onnxOptions.InterOpThreads, cfg.StorePath)
 		return true, nil
 	case "http":
 		if url == "" {

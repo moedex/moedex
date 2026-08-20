@@ -38,12 +38,13 @@ type RankConfig struct {
 	//     next boot. This is what makes the dense arm practical at full-corpus
 	//     scale — embed once, reuse across boots.
 	//   - Otherwise OpenRank embeds the whole corpus in memory (the boot cost).
-	Emb           embed.Embedder
-	Store         *embed.Store
-	StorePath     string // persisted corpus-embedding sidecar (load-or-build-and-save)
-	EmbedModel    string // recorded in the sidecar meta; a model change invalidates it
-	LinesPerChunk int    // dense chunk window (default 40); recorded in the meta, a change invalidates it
-	Overlap       int    // dense chunk overlap (default 10); recorded in the meta, a change invalidates it
+	Emb               embed.Embedder
+	Store             *embed.Store
+	StorePath         string // persisted corpus-embedding sidecar (load-or-build-and-save)
+	EmbedModel        string // recorded in the sidecar meta; a model change invalidates it
+	LinesPerChunk     int    // dense chunk window (default 40); recorded in the meta, a change invalidates it
+	Overlap           int    // dense chunk overlap (default 10); recorded in the meta, a change invalidates it
+	EmbeddingProgress func(embed.BuildProgress)
 
 	// Token/symbol sidecars (load-or-build-and-save, mirroring StorePath). Both
 	// default to a path under dir when empty, so the feature is on by default; a
@@ -490,7 +491,7 @@ func RefreshEmbeddings(ctx context.Context, dir string, cfg RankConfig) (Embeddi
 	if prev != nil {
 		reuse = prev.KeyVectors()
 	}
-	store, st, err := embed.BuildStoreIncremental(ctx, ix, cfg.Emb, chunkLines(cfg), chunkOverlap(cfg), reuse)
+	store, st, err := embed.BuildStoreIncrementalWithProgress(ctx, ix, cfg.Emb, chunkLines(cfg), chunkOverlap(cfg), reuse, cfg.EmbeddingProgress)
 	if err != nil {
 		return EmbeddingRefreshStats{}, fmt.Errorf("server: build embeddings: %w", err)
 	}

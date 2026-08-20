@@ -10,8 +10,9 @@ package candidates
 //
 // The store is keyed by name because that is how verification is shaped: a
 // verifier is chosen per language and per symbol, and every candidate for one
-// name shares that choice, so a name's candidates are the natural unit of work
-// (and of concurrency) for the next phase.
+// name shares that choice. Corpus builds may subdivide that logical unit into
+// PreparedName source batches for concurrency; the store's stable name grouping
+// remains unchanged.
 
 import (
 	"sort"

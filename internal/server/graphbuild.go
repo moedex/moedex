@@ -97,6 +97,7 @@ func GraphPath(dir string) string { return filepath.Join(dir, GraphFileName) }
 type GraphBuildReport struct {
 	Nodes     int
 	Edges     uint64
+	Schedule  GraphScheduleStats
 	HTTP      httproute.Report
 	Manifest  manifest.Report
 	Hierarchy HierarchyReport
@@ -105,6 +106,22 @@ type GraphBuildReport struct {
 	Renders   RenderReport
 	Cluster   cluster.BuildReport
 	Counts    GraphBuildCounts
+}
+
+// GraphScheduleStats describes how the per-name candidate sweep was divided.
+// CandidateUpperBound includes self-definition pairs that generation removes,
+// so it is intentionally a conservative work estimate rather than an edge count.
+type GraphScheduleStats struct {
+	Workers                 int
+	Names                   int
+	Batches                 int
+	CandidateUpperBound     uint64
+	LargestBatchUpperBound  uint64
+	HeaviestName            string
+	HeaviestNameUpperBound  uint64
+	HeaviestNameBatches     int
+	PreparationElapsed      time.Duration
+	CandidateComputeElapsed time.Duration
 }
 
 // GraphBuildCounts makes graph construction auditable by source shape,
@@ -191,27 +208,24 @@ func BuildGraphWithOptions(dir string, opts GraphBuildOptions) (path string, rep
 // two are meant to be identical, and now share the one function that decides
 // what "every edge type" means.
 func (s *graphSweep) buildAllEdges(builder *diskgraph.Builder, emit *graphEmitter, generation uint64, opts GraphBuildOptions) (report GraphBuildReport, err error) {
-	edgeResults, err := s.computeEdgesParallel(s.names, generation)
+	edgeResults, schedule, err := s.computeEdgesParallel(s.names, generation)
 	if err != nil {
 		return report, err
 	}
+	report.Schedule = schedule
 
 	crossRelevant := make(map[string]bool)
 	if err := s.addDefinitionNodes(builder); err != nil {
 		return report, err
 	}
 	for i, name := range s.names {
-		for j := range edgeResults[i] {
-			if err := emit.Add(edgeResults[i][j].Key, edgeResults[i][j].Edge); err != nil {
+		for j := range edgeResults[i].Edges {
+			if err := emit.Add(edgeResults[i].Edges[j].Key, edgeResults[i].Edges[j].Edge); err != nil {
 				return report, err
 			}
 		}
-		generated := candidates.GenerateCandidates(s.corpus, name)
-		for _, candidate := range generated {
-			if candidate.CrossShard() {
-				crossRelevant[name] = true
-				break
-			}
+		if edgeResults[i].CrossShard {
+			crossRelevant[name] = true
 		}
 	}
 	if err := addLSPCallEdges(context.Background(), builder, s.merged, s.idxs, emit.seen, crossRelevant, opts); err != nil {
@@ -517,7 +531,14 @@ type graphKeyEdge struct {
 // one name and returns the resolved key/edge pairs. It is read-only against the
 // corpus and symbol index, so multiple names can be computed concurrently.
 func (s *graphSweep) computeEdgesForName(name string, generation uint64) ([]graphKeyEdge, error) {
-	scored := graphverify.Verify(candidates.GenerateCandidates(s.corpus, name))
+	prepared := candidates.PrepareName(s.corpus, name)
+	return s.computeEdgesForPreparedRange(name, prepared, 0, prepared.NumSources(), generation)
+}
+
+// computeEdgesForPreparedRange verifies and resolves one bounded source slice
+// of a name prepared by candidates.PrepareName.
+func (s *graphSweep) computeEdgesForPreparedRange(name string, prepared *candidates.PreparedName, start, end int, generation uint64) ([]graphKeyEdge, error) {
+	scored := graphverify.Verify(prepared.Generate(start, end))
 	out := make([]graphKeyEdge, 0, len(scored))
 	for _, sc := range scored {
 		sourceBlob := s.corpus.Blob(sc.Source)

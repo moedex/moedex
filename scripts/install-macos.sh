@@ -39,6 +39,8 @@ SHARD_DIR="${MOEDEX_SHARD_DIR:-$INDEX_DIR/shards}"
 LAUNCH_AGENTS="$HOME/Library/LaunchAgents"
 TOKEN_FILE="$INDEX_DIR/auth-token"
 CORPUS_BIN="${MOEDEX_CORPUS_BIN:-$BINDIR/moedex-corpus}"
+ONNX_INTRA_THREADS="${MOEDEX_ONNX_INTRA_OP_THREADS:-0}"
+ONNX_INTER_THREADS="${MOEDEX_ONNX_INTER_OP_THREADS:-0}"
 
 log()  { printf '[setup] %s\n' "$*"; }
 warn() { printf '[setup] WARN: %s\n' "$*" >&2; }
@@ -47,6 +49,9 @@ have() { command -v "$1" >/dev/null 2>&1; }
 
 [ "$DRY_RUN" = 1 ] && log "DRY RUN — no changes will be made"
 [ "$(uname -s)" = "Darwin" ] || die "this bootstrap is macOS-only (Linux: see deploy/*.service)"
+case "$ONNX_INTRA_THREADS:$ONNX_INTER_THREADS" in
+  *[!0-9:]*) die "MOEDEX_ONNX_INTRA_OP_THREADS and MOEDEX_ONNX_INTER_OP_THREADS must be non-negative integers" ;;
+esac
 
 # --- onnx runtime detection (Apple Silicon vs Intel brew prefix) ---
 ONNX_LIB=""
@@ -149,7 +154,9 @@ install_agent() {
   [ -f "$src" ] || die "missing template $src"
   rendered="$(sed -e "s|@HOME@|$HOME|g" -e "s|@REPO@|$REPO|g" \
     -e "s|@CORPUS@|$CORPUS|g" -e "s|@CAS_DIR@|$CAS_DIR|g" \
-    -e "s|@SHARD_DIR@|$SHARD_DIR|g" -e "s|@ONNX_LIB@|$ONNX_LIB|g" "$src")"
+    -e "s|@SHARD_DIR@|$SHARD_DIR|g" -e "s|@ONNX_LIB@|$ONNX_LIB|g" \
+    -e "s|@ONNX_INTRA_THREADS@|$ONNX_INTRA_THREADS|g" \
+    -e "s|@ONNX_INTER_THREADS@|$ONNX_INTER_THREADS|g" "$src")"
   domain="gui/$(id -u)"
   changed=1
   if [ -f "$dst" ] && [ "$(cat "$dst" 2>/dev/null)" = "$rendered" ]; then changed=0; fi

@@ -724,6 +724,60 @@ func TestComputeParallelHappyPath(t *testing.T) {
 	}
 }
 
+func TestCandidateSourceBatchesBoundWorkAndCoverSources(t *testing.T) {
+	got := candidateSourceBatches(11, 3, 10)
+	want := [][2]int{{0, 3}, {3, 6}, {6, 9}, {9, 11}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ranges = %v, want %v", got, want)
+	}
+	for _, bounds := range got {
+		if edges := (bounds[1] - bounds[0]) * 3; edges > 10 {
+			t.Fatalf("range %v estimates %d candidates, exceeds cap 10", bounds, edges)
+		}
+	}
+}
+
+func TestCandidateSourceBatchesKeepOneSourceWhenDefinitionsExceedCap(t *testing.T) {
+	got := candidateSourceBatches(3, 100, 10)
+	want := [][2]int{{0, 1}, {1, 2}, {2, 3}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ranges = %v, want %v", got, want)
+	}
+}
+
+func TestGraphSchedulerSplitsHotNameWithoutChangingOutput(t *testing.T) {
+	var source strings.Builder
+	source.WriteString("package fixture\n\ntype Domain struct{}\n\n")
+	for i := 0; i < 17; i++ {
+		fmt.Fprintf(&source, "var DomainUse%d = Domain{}\n", i)
+	}
+	dir := t.TempDir()
+	writeGraphShards(t, dir, []graphFile{{repo: "fixture", path: "domain.go", content: source.String()}}, 1)
+	sweep, err := openGraphSweep(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sweep.Close()
+
+	want, err := sweep.computeEdgesForName("Domain", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, stats, err := sweep.computeEdgesParallelBatched([]string{"Domain"}, 1, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.Batches < 2 {
+		t.Fatalf("hot name scheduled as %d batch(es), want at least 2", stats.Batches)
+	}
+	if stats.HeaviestName != "Domain" {
+		t.Fatalf("heaviest name = %q, want Domain", stats.HeaviestName)
+	}
+	if !reflect.DeepEqual(got[0].Edges, want) {
+		t.Fatalf("bounded scheduler returned %d edges, direct pipeline returned %d", len(got[0].Edges), len(want))
+	}
+}
+
 // TestComputeParallelRecoversPanic pins F-33: a panic anywhere inside fn's
 // call graph must not crash the caller. Before the fix, computeEdgesParallel's
 // worker loop called computeEdgesForName with no recover() at all, so a panic

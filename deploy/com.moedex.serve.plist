@@ -26,7 +26,7 @@
       would miss: $HOME/go/bin (gopls), /opt/homebrew/bin (csharp-ls, cflsp, node,
       dotnet, the vscode-* and ts/pyright servers), $HOME/.dotnet/tools.
     -->
-    <string>TOKEN=$(cat "$HOME/.moedex-index/auth-token"); launchctl setenv MOEDEX_TOKEN "$TOKEN"; export MOEDEX_AUTH_TOKEN="$TOKEN"; export PATH="$HOME/go/bin:/opt/homebrew/bin:$HOME/.dotnet/tools:$PATH"; exec "$HOME/.local/bin/moedex-serve" -shard-dir "@SHARD_DIR@" -mcp-http 127.0.0.1:8081 -embed onnx -onnx-runtime @ONNX_LIB@</string>
+    <string>TOKEN=$(cat "$HOME/.moedex-index/auth-token"); launchctl setenv MOEDEX_TOKEN "$TOKEN"; export MOEDEX_AUTH_TOKEN="$TOKEN"; export PATH="$HOME/go/bin:/opt/homebrew/bin:$HOME/.dotnet/tools:$PATH"; exec "$HOME/.local/bin/moedex-serve" -shard-dir "@SHARD_DIR@" -mcp-http 127.0.0.1:8081 -embed onnx -onnx-runtime @ONNX_LIB@ -onnx-intra-op-threads @ONNX_INTRA_THREADS@ -onnx-inter-op-threads @ONNX_INTER_THREADS@</string>
   </array>
 
   <key>RunAtLoad</key>
