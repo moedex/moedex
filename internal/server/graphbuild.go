@@ -55,6 +55,12 @@ type GraphBuildOptions struct {
 	SimilarTopK      int
 	SimilarThreshold float64
 	Embedder         embed.Embedder
+	// SimilarExactLimit preserves exact all-pairs comparison only up to this
+	// many definitions. Zero selects embed.DefaultSimilarExactLimit.
+	SimilarExactLimit int
+	// SimilarMaxCandidates bounds exact cosine reranking per definition after
+	// large-corpus angular-LSH candidate generation. Zero selects the default.
+	SimilarMaxCandidates int
 	// Generation stamps the rebuilt graph and every recomputed edge. Zero uses
 	// diskgraph.FirstGeneration. Callers replacing an existing full graph set
 	// this to the prior generation plus one so generation-bound sidecars and
@@ -179,6 +185,12 @@ func BuildGraphWithOptions(dir string, opts GraphBuildOptions) (path string, rep
 	}
 	if math.IsNaN(opts.SimilarThreshold) || opts.SimilarThreshold < -1 || opts.SimilarThreshold > 1 {
 		return "", report, fmt.Errorf("server: graph similarity threshold %g is outside [-1,1]", opts.SimilarThreshold)
+	}
+	if opts.SimilarExactLimit < 0 {
+		return "", report, fmt.Errorf("server: graph similarity exact limit must be non-negative")
+	}
+	if opts.SimilarMaxCandidates < 0 {
+		return "", report, fmt.Errorf("server: graph similarity max candidates must be non-negative")
 	}
 	if math.IsNaN(opts.LSPRequestsPerSecond) || math.IsInf(opts.LSPRequestsPerSecond, 0) || opts.LSPRequestsPerSecond < 0 {
 		return "", report, fmt.Errorf("server: graph LSP requests/second must be finite and non-negative")

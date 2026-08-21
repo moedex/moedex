@@ -5,7 +5,9 @@ package server
 import (
 	"context"
 	"fmt"
+	"log"
 	"math"
+	"time"
 
 	"moedex/internal/embed"
 	"moedex/internal/graph"
@@ -75,14 +77,44 @@ func addSimilarToEdges(ctx context.Context, builder *diskgraph.Builder, merged *
 		return nil
 	}
 
-	store, err := embed.BuildStore(ctx, synthetic, opts.Embedder, 0, 0)
+	var lastEmbeddingLog time.Time
+	store, _, err := embed.BuildStoreIncrementalWithProgress(ctx, synthetic, opts.Embedder, 0, 0, nil, func(progress embed.BuildProgress) {
+		now := time.Now()
+		if progress.Embedded == 0 || progress.Embedded == progress.Total || now.Sub(lastEmbeddingLog) >= 30*time.Second {
+			log.Printf("server: graph SIMILAR_TO embed progress %d/%d definition(s)", progress.Embedded, progress.Total)
+			lastEmbeddingLog = now
+		}
+	})
 	if err != nil {
 		return fmt.Errorf("server: embed graph symbols: %w", err)
 	}
-	pairs, err := store.Similar(ctx, opts.SimilarTopK, float32(opts.SimilarThreshold))
+	exactLimit := opts.SimilarExactLimit
+	if exactLimit == 0 {
+		exactLimit = embed.DefaultSimilarExactLimit
+	}
+	maxCandidates := opts.SimilarMaxCandidates
+	if maxCandidates == 0 {
+		maxCandidates = embed.DefaultSimilarMaxCandidates
+	}
+	started := time.Now()
+	log.Printf("server: graph SIMILAR_TO scheduled %d definition(s), exact_limit=%d max_candidates=%d", store.Len(), exactLimit, maxCandidates)
+	pairs, stats, err := store.SimilarBounded(ctx, opts.SimilarTopK, float32(opts.SimilarThreshold), embed.SimilarOptions{
+		ExactLimit:    exactLimit,
+		MaxCandidates: maxCandidates,
+		Progress: func(progress embed.SimilarityProgress) {
+			log.Printf("server: graph SIMILAR_TO %s progress %d/%d definition(s), exact_comparisons=%d, elapsed=%s",
+				progress.Stage, progress.Completed, progress.Total, progress.CandidateComparisons, time.Since(started).Round(time.Second))
+		},
+	})
 	if err != nil {
 		return fmt.Errorf("server: compare graph symbols: %w", err)
 	}
+	mode := "exact"
+	if stats.Approximate {
+		mode = "bounded"
+	}
+	log.Printf("server: graph SIMILAR_TO complete mode=%s definitions=%d exact_comparisons=%d edges=%d elapsed=%s",
+		mode, stats.Sources, stats.CandidateComparisons, len(pairs), time.Since(started).Round(time.Millisecond))
 	for _, pair := range pairs {
 		if pair.Source.Blob >= uint64(len(definitions)) || pair.Target.Blob >= uint64(len(definitions)) {
 			return fmt.Errorf("server: similarity result references unknown synthetic symbol")

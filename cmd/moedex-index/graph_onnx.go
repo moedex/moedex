@@ -22,6 +22,14 @@ func buildGraph(dir string) (path string, stats server.GraphRefreshStats, err er
 	if err != nil {
 		return "", stats, err
 	}
+	exactLimit, err := graphIntEnv("MOEDEX_GRAPH_SIMILAR_EXACT_LIMIT", embed.DefaultSimilarExactLimit)
+	if err != nil {
+		return "", stats, err
+	}
+	maxCandidates, err := graphIntEnv("MOEDEX_GRAPH_SIMILAR_MAX_CANDIDATES", embed.DefaultSimilarMaxCandidates)
+	if err != nil {
+		return "", stats, err
+	}
 	if topK == 0 {
 		return server.RefreshGraph(dir)
 	}
@@ -62,6 +70,8 @@ func buildGraph(dir string) (path string, stats server.GraphRefreshStats, err er
 	path, report, err := server.BuildGraphWithOptions(dir, server.GraphBuildOptions{
 		SimilarTopK:          topK,
 		SimilarThreshold:     threshold,
+		SimilarExactLimit:    exactLimit,
+		SimilarMaxCandidates: maxCandidates,
 		Embedder:             embedder,
 		Generation:           generation,
 		LSPConcurrency:       lspConcurrency,

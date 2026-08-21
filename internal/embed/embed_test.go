@@ -273,6 +273,160 @@ func TestSimilar_RejectsInvalidThreshold(t *testing.T) {
 	}
 }
 
+func TestSimilarBoundedUsesExactFallbackForSmallStores(t *testing.T) {
+	store := &Store{
+		dim:     2,
+		chunks:  []Chunk{{Blob: 10}, {Blob: 20}, {Blob: 30}},
+		vectors: []Vector{{1, 0}, {0.8, 0.6}, {-1, 0}},
+	}
+
+	want, err := store.Similar(context.Background(), 1, 0.75)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, stats, err := store.SimilarBounded(context.Background(), 1, 0.75, SimilarOptions{
+		ExactLimit:    3,
+		Tables:        2,
+		BitsPerTable:  2,
+		MaxCandidates: 2,
+	})
+	if err != nil {
+		t.Fatalf("SimilarBounded: %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("SimilarBounded exact fallback = %#v, want %#v", got, want)
+	}
+	if stats.Approximate || stats.CandidateComparisons != 6 {
+		t.Fatalf("stats = %#v, want exact 6 directed comparisons", stats)
+	}
+}
+
+func TestSimilarBoundedCapsLargeStoreAndIsDeterministic(t *testing.T) {
+	const (
+		groups   = 128
+		perGroup = 8
+		dim      = groups
+	)
+	store := &Store{dim: dim}
+	for group := range groups {
+		vector := make(Vector, dim)
+		vector[group] = 1
+		vector = normalize(vector)
+		for member := range perGroup {
+			store.chunks = append(store.chunks, Chunk{Blob: uint64(group*perGroup + member)})
+			store.vectors = append(store.vectors, append(Vector(nil), vector...))
+		}
+	}
+
+	var progress []SimilarityProgress
+	opts := SimilarOptions{
+		ExactLimit:    32,
+		Tables:        8,
+		BitsPerTable:  8,
+		MaxCandidates: 64,
+		Progress: func(p SimilarityProgress) {
+			progress = append(progress, p)
+		},
+	}
+	first, firstStats, err := store.SimilarBounded(context.Background(), 1, 0.99, opts)
+	if err != nil {
+		t.Fatalf("first SimilarBounded: %v", err)
+	}
+	second, secondStats, err := store.SimilarBounded(context.Background(), 1, 0.99, opts)
+	if err != nil {
+		t.Fatalf("second SimilarBounded: %v", err)
+	}
+	if !reflect.DeepEqual(first, second) || firstStats != secondStats {
+		t.Fatal("bounded similarity output or stats are not deterministic")
+	}
+	if len(first) != groups*perGroup {
+		t.Fatalf("similarities = %d, want one identical neighbor per source", len(first))
+	}
+	if !firstStats.Approximate {
+		t.Fatalf("stats = %#v, want bounded mode", firstStats)
+	}
+	if max := groups * perGroup * opts.MaxCandidates; firstStats.CandidateComparisons > int64(max) {
+		t.Fatalf("candidate comparisons = %d, exceed hard cap %d", firstStats.CandidateComparisons, max)
+	}
+	if len(progress) == 0 || progress[len(progress)-1].Completed != groups*perGroup {
+		t.Fatalf("final progress = %#v, want all sources complete", progress)
+	}
+	for _, pair := range first {
+		if pair.Source.Blob/perGroup != pair.Target.Blob/perGroup || pair.Score < 0.999 {
+			t.Fatalf("unexpected bounded neighbor: %#v", pair)
+		}
+	}
+}
+
+func TestProbeAngularBucketHasHardVisitBound(t *testing.T) {
+	bucket := make([]int, 10_000)
+	for i := range bucket {
+		bucket[i] = i
+	}
+	collect := func() []int {
+		var got []int
+		probeAngularBucket(bucket, 777, 3, 64, func(target int) {
+			if target == 777 {
+				t.Fatal("source was returned as its own candidate")
+			}
+			got = append(got, target)
+		})
+		return got
+	}
+	first, second := collect(), collect()
+	if len(first) != 64 {
+		t.Fatalf("bucket visits = %d, want hard limit 64", len(first))
+	}
+	if !reflect.DeepEqual(first, second) {
+		t.Fatal("bucket probing is not deterministic")
+	}
+}
+
+func TestSimilarBoundedRecallsInjectedNearNeighbors(t *testing.T) {
+	const (
+		groups = 256
+		dim    = 64
+	)
+	store := &Store{dim: dim}
+	state := uint64(0x243f6a8885a308d3)
+	next := func() float32 {
+		state ^= state << 13
+		state ^= state >> 7
+		state ^= state << 17
+		return float32(int32(state>>32)) / float32(math.MaxInt32)
+	}
+	for group := range groups {
+		base := make(Vector, dim)
+		for i := range base {
+			base[i] = next()
+		}
+		base = normalize(base)
+		near := append(Vector(nil), base...)
+		for i := range near {
+			near[i] += next() * 0.002
+		}
+		near = normalize(near)
+		store.chunks = append(store.chunks, Chunk{Blob: uint64(group * 2)}, Chunk{Blob: uint64(group*2 + 1)})
+		store.vectors = append(store.vectors, base, near)
+	}
+
+	pairs, _, err := store.SimilarBounded(context.Background(), 1, 0.99, SimilarOptions{
+		ExactLimit: 32, Tables: 8, BitsPerTable: 8, MaxCandidates: 64,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	matched := 0
+	for _, pair := range pairs {
+		if pair.Source.Blob/2 == pair.Target.Blob/2 {
+			matched++
+		}
+	}
+	if recall := float64(matched) / float64(groups*2); recall < 0.98 {
+		t.Fatalf("injected near-neighbor recall = %.3f (%d/%d), want >= 0.98", recall, matched, groups*2)
+	}
+}
+
 func TestDotClampsCosineRoundingOvershoot(t *testing.T) {
 	// A cosine is mathematically bounded by [-1, 1], but float32 normalization
 	// and accumulation can leave a vector within one ULP of unit norm on the

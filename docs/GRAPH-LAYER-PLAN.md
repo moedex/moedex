@@ -271,7 +271,14 @@ embeds one whole-definition chunk per content-addressed symbol, performs an
 exact corpus-wide cosine top-K pass, and persists directed `SIMILAR_TO` edges
 with Candidate provenance and confidence score equal to the exact cosine; the
 definition body is their evidence span. Top-K and threshold are configurable with
-`MOEDEX_GRAPH_SIMILAR_TOP_K` and `MOEDEX_GRAPH_SIMILAR_THRESHOLD`.
+`MOEDEX_GRAPH_SIMILAR_TOP_K` and `MOEDEX_GRAPH_SIMILAR_THRESHOLD`. Graphs with
+at most 4,096 definitions use exact all-pairs cosine. Larger graphs use
+deterministic angular-LSH candidate generation followed by exact cosine
+reranking, capped at 2,048 candidates per definition. This bounds the
+large-corpus pass linearly while retaining exact persisted scores and stable
+ordering. `MOEDEX_GRAPH_SIMILAR_EXACT_LIMIT` and
+`MOEDEX_GRAPH_SIMILAR_MAX_CANDIDATES` tune those bounds; build logs expose the
+mode, indexed definitions, exact comparison count, edge count, and elapsed time.
 
 Phase 9 is implemented behind the existing `lsp` tag. During graph
 construction it enumerates indexed source files with LSP `documentSymbol`, then

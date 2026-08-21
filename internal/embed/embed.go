@@ -10,8 +10,9 @@
 //   - the embedded unit is a fixed-size overlapping line-window of a blob
 //     (Chunk), giving finer recall than one-vector-per-file and aligning with
 //     context-block assembly.
-//   - the Store is flat (brute-force cosine). At single-node corpus scale this
-//     is fine; an ANN index is a later optimization behind the same Search API.
+//   - request-time Search keeps the Store flat and exact. Offline all-node
+//     similarity uses a transient deterministic angular-LSH index above a
+//     small-corpus exact cutoff, then exact-reranks a bounded candidate set.
 //
 // CONTRACT FREEZE (Lane B implements behind these signatures; internal/rank's
 // dense arm is written against them — do not change their shape):
@@ -42,6 +43,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"moedex/internal/index"
@@ -339,8 +341,9 @@ func wholeBlobChunk(b *index.Blob, numLines int) Chunk {
 	}
 }
 
-// Store is a flat (brute-force cosine) vector store over blob chunks. Vectors
-// are stored L2-normalized so Search reduces to a dot product.
+// Store is a flat vector store over blob chunks. Vectors are stored
+// L2-normalized so request-time Search reduces to a dot product. Offline
+// all-node similarity can build a transient bounded angular-LSH index.
 type Store struct {
 	dim     int
 	chunks  []Chunk
@@ -556,6 +559,43 @@ type Similarity struct {
 	Score  float32
 }
 
+const (
+	// DefaultSimilarExactLimit preserves exact results for small graphs while
+	// preventing the quadratic all-pairs pass from reaching corpus scale.
+	DefaultSimilarExactLimit = 4096
+	// The angular-LSH defaults admit at most this many exact cosine comparisons
+	// per source after deterministic candidate generation.
+	DefaultSimilarMaxCandidates = 2048
+	DefaultSimilarTables        = 8
+	DefaultSimilarBitsPerTable  = 8
+)
+
+// SimilarOptions controls the bounded large-store nearest-neighbor pass.
+// Stores at or below ExactLimit retain the exact Similar implementation.
+type SimilarOptions struct {
+	ExactLimit    int
+	Tables        int
+	BitsPerTable  int
+	MaxCandidates int
+	Progress      func(SimilarityProgress)
+}
+
+// SimilarityProgress reports one stage of bounded similarity construction.
+// CandidateComparisons counts exact cosine reranking calls, not LSH probes.
+type SimilarityProgress struct {
+	Stage                string
+	Completed            int
+	Total                int
+	CandidateComparisons int64
+}
+
+// SimilarityStats makes the large-corpus cost and approximation explicit.
+type SimilarityStats struct {
+	Sources              int
+	CandidateComparisons int64
+	Approximate          bool
+}
+
 // Similar returns, for every stored chunk, its topK nearest OTHER chunks whose
 // cosine similarity is at least threshold. Results are grouped in store order
 // by source; each source's neighbors are ordered by score descending, with
@@ -659,6 +699,310 @@ func (s *Store) Similar(ctx context.Context, topK int, threshold float32) ([]Sim
 		out = append(out, neighbors...)
 	}
 	return out, nil
+}
+
+// SimilarBounded returns exact results for small stores and uses deterministic
+// angular-LSH candidate generation plus exact cosine reranking for large stores.
+// The large-store pass is O(n*MaxCandidates) after indexing rather than O(n^2).
+func (s *Store) SimilarBounded(ctx context.Context, topK int, threshold float32, opts SimilarOptions) ([]Similarity, SimilarityStats, error) {
+	var stats SimilarityStats
+	if s == nil || topK <= 0 || len(s.chunks) < 2 {
+		return nil, stats, nil
+	}
+	if math.IsNaN(float64(threshold)) || threshold < -1 || threshold > 1 {
+		return nil, stats, fmt.Errorf("embed: similarity threshold %g is outside [-1,1]", threshold)
+	}
+	if len(s.vectors) != len(s.chunks) {
+		return nil, stats, fmt.Errorf("embed: %d chunks have %d vectors", len(s.chunks), len(s.vectors))
+	}
+	for i, vector := range s.vectors {
+		if len(vector) != s.dim {
+			return nil, stats, fmt.Errorf("embed: chunk %d vector dim %d != store dim %d", i, len(vector), s.dim)
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, stats, err
+	}
+	if topK >= len(s.chunks) {
+		topK = len(s.chunks) - 1
+	}
+
+	opts = defaultSimilarOptions(opts)
+	if err := validateSimilarOptions(opts, topK); err != nil {
+		return nil, stats, err
+	}
+	stats.Sources = len(s.chunks)
+	if len(s.chunks) <= opts.ExactLimit {
+		out, err := s.Similar(ctx, topK, threshold)
+		stats.CandidateComparisons = int64(len(s.chunks)) * int64(len(s.chunks)-1)
+		if opts.Progress != nil {
+			opts.Progress(SimilarityProgress{
+				Stage: "exact", Completed: len(s.chunks), Total: len(s.chunks),
+				CandidateComparisons: stats.CandidateComparisons,
+			})
+		}
+		return out, stats, err
+	}
+	stats.Approximate = true
+
+	signatures, err := buildAngularSignatures(ctx, s.vectors, opts, opts.Progress)
+	if err != nil {
+		return nil, stats, err
+	}
+	buckets := make([]map[uint16][]int, opts.Tables)
+	for table := range opts.Tables {
+		buckets[table] = make(map[uint16][]int)
+	}
+	for source := range s.chunks {
+		for table := range opts.Tables {
+			key := signatures[source*opts.Tables+table]
+			buckets[table][key] = append(buckets[table][key], source)
+		}
+	}
+
+	perSource := make([][]Similarity, len(s.chunks))
+	var completed, comparisons atomic.Int64
+	stopProgress := startSimilarityProgress(opts.Progress, "compare", len(s.chunks), &completed, &comparisons)
+	workers := min(runtime.GOMAXPROCS(0), len(s.chunks))
+	jobs := make(chan int)
+	var wg sync.WaitGroup
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			counts := make([]uint8, len(s.chunks))
+			touched := make([]int, 0, opts.MaxCandidates)
+			for source := range jobs {
+				if ctx.Err() != nil {
+					return
+				}
+				touched = touched[:0]
+				for table := range opts.Tables {
+					key := signatures[source*opts.Tables+table]
+					take := opts.MaxCandidates / opts.Tables
+					if table < opts.MaxCandidates%opts.Tables {
+						take++
+					}
+					probeAngularBucket(buckets[table][key], source, table, take, func(target int) {
+						if counts[target] == 0 {
+							touched = append(touched, target)
+						}
+						counts[target]++
+					})
+				}
+				candidates := touched
+				for _, target := range touched {
+					counts[target] = 0
+				}
+				comparisons.Add(int64(len(candidates)))
+
+				h := make(scoreHeap, 0, topK)
+				for i, target := range candidates {
+					if i&255 == 0 && ctx.Err() != nil {
+						return
+					}
+					score := dot(s.vectors[source], s.vectors[target])
+					if score < threshold {
+						continue
+					}
+					candidate := scored{idx: target, score: score}
+					if len(h) < topK {
+						heap.Push(&h, candidate)
+					} else if betterThan(candidate, h[0]) {
+						h[0] = candidate
+						heap.Fix(&h, 0)
+					}
+				}
+				scores := []scored(h)
+				sort.Slice(scores, func(i, j int) bool { return betterThan(scores[i], scores[j]) })
+				neighbors := make([]Similarity, len(scores))
+				for i, candidate := range scores {
+					neighbors[i] = Similarity{
+						Source: s.chunks[source], Target: s.chunks[candidate.idx], Score: candidate.score,
+					}
+				}
+				perSource[source] = neighbors
+				completed.Add(1)
+			}
+		}()
+	}
+sendJobs:
+	for source := range s.chunks {
+		select {
+		case jobs <- source:
+		case <-ctx.Done():
+			break sendJobs
+		}
+	}
+	close(jobs)
+	wg.Wait()
+	stopProgress()
+	stats.CandidateComparisons = comparisons.Load()
+	if err := ctx.Err(); err != nil {
+		return nil, stats, err
+	}
+
+	var out []Similarity
+	for _, neighbors := range perSource {
+		out = append(out, neighbors...)
+	}
+	return out, stats, nil
+}
+
+func defaultSimilarOptions(opts SimilarOptions) SimilarOptions {
+	if opts.ExactLimit == 0 {
+		opts.ExactLimit = DefaultSimilarExactLimit
+	}
+	if opts.Tables == 0 {
+		opts.Tables = DefaultSimilarTables
+	}
+	if opts.BitsPerTable == 0 {
+		opts.BitsPerTable = DefaultSimilarBitsPerTable
+	}
+	if opts.MaxCandidates == 0 {
+		opts.MaxCandidates = DefaultSimilarMaxCandidates
+	}
+	return opts
+}
+
+func validateSimilarOptions(opts SimilarOptions, topK int) error {
+	if opts.ExactLimit < 1 {
+		return fmt.Errorf("embed: similarity exact limit must be positive")
+	}
+	if opts.Tables < 1 || opts.Tables > 255 {
+		return fmt.Errorf("embed: similarity tables must be in [1,255]")
+	}
+	if opts.BitsPerTable < 1 || opts.BitsPerTable > 16 {
+		return fmt.Errorf("embed: similarity bits per table must be in [1,16]")
+	}
+	if opts.MaxCandidates < topK {
+		return fmt.Errorf("embed: similarity max candidates %d is below top-K %d", opts.MaxCandidates, topK)
+	}
+	return nil
+}
+
+func buildAngularSignatures(ctx context.Context, vectors []Vector, opts SimilarOptions, progress func(SimilarityProgress)) ([]uint16, error) {
+	totalBits := opts.Tables * opts.BitsPerTable
+	dim := len(vectors[0])
+	hyperplanes := make([]Vector, totalBits)
+	state := uint64(0x6a09e667f3bcc909)
+	for bit := range totalBits {
+		hyperplanes[bit] = make(Vector, dim)
+		for dimension := range dim {
+			state += 0x9e3779b97f4a7c15
+			mixed := state
+			mixed = (mixed ^ (mixed >> 30)) * 0xbf58476d1ce4e5b9
+			mixed = (mixed ^ (mixed >> 27)) * 0x94d049bb133111eb
+			mixed ^= mixed >> 31
+			if mixed&1 == 0 {
+				hyperplanes[bit][dimension] = -1
+			} else {
+				hyperplanes[bit][dimension] = 1
+			}
+		}
+	}
+
+	signatures := make([]uint16, len(vectors)*opts.Tables)
+	var completed atomic.Int64
+	stopProgress := startSimilarityProgress(progress, "index", len(vectors), &completed, nil)
+	workers := min(runtime.GOMAXPROCS(0), len(vectors))
+	jobs := make(chan int)
+	var wg sync.WaitGroup
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for source := range jobs {
+				if ctx.Err() != nil {
+					return
+				}
+				for table := range opts.Tables {
+					var signature uint16
+					for bit := range opts.BitsPerTable {
+						var projection float32
+						hyperplane := hyperplanes[table*opts.BitsPerTable+bit]
+						for dimension, value := range vectors[source] {
+							projection += value * hyperplane[dimension]
+						}
+						if projection >= 0 {
+							signature |= 1 << bit
+						}
+					}
+					signatures[source*opts.Tables+table] = signature
+				}
+				completed.Add(1)
+			}
+		}()
+	}
+sendJobs:
+	for source := range vectors {
+		select {
+		case jobs <- source:
+		case <-ctx.Done():
+			break sendJobs
+		}
+	}
+	close(jobs)
+	wg.Wait()
+	stopProgress()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return signatures, nil
+}
+
+func startSimilarityProgress(progress func(SimilarityProgress), stage string, total int, completed, comparisons *atomic.Int64) func() {
+	if progress == nil {
+		return func() {}
+	}
+	read := func() SimilarityProgress {
+		p := SimilarityProgress{Stage: stage, Completed: int(completed.Load()), Total: total}
+		if comparisons != nil {
+			p.CandidateComparisons = comparisons.Load()
+		}
+		return p
+	}
+	progress(read())
+	done := make(chan struct{})
+	stopped := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				progress(read())
+			case <-done:
+				return
+			}
+		}
+	}()
+	return func() {
+		close(done)
+		<-stopped
+		progress(read())
+	}
+}
+
+func probeAngularBucket(bucket []int, source, table, limit int, visit func(int)) {
+	if limit <= 0 || len(bucket) < 2 {
+		return
+	}
+	seed := uint64(source+1)*0x9e3779b97f4a7c15 ^ uint64(table+1)*0xbf58476d1ce4e5b9
+	seed = (seed ^ (seed >> 30)) * 0xbf58476d1ce4e5b9
+	seed = (seed ^ (seed >> 27)) * 0x94d049bb133111eb
+	seed ^= seed >> 31
+	start := int(seed % uint64(len(bucket)))
+	added := 0
+	for scanned := 0; scanned < len(bucket) && added < limit; scanned++ {
+		target := bucket[(start+scanned)%len(bucket)]
+		if target == source {
+			continue
+		}
+		visit(target)
+		added++
+	}
 }
 
 // Search embeds query via e and returns the topK most similar chunks, best
