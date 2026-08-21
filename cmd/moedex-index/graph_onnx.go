@@ -33,6 +33,14 @@ func buildGraph(dir string) (path string, stats server.GraphRefreshStats, err er
 	if err != nil {
 		return "", stats, err
 	}
+	lspConcurrency, err := graphIntEnv("MOEDEX_GRAPH_LSP_CONCURRENCY", server.DefaultLSPConcurrency())
+	if err != nil {
+		return "", stats, err
+	}
+	lspRate, err := graphNonNegativeFloatEnv("MOEDEX_GRAPH_LSP_REQUESTS_PER_SECOND", server.DefaultLSPRequestsPerSecond)
+	if err != nil {
+		return "", stats, err
+	}
 
 	embedder, err := embed.NewONNXEmbedderWithOptions(os.Getenv("ONNXRUNTIME_LIB_PATH"), embed.ONNXOptions{
 		IntraOpThreads: intraThreads,
@@ -50,11 +58,15 @@ func buildGraph(dir string) (path string, stats server.GraphRefreshStats, err er
 	if err != nil {
 		return "", stats, err
 	}
+	var lspStats server.LSPGraphStats
 	path, report, err := server.BuildGraphWithOptions(dir, server.GraphBuildOptions{
-		SimilarTopK:      topK,
-		SimilarThreshold: threshold,
-		Embedder:         embedder,
-		Generation:       generation,
+		SimilarTopK:          topK,
+		SimilarThreshold:     threshold,
+		Embedder:             embedder,
+		Generation:           generation,
+		LSPConcurrency:       lspConcurrency,
+		LSPRequestsPerSecond: lspRate,
+		LSPStats:             &lspStats,
 	})
 	if err == nil {
 		stats.FullRebuild = true
@@ -67,6 +79,7 @@ func buildGraph(dir string) (path string, stats server.GraphRefreshStats, err er
 		stats.Schedule = report.Schedule
 		stats.Cluster = report.Cluster
 		stats.Counts = report.Counts
+		stats.LSP = lspStats
 	}
 	return path, stats, err
 }
@@ -107,6 +120,18 @@ func graphFloatEnv(key string, fallback float64) (float64, error) {
 	value, err := strconv.ParseFloat(raw, 64)
 	if err != nil || math.IsNaN(value) || value < -1 || value > 1 {
 		return 0, fmt.Errorf("%s must be a cosine score in [-1,1], got %q", key, raw)
+	}
+	return value, nil
+}
+
+func graphNonNegativeFloatEnv(key string, fallback float64) (float64, error) {
+	raw := os.Getenv(key)
+	if raw == "" {
+		return fallback, nil
+	}
+	value, err := strconv.ParseFloat(raw, 64)
+	if err != nil || math.IsNaN(value) || math.IsInf(value, 0) || value < 0 {
+		return 0, fmt.Errorf("%s must be a finite non-negative number, got %q", key, raw)
 	}
 	return value, nil
 }

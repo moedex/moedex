@@ -295,6 +295,11 @@ func workspaceRoot(file string) (lang, root string) {
 	}
 }
 
+// WorkspaceRoute returns the exact (language, workspace-root) pair Pool uses
+// for file. Offline schedulers use it to serialize requests per language server
+// while running independent workspaces concurrently.
+func WorkspaceRoute(file string) (lang, root string) { return workspaceRoot(file) }
+
 // markerPresent reports whether a root marker exists in dir. A marker containing
 // '*' is matched as a glob (e.g. "*.sln"); otherwise it is an exact filename.
 func markerPresent(dir, marker string) bool {
@@ -327,7 +332,7 @@ func dotnetRootEnv() []string {
 	}
 	bindir := filepath.Dir(p)
 	candidates := []string{
-		bindir,                                      // standard layout: <root>/dotnet -> root has shared/
+		bindir, // standard layout: <root>/dotnet -> root has shared/
 		filepath.Join(filepath.Dir(bindir), "libexec"), // Homebrew: <cellar>/bin/dotnet -> ../libexec
 	}
 	for _, c := range candidates {

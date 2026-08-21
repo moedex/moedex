@@ -17,6 +17,7 @@ import (
 	"io"
 	"math"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync/atomic"
@@ -64,6 +65,10 @@ type GraphBuildOptions struct {
 	// language servers used by the optional lsp-tagged call-graph pass. Zero
 	// selects DefaultLSPRequestsPerSecond. The field is inert without -tags lsp.
 	LSPRequestsPerSecond float64
+	// LSPConcurrency bounds simultaneous requests across independent
+	// (language, workspace) servers. Requests to one server remain sequential.
+	// Zero selects DefaultLSPConcurrency. The field is inert without -tags lsp.
+	LSPConcurrency int
 	// LSPRequestTimeout bounds each document-symbol and find-references call.
 	// Zero selects DefaultLSPRequestTimeout. The field is inert without -tags lsp.
 	LSPRequestTimeout time.Duration
@@ -72,14 +77,29 @@ type GraphBuildOptions struct {
 }
 
 const (
-	// DefaultLSPRequestsPerSecond is intentionally conservative: language
-	// servers already do substantial workspace analysis per request, and the
-	// offline sweep must not turn symbol count into an unbounded request burst.
-	DefaultLSPRequestsPerSecond = 5
+	// DefaultLSPRequestsPerSecond caps aggregate starts across independent
+	// workspaces. Per-workspace requests remain sequential, so this prevents a
+	// process-spawn burst without turning the corpus sweep into an hours-long
+	// latency pipeline.
+	DefaultLSPRequestsPerSecond = 100
 	// DefaultLSPRequestTimeout prevents one wedged symbol query from stalling an
 	// entire graph rebuild indefinitely.
 	DefaultLSPRequestTimeout = 30 * time.Second
 )
+
+// DefaultLSPConcurrency uses extra lanes because LSP work is predominantly
+// subprocess I/O. The cap prevents a large corpus from launching an unbounded
+// number of heavyweight language servers at once.
+func DefaultLSPConcurrency() int {
+	workers := runtime.GOMAXPROCS(0) * 2
+	if workers > 32 {
+		workers = 32
+	}
+	if workers < 1 {
+		workers = 1
+	}
+	return workers
+}
 
 // LSPGraphStats describes one systematic call-graph sweep. It is populated only
 // in lsp-tagged builds; default builds leave it at the zero value.
@@ -162,6 +182,9 @@ func BuildGraphWithOptions(dir string, opts GraphBuildOptions) (path string, rep
 	}
 	if math.IsNaN(opts.LSPRequestsPerSecond) || math.IsInf(opts.LSPRequestsPerSecond, 0) || opts.LSPRequestsPerSecond < 0 {
 		return "", report, fmt.Errorf("server: graph LSP requests/second must be finite and non-negative")
+	}
+	if opts.LSPConcurrency < 0 {
+		return "", report, fmt.Errorf("server: graph LSP concurrency must be non-negative")
 	}
 	if opts.LSPRequestTimeout < 0 {
 		return "", report, fmt.Errorf("server: graph LSP request timeout must be non-negative")

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -41,6 +42,31 @@ type fakeGraphNavigator struct {
 	documents map[string][]navigate.Symbol
 	reference map[string][]navigate.Location
 	order     []string
+}
+
+type concurrentGraphNavigator struct {
+	started chan struct{}
+	release chan struct{}
+	active  atomic.Int32
+	max     atomic.Int32
+}
+
+func (f *concurrentGraphNavigator) DocumentSymbol(context.Context, string) ([]navigate.Symbol, error) {
+	active := f.active.Add(1)
+	for {
+		maxSeen := f.max.Load()
+		if active <= maxSeen || f.max.CompareAndSwap(maxSeen, active) {
+			break
+		}
+	}
+	f.started <- struct{}{}
+	<-f.release
+	f.active.Add(-1)
+	return nil, nil
+}
+
+func (*concurrentGraphNavigator) References(context.Context, navigate.Pos, bool) ([]navigate.Location, error) {
+	return nil, nil
 }
 
 func (f *fakeGraphNavigator) DocumentSymbol(_ context.Context, file string) ([]navigate.Symbol, error) {
@@ -151,6 +177,92 @@ func TestLSPRequestPacerSpacesStarts(t *testing.T) {
 	}
 	if want := []time.Duration{100 * time.Millisecond, 100 * time.Millisecond}; !reflect.DeepEqual(slept, want) {
 		t.Fatalf("pacer sleeps = %v, want %v", slept, want)
+	}
+}
+
+func TestCollectLSPCallEdgesRunsIndependentWorkspacesConcurrently(t *testing.T) {
+	root := t.TempDir()
+	var shards []*index.Index
+	merged := symbol.NewCorpus()
+	for i, repo := range []string{"repo-a", "repo-b"} {
+		repoRoot := filepath.Join(root, repo)
+		file := filepath.Join(repoRoot, "main.go")
+		writeLSPGraphFile(t, filepath.Join(repoRoot, "go.mod"), "module example/"+repo+"\n\ngo 1.26\n")
+		writeLSPGraphFile(t, file, lspGraphRepoA)
+		ix := lspGraphIndex(repo, file, "main.go", lspGraphRepoA)
+		shards = append(shards, ix)
+		merged.AddShard(string(rune('a'+i)), symbol.BuildMulti(ix))
+	}
+	fake := &concurrentGraphNavigator{
+		started: make(chan struct{}, 2),
+		release: make(chan struct{}),
+	}
+	done := make(chan error, 1)
+	go func() {
+		_, _, err := collectLSPCallEdgesConcurrent(
+			context.Background(), fake, merged, shards, nil, time.Second,
+			newLSPRequestPacer(1e9), 2,
+		)
+		done <- err
+	}()
+	for range 2 {
+		select {
+		case <-fake.started:
+		case <-time.After(time.Second):
+			close(fake.release)
+			t.Fatal("independent workspace requests did not overlap")
+		}
+	}
+	close(fake.release)
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	if got := fake.max.Load(); got != 2 {
+		t.Fatalf("max concurrent workspace requests = %d, want 2", got)
+	}
+}
+
+func TestCollectLSPCallEdgesSerializesOneWorkspaceRoute(t *testing.T) {
+	repo := t.TempDir()
+	writeLSPGraphFile(t, filepath.Join(repo, "go.mod"), "module example/one\n\ngo 1.26\n")
+	ix := index.New()
+	for _, name := range []string{"a.go", "b.go"} {
+		file := filepath.Join(repo, name)
+		writeLSPGraphFile(t, file, lspGraphRepoA)
+		ix.AddFile("repo", name, file, diskstore.GitBlobSHA1([]byte(lspGraphRepoA)), []byte(lspGraphRepoA))
+	}
+	merged := symbol.NewCorpus()
+	merged.AddShard("repo", symbol.BuildMulti(ix))
+	fake := &concurrentGraphNavigator{
+		started: make(chan struct{}, 2),
+		release: make(chan struct{}),
+	}
+	done := make(chan error, 1)
+	go func() {
+		_, _, err := collectLSPCallEdgesConcurrent(
+			context.Background(), fake, merged, []*index.Index{ix}, nil, time.Second,
+			newLSPRequestPacer(1e9), 2,
+		)
+		done <- err
+	}()
+	select {
+	case <-fake.started:
+	case <-time.After(time.Second):
+		close(fake.release)
+		t.Fatal("first workspace request did not start")
+	}
+	select {
+	case <-fake.started:
+		close(fake.release)
+		t.Fatal("same workspace route ran two requests concurrently")
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(fake.release)
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	if got := fake.max.Load(); got != 1 {
+		t.Fatalf("max concurrent requests for one route = %d, want 1", got)
 	}
 }
 

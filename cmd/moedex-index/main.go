@@ -287,6 +287,12 @@ func printGraphStats(stats server.GraphRefreshStats) {
 			formatCountMap(stats.Counts.SourceClassification), formatCountMap(stats.Counts.Confidence),
 			formatCountMap(stats.Counts.EdgeType), formatCountMap(stats.Counts.Enclosing))
 	}
+	if stats.LSP.EligibleFiles > 0 {
+		fmt.Printf("  graph LSP: files=%d document_requests=%d symbols=%d reference_requests=%d failures=%d proven_calls=%d restricted_workspaces=%d\n",
+			stats.LSP.EligibleFiles, stats.LSP.DocumentRequests, stats.LSP.DiscoveredSymbols,
+			stats.LSP.ReferenceRequests, stats.LSP.FailedRequests, stats.LSP.CallEdges,
+			stats.LSP.RestrictedWorkspaces)
+	}
 }
 
 func formatCountMap(counts map[string]int) string {

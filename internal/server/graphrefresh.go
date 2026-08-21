@@ -70,6 +70,7 @@ type GraphRefreshStats struct {
 	Schedule        GraphScheduleStats
 	Cluster         cluster.BuildReport
 	Counts          GraphBuildCounts
+	LSP             LSPGraphStats
 }
 
 // RefreshGraph rebuilds dir's graph incrementally against the graph already

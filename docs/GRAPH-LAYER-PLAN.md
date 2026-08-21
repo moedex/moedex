@@ -276,9 +276,13 @@ definition body is their evidence span. Top-K and threshold are configurable wit
 Phase 9 is implemented behind the existing `lsp` tag. During graph
 construction it enumerates indexed source files with LSP `documentSymbol`, then
 issues `find_references` for every exported symbol. Symbols whose Phase 3 work
-list contains a cross-shard edge are queried first. Request starts are globally
-paced (five per second by default), sequential, and individually timeout-bound;
-workspace privacy is validated before any language server launches. Only
+list contains a cross-shard edge are queried first. Work is grouped by the exact
+`(language, workspace)` server route: requests to one server stay sequential while
+independent routes run through a bounded pool (default `min(2*GOMAXPROCS, 32)`).
+Aggregate starts are capped at 100/second and every request remains individually
+timeout-bound. `MOEDEX_GRAPH_LSP_CONCURRENCY` and
+`MOEDEX_GRAPH_LSP_REQUESTS_PER_SECOND` tune those bounds. Workspace privacy is
+validated before any language server launches. Only
 intra-repo references with call syntax and an enclosing caller become `CALLS`
 edges. They persist at Proven (`1.0`) with the exact call-site evidence span and
 upgrade a matching regex edge in place. Short exported names and nested

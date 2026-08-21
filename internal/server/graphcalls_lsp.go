@@ -6,10 +6,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"moedex/internal/graph"
@@ -29,6 +32,7 @@ type lspGraphNavigator interface {
 type lspIndexedFile struct {
 	path     string
 	repoRoot string
+	route    string
 	shard    int
 	blobID   uint64
 	blob     *index.Blob
@@ -38,6 +42,7 @@ type lspDefinitionJob struct {
 	name        string
 	path        string
 	repoRoot    string
+	route       string
 	at          navigate.Pos
 	target      diskgraph.Key
 	prioritized bool
@@ -58,8 +63,15 @@ func addLSPCallEdges(ctx context.Context, builder *diskgraph.Builder, merged *sy
 	if timeout == 0 {
 		timeout = DefaultLSPRequestTimeout
 	}
+	concurrency := opts.LSPConcurrency
+	if concurrency == 0 {
+		concurrency = DefaultLSPConcurrency()
+	}
 
-	pool := navigate.NewPool(navigate.Config{RequestTimeout: timeout})
+	pool := navigate.NewPool(navigate.Config{
+		RequestTimeout: timeout,
+		IdleTTL:        2 * timeout,
+	})
 	// Pool teardown is best-effort after every child has been reaped. Some
 	// servers (including gopls versions that exit on the cancelled process
 	// context after acknowledging shutdown) report a non-zero process status;
@@ -67,7 +79,7 @@ func addLSPCallEdges(ctx context.Context, builder *diskgraph.Builder, merged *sy
 	defer func() { _ = pool.Close() }()
 
 	pacer := newLSPRequestPacer(rate)
-	calls, stats, err := collectLSPCallEdges(ctx, pool, merged, shards, crossRelevant, timeout, pacer)
+	calls, stats, err := collectLSPCallEdgesConcurrent(ctx, pool, merged, shards, crossRelevant, timeout, pacer, concurrency)
 	if opts.LSPStats != nil {
 		*opts.LSPStats = stats
 	}
@@ -112,7 +124,14 @@ func addLSPCallEdges(ctx context.Context, builder *diskgraph.Builder, merged *sy
 }
 
 func collectLSPCallEdges(ctx context.Context, nav lspGraphNavigator, merged *symbol.Corpus, shards []*index.Index, crossRelevant map[string]bool, timeout time.Duration, pacer *lspRequestPacer) ([]lspConfirmedCall, LSPGraphStats, error) {
+	return collectLSPCallEdgesConcurrent(ctx, nav, merged, shards, crossRelevant, timeout, pacer, 1)
+}
+
+func collectLSPCallEdgesConcurrent(ctx context.Context, nav lspGraphNavigator, merged *symbol.Corpus, shards []*index.Index, crossRelevant map[string]bool, timeout time.Duration, pacer *lspRequestPacer, concurrency int) ([]lspConfirmedCall, LSPGraphStats, error) {
 	var stats LSPGraphStats
+	if concurrency < 1 {
+		concurrency = 1
+	}
 	files, restricted, err := lspEligibleFiles(merged, shards)
 	stats.RestrictedWorkspaces = restricted
 	if err != nil {
@@ -127,64 +146,23 @@ func collectLSPCallEdges(ctx context.Context, nav lspGraphNavigator, merged *sym
 		byPath[file.path] = file
 	}
 
+	fileGroups := groupLSPFiles(files)
+	documentResults := make([]lspDocumentResult, len(fileGroups))
+	documentCounters := &lspPhaseCounters{}
+	stopDocumentProgress := startLSPPhaseProgress("documentSymbol", len(files), len(fileGroups), concurrency, documentCounters)
+	runLSPFileGroups(ctx, concurrency, fileGroups, documentResults, func(group []lspIndexedFile) lspDocumentResult {
+		return collectLSPDocumentGroup(ctx, nav, group, byPath, merged, crossRelevant, timeout, pacer, documentCounters)
+	})
+	stopDocumentProgress()
 	jobsByKey := make(map[string]lspDefinitionJob)
-	for _, file := range files {
-		if err := pacer.Wait(ctx); err != nil {
-			return nil, stats, err
+	for _, result := range documentResults {
+		stats.DocumentRequests += result.requests
+		stats.FailedRequests += result.failed
+		if result.err != nil {
+			return nil, stats, result.err
 		}
-		stats.DocumentRequests++
-		requestCtx, cancel := requestContext(ctx, timeout)
-		syms, queryErr := nav.DocumentSymbol(requestCtx, file.path)
-		cancel()
-		if queryErr != nil {
-			if ctx.Err() != nil {
-				return nil, stats, ctx.Err()
-			}
-			stats.FailedRequests++
-			continue
-		}
-
-		if len(syms) == 0 {
-			// Partial-capability servers may not implement documentSymbol. The
-			// syntactic sidecar is a safe fallback work list; find-references still
-			// performs the semantic confirmation.
-			for _, sym := range merged.Symbols(file.shard, file.blobID) {
-				if !candidates.Exported(sym.Name) || sym.NameStart < 0 || sym.NameEnd <= sym.NameStart {
-					continue
-				}
-				job := lspDefinitionJob{
-					name:        sym.Name,
-					path:        file.path,
-					repoRoot:    file.repoRoot,
-					at:          byteOffsetPos(file.path, file.blob.Content, sym.NameStart),
-					target:      diskgraph.Key{BlobSHA: file.blob.SHA, SymbolOffset: uint64(sym.NameStart)},
-					prioritized: crossRelevant[sym.Name],
-				}
-				jobsByKey[lspJobKey(job)] = job
-			}
-			continue
-		}
-		for _, sym := range syms {
-			if !candidates.Exported(sym.Name) {
-				continue
-			}
-			definitionFile, ok := byPath[cleanAbsolute(sym.Loc.File)]
-			if !ok || definitionFile.repoRoot != file.repoRoot {
-				continue
-			}
-			start, _, ok := namedSpan(definitionFile.blob.Content, sym.Loc.Start, sym.Loc.End, sym.Name)
-			if !ok {
-				continue
-			}
-			job := lspDefinitionJob{
-				name:        sym.Name,
-				path:        definitionFile.path,
-				repoRoot:    definitionFile.repoRoot,
-				at:          byteOffsetPos(definitionFile.path, definitionFile.blob.Content, start),
-				target:      diskgraph.Key{BlobSHA: definitionFile.blob.SHA, SymbolOffset: uint64(start)},
-				prioritized: crossRelevant[sym.Name],
-			}
-			jobsByKey[lspJobKey(job)] = job
+		for key, job := range result.jobs {
+			jobsByKey[key] = job
 		}
 	}
 
@@ -212,48 +190,23 @@ func collectLSPCallEdges(ctx context.Context, nav lspGraphNavigator, merged *sym
 	})
 	stats.DiscoveredSymbols = len(jobs)
 
+	referenceGroups := groupLSPDefinitionJobs(jobs)
+	referenceResults := make([]lspReferenceResult, len(referenceGroups))
+	referenceCounters := &lspPhaseCounters{}
+	stopReferenceProgress := startLSPPhaseProgress("findReferences", len(jobs), len(referenceGroups), concurrency, referenceCounters)
+	runLSPReferenceGroups(ctx, concurrency, referenceGroups, referenceResults, func(group []lspDefinitionJob) lspReferenceResult {
+		return collectLSPReferenceGroup(ctx, nav, group, byPath, merged, timeout, pacer, referenceCounters)
+	})
+	stopReferenceProgress()
 	unique := make(map[string]lspConfirmedCall)
-	for _, job := range jobs {
-		if err := pacer.Wait(ctx); err != nil {
-			return nil, stats, err
+	for _, result := range referenceResults {
+		stats.ReferenceRequests += result.requests
+		stats.FailedRequests += result.failed
+		if result.err != nil {
+			return nil, stats, result.err
 		}
-		stats.ReferenceRequests++
-		requestCtx, cancel := requestContext(ctx, timeout)
-		locations, queryErr := nav.References(requestCtx, job.at, false)
-		cancel()
-		if queryErr != nil {
-			if ctx.Err() != nil {
-				return nil, stats, ctx.Err()
-			}
-			stats.FailedRequests++
-			continue
-		}
-		for _, location := range locations {
-			callerFile, ok := byPath[cleanAbsolute(location.File)]
-			if !ok || callerFile.repoRoot != job.repoRoot {
-				continue // Phase 9 is deliberately intra-repository.
-			}
-			start, end, ok := namedSpan(callerFile.blob.Content, location.Start, location.End, job.name)
-			if !ok || !callSyntaxAt(callerFile.blob.Content, end) {
-				continue // find-references also returns non-call uses.
-			}
-			enclosing, ok := merged.Enclosing(callerFile.shard, callerFile.blobID, start)
-			if !ok || enclosing.NameStart < 0 {
-				continue // a CALLS edge needs a source definition node.
-			}
-			call := lspConfirmedCall{
-				source: diskgraph.Key{
-					BlobSHA:      callerFile.blob.SHA,
-					SymbolOffset: uint64(enclosing.NameStart),
-				},
-				target: job.target,
-				evidence: graph.Evidence{
-					BlobSHA:    callerFile.blob.SHA,
-					ByteOffset: uint64(start),
-					ByteLength: uint64(end - start),
-				},
-			}
-			unique[lspCallKey(call)] = call
+		for key, call := range result.calls {
+			unique[key] = call
 		}
 	}
 
@@ -277,6 +230,253 @@ func collectLSPCallEdges(ctx context.Context, nav lspGraphNavigator, merged *sym
 		return out[i].evidence.ByteOffset < out[j].evidence.ByteOffset
 	})
 	return out, stats, nil
+}
+
+type lspDocumentResult struct {
+	jobs     map[string]lspDefinitionJob
+	requests int
+	failed   int
+	err      error
+}
+
+type lspReferenceResult struct {
+	calls    map[string]lspConfirmedCall
+	requests int
+	failed   int
+	err      error
+}
+
+type lspPhaseCounters struct {
+	completed atomic.Int64
+	failed    atomic.Int64
+}
+
+func startLSPPhaseProgress(phase string, total, routes, workers int, counters *lspPhaseCounters) func() {
+	started := time.Now()
+	log.Printf("server: LSP %s scheduled %d request(s) across %d route(s) on %d worker(s)", phase, total, routes, min(workers, routes))
+	done := make(chan struct{})
+	stopped := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				log.Printf("server: LSP %s progress %d/%d request(s), failures=%d, elapsed=%s",
+					phase, counters.completed.Load(), total, counters.failed.Load(), time.Since(started).Round(time.Second))
+			case <-done:
+				return
+			}
+		}
+	}()
+	return func() {
+		close(done)
+		<-stopped
+		log.Printf("server: LSP %s complete %d/%d request(s), failures=%d, elapsed=%s",
+			phase, counters.completed.Load(), total, counters.failed.Load(), time.Since(started).Round(time.Millisecond))
+	}
+}
+
+func lspRouteKey(language, workspace string) string { return language + "\x00" + workspace }
+
+func groupLSPFiles(files []lspIndexedFile) [][]lspIndexedFile {
+	byRoute := make(map[string][]lspIndexedFile)
+	for _, file := range files {
+		byRoute[file.route] = append(byRoute[file.route], file)
+	}
+	groups := make([][]lspIndexedFile, 0, len(byRoute))
+	for _, group := range byRoute {
+		groups = append(groups, group)
+	}
+	sort.Slice(groups, func(i, j int) bool {
+		if len(groups[i]) != len(groups[j]) {
+			return len(groups[i]) > len(groups[j])
+		}
+		return groups[i][0].route < groups[j][0].route
+	})
+	return groups
+}
+
+func groupLSPDefinitionJobs(jobs []lspDefinitionJob) [][]lspDefinitionJob {
+	byRoute := make(map[string][]lspDefinitionJob)
+	for _, job := range jobs {
+		byRoute[job.route] = append(byRoute[job.route], job)
+	}
+	groups := make([][]lspDefinitionJob, 0, len(byRoute))
+	for _, group := range byRoute {
+		groups = append(groups, group)
+	}
+	sort.Slice(groups, func(i, j int) bool {
+		if len(groups[i]) != len(groups[j]) {
+			return len(groups[i]) > len(groups[j])
+		}
+		return groups[i][0].route < groups[j][0].route
+	})
+	return groups
+}
+
+func runLSPFileGroups(ctx context.Context, concurrency int, groups [][]lspIndexedFile, results []lspDocumentResult, run func([]lspIndexedFile) lspDocumentResult) {
+	workers := min(max(concurrency, 1), len(groups))
+	if workers == 0 {
+		return
+	}
+	work := make(chan int)
+	var wg sync.WaitGroup
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := range work {
+				if ctx.Err() != nil {
+					results[i].err = ctx.Err()
+					continue
+				}
+				results[i] = run(groups[i])
+			}
+		}()
+	}
+	for i := range groups {
+		work <- i
+	}
+	close(work)
+	wg.Wait()
+}
+
+func runLSPReferenceGroups(ctx context.Context, concurrency int, groups [][]lspDefinitionJob, results []lspReferenceResult, run func([]lspDefinitionJob) lspReferenceResult) {
+	workers := min(max(concurrency, 1), len(groups))
+	if workers == 0 {
+		return
+	}
+	work := make(chan int)
+	var wg sync.WaitGroup
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := range work {
+				if ctx.Err() != nil {
+					results[i].err = ctx.Err()
+					continue
+				}
+				results[i] = run(groups[i])
+			}
+		}()
+	}
+	for i := range groups {
+		work <- i
+	}
+	close(work)
+	wg.Wait()
+}
+
+func collectLSPDocumentGroup(ctx context.Context, nav lspGraphNavigator, files []lspIndexedFile, byPath map[string]lspIndexedFile, merged *symbol.Corpus, crossRelevant map[string]bool, timeout time.Duration, pacer *lspRequestPacer, counters *lspPhaseCounters) lspDocumentResult {
+	result := lspDocumentResult{jobs: make(map[string]lspDefinitionJob)}
+	for _, file := range files {
+		if err := pacer.Wait(ctx); err != nil {
+			result.err = err
+			return result
+		}
+		result.requests++
+		requestCtx, cancel := requestContext(ctx, timeout)
+		syms, queryErr := nav.DocumentSymbol(requestCtx, file.path)
+		cancel()
+		counters.completed.Add(1)
+		if queryErr != nil {
+			if ctx.Err() != nil {
+				result.err = ctx.Err()
+				return result
+			}
+			result.failed++
+			counters.failed.Add(1)
+			continue
+		}
+		if len(syms) == 0 {
+			// Partial-capability servers may not implement documentSymbol. The
+			// syntactic sidecar remains a safe find-references work list.
+			for _, sym := range merged.Symbols(file.shard, file.blobID) {
+				if !candidates.Exported(sym.Name) || sym.NameStart < 0 || sym.NameEnd <= sym.NameStart {
+					continue
+				}
+				job := lspDefinitionJob{
+					name: sym.Name, path: file.path, repoRoot: file.repoRoot, route: file.route,
+					at:          byteOffsetPos(file.path, file.blob.Content, sym.NameStart),
+					target:      diskgraph.Key{BlobSHA: file.blob.SHA, SymbolOffset: uint64(sym.NameStart)},
+					prioritized: crossRelevant[sym.Name],
+				}
+				result.jobs[lspJobKey(job)] = job
+			}
+			continue
+		}
+		for _, sym := range syms {
+			if !candidates.Exported(sym.Name) {
+				continue
+			}
+			definitionFile, ok := byPath[cleanAbsolute(sym.Loc.File)]
+			if !ok || definitionFile.repoRoot != file.repoRoot {
+				continue
+			}
+			start, _, ok := namedSpan(definitionFile.blob.Content, sym.Loc.Start, sym.Loc.End, sym.Name)
+			if !ok {
+				continue
+			}
+			job := lspDefinitionJob{
+				name: sym.Name, path: definitionFile.path, repoRoot: definitionFile.repoRoot, route: definitionFile.route,
+				at:          byteOffsetPos(definitionFile.path, definitionFile.blob.Content, start),
+				target:      diskgraph.Key{BlobSHA: definitionFile.blob.SHA, SymbolOffset: uint64(start)},
+				prioritized: crossRelevant[sym.Name],
+			}
+			result.jobs[lspJobKey(job)] = job
+		}
+	}
+	return result
+}
+
+func collectLSPReferenceGroup(ctx context.Context, nav lspGraphNavigator, jobs []lspDefinitionJob, byPath map[string]lspIndexedFile, merged *symbol.Corpus, timeout time.Duration, pacer *lspRequestPacer, counters *lspPhaseCounters) lspReferenceResult {
+	result := lspReferenceResult{calls: make(map[string]lspConfirmedCall)}
+	for _, job := range jobs {
+		if err := pacer.Wait(ctx); err != nil {
+			result.err = err
+			return result
+		}
+		result.requests++
+		requestCtx, cancel := requestContext(ctx, timeout)
+		locations, queryErr := nav.References(requestCtx, job.at, false)
+		cancel()
+		counters.completed.Add(1)
+		if queryErr != nil {
+			if ctx.Err() != nil {
+				result.err = ctx.Err()
+				return result
+			}
+			result.failed++
+			counters.failed.Add(1)
+			continue
+		}
+		for _, location := range locations {
+			callerFile, ok := byPath[cleanAbsolute(location.File)]
+			if !ok || callerFile.repoRoot != job.repoRoot {
+				continue
+			}
+			start, end, ok := namedSpan(callerFile.blob.Content, location.Start, location.End, job.name)
+			if !ok || !callSyntaxAt(callerFile.blob.Content, end) {
+				continue
+			}
+			enclosing, ok := merged.Enclosing(callerFile.shard, callerFile.blobID, start)
+			if !ok || enclosing.NameStart < 0 {
+				continue
+			}
+			call := lspConfirmedCall{
+				source: diskgraph.Key{BlobSHA: callerFile.blob.SHA, SymbolOffset: uint64(enclosing.NameStart)},
+				target: job.target,
+				evidence: graph.Evidence{
+					BlobSHA: callerFile.blob.SHA, ByteOffset: uint64(start), ByteLength: uint64(end - start),
+				},
+			}
+			result.calls[lspCallKey(call)] = call
+		}
+	}
+	return result
 }
 
 func lspEligibleFiles(merged *symbol.Corpus, shards []*index.Index) ([]lspIndexedFile, int, error) {
@@ -309,7 +509,11 @@ func lspEligibleFiles(merged *symbol.Corpus, shards []*index.Index) ([]lspIndexe
 				if _, duplicate := byPath[path]; duplicate {
 					continue
 				}
-				byPath[path] = lspIndexedFile{path: path, repoRoot: root, shard: shardID, blobID: blobID, blob: blob}
+				language, workspace := navigate.WorkspaceRoute(path)
+				byPath[path] = lspIndexedFile{
+					path: path, repoRoot: root, route: lspRouteKey(language, workspace),
+					shard: shardID, blobID: blobID, blob: blob,
+				}
 				roots[root] = struct{}{}
 			}
 		}
@@ -531,6 +735,7 @@ func lspCallKey(call lspConfirmedCall) string {
 }
 
 type lspRequestPacer struct {
+	mu       sync.Mutex
 	interval time.Duration
 	last     time.Time
 	now      func() time.Time
@@ -545,13 +750,15 @@ func newLSPRequestPacer(requestsPerSecond float64) *lspRequestPacer {
 	}
 }
 
-// Wait spaces request starts globally across the entire graph pass. Queries are
-// deliberately sequential as well, so this is both a rate cap and a concurrency
-// cap for language servers that become unstable under bursty workspace loads.
+// Wait spaces request starts globally across the entire graph pass. The graph
+// scheduler serializes each (language, workspace) route separately while this
+// pacer bounds aggregate starts across concurrently active routes.
 func (p *lspRequestPacer) Wait(ctx context.Context) error {
 	if p == nil || p.interval <= 0 {
 		return nil
 	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	now := p.now()
 	if !p.last.IsZero() {
 		if delay := p.last.Add(p.interval).Sub(now); delay > 0 {

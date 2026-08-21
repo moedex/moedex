@@ -31,6 +31,10 @@ func TestGraphSimilarityEnvironmentRejectsInvalidValues(t *testing.T) {
 	if _, err := graphFloatEnv("MOEDEX_GRAPH_SIMILAR_THRESHOLD", 0.60); err == nil {
 		t.Fatal("NaN threshold accepted")
 	}
+	t.Setenv("MOEDEX_GRAPH_LSP_REQUESTS_PER_SECOND", "-1")
+	if _, err := graphNonNegativeFloatEnv("MOEDEX_GRAPH_LSP_REQUESTS_PER_SECOND", server.DefaultLSPRequestsPerSecond); err == nil {
+		t.Fatal("negative LSP request rate accepted")
+	}
 }
 
 func TestNextSemanticGraphGenerationAdvancesExistingGraph(t *testing.T) {
