@@ -81,8 +81,16 @@ parity:
       - PARITY-REPORT.md
     expire_in: 30 days
 
-# --- graph-eval: reviewed private graph quality (self-hosted) -------------
-graph-eval:
+# --- graph-eval-private: reviewed private graph quality (self-hosted) -----
+# Configure these as runner/project variables (they are paths, not secrets):
+#   * MOEDEX_GRAPH_EVAL_SHARDS — absolute path to the mounted managed shards.
+#   * MOEDEX_GRAPH_GOLD — absolute path to the mounted reviewed gold JSON file.
+#
+# A Verified-precision failure is more likely to expose insufficient label
+# coverage than a product regression: the 0.9 floor comes from a 1.0 baseline
+# over roughly nine Verified edges, so one new false positive lands exactly on
+# the floor. Check the labels before treating a Verified trip as graph breakage.
+graph-eval-private:
   stage: parity
   tags:
     - moedex-corpus
@@ -99,6 +107,24 @@ graph-eval:
         - Makefile
         - .gitlab-ci.yml
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  before_script:
+    - |
+      test -n "${MOEDEX_GRAPH_EVAL_SHARDS:-}" || {
+        echo "MOEDEX_GRAPH_EVAL_SHARDS must point to the mounted managed shards" >&2
+        exit 1
+      }
+      test -d "$MOEDEX_GRAPH_EVAL_SHARDS" || {
+        echo "MOEDEX_GRAPH_EVAL_SHARDS is not a mounted directory: $MOEDEX_GRAPH_EVAL_SHARDS" >&2
+        exit 1
+      }
+      test -n "${MOEDEX_GRAPH_GOLD:-}" || {
+        echo "MOEDEX_GRAPH_GOLD must point to the mounted reviewed gold JSON file" >&2
+        exit 1
+      }
+      test -r "$MOEDEX_GRAPH_GOLD" || {
+        echo "MOEDEX_GRAPH_GOLD is not a readable mounted file: $MOEDEX_GRAPH_GOLD" >&2
+        exit 1
+      }
   script:
     - go run ./cmd/moedex-index graph -shard-dir "$MOEDEX_GRAPH_EVAL_SHARDS"
     - make graph-eval-private
