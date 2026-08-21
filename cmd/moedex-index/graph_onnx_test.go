@@ -2,7 +2,12 @@
 
 package main
 
-import "testing"
+import (
+	"testing"
+
+	"moedex/internal/graph/diskgraph"
+	"moedex/internal/server"
+)
 
 func TestGraphSimilarityEnvironment(t *testing.T) {
 	t.Setenv("MOEDEX_GRAPH_SIMILAR_TOP_K", "9")
@@ -25,5 +30,21 @@ func TestGraphSimilarityEnvironmentRejectsInvalidValues(t *testing.T) {
 	t.Setenv("MOEDEX_GRAPH_SIMILAR_THRESHOLD", "NaN")
 	if _, err := graphFloatEnv("MOEDEX_GRAPH_SIMILAR_THRESHOLD", 0.60); err == nil {
 		t.Fatal("NaN threshold accepted")
+	}
+}
+
+func TestNextSemanticGraphGenerationAdvancesExistingGraph(t *testing.T) {
+	dir := t.TempDir()
+	b := diskgraph.NewBuilder()
+	b.SetGeneration(6)
+	if err := b.Save(server.GraphPath(dir)); err != nil {
+		t.Fatal(err)
+	}
+	generation, previous, err := nextSemanticGraphGeneration(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if generation != 7 || previous != 6 {
+		t.Fatalf("generation = %d, previous = %d; want 7, 6", generation, previous)
 	}
 }

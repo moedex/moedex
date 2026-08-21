@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"moedex/internal/embed"
+	"moedex/internal/graph/diskgraph"
 	"moedex/internal/server"
 )
 
@@ -45,15 +46,21 @@ func buildGraph(dir string) (path string, stats server.GraphRefreshStats, err er
 			err = fmt.Errorf("close graph ONNX embedder: %w", closeErr)
 		}
 	}()
+	generation, previousGeneration, err := nextSemanticGraphGeneration(dir)
+	if err != nil {
+		return "", stats, err
+	}
 	path, report, err := server.BuildGraphWithOptions(dir, server.GraphBuildOptions{
 		SimilarTopK:      topK,
 		SimilarThreshold: threshold,
 		Embedder:         embedder,
+		Generation:       generation,
 	})
 	if err == nil {
 		stats.FullRebuild = true
 		stats.Reason = "semantic similarity enabled"
-		stats.Generation = 1
+		stats.PreviousGeneration = previousGeneration
+		stats.Generation = generation
 		stats.NamesEligible = report.Schedule.Names
 		stats.NamesRecomputed = report.Schedule.Names
 		stats.EdgesRecomputed = int(report.Edges)
@@ -62,6 +69,22 @@ func buildGraph(dir string) (path string, stats server.GraphRefreshStats, err er
 		stats.Counts = report.Counts
 	}
 	return path, stats, err
+}
+
+func nextSemanticGraphGeneration(dir string) (generation, previous uint64, err error) {
+	generation = diskgraph.FirstGeneration
+	g, openErr := diskgraph.Open(server.GraphPath(dir))
+	if openErr != nil {
+		return generation, 0, nil
+	}
+	previous = g.Generation()
+	if closeErr := g.Close(); closeErr != nil {
+		return 0, 0, fmt.Errorf("close prior graph generation: %w", closeErr)
+	}
+	if previous == ^uint64(0) {
+		return 0, 0, fmt.Errorf("prior graph generation overflow")
+	}
+	return previous + 1, previous, nil
 }
 
 func graphIntEnv(key string, fallback int) (int, error) {

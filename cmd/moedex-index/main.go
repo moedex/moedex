@@ -320,7 +320,7 @@ func runGraph(args []string) error {
 	}
 	started := time.Now()
 	stopMemory := startPeakMemoryMonitor()
-	_, stats, err := server.RefreshGraph(dir)
+	_, stats, err := buildGraph(dir)
 	peakMemory := stopMemory()
 	if err != nil {
 		return err

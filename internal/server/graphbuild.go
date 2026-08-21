@@ -54,6 +54,11 @@ type GraphBuildOptions struct {
 	SimilarTopK      int
 	SimilarThreshold float64
 	Embedder         embed.Embedder
+	// Generation stamps the rebuilt graph and every recomputed edge. Zero uses
+	// diskgraph.FirstGeneration. Callers replacing an existing full graph set
+	// this to the prior generation plus one so generation-bound sidecars and
+	// observability remain monotonic.
+	Generation uint64
 
 	// LSPRequestsPerSecond caps the aggregate request start rate across all
 	// language servers used by the optional lsp-tagged call-graph pass. Zero
@@ -175,12 +180,16 @@ func BuildGraphWithOptions(dir string, opts GraphBuildOptions) (path string, rep
 		}
 	}()
 
+	generation := opts.Generation
+	if generation == 0 {
+		generation = diskgraph.FirstGeneration
+	}
 	builder := diskgraph.NewBuilder()
-	builder.SetGeneration(diskgraph.FirstGeneration)
+	builder.SetGeneration(generation)
 	sweep.recordCorpusRoster(builder)
 	emit := newGraphEmitter(builder)
 
-	report, err = sweep.buildAllEdges(builder, emit, diskgraph.FirstGeneration, opts)
+	report, err = sweep.buildAllEdges(builder, emit, generation, opts)
 	if err != nil {
 		return "", report, err
 	}

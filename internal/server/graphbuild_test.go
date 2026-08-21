@@ -77,6 +77,42 @@ func TestBuildGraphPersistsVerifiedAdjacency(t *testing.T) {
 	}
 }
 
+func TestBuildGraphWithOptionsUsesRequestedGeneration(t *testing.T) {
+	dir := t.TempDir()
+	content := []byte("package p\n\nfunc Target() {}\nfunc Caller() { Target() }\n")
+	sha := diskstore.GitBlobSHA1(content)
+	ix := index.New()
+	ix.AddFile("repo", "main.go", "/repo/main.go", sha, content)
+	if err := diskstore.Save(ix, filepath.Join(dir, "shard-0000.idx")); err != nil {
+		t.Fatal(err)
+	}
+
+	const generation = 7
+	path, _, err := BuildGraphWithOptions(dir, GraphBuildOptions{Generation: generation})
+	if err != nil {
+		t.Fatalf("BuildGraphWithOptions: %v", err)
+	}
+	g, err := diskgraph.Open(path)
+	if err != nil {
+		t.Fatalf("open graph: %v", err)
+	}
+	defer g.Close()
+	if got := g.Generation(); got != generation {
+		t.Fatalf("graph generation = %d, want %d", got, generation)
+	}
+	var edges int
+	g.EachEdge(func(_ diskgraph.Key, edge diskgraph.Edge) bool {
+		edges++
+		if edge.Generation != generation {
+			t.Errorf("edge generation = %d, want %d", edge.Generation, generation)
+		}
+		return true
+	})
+	if edges == 0 {
+		t.Fatal("fixture produced no graph edges")
+	}
+}
+
 func TestBuildGraphFromDedupedShards(t *testing.T) {
 	dir := t.TempDir()
 	targetContent := []byte("package target\n\nfunc Target() {}\n")
