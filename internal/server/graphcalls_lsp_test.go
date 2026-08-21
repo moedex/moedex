@@ -51,6 +51,19 @@ type concurrentGraphNavigator struct {
 	max     atomic.Int32
 }
 
+type statusGraphNavigator struct {
+	result navigate.LocationQueryResult
+	err    error
+}
+
+func (*statusGraphNavigator) DocumentSymbol(context.Context, string) ([]navigate.Symbol, error) {
+	return nil, nil
+}
+
+func (n *statusGraphNavigator) ReferencesDetailed(context.Context, navigate.Pos, bool) (navigate.LocationQueryResult, error) {
+	return n.result, n.err
+}
+
 func (f *concurrentGraphNavigator) DocumentSymbol(context.Context, string) ([]navigate.Symbol, error) {
 	active := f.active.Add(1)
 	for {
@@ -65,26 +78,31 @@ func (f *concurrentGraphNavigator) DocumentSymbol(context.Context, string) ([]na
 	return nil, nil
 }
 
-func (*concurrentGraphNavigator) References(context.Context, navigate.Pos, bool) ([]navigate.Location, error) {
-	return nil, nil
+func (*concurrentGraphNavigator) ReferencesDetailed(context.Context, navigate.Pos, bool) (navigate.LocationQueryResult, error) {
+	return navigate.LocationQueryResult{Status: navigate.LocationQueryReadyEmpty}, nil
 }
 
 func (f *fakeGraphNavigator) DocumentSymbol(_ context.Context, file string) ([]navigate.Symbol, error) {
 	return f.documents[cleanAbsolute(file)], nil
 }
 
-func (f *fakeGraphNavigator) References(_ context.Context, at navigate.Pos, _ bool) ([]navigate.Location, error) {
+func (f *fakeGraphNavigator) ReferencesDetailed(_ context.Context, at navigate.Pos, _ bool) (navigate.LocationQueryResult, error) {
 	data, err := os.ReadFile(at.File)
 	if err != nil {
-		return nil, err
+		return navigate.LocationQueryResult{Status: navigate.LocationQueryUnavailable}, err
 	}
 	off, ok := byteOffset(data, at)
 	if !ok {
-		return nil, nil
+		return navigate.LocationQueryResult{Status: navigate.LocationQueryReadyEmpty}, nil
 	}
 	name := identifierAtTest(data, off)
 	f.order = append(f.order, name)
-	return f.reference[name], nil
+	locations := f.reference[name]
+	status := navigate.LocationQueryReadyEmpty
+	if len(locations) > 0 {
+		status = navigate.LocationQueryResolved
+	}
+	return navigate.LocationQueryResult{Status: status, Locations: locations}, nil
 }
 
 func TestCollectLSPCallEdgesPrioritizesCrossShardAndFindsShortInterfaceCall(t *testing.T) {
@@ -177,6 +195,22 @@ func TestLSPRequestPacerSpacesStarts(t *testing.T) {
 	}
 	if want := []time.Duration{100 * time.Millisecond, 100 * time.Millisecond}; !reflect.DeepEqual(slept, want) {
 		t.Fatalf("pacer sleeps = %v, want %v", slept, want)
+	}
+}
+
+func TestLSPReferenceRouteStopsAfterUnavailableResult(t *testing.T) {
+	jobs := []lspDefinitionJob{
+		{name: "One", repoRoot: "/repo", route: "go\x00/repo", at: navigate.Pos{File: "/repo/a.go", Line: 1, Col: 1}},
+		{name: "Two", repoRoot: "/repo", route: "go\x00/repo", at: navigate.Pos{File: "/repo/a.go", Line: 2, Col: 1}},
+		{name: "Three", repoRoot: "/repo", route: "go\x00/repo", at: navigate.Pos{File: "/repo/a.go", Line: 3, Col: 1}},
+	}
+	result := collectLSPReferenceGroup(
+		context.Background(),
+		&statusGraphNavigator{result: navigate.LocationQueryResult{Status: navigate.LocationQueryUnavailable}},
+		jobs, nil, nil, time.Second, newLSPRequestPacer(1e9), &lspPhaseCounters{},
+	)
+	if result.requests != 1 || result.unavailable != 1 || result.failed != 1 || result.skipped != 2 {
+		t.Fatalf("route circuit breaker = %+v, want one failed request and two skipped", result)
 	}
 }
 
@@ -288,17 +322,135 @@ privacy_levels:
 	}
 }
 
-func TestBuildGraphLSPPersistsProvenInterfaceDispatch(t *testing.T) {
+func TestReconcilePatternCallGroupsPrunesCompleteExactPositive(t *testing.T) {
+	group := testPatternCallGroup("source", 17, "Resolve", []diskgraph.Key{
+		{BlobSHA: "target-a", SymbolOffset: 3},
+		{BlobSHA: "target-b", SymbolOffset: 5},
+	})
+	exact := []lspConfirmedCall{
+		{source: group.source, target: group.targets[0], name: group.key.name, evidence: group.edges[0].Edge.Evidence, repoRoot: "/repo"},
+		{source: group.source, target: group.targets[1], name: group.key.name, evidence: group.edges[0].Edge.Evidence, repoRoot: "/repo"},
+	}
+	authoritative := map[lspTargetContext]struct{}{
+		{repoRoot: "/repo", target: group.targets[0]}: {},
+		{repoRoot: "/repo", target: group.targets[1]}: {},
+	}
+	reconciled := reconcilePatternCallGroups(
+		[]patternCallGroup{group},
+		lspCallCollection{calls: exact, authoritative: authoritative},
+		map[string]int{"source": 1},
+	)
+	if _, ok := reconciled.pruneSites[group.key]; !ok {
+		t.Fatalf("prune sites = %#v, want exact group", reconciled.pruneSites)
+	}
+	if reconciled.stats.ReconciledCallGroups != 1 || reconciled.stats.PrunedPatternEdges != 2 {
+		t.Fatalf("stats = %+v, want one reconciled group and two pruned siblings", reconciled.stats)
+	}
+}
+
+func TestReconcilePatternCallGroupsRetainsPartialAndMultiRepoFanout(t *testing.T) {
+	tests := []struct {
+		name     string
+		contexts int
+		auth     bool
+	}{
+		{name: "partial target coverage", contexts: 1, auth: false},
+		{name: "content shared across repositories", contexts: 2, auth: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			group := testPatternCallGroup("shared-source", 23, "Resolve", []diskgraph.Key{
+				{BlobSHA: "target-a", SymbolOffset: 3},
+				{BlobSHA: "target-b", SymbolOffset: 5},
+			})
+			exact := lspConfirmedCall{
+				source: group.source, target: group.targets[0], name: group.key.name,
+				evidence: group.edges[0].Edge.Evidence, repoRoot: "/repo",
+			}
+			authoritative := map[lspTargetContext]struct{}{
+				{repoRoot: "/repo", target: group.targets[0]}: {},
+			}
+			if tt.auth {
+				authoritative[lspTargetContext{repoRoot: "/repo", target: group.targets[1]}] = struct{}{}
+			}
+			reconciled := reconcilePatternCallGroups(
+				[]patternCallGroup{group},
+				lspCallCollection{calls: []lspConfirmedCall{exact}, authoritative: authoritative},
+				map[string]int{"shared-source": tt.contexts},
+			)
+			if _, ok := reconciled.pruneSites[group.key]; ok {
+				t.Fatalf("uncertain group was pruned: %+v", reconciled)
+			}
+			if len(reconciled.calls) != 1 || reconciled.stats.RetainedUncertainCallGroups != 1 {
+				t.Fatalf("reconciliation = %+v, want Pattern retention plus exact Proven call", reconciled)
+			}
+		})
+	}
+}
+
+func TestLSPDefinitionJobsForGroupsScopesIncrementalReferences(t *testing.T) {
+	repo := t.TempDir()
+	file := filepath.Join(repo, "fixture.go")
+	writeLSPGraphFile(t, file, lspGraphRepoA)
+	ix := lspGraphIndex("fixture", file, "fixture.go", lspGraphRepoA)
+	merged := symbol.NewCorpus()
+	merged.AddShard("fixture", symbol.BuildMulti(ix))
+	files, _, err := lspEligibleFiles(merged, []*index.Index{ix})
+	if err != nil {
+		t.Fatal(err)
+	}
+	definition := merged.Definitions("Relevant")[0]
+	group := testPatternCallGroup("source", 10, "Relevant", []diskgraph.Key{{
+		BlobSHA: ix.Blob(definition.Blob).SHA, SymbolOffset: uint64(definition.Start),
+	}})
+	// The call source shares the same repository context as the target.
+	group.key.sourceBlob = ix.Blob(definition.Blob).SHA
+	jobs := lspDefinitionJobsForGroups(files, []patternCallGroup{group}, nil)
+	if len(jobs) != 1 {
+		t.Fatalf("dirty-name jobs = %#v, want only Relevant", jobs)
+	}
+	for _, job := range jobs {
+		if job.name != "Relevant" {
+			t.Fatalf("job = %+v, want Relevant only", job)
+		}
+	}
+}
+
+func testPatternCallGroup(sourceBlob string, evidenceOffset uint64, name string, targets []diskgraph.Key) patternCallGroup {
+	group := patternCallGroup{
+		key:     patternCallSiteKey{sourceBlob: sourceBlob, evidence: evidenceOffset, name: name},
+		source:  diskgraph.Key{BlobSHA: sourceBlob, SymbolOffset: 2},
+		targets: append([]diskgraph.Key(nil), targets...),
+	}
+	for _, target := range targets {
+		group.edges = append(group.edges, graphKeyEdge{
+			Key: group.source,
+			Edge: diskgraph.Edge{
+				Type: diskgraph.EdgeCalls, TargetBlob: target.BlobSHA, TargetOffset: target.SymbolOffset,
+				Confidence: graph.Pattern, Name: name,
+				Evidence: graph.Evidence{BlobSHA: sourceBlob, ByteOffset: evidenceOffset, ByteLength: uint64(len(name))},
+			},
+		})
+	}
+	return group
+}
+
+func TestBuildGraphLSPReconcilesPatternCallWithoutDocumentSweep(t *testing.T) {
 	if _, err := exec.LookPath("gopls"); err != nil {
 		t.Skip("gopls not on PATH; skipping real LSP call-graph integration test")
 	}
+	const source = `package fixture
+
+func Target() {}
+func Caller() { Target() }
+`
 	repo := t.TempDir()
 	file := filepath.Join(repo, "fixture.go")
 	writeLSPGraphFile(t, filepath.Join(repo, "go.mod"), "module example/interfacecalls\n\ngo 1.26\n")
-	writeLSPGraphFile(t, file, lspGraphRepoA)
+	writeLSPGraphFile(t, file, source)
 
 	shardDir := t.TempDir()
-	ix := lspGraphIndex("fixture", file, "fixture.go", lspGraphRepoA)
+	ix := lspGraphIndex("fixture", file, "fixture.go", source)
 	if err := diskstore.Save(ix, filepath.Join(shardDir, "shard-0000.idx")); err != nil {
 		t.Fatal(err)
 	}
@@ -317,30 +469,109 @@ func TestBuildGraphLSPPersistsProvenInterfaceDispatch(t *testing.T) {
 	}
 	defer g.Close()
 
-	sha := diskstore.GitBlobSHA1([]byte(lspGraphRepoA))
-	invoke := uint64(strings.Index(lspGraphRepoA, "Invoke"))
-	interfaceDo := uint64(strings.Index(lspGraphRepoA, "Do"))
-	callDo := uint64(strings.LastIndex(lspGraphRepoA, "Do"))
+	sha := diskstore.GitBlobSHA1([]byte(source))
+	caller := uint64(strings.Index(source, "Caller"))
+	target := uint64(strings.Index(source, "Target"))
+	callTarget := uint64(strings.LastIndex(source, "Target"))
 	var found bool
-	for _, edge := range g.Load(sha, invoke) {
-		if edge.Type == diskgraph.EdgeCalls && edge.TargetBlob == sha && edge.TargetOffset == interfaceDo {
+	for _, edge := range g.Load(sha, caller) {
+		if edge.Type == diskgraph.EdgeCalls && edge.TargetBlob == sha && edge.TargetOffset == target {
 			found = true
 			if edge.Confidence != graph.Proven || edge.Confidence.Score() != 1.0 {
 				t.Fatalf("LSP call confidence = %s / %.2f, want Proven / 1.0", edge.Confidence, edge.Confidence.Score())
 			}
-			if edge.Name != "Do" || edge.Generation != diskgraph.FirstGeneration {
-				t.Fatalf("LSP call provenance = name %q generation %d, want Do at generation %d", edge.Name, edge.Generation, diskgraph.FirstGeneration)
+			if edge.Name != "Target" || edge.Generation != diskgraph.FirstGeneration {
+				t.Fatalf("LSP call provenance = name %q generation %d, want Target at generation %d", edge.Name, edge.Generation, diskgraph.FirstGeneration)
 			}
-			if edge.Evidence.ByteOffset != callDo || edge.Evidence.ByteLength != 2 {
-				t.Fatalf("LSP call evidence = %+v, want Do at %d", edge.Evidence, callDo)
+			if edge.Evidence.ByteOffset != callTarget || edge.Evidence.ByteLength != uint64(len("Target")) {
+				t.Fatalf("LSP call evidence = %+v, want Target at %d", edge.Evidence, callTarget)
 			}
 		}
 	}
 	if !found {
-		t.Fatalf("Invoke adjacency = %#v, stats = %+v; want Proven interface-dispatched Do call", g.Load(sha, invoke), stats)
+		t.Fatalf("Caller adjacency = %#v, stats = %+v; want Proven Target call", g.Load(sha, caller), stats)
 	}
-	if stats.ReferenceRequests != stats.DiscoveredSymbols || stats.CallEdges == 0 {
+	if stats.DocumentRequests != 0 || stats.ReferenceRequests != 1 || stats.CallEdges != 1 || stats.PrunedPatternEdges != 1 {
 		t.Fatalf("LSP graph coverage stats = %+v", stats)
+	}
+	statusTotal := stats.ResolvedReferenceRequests + stats.EmptyReferenceRequests + stats.UnsupportedReferenceRequests + stats.UnavailableReferenceRequests
+	if statusTotal != stats.ReferenceRequests || stats.ReferenceLatencyTotal <= 0 || stats.ReferenceLatencyMax <= 0 {
+		t.Fatalf("LSP request status/latency accounting = %+v", stats)
+	}
+}
+
+func TestBuildGraphLSPCancellationDoesNotPublishGraph(t *testing.T) {
+	repo := t.TempDir()
+	file := filepath.Join(repo, "fixture.go")
+	writeLSPGraphFile(t, filepath.Join(repo, "go.mod"), "module example/cancelled\n\ngo 1.26\n")
+	writeLSPGraphFile(t, file, lspGraphRepoA)
+	shardDir := t.TempDir()
+	if err := diskstore.Save(lspGraphIndex("fixture", file, "fixture.go", lspGraphRepoA), filepath.Join(shardDir, "shard-0000.idx")); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, _, err := BuildGraphWithOptions(shardDir, GraphBuildOptions{Context: ctx}); err == nil {
+		t.Fatal("cancelled LSP graph build returned nil error")
+	}
+	if _, err := os.Stat(GraphPath(shardDir)); !os.IsNotExist(err) {
+		t.Fatalf("cancelled build published graph: stat error %v", err)
+	}
+}
+
+func TestRefreshGraphLSPReconcilesDirtyNameWithoutDocumentSweep(t *testing.T) {
+	if _, err := exec.LookPath("gopls"); err != nil {
+		t.Skip("gopls not on PATH; skipping real LSP refresh integration test")
+	}
+	repo := t.TempDir()
+	file := filepath.Join(repo, "fixture.go")
+	writeLSPGraphFile(t, filepath.Join(repo, "go.mod"), "module example/refreshcalls\n\ngo 1.26\n")
+	initial := "package fixture\n\nfunc Target() {}\nfunc Caller() { Target() }\n"
+	writeLSPGraphFile(t, file, initial)
+	shardDir := t.TempDir()
+	shardPath := filepath.Join(shardDir, "shard-0000.idx")
+	if err := diskstore.Save(lspGraphIndex("fixture", file, "fixture.go", initial), shardPath); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := BuildGraphWithOptions(shardDir, GraphBuildOptions{LSPRequestsPerSecond: 1000}); err != nil {
+		t.Fatal(err)
+	}
+
+	updated := "package fixture\n\nfunc Target() {}\nfunc Caller() {\n\tTarget()\n}\n"
+	writeLSPGraphFile(t, file, updated)
+	if err := diskstore.Save(lspGraphIndex("fixture", file, "fixture.go", updated), shardPath); err != nil {
+		t.Fatal(err)
+	}
+	var lspStats LSPGraphStats
+	path, stats, err := RefreshGraphWithOptions(shardDir, GraphBuildOptions{
+		LSPRequestsPerSecond: 1000,
+		LSPStats:             &lspStats,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.FullRebuild || stats.NamesRecomputed == 0 {
+		t.Fatalf("refresh stats = %+v, want dirty-name delta", stats)
+	}
+	if lspStats.DocumentRequests != 0 || lspStats.ReferenceRequests == 0 {
+		t.Fatalf("targeted LSP stats = %+v, want references without document sweep", lspStats)
+	}
+	g, err := diskgraph.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	sha := diskstore.GitBlobSHA1([]byte(updated))
+	caller := uint64(strings.Index(updated, "Caller"))
+	target := uint64(strings.Index(updated, "Target"))
+	var calls []diskgraph.Edge
+	for _, edge := range g.Load(sha, caller) {
+		if edge.Type == diskgraph.EdgeCalls && edge.Name == "Target" {
+			calls = append(calls, edge)
+		}
+	}
+	if len(calls) != 1 || calls[0].Confidence != graph.Proven || calls[0].TargetOffset != target {
+		t.Fatalf("dirty Caller calls = %#v, want one reconciled Proven Target", calls)
 	}
 }
 

@@ -23,6 +23,7 @@ package contextwin
 
 import (
 	"bytes"
+	"path"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -39,6 +40,12 @@ const (
 	DefaultContextLines = 3
 	// tokensPerChar drives TokenEstimate: tokens ~= ceil(chars / charsPerToken).
 	charsPerToken = 4
+	// importSelectionMultiplier softly demotes import-dominated blocks while
+	// keeping a strongly relevant dependency/header result reachable.
+	importSelectionMultiplier = 0.4
+	// testSelectionMultiplier softly demotes requested test-path conventions
+	// while keeping test-focused results reachable.
+	testSelectionMultiplier = 0.5
 )
 
 // ContextBlock is one contiguous, deduplicated slice of a file selected for the
@@ -87,18 +94,114 @@ type Options struct {
 
 // candidate is an in-flight block keyed to a file, carried through expansion,
 // merge, and the budget walk. It tracks the source result order so the walk can
-// stay stable (best-first by Score, ties broken by original result order).
+// stay stable after internal selection penalties are applied.
 type candidate struct {
 	repo, relPath, absPath string
 	startLine, endLine     int    // 1-based inclusive
 	content                []byte // blob content this block is sliced from
+	view                   *blobView
 	score                  float64
+	selectionScore         float64 // internal ordering score after composable penalties
 	lexical, dense         float64 // per-arm scores of the contributing result (track score)
 	order                  int     // index of the originating result (lower = earlier)
 	blob                   uint64  // originating blob ID (for symbol scoping)
 	salientLine            int     // highest-ranked salient line retained through merging
 	salientOrder           int     // originating result order for salient-line tie breaking
 	importDominated        bool    // true when >70% of non-blank lines are import/header syntax
+	testDominated          bool    // true when relPath matches a requested test convention
+}
+
+// blobView is the per-assembly, per-blob line index. It makes all candidate
+// classification queries O(1) after one linear scan and supplies the same line
+// representation to expansion, slicing, clipping, and byte/line conversion.
+type blobView struct {
+	content        []byte
+	lines          [][]byte
+	lineStarts     []int
+	nonBlankPrefix []int
+	importPrefix   []int
+}
+
+func newBlobView(content []byte) *blobView {
+	v := &blobView{content: content, lines: splitLines(content)}
+	n := len(v.lines)
+	v.lineStarts = make([]int, n)
+	v.nonBlankPrefix = make([]int, n+1)
+	v.importPrefix = make([]int, n+1)
+
+	off := 0
+	inGoImportBlock := false
+	for i, raw := range v.lines {
+		v.lineStarts[i] = off
+		off += len(raw) + 1
+
+		trimmed := strings.TrimSpace(string(raw))
+		if strings.HasPrefix(trimmed, "import (") || trimmed == "import(" {
+			inGoImportBlock = true
+		}
+		v.nonBlankPrefix[i+1] = v.nonBlankPrefix[i]
+		v.importPrefix[i+1] = v.importPrefix[i]
+		if trimmed != "" {
+			v.nonBlankPrefix[i+1]++
+			if inGoImportBlock || isImportLine(trimmed) {
+				v.importPrefix[i+1]++
+			}
+		}
+		if inGoImportBlock && trimmed == ")" {
+			inGoImportBlock = false
+		}
+	}
+	return v
+}
+
+func (v *blobView) importDominated(startLine, endLine int) bool {
+	if v == nil || len(v.lines) == 0 {
+		return false
+	}
+	start := clamp(startLine, 1, len(v.lines))
+	end := clamp(endLine, start, len(v.lines))
+	nonBlank := v.nonBlankPrefix[end] - v.nonBlankPrefix[start-1]
+	imports := v.importPrefix[end] - v.importPrefix[start-1]
+	return nonBlank > 0 && imports*10 > nonBlank*7
+}
+
+func (v *blobView) sliceLines(startLine, endLine int) string {
+	if v == nil || len(v.lines) == 0 {
+		return ""
+	}
+	start := clamp(startLine, 1, len(v.lines))
+	end := clamp(endLine, start, len(v.lines))
+	startByte := v.lineStarts[start-1]
+	endByte := len(v.content)
+	if end < len(v.lines) {
+		endByte = v.lineStarts[end]
+	}
+	text := v.content[startByte:endByte]
+	if len(text) > 0 && text[len(text)-1] == '\n' {
+		return string(text)
+	}
+	return string(text) + "\n"
+}
+
+func (v *blobView) lineStart(line int) int {
+	if v == nil || len(v.lineStarts) == 0 {
+		return 0
+	}
+	return v.lineStarts[clamp(line, 1, len(v.lineStarts))-1]
+}
+
+func (v *blobView) lineOfByte(off int) int {
+	if v == nil || len(v.lineStarts) == 0 {
+		return 1
+	}
+	off = clamp(off, 0, len(v.content))
+	// lineStarts contains every line's first byte. The number of starts <= off
+	// is therefore the containing 1-based line number.
+	line := sort.Search(len(v.lineStarts), func(i int) bool { return v.lineStarts[i] > off })
+	if line == 0 {
+		return 1
+	}
+	return line
 }
 
 // Assemble turns ranked results into a token-budgeted, deduplicated,
@@ -134,12 +237,13 @@ type candidate struct {
 // next.start <= cur.end+2). The merged block spans the union of line ranges and
 // keeps the maximum Score of its parts. Blocks in different files never merge.
 //
-// Budget / truncation rule: blocks are emitted best-first (Score desc; ties
-// broken by originating result order, then file path, then start line — fully
-// deterministic). If the best block alone exceeds TokenBudget it is clipped
-// around its highest-ranked salient line. Subsequent over-budget blocks are
-// skipped and any skip sets Truncated = true. Clipping is reported separately
-// because it narrows returned source while truncation omits candidates.
+// Budget / truncation rule: blocks are emitted best-first by the internal
+// selection score (raw Score with soft import/test penalties); ties use raw
+// Score, originating result order, file path, and start line. If the best block
+// alone exceeds TokenBudget it is clipped around its highest-ranked salient
+// line. Subsequent over-budget blocks are skipped and any skip sets Truncated =
+// true. Clipping is reported separately because it narrows returned source
+// while truncation omits candidates.
 //
 // Token formula: tokens(text) = ceil(len(text) / 4). TokenEstimate is the sum
 // over emitted blocks' Text.
@@ -159,6 +263,7 @@ func Assemble(ix *index.Index, results []rank.RankedResult, opts Options) Contex
 
 	// 1+2. Expand every span into a candidate block, grouped per file.
 	byFile := map[string][]candidate{}
+	views := map[uint64]*blobView{}
 	var fileOrder []string // preserve first-seen file order for determinism
 	for order, res := range results {
 		if len(res.Files) == 0 {
@@ -172,13 +277,17 @@ func Assemble(ix *index.Index, results []rank.RankedResult, opts Options) Contex
 		if blob == nil {
 			continue
 		}
-		lines := splitLines(blob.Content)
-		if len(lines) == 0 {
+		view := views[res.Blob]
+		if view == nil {
+			view = newBlobView(blob.Content)
+			views[res.Blob] = view
+		}
+		if len(view.lines) == 0 {
 			continue
 		}
 		ref := res.Files[0]
 		for _, span := range res.LineSpans {
-			start, end := expandSpanScoped(lines, blob.Content, res.Blob, span, ctxLines, opts.EnclosingBytes)
+			start, end := expandSpanScopedView(view, res.Blob, span, ctxLines, opts.EnclosingBytes)
 			c := candidate{
 				repo:         ref.Repo,
 				relPath:      ref.RelPath,
@@ -186,12 +295,13 @@ func Assemble(ix *index.Index, results []rank.RankedResult, opts Options) Contex
 				startLine:    start,
 				endLine:      end,
 				content:      blob.Content,
+				view:         view,
 				score:        res.Score,
 				lexical:      res.Lexical,
 				dense:        res.Dense,
 				order:        order,
 				blob:         res.Blob,
-				salientLine:  clamp(span.StartLine, 1, len(lines)),
+				salientLine:  clamp(span.StartLine, 1, len(view.lines)),
 				salientOrder: order,
 			}
 			if _, seen := byFile[c.absPath]; !seen {
@@ -208,13 +318,21 @@ func Assemble(ix *index.Index, results []rank.RankedResult, opts Options) Contex
 	}
 	for i := range merged {
 		merged[i].importDominated = isImportDominated(merged[i])
+		merged[i].testDominated = isTestDominatedPath(merged[i].relPath)
+		merged[i].selectionScore = merged[i].score
+		if merged[i].importDominated {
+			merged[i].selectionScore *= importSelectionMultiplier
+		}
+		if merged[i].testDominated {
+			merged[i].selectionScore *= testSelectionMultiplier
+		}
 	}
 
 	// 4. Walk best-first under the token budget.
 	sort.SliceStable(merged, func(i, j int) bool {
 		a, b := merged[i], merged[j]
-		if a.importDominated != b.importDominated {
-			return !a.importDominated
+		if a.selectionScore != b.selectionScore {
+			return a.selectionScore > b.selectionScore
 		}
 		if a.score != b.score {
 			return a.score > b.score // higher score first
@@ -230,7 +348,7 @@ func Assemble(ix *index.Index, results []rank.RankedResult, opts Options) Contex
 
 	win := ContextWindow{}
 	for _, c := range merged {
-		text := sliceLines(c.content, c.startLine, c.endLine)
+		text := c.view.sliceLines(c.startLine, c.endLine)
 		cost := estimateTokens(text)
 		clipped := false
 		if len(win.Blocks) == 0 && cost > budget {
@@ -284,21 +402,7 @@ func splitLines(content []byte) [][]byte {
 // sliceLines returns the text of lines [start,end] (1-based inclusive),
 // rejoined with '\n' and terminated with a trailing '\n'.
 func sliceLines(content []byte, start, end int) string {
-	lines := splitLines(content)
-	if len(lines) == 0 {
-		return ""
-	}
-	start = clamp(start, 1, len(lines))
-	end = clamp(end, 1, len(lines))
-	if end < start {
-		end = start
-	}
-	var b bytes.Buffer
-	for i := start; i <= end; i++ {
-		b.Write(lines[i-1])
-		b.WriteByte('\n')
-	}
-	return b.String()
+	return newBlobView(content).sliceLines(start, end)
 }
 
 // estimateTokens implements ceil(len/4).
@@ -326,16 +430,21 @@ func clamp(v, lo, hi int) int {
 // because the symbol layer keys on definition ranges and the span's opening line
 // is the most reliable anchor inside the enclosing definition.
 func expandSpanScoped(lines [][]byte, content []byte, blob uint64, span rank.LineSpan, ctxLines int, enc func(uint64, int) (int, int, bool)) (int, int) {
+	return expandSpanScopedView(newBlobView(content), blob, span, ctxLines, enc)
+}
+
+func expandSpanScopedView(view *blobView, blob uint64, span rank.LineSpan, ctxLines int, enc func(uint64, int) (int, int, bool)) (int, int) {
+	lines := view.lines
 	if enc != nil {
 		n := len(lines)
 		startLine := clamp(span.StartLine, 1, n)
-		byteOff := lineStartByte(lines, startLine)
+		byteOff := view.lineStart(startLine)
 		if bs, be, ok := enc(blob, byteOff); ok && be > bs {
 			// be is exclusive; subtract 1 to land on the last contained byte so
 			// LineOf maps to the line the body actually ends on (not the line
 			// after a trailing newline).
-			sLine := lineOfByte(content, bs)
-			eLine := lineOfByte(content, be-1)
+			sLine := view.lineOfByte(bs)
+			eLine := view.lineOfByte(be - 1)
 			sLine = clamp(sLine, 1, n)
 			eLine = clamp(eLine, 1, n)
 			if eLine < sLine {
@@ -352,7 +461,11 @@ func expandSpanScoped(lines [][]byte, content []byte, blob uint64, span rank.Lin
 // the salient line itself is too large, it returns a UTF-8-safe prefix of that
 // line. maxBytes is positive for every normalized token budget.
 func clipAroundSalient(c candidate, maxBytes int) (text string, startLine, endLine int) {
-	lines := splitLines(c.content)
+	view := c.view
+	if view == nil {
+		view = newBlobView(c.content)
+	}
+	lines := view.lines
 	if len(lines) == 0 || maxBytes <= 0 {
 		return "", c.salientLine, c.salientLine
 	}
@@ -398,7 +511,7 @@ func clipAroundSalient(c candidate, maxBytes int) (text string, startLine, endLi
 			break
 		}
 	}
-	return sliceLines(c.content, start, end), start, end
+	return view.sliceLines(start, end), start, end
 }
 
 // utf8Prefix returns the longest valid UTF-8 prefix no longer than max bytes.
@@ -629,34 +742,21 @@ func mergeFile(cands []candidate) []candidate {
 }
 
 func isImportDominated(c candidate) bool {
-	lines := splitLines(c.content)
-	if len(lines) == 0 {
-		return false
+	view := c.view
+	if view == nil {
+		view = newBlobView(c.content)
 	}
-	start := clamp(c.startLine, 1, len(lines))
-	end := clamp(c.endLine, start, len(lines))
-	nonBlank, imports := 0, 0
-	inGoImportBlock := false
-	for lineNo, raw := range lines {
-		trimmed := strings.TrimSpace(string(raw))
-		if strings.HasPrefix(trimmed, "import (") || trimmed == "import(" {
-			inGoImportBlock = true
-		}
-		inside := lineNo+1 >= start && lineNo+1 <= end
-		if inside && trimmed != "" {
-			nonBlank++
-			if inGoImportBlock || isImportLine(trimmed) {
-				imports++
-			}
-		}
-		if inGoImportBlock && trimmed == ")" {
-			inGoImportBlock = false
-		}
-		if lineNo+1 > end {
-			break
-		}
+	return view.importDominated(c.startLine, c.endLine)
+}
+
+func isTestDominatedPath(relPath string) bool {
+	normalized := strings.ToLower(strings.ReplaceAll(relPath, "\\", "/"))
+	base := path.Base(normalized)
+	if strings.HasSuffix(base, "tests.cs") || strings.HasSuffix(base, ".spec.ts") || strings.HasSuffix(base, "_test.go") {
+		return true
 	}
-	return nonBlank > 0 && imports*10 > nonBlank*7
+	normalized = "/" + strings.Trim(normalized, "/") + "/"
+	return strings.Contains(normalized, "/cypress/")
 }
 
 func isImportLine(line string) bool {

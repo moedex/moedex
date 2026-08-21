@@ -174,6 +174,82 @@ func TestSymbolsOverviewTool_Call_MissingFile_ReturnsError(t *testing.T) {
 	}
 }
 
+func TestNavTool_Call_ExposesDetailedLocationStatus(t *testing.T) {
+	tests := []struct {
+		name      string
+		result    navigate.LocationQueryResult
+		err       error
+		wantText  string
+		wantError bool
+	}{
+		{
+			name: "resolved",
+			result: navigate.LocationQueryResult{
+				Status: navigate.LocationQueryResolved,
+				Locations: []navigate.Location{{
+					File:  "/tmp/a.go",
+					Start: navigate.Pos{File: "/tmp/a.go", Line: 3, Col: 4},
+				}},
+			},
+			wantText: "/tmp/a.go:3:4",
+		},
+		{
+			name:     "ready empty",
+			result:   navigate.LocationQueryResult{Status: navigate.LocationQueryReadyEmpty},
+			wantText: "ready_empty: language server returned no locations",
+		},
+		{
+			name:     "unsupported",
+			result:   navigate.LocationQueryResult{Status: navigate.LocationQueryUnsupported},
+			wantText: "unsupported: language server does not implement this navigation method",
+		},
+		{
+			name:      "unavailable",
+			result:    navigate.LocationQueryResult{Status: navigate.LocationQueryUnavailable},
+			err:       context.DeadlineExceeded,
+			wantText:  "unavailable: context deadline exceeded",
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tool := &navTool{
+				name: "find_definition",
+				run: func(context.Context, *navigate.Pool, navigate.Pos, navArgs) (navigate.LocationQueryResult, error) {
+					return tt.result, tt.err
+				},
+			}
+			text, isError := callTool(t, tool, map[string]any{"file": "/tmp/a.go", "line": 1})
+			if text != tt.wantText {
+				t.Errorf("text = %q, want %q", text, tt.wantText)
+			}
+			if isError != tt.wantError {
+				t.Errorf("isError = %v, want %v", isError, tt.wantError)
+			}
+
+			raw, err := json.Marshal(map[string]any{"file": "/tmp/a.go", "line": 1})
+			if err != nil {
+				t.Fatal(err)
+			}
+			res, err := tool.Call(context.Background(), raw)
+			if err != nil {
+				t.Fatalf("Call: %v", err)
+			}
+			structured, ok := res["structuredContent"].(map[string]interface{})
+			if !ok {
+				t.Fatalf("structuredContent = %T, want map", res["structuredContent"])
+			}
+			if got := structured["status"]; got != string(tt.result.Status) {
+				t.Errorf("structured status = %v, want %q", got, tt.result.Status)
+			}
+			if strings.Contains(strings.ToLower(text), "external") {
+				t.Errorf("text must not infer an external symbol: %q", text)
+			}
+		})
+	}
+}
+
 // TestFindSymbolTool_Call_ColdRootNoLang_ReturnsNoResults pins the "coverage
 // honesty" contract at the MCP surface: find_symbol with no lang on a root with
 // no already-live server must answer "no results", not spawn a server or
@@ -290,4 +366,3 @@ func lineOf(t *testing.T, file, needle string) int {
 	}
 	return 1 + strings.Count(string(data[:idx]), "\n")
 }
-

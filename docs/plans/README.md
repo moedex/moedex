@@ -4,6 +4,12 @@ These plans translate proposed ADRs into dependency-ordered execution artifacts.
 authoritative for architectural decisions; each phase `PLAN.md` is the implementation and
 verification contract for one delivery gate.
 
+## Standalone remediation plans
+
+- [Pattern call resolution and context block selection](./graph-pattern-call-resolution-and-context-selection.md)
+  resolves same-name Pattern call fan-out with bounded, fail-open LSP work and replaces absolute
+  header/test-file ranking gates with composable penalties.
+
 ## Program phases
 
 | Phase | Execution plan | ADR | Wave | Depends on | Status |

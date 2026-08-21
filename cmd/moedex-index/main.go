@@ -10,6 +10,7 @@
 //	moedex-index build   -corpus ROOT -shard-dir DIR [-shard-bytes N] [-force]
 //	moedex-index check   -shard-dir DIR [-corpus ROOT]
 //	moedex-index refresh -shard-dir DIR [-corpus ROOT] [-keep-backup]
+//	moedex-index graph-audit -shard-dir DIR [-sample N] [-seed N] [-resolve-sample N]
 //
 // A second family of subcommands operates the content-addressable blob store
 // (CAS) — the storage layer that stores each unique blob ONCE for the whole
@@ -57,6 +58,8 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -92,6 +95,8 @@ func main() {
 		err = runRefresh(os.Args[2:])
 	case "graph":
 		err = runGraph(os.Args[2:])
+	case "graph-audit":
+		err = runGraphAudit(os.Args[2:])
 	case "cas-build":
 		err = runCASBuild(os.Args[2:])
 	case "cas-refresh":
@@ -139,6 +144,10 @@ Usage:
   moedex-index graph   -shard-dir DIR
       Rebuild/refresh only corpus-graph.graph and its generation-bound cluster
       sidecar from existing shards; no source corpus checkout is required.
+  moedex-index graph-audit -shard-dir DIR [-sample N] [-seed N] [-resolve-sample N]
+      Read-only Pattern call-site census and resolver request projection. Does
+      not write graph artifacts. A positive resolve-sample runs a bounded,
+      non-persisting LSP sample and requires an lsp-tagged binary.
   moedex-index doctor  [-shard-dir DIR] [-addr HOST:PORT] [-strict]
       Read-only preflight: binary skew/shadows, shard-dir layout + correct refresh
       command, dense sidecar freshness, daemon + launchd health. Non-zero on a
@@ -291,11 +300,21 @@ func printGraphStats(stats server.GraphRefreshStats) {
 			formatCountMap(stats.Counts.SourceClassification), formatCountMap(stats.Counts.Confidence),
 			formatCountMap(stats.Counts.EdgeType), formatCountMap(stats.Counts.Enclosing))
 	}
-	if stats.LSP.EligibleFiles > 0 {
-		fmt.Printf("  graph LSP: files=%d document_requests=%d symbols=%d reference_requests=%d failures=%d proven_calls=%d restricted_workspaces=%d\n",
+	if stats.LSP.EligibleFiles > 0 || stats.LSP.CallGroups > 0 {
+		fmt.Printf("  graph LSP: files=%d document_requests=%d symbols=%d reference_requests=%d failures=%d proven_calls=%d restricted_workspaces=%d groups=%d reconciled=%d pattern_pruned=%d retained_uncertain=%d projected_references=%d projected_definitions=%d\n",
 			stats.LSP.EligibleFiles, stats.LSP.DocumentRequests, stats.LSP.DiscoveredSymbols,
 			stats.LSP.ReferenceRequests, stats.LSP.FailedRequests, stats.LSP.CallEdges,
-			stats.LSP.RestrictedWorkspaces)
+			stats.LSP.RestrictedWorkspaces, stats.LSP.CallGroups, stats.LSP.ReconciledCallGroups,
+			stats.LSP.PrunedPatternEdges, stats.LSP.RetainedUncertainCallGroups,
+			stats.LSP.ProjectedReferenceRequests, stats.LSP.ProjectedDefinitionRequests)
+		meanLatency := time.Duration(0)
+		if stats.LSP.ReferenceRequests > 0 {
+			meanLatency = stats.LSP.ReferenceLatencyTotal / time.Duration(stats.LSP.ReferenceRequests)
+		}
+		fmt.Printf("  graph LSP responses: resolved=%d ready_empty=%d unsupported=%d unavailable=%d skipped_after_route_failure=%d mean=%s max=%s\n",
+			stats.LSP.ResolvedReferenceRequests, stats.LSP.EmptyReferenceRequests,
+			stats.LSP.UnsupportedReferenceRequests, stats.LSP.UnavailableReferenceRequests, stats.LSP.SkippedReferenceRequests,
+			meanLatency.Round(time.Millisecond), stats.LSP.ReferenceLatencyMax.Round(time.Millisecond))
 	}
 }
 
@@ -339,6 +358,46 @@ func runGraph(args []string) error {
 	fmt.Printf("  graph resources: elapsed=%s peak_go_runtime=%.2f GiB\n",
 		time.Since(started).Round(time.Millisecond), float64(peakMemory)/(1<<30))
 	return nil
+}
+
+func runGraphAudit(args []string) error {
+	fs := newFlagSet("graph-audit")
+	shardDir := fs.String("shard-dir", "", "existing shard directory")
+	sample := fs.Int("sample", 50, "maximum deterministic call groups included in the report")
+	routeLimit := fs.Int("route-limit", 200, "maximum language/workspace route rows in JSON (0 includes all)")
+	seed := fs.Uint64("seed", 0, "deterministic sample seed")
+	resolveSample := fs.Int("resolve-sample", 0, "deterministic call groups to resolve through LSP without persistence (requires -tags lsp)")
+	resolveTimeout := fs.Duration("resolve-timeout", 2*time.Minute, "overall timeout for the optional LSP resolver sample")
+	requestTimeout := fs.Duration("request-timeout", 10*time.Second, "per-request timeout for the optional LSP resolver sample")
+	resolveConcurrency := fs.Int("resolve-concurrency", server.DefaultLSPConcurrency(), "independent LSP routes sampled concurrently")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *shardDir == "" {
+		return fmt.Errorf("graph-audit requires -shard-dir")
+	}
+	dir, err := filepath.Abs(*shardDir)
+	if err != nil {
+		return err
+	}
+	if _, err := server.InspectShardDir(dir); err != nil {
+		return err
+	}
+	report, err := server.AuditPatternCalls(context.Background(), dir, server.PatternCallAuditOptions{
+		SampleLimit:           *sample,
+		RouteLimit:            *routeLimit,
+		Seed:                  *seed,
+		ResolveSampleLimit:    *resolveSample,
+		ResolveWallTimeout:    *resolveTimeout,
+		ResolveRequestTimeout: *requestTimeout,
+		ResolveConcurrency:    *resolveConcurrency,
+	})
+	if err != nil {
+		return err
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	return enc.Encode(report)
 }
 
 func startPeakMemoryMonitor() func() uint64 {

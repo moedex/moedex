@@ -45,6 +45,13 @@ type graphSnapshot struct {
 	symbols *SymbolCorpus
 	wg      sync.WaitGroup
 
+	// Snapshot identity is captured when the graph mmap opens and remains bound
+	// to it across concurrent calls. The corpus fingerprint uses the same
+	// content-true shard identity as rank sidecars; buildID identifies the exact
+	// graph artifact rather than merely its refresh generation.
+	corpusFingerprint string
+	buildID           string
+
 	nodes    map[diskgraph.Key]nodeMetadata
 	bySymbol map[string][]diskgraph.Key
 	blobs    map[string][]*index.Blob
@@ -171,13 +178,21 @@ func openGraphSnapshotWithClusters(dir string, loadClusters bool) (*graphSnapsho
 		_ = g.Close()
 		return nil, fmt.Errorf("server: open graph symbols: %w", err)
 	}
+	shardPaths, err := globShards(dir)
+	if err != nil {
+		_ = syms.Close()
+		_ = g.Close()
+		return nil, fmt.Errorf("server: fingerprint graph corpus: %w", err)
+	}
 	s := &graphSnapshot{
-		graph:    g,
-		symbols:  syms,
-		nodes:    make(map[diskgraph.Key]nodeMetadata),
-		bySymbol: make(map[string][]diskgraph.Key),
-		blobs:    make(map[string][]*index.Blob),
-		byPath:   make(map[string][]locatedNode),
+		graph:             g,
+		symbols:           syms,
+		corpusFingerprint: corpusFingerprint(shardPaths),
+		buildID:           g.BuildID(),
+		nodes:             make(map[diskgraph.Key]nodeMetadata),
+		bySymbol:          make(map[string][]diskgraph.Key),
+		blobs:             make(map[string][]*index.Blob),
+		byPath:            make(map[string][]locatedNode),
 	}
 	s.buildCatalog()
 	if loadClusters {

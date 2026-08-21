@@ -364,6 +364,12 @@ Standalone `GraphNode` results include `hops` and are ordered by hop, confidence
 same-repository/shared-directory proximity to the root, symbol, then stable node ID.
 All standalone graph traversals default to the same `Pattern` confidence floor.
 
+`graph_schema` identifies the exact loaded snapshot as well as describing it. Its
+structured payload includes `generation`, the content-true `corpus_fingerprint`
+used by ranking sidecars, and `build_id` (SHA-256 of the complete graph artifact).
+Use those three fields as the graph portion of a downstream cache key; callers do
+not need to couple cache discovery to `list_clusters`.
+
 `list_clusters` never computes Louvain while serving. Graph build/refresh writes the
 generation-bound `corpus-graph.clusters.json` sidecar from only Verified/Proven
 `calls`, `http_calls`, `imports`, and manifest `depends_on` edges. A summary call is
@@ -377,12 +383,22 @@ Rebuild and verify these artifacts with:
 
 ```sh
 go run ./cmd/moedex-index graph -shard-dir /path/to/shards
+go run ./cmd/moedex-index graph-audit -shard-dir /path/to/shards -sample 50
+go run -tags lsp ./cmd/moedex-index graph-audit -shard-dir /path/to/shards -resolve-sample 20
 make graph-eval
 MOEDEX_GRAPH_EVAL_SHARDS=/path/to/shards MOEDEX_GRAPH_GOLD=/path/to/reviewed-gold.json make graph-eval-private
 ```
 
 The hermetic graph gate is also part of `make health`; the private command requires
 at least 30 reviewed records and committed mechanical floors in its mounted gold file.
+`graph-audit` scans the current mmap graph without rebuilding or writing it and reports
+Pattern call-site fanout plus References-vs-Definition request projections. The optional
+LSP sample is wall-clock bounded, reports typed response counts and latency, and never
+persists its Proven results. Production LSP graph builds use only participating Pattern
+targets from the symbol sidecar; they do not run the former all-file `DocumentSymbol`
+sweep. A group without an exact positive—or with partial, unsupported, unavailable,
+or multi-context coverage—retains the existing Pattern siblings; an empty response
+alone never suppresses them.
 
 The MCP server applies hardening defaults: a 30 s per-call timeout, 8-way handler
 concurrency, a 1 MiB cap on a single JSON-RPC message, and an 8 KiB cap on the

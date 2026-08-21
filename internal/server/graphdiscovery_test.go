@@ -160,6 +160,15 @@ func TestGraphSchemaReturnsCountsAndTypes(t *testing.T) {
 	if schema.TotalEdges <= 0 {
 		t.Fatalf("total_edges = %d, want > 0", schema.TotalEdges)
 	}
+	if schema.Generation != diskgraph.FirstGeneration {
+		t.Fatalf("generation = %d, want %d", schema.Generation, diskgraph.FirstGeneration)
+	}
+	if len(schema.CorpusFingerprint) != 64 {
+		t.Fatalf("corpus_fingerprint = %q, want SHA-256", schema.CorpusFingerprint)
+	}
+	if len(schema.BuildID) != 64 {
+		t.Fatalf("build_id = %q, want graph SHA-256", schema.BuildID)
+	}
 	if _, ok := schema.EdgeTypes["calls"]; !ok {
 		t.Fatalf("edge_types missing 'calls': %v", schema.EdgeTypes)
 	}

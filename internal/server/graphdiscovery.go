@@ -23,10 +23,13 @@ const (
 // discoverySchema caches the graph's node-kind and edge-type counts, computed
 // once per snapshot generation.
 type discoverySchema struct {
-	TotalNodes int            `json:"total_nodes"`
-	TotalEdges int            `json:"total_edges"`
-	NodeKinds  map[string]int `json:"node_kinds"`
-	EdgeTypes  map[string]int `json:"edge_types"`
+	Generation        uint64         `json:"generation"`
+	CorpusFingerprint string         `json:"corpus_fingerprint"`
+	BuildID           string         `json:"build_id"`
+	TotalNodes        int            `json:"total_nodes"`
+	TotalEdges        int            `json:"total_edges"`
+	NodeKinds         map[string]int `json:"node_kinds"`
+	EdgeTypes         map[string]int `json:"edge_types"`
 }
 
 // discoveryTool handles corpus orientation and discovery MCP tools.
@@ -53,7 +56,7 @@ func (t *discoveryTool) Descriptor() map[string]interface{} {
 			},
 		}
 	case "graph_schema":
-		description = "Describe the graph's schema: node kind counts, edge type counts, and totals. Use this to understand what the graph contains before querying it."
+		description = "Describe the loaded graph snapshot: generation, corpus fingerprint, build ID, node kind counts, edge type counts, and totals. Use its identity fields for downstream cache keys."
 		schema["properties"] = map[string]interface{}{}
 	case "read_source":
 		description = "Read a source file's content from the indexed corpus by repository and path. Supports partial reads via start_line/end_line."
@@ -299,10 +302,13 @@ func (s *graphSnapshot) ensureSchema() {
 			}
 		}
 		s.schemaInfo = &discoverySchema{
-			TotalNodes: len(s.nodes),
-			TotalEdges: s.graph.NumEdges(),
-			NodeKinds:  kinds,
-			EdgeTypes:  types,
+			Generation:        s.graph.Generation(),
+			CorpusFingerprint: s.corpusFingerprint,
+			BuildID:           s.buildID,
+			TotalNodes:        len(s.nodes),
+			TotalEdges:        s.graph.NumEdges(),
+			NodeKinds:         kinds,
+			EdgeTypes:         types,
 		}
 	})
 }
@@ -346,7 +352,8 @@ func (s *graphSnapshot) listRepos(filter string) map[string]interface{} {
 func (s *graphSnapshot) graphSchemaResult() map[string]interface{} {
 	s.ensureSchema()
 	return mcp.StructuredResult(
-		fmt.Sprintf("graph_schema: %d nodes (%d kinds), %d edges (%d types)",
+		fmt.Sprintf("graph_schema: generation %d, build %s, %d nodes (%d kinds), %d edges (%d types)",
+			s.schemaInfo.Generation, s.schemaInfo.BuildID,
 			s.schemaInfo.TotalNodes, len(s.schemaInfo.NodeKinds),
 			s.schemaInfo.TotalEdges, len(s.schemaInfo.EdgeTypes)),
 		s.schemaInfo, false,

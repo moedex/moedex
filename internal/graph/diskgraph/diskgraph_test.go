@@ -132,6 +132,58 @@ func TestRoundTripMmapRecoversEdgesExactly(t *testing.T) {
 	}
 }
 
+func TestBuildIDIdentifiesExactPersistedGraph(t *testing.T) {
+	b := NewBuilder()
+	source := Key{BlobSHA: "source", SymbolOffset: 7}
+	if err := b.AddEdge(source, Edge{
+		Type: EdgeCalls, TargetBlob: "target", TargetOffset: 9,
+		Confidence: graph.Pattern,
+		Evidence:   graph.Evidence{BlobSHA: "source", ByteOffset: 7, ByteLength: 2},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	firstPath := filepath.Join(t.TempDir(), "first.graph")
+	secondPath := filepath.Join(t.TempDir(), "second.graph")
+	if err := b.Save(firstPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.Save(secondPath); err != nil {
+		t.Fatal(err)
+	}
+	first, err := Open(firstPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer first.Close()
+	second, err := Open(secondPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer second.Close()
+
+	if len(first.BuildID()) != 64 {
+		t.Fatalf("BuildID = %q, want SHA-256", first.BuildID())
+	}
+	if first.BuildID() != second.BuildID() {
+		t.Fatalf("identical persisted graphs have different build IDs: %s != %s", first.BuildID(), second.BuildID())
+	}
+
+	b.SetGeneration(2)
+	thirdPath := filepath.Join(t.TempDir(), "third.graph")
+	if err := b.Save(thirdPath); err != nil {
+		t.Fatal(err)
+	}
+	third, err := Open(thirdPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer third.Close()
+	if first.BuildID() == third.BuildID() {
+		t.Fatal("generation-changing graph rewrite retained the same build ID")
+	}
+}
+
 func TestRoundTripRetainsIsolatedNode(t *testing.T) {
 	b := NewBuilder()
 	isolated := Key{BlobSHA: "isolated-sha", SymbolOffset: 17}

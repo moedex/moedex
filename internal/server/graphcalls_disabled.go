@@ -5,12 +5,13 @@ package server
 import (
 	"context"
 
-	"moedex/internal/graph/diskgraph"
 	"moedex/internal/index"
 	"moedex/internal/symbol"
 )
 
+func lspGraphAvailable() bool { return false }
+
 // The systematic language-server sweep is wholly absent from default builds.
-func addLSPCallEdges(_ context.Context, _ *diskgraph.Builder, _ *symbol.Corpus, _ []*index.Index, _ map[persistedGraphEdge]struct{}, _ map[string]bool, _ uint64, _ GraphBuildOptions) error {
-	return nil
+func collectLSPPatternReconciliation(_ context.Context, _ *symbol.Corpus, _ []*index.Index, _ []patternCallGroup, _ map[string]bool, _ GraphBuildOptions) (*lspPatternReconciliation, error) {
+	return &lspPatternReconciliation{}, nil
 }

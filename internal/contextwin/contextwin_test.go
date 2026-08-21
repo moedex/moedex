@@ -3,6 +3,7 @@ package contextwin
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"moedex/internal/index"
 	"moedex/internal/rank"
@@ -323,7 +324,7 @@ func TestMergeAcrossOneBlankLine(t *testing.T) {
 	}
 }
 
-func TestImportDominatedBlockRanksAfterImplementation(t *testing.T) {
+func TestImportPenaltyLetsSimilarImplementationWin(t *testing.T) {
 	header := "using System;\nusing System.Linq;\nusing Product.Domain;\nusing Product.Cart;\n"
 	implementation := "public Order Checkout(Cart cart) {\n    return domain.Register(cart.Domain);\n}\n"
 	ix := index.New()
@@ -335,6 +336,184 @@ func TestImportDominatedBlockRanksAfterImplementation(t *testing.T) {
 	}, Options{TokenBudget: 100, ContextLines: 1})
 	if len(win.Blocks) < 1 || win.Blocks[0].RelPath != "Checkout.cs" {
 		t.Fatalf("import-dominated header outranked implementation: %+v", win.Blocks)
+	}
+}
+
+func TestImportPenaltyLetsStrongHeaderBeatWeakImplementation(t *testing.T) {
+	header := "using System;\nusing System.Linq;\nusing Product.Domain;\nusing Product.Cart;\n"
+	implementation := "public Order Noise() {\n    return default;\n}\n"
+	ix := index.New()
+	ix.AddFile("r", "Controller.cs", "/abs/Controller.cs", sha(header), []byte(header))
+	ix.AddFile("r", "Noise.cs", "/abs/Noise.cs", sha(implementation), []byte(implementation))
+	win := Assemble(ix, []rank.RankedResult{
+		{Blob: 0, Files: []index.FileRef{ref("r", "Controller.cs", "/abs/Controller.cs")}, Score: 1, LineSpans: []rank.LineSpan{span(1, 4)}},
+		{Blob: 1, Files: []index.FileRef{ref("r", "Noise.cs", "/abs/Noise.cs")}, Score: .3, LineSpans: []rank.LineSpan{span(1, 3)}},
+	}, Options{TokenBudget: 100, ContextLines: 1})
+	if len(win.Blocks) < 1 || win.Blocks[0].RelPath != "Controller.cs" {
+		t.Fatalf("strong import result should beat weak implementation noise: %+v", win.Blocks)
+	}
+	if win.Blocks[0].Score != 1 {
+		t.Fatalf("public Score changed by internal import penalty: got %v want 1", win.Blocks[0].Score)
+	}
+}
+
+func TestTestPathPenaltyIsSoftAndComposable(t *testing.T) {
+	const implementation = "public Order Checkout() { return order; }\n"
+	const imports = "using System;\nusing Product.Domain;\nusing Product.Cart;\n"
+	tests := []struct {
+		name       string
+		paths      []string
+		scores     []float64
+		contents   []string
+		wantFirst  string
+		wantScores []float64
+	}{
+		{
+			name:       "production narrowly beats test",
+			paths:      []string{"CheckoutTests.cs", "Checkout.cs"},
+			scores:     []float64{.9, .5},
+			contents:   []string{implementation, implementation + "// production\n"},
+			wantFirst:  "Checkout.cs",
+			wantScores: []float64{.5, .9},
+		},
+		{
+			name:       "strong test beats weak production",
+			paths:      []string{"CheckoutTests.cs", "Checkout.cs"},
+			scores:     []float64{1, .4},
+			contents:   []string{implementation, implementation + "// production\n"},
+			wantFirst:  "CheckoutTests.cs",
+			wantScores: []float64{1, .4},
+		},
+		{
+			name:       "import and test penalties compose",
+			paths:      []string{"CheckoutTests.cs", "Checkout.cs"},
+			scores:     []float64{1, .25},
+			contents:   []string{imports, implementation},
+			wantFirst:  "Checkout.cs",
+			wantScores: []float64{.25, 1},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ix := index.New()
+			results := make([]rank.RankedResult, 0, len(tt.paths))
+			for i := range tt.paths {
+				abs := "/abs/" + tt.paths[i]
+				ix.AddFile("r", tt.paths[i], abs, sha(tt.contents[i]), []byte(tt.contents[i]))
+				results = append(results, rank.RankedResult{
+					Blob: uint64(i), Files: []index.FileRef{ref("r", tt.paths[i], abs)}, Score: tt.scores[i],
+					LineSpans: []rank.LineSpan{span(1, strings.Count(tt.contents[i], "\n"))},
+				})
+			}
+			win := Assemble(ix, results, Options{TokenBudget: 1000, ContextLines: 1})
+			if len(win.Blocks) != 2 || win.Blocks[0].RelPath != tt.wantFirst {
+				t.Fatalf("blocks = %+v, want %s first", win.Blocks, tt.wantFirst)
+			}
+			for i, want := range tt.wantScores {
+				if win.Blocks[i].Score != want {
+					t.Fatalf("block %d public Score = %v, want raw score %v", i, win.Blocks[i].Score, want)
+				}
+			}
+		})
+	}
+}
+
+func TestSelectionScoreTieUsesRawScoreThenStableKeys(t *testing.T) {
+	imports := "using System;\nusing Product.Domain;\n"
+	implementation := "public void Checkout() {}\n"
+	ix := index.New()
+	ix.AddFile("r", "Imports.cs", "/abs/z.cs", sha(imports), []byte(imports))
+	ix.AddFile("r", "Checkout.cs", "/abs/a.cs", sha(implementation), []byte(implementation))
+	results := []rank.RankedResult{
+		{Blob: 1, Files: []index.FileRef{ref("r", "Checkout.cs", "/abs/a.cs")}, Score: .4, LineSpans: []rank.LineSpan{span(1, 1)}},
+		{Blob: 0, Files: []index.FileRef{ref("r", "Imports.cs", "/abs/z.cs")}, Score: 1, LineSpans: []rank.LineSpan{span(1, 2)}},
+	}
+	for i := 0; i < 10; i++ {
+		win := Assemble(ix, results, Options{TokenBudget: 1000, ContextLines: 1})
+		if len(win.Blocks) != 2 || win.Blocks[0].RelPath != "Imports.cs" {
+			t.Fatalf("run %d selection-score tie did not use raw score deterministically: %+v", i, win.Blocks)
+		}
+	}
+}
+
+func TestTestDominatedPath(t *testing.T) {
+	tests := []struct {
+		path string
+		want bool
+	}{
+		{"Orders/CheckoutTests.cs", true},
+		{"orders/checkouttests.CS", true},
+		{"ui/cart.spec.ts", true},
+		{"pkg/cart_test.go", true},
+		{`ui\\cypress\\support\\Cart.ts`, true},
+		{"cypress/Cart.ts", true},
+		{"Orders/CheckoutTest.cs", false},
+		{"ui/cart.spec.tsx", false},
+		{"pkg/cart_tests.go", false},
+		{"ui/mycypress/support/Cart.ts", false},
+		{"ui/cypressical/Cart.ts", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			if got := isTestDominatedPath(tt.path); got != tt.want {
+				t.Fatalf("isTestDominatedPath(%q) = %v, want %v", tt.path, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTestPenaltyFollowsDisplayedFirstFileRef(t *testing.T) {
+	shared := "public void Checkout() {}\n"
+	competitor := "public void Other() {}\n"
+	ix := index.New()
+	ix.AddFile("r", "CheckoutTests.cs", "/abs/CheckoutTests.cs", sha(shared), []byte(shared))
+	ix.AddFile("r", "Checkout.cs", "/abs/Checkout.cs", sha(shared), []byte(shared))
+	ix.AddFile("r", "Other.cs", "/abs/Other.cs", sha(competitor), []byte(competitor))
+
+	assemble := func(files []index.FileRef) ContextWindow {
+		return Assemble(ix, []rank.RankedResult{
+			{Blob: 0, Files: files, Score: .9, LineSpans: []rank.LineSpan{span(1, 1)}},
+			{Blob: 1, Files: []index.FileRef{ref("r", "Other.cs", "/abs/Other.cs")}, Score: .5, LineSpans: []rank.LineSpan{span(1, 1)}},
+		}, Options{TokenBudget: 1000, ContextLines: 1})
+	}
+
+	testFirst := assemble([]index.FileRef{
+		ref("r", "CheckoutTests.cs", "/abs/CheckoutTests.cs"),
+		ref("r", "Checkout.cs", "/abs/Checkout.cs"),
+	})
+	if len(testFirst.Blocks) != 2 || testFirst.Blocks[0].RelPath != "Other.cs" {
+		t.Fatalf("displayed test path should receive test penalty: %+v", testFirst.Blocks)
+	}
+
+	productionFirst := assemble([]index.FileRef{
+		ref("r", "Checkout.cs", "/abs/Checkout.cs"),
+		ref("r", "CheckoutTests.cs", "/abs/CheckoutTests.cs"),
+	})
+	if len(productionFirst.Blocks) != 2 || productionFirst.Blocks[0].RelPath != "Checkout.cs" {
+		t.Fatalf("non-displayed test alias should not penalize production provenance: %+v", productionFirst.Blocks)
+	}
+}
+
+func TestBlobViewImportClassificationAtDeepLine(t *testing.T) {
+	var src strings.Builder
+	for i := 1; i <= 5000; i++ {
+		switch {
+		case i == 3999:
+			src.WriteString("import (\n")
+		case i >= 4000 && i <= 4004:
+			src.WriteString("\t\"example.com/pkg\"\n")
+		case i == 4005:
+			src.WriteString(")\n")
+		default:
+			src.WriteString("implementation()\n")
+		}
+	}
+	view := newBlobView([]byte(src.String()))
+	if !view.importDominated(3999, 4005) {
+		t.Fatal("deep Go import block was not classified from precomputed membership")
+	}
+	if view.importDominated(4006, 4010) {
+		t.Fatal("implementation below deep import block was misclassified")
 	}
 }
 
@@ -400,7 +579,7 @@ func TestLargeEnclosingSymbolClipsAroundSalient(t *testing.T) {
 	var src strings.Builder
 	for i := 1; i <= 400; i++ {
 		if i == 200 {
-			src.WriteString("salient_call()\n")
+			src.WriteString("salient_call(\"🙂\")\n")
 		} else {
 			src.WriteString("short line\n")
 		}
@@ -420,11 +599,17 @@ func TestLargeEnclosingSymbolClipsAroundSalient(t *testing.T) {
 	if !win.Blocks[0].Clipped {
 		t.Fatalf("400-line symbol should remain the selected scope and clip around its salient line: %+v", win.Blocks[0])
 	}
-	if !strings.Contains(win.Blocks[0].Text, "salient_call()") {
+	if !strings.Contains(win.Blocks[0].Text, "salient_call(\"🙂\")") {
 		t.Fatalf("fallback lost salient line: %q", win.Blocks[0].Text)
+	}
+	if !utf8.ValidString(win.Blocks[0].Text) {
+		t.Fatalf("large-scope clip split UTF-8: %q", win.Blocks[0].Text)
 	}
 	if win.TokenEstimate > 20 {
 		t.Fatalf("TokenEstimate = %d, exceeds budget 20", win.TokenEstimate)
+	}
+	if win.TokenEstimate != estimateTokens(win.Blocks[0].Text) {
+		t.Fatalf("TokenEstimate = %d, exact clipped estimate = %d", win.TokenEstimate, estimateTokens(win.Blocks[0].Text))
 	}
 }
 

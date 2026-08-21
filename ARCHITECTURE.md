@@ -878,6 +878,17 @@ the reported token estimate is always within the requested budget. Cluster reque
 page a generation-matched `corpus-graph.clusters.json` built during graph refresh;
 they never run Louvain on the serving path.
 
+Context selection keeps the public fused score unchanged but uses composable internal
+penalties for import-dominated blocks and conventional test paths (`*Tests.cs`,
+`*.spec.ts`, `*_test.go`, and `cypress/`). These are score multipliers rather than
+absolute gates, so dependency queries and test-focused searches can still rank those
+blocks first. Line/import classification is precomputed once per blob.
+
+`graph_schema` returns the loaded graph generation, content-true shard/corpus
+fingerprint, and exact graph-artifact build ID alongside node/edge counts. Navigation
+location queries expose `resolved`, `ready_empty`, `unsupported`, and `unavailable`
+outcomes; a successful empty response is never described as proof of an external symbol.
+
 ### `scale` — corpus sizing tool
 
 ```sh

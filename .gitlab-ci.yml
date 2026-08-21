@@ -95,7 +95,7 @@ parity:
 graph-eval-private:
   stage: parity
   tags:
-    - moedex-corpus
+    - docker-image
   variables:
     MOEDEX_GRAPH_EVAL_SHARDS: "$CI_MOEDEX_GRAPH_EVAL_SHARDS"
     MOEDEX_GRAPH_GOLD: "$CI_MOEDEX_GRAPH_GOLD"

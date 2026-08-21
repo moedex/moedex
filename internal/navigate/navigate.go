@@ -66,6 +66,58 @@ type Location struct {
 
 func (l Location) String() string { return l.Start.String() }
 
+// LocationQueryStatus describes what a language server actually told us about
+// a position-based navigation request. It deliberately does not infer that an
+// empty answer means the symbol is external: an initialized server can return
+// null while it is still indexing, or simply because it cannot resolve the
+// cursor position.
+type LocationQueryStatus string
+
+const (
+	// LocationQueryResolved means the server returned one or more locations.
+	LocationQueryResolved LocationQueryStatus = "resolved"
+	// LocationQueryReadyEmpty means the request completed successfully and the
+	// server returned null or an empty location array. It is not proof that the
+	// symbol lives outside the workspace.
+	LocationQueryReadyEmpty LocationQueryStatus = "ready_empty"
+	// LocationQueryUnsupported means the server returned JSON-RPC -32601 for
+	// this method.
+	LocationQueryUnsupported LocationQueryStatus = "unsupported"
+	// LocationQueryUnavailable means the request could not produce an
+	// authoritative answer because startup, transport, timeout, cancellation,
+	// privacy, synchronization, or response decoding failed.
+	LocationQueryUnavailable LocationQueryStatus = "unavailable"
+)
+
+// LocationQueryResult is the detailed result for definition, references, and
+// implementation requests. Existing slice-returning methods remain available
+// as compatibility wrappers; new accuracy-sensitive callers should use the
+// Detailed variants so empty, unsupported, and failed requests are not
+// conflated.
+type LocationQueryResult struct {
+	Status    LocationQueryStatus `json:"status"`
+	Locations []Location          `json:"locations,omitempty"`
+}
+
+// DetailedNavigator is the status-preserving navigation surface. It is kept
+// separate from Navigator so existing third-party implementations of the
+// original interface continue to compile.
+type DetailedNavigator interface {
+	DefinitionDetailed(ctx context.Context, at Pos) (LocationQueryResult, error)
+	ReferencesDetailed(ctx context.Context, at Pos, includeDecl bool) (LocationQueryResult, error)
+	ImplementationsDetailed(ctx context.Context, at Pos) (LocationQueryResult, error)
+}
+
+// legacyLocations implements the compatibility contract shared by LSP and
+// Pool: resolved locations pass through, successful empty/unsupported results
+// remain (nil, nil), and unavailable results preserve their error.
+func legacyLocations(result LocationQueryResult, err error) ([]Location, error) {
+	if err != nil {
+		return nil, err
+	}
+	return result.Locations, nil
+}
+
 // Symbol is a named, kind-tagged declaration returned by the name-based
 // navigation tools (ADR 0018: workspace/symbol and textDocument/documentSymbol)
 // — as opposed to the bare Location the position-based tools return. Kind is

@@ -386,16 +386,34 @@ func resolveLogger(l *slog.Logger) *slog.Logger {
 // --- public Navigator surface ----------------------------------------------
 
 func (c *LSP) Definition(ctx context.Context, at Pos) ([]Location, error) {
-	return c.locationQuery(ctx, "textDocument/definition", at, nil)
+	return legacyLocations(c.DefinitionDetailed(ctx, at))
 }
 
 func (c *LSP) Implementations(ctx context.Context, at Pos) ([]Location, error) {
-	return c.locationQuery(ctx, "textDocument/implementation", at, nil)
+	return legacyLocations(c.ImplementationsDetailed(ctx, at))
 }
 
 func (c *LSP) References(ctx context.Context, at Pos, includeDecl bool) ([]Location, error) {
+	return legacyLocations(c.ReferencesDetailed(ctx, at, includeDecl))
+}
+
+// DefinitionDetailed resolves a definition while preserving whether an empty
+// response was successful, unsupported, or unavailable.
+func (c *LSP) DefinitionDetailed(ctx context.Context, at Pos) (LocationQueryResult, error) {
+	return c.locationQueryDetailed(ctx, "textDocument/definition", at, nil)
+}
+
+// ImplementationsDetailed resolves implementations while preserving the
+// language server's detailed outcome.
+func (c *LSP) ImplementationsDetailed(ctx context.Context, at Pos) (LocationQueryResult, error) {
+	return c.locationQueryDetailed(ctx, "textDocument/implementation", at, nil)
+}
+
+// ReferencesDetailed resolves references while preserving the language
+// server's detailed outcome.
+func (c *LSP) ReferencesDetailed(ctx context.Context, at Pos, includeDecl bool) (LocationQueryResult, error) {
 	extra := map[string]any{"context": map[string]any{"includeDeclaration": includeDecl}}
-	return c.locationQuery(ctx, "textDocument/references", at, extra)
+	return c.locationQueryDetailed(ctx, "textDocument/references", at, extra)
 }
 
 // shutdownTimeout bounds the graceful "shutdown" handshake in Close. A wedged
@@ -448,12 +466,12 @@ func (c *LSP) Close() error {
 
 // --- query plumbing ---------------------------------------------------------
 
-func (c *LSP) locationQuery(ctx context.Context, method string, at Pos, extra map[string]any) ([]Location, error) {
+func (c *LSP) locationQueryDetailed(ctx context.Context, method string, at Pos, extra map[string]any) (LocationQueryResult, error) {
 	if err := c.ensureInit(ctx, at.File); err != nil {
-		return nil, err
+		return LocationQueryResult{Status: LocationQueryUnavailable}, err
 	}
 	if err := c.ensureFresh(ctx, at.File); err != nil {
-		return nil, err
+		return LocationQueryResult{Status: LocationQueryUnavailable}, err
 	}
 	params := map[string]any{
 		"textDocument": map[string]any{"uri": pathToURI(at.File)},
@@ -463,31 +481,40 @@ func (c *LSP) locationQuery(ctx context.Context, method string, at Pos, extra ma
 		params[k] = v
 	}
 	raw, err := c.call(ctx, method, params)
-	if err != nil {
+	return decodeLocationQueryResult(raw, err, method)
+}
+
+// decodeLocationQueryResult turns the wire response into the honest detailed
+// outcome without conflating an unsupported method, a successful empty result,
+// and a failed request. It is split from locationQueryDetailed so every status
+// transition is deterministic and unit-testable without a live server.
+func decodeLocationQueryResult(raw json.RawMessage, queryErr error, method string) (LocationQueryResult, error) {
+	if queryErr != nil {
 		// A server that doesn't implement this method (JSON-RPC MethodNotFound,
-		// -32601) is a partial-capability server, not a failure: many real
-		// servers support only a subset (sql-language-server has no
-		// definition/references at all; cflsp has definition but no references;
-		// the CSS/HTML servers vary). Degrade to "no results" so `def` works
-		// where supported and `refs`/`impl` come back empty instead of erroring.
+		// -32601) is a partial-capability server, not a transport failure.
 		var rpcErr *rpcError
-		if errors.As(err, &rpcErr) && rpcErr.Code == codeMethodNotFound {
-			return nil, nil
+		if errors.As(queryErr, &rpcErr) && rpcErr.Code == codeMethodNotFound {
+			return LocationQueryResult{Status: LocationQueryUnsupported}, nil
 		}
-		return nil, err
+		return LocationQueryResult{Status: LocationQueryUnavailable}, queryErr
 	}
 	// definition can return a single Location or an array; references and
-	// implementation return an array. null means "no result".
-	if len(raw) == 0 || string(raw) == "null" {
-		return nil, nil
+	// implementation return an array. null and [] are successful empty replies,
+	// but neither proves that the symbol is outside the workspace.
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
+		return LocationQueryResult{Status: LocationQueryReadyEmpty}, nil
 	}
 	var locs []lspLocation
 	if err := json.Unmarshal(raw, &locs); err != nil {
 		var one lspLocation
 		if err2 := json.Unmarshal(raw, &one); err2 != nil {
-			return nil, fmt.Errorf("navigate: decode %s result: %w", method, err)
+			return LocationQueryResult{Status: LocationQueryUnavailable}, fmt.Errorf("navigate: decode %s result: %w", method, err)
 		}
 		locs = []lspLocation{one}
+	}
+	if len(locs) == 0 {
+		return LocationQueryResult{Status: LocationQueryReadyEmpty}, nil
 	}
 	out := make([]Location, 0, len(locs))
 	for _, l := range locs {
@@ -497,7 +524,7 @@ func (c *LSP) locationQuery(ctx context.Context, method string, at Pos, extra ma
 			End:   lspToPos(uriToPath(l.URI), l.Range.End),
 		})
 	}
-	return out, nil
+	return LocationQueryResult{Status: LocationQueryResolved, Locations: out}, nil
 }
 
 // symNode is a decode union for the two shapes a server can hand back a named

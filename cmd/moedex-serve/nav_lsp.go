@@ -35,27 +35,27 @@ func navTools() ([]mcp.ToolHandler, func() error) {
 	})
 	defs := []struct {
 		name, desc string
-		run        func(context.Context, *navigate.Pool, navigate.Pos, navArgs) ([]navigate.Location, error)
+		run        func(context.Context, *navigate.Pool, navigate.Pos, navArgs) (navigate.LocationQueryResult, error)
 	}{
 		{
 			"find_definition",
 			"Resolve the symbol at a file position to its declaration site(s) via a real language server — type-resolved and cross-file, unlike a text search. Returns location(s) as file:line:col. Languages: go, csharp, typescript/js, css/scss, cfml (definition only), python; others route when their server is installed.",
-			func(ctx context.Context, p *navigate.Pool, at navigate.Pos, _ navArgs) ([]navigate.Location, error) {
-				return p.Definition(ctx, at)
+			func(ctx context.Context, p *navigate.Pool, at navigate.Pos, _ navArgs) (navigate.LocationQueryResult, error) {
+				return p.DefinitionDetailed(ctx, at)
 			},
 		},
 		{
 			"find_references",
-			"Find every reference to the symbol at a file position across the workspace (type-resolved). Returns locations as file:line:col. Empty for servers without a references provider (e.g. cfml, sql).",
-			func(ctx context.Context, p *navigate.Pool, at navigate.Pos, a navArgs) ([]navigate.Location, error) {
-				return p.References(ctx, at, a.includeDecl())
+			"Find every reference to the symbol at a file position across the workspace (type-resolved). Returns locations as file:line:col and a structured status. Servers without a references provider (e.g. cfml, sql) report unsupported rather than an ambiguous empty result.",
+			func(ctx context.Context, p *navigate.Pool, at navigate.Pos, a navArgs) (navigate.LocationQueryResult, error) {
+				return p.ReferencesDetailed(ctx, at, a.includeDecl())
 			},
 		},
 		{
 			"find_implementations",
 			"Find concrete implementations of the interface or interface method at a file position (type-resolved). Returns locations as file:line:col.",
-			func(ctx context.Context, p *navigate.Pool, at navigate.Pos, _ navArgs) ([]navigate.Location, error) {
-				return p.Implementations(ctx, at)
+			func(ctx context.Context, p *navigate.Pool, at navigate.Pos, _ navArgs) (navigate.LocationQueryResult, error) {
+				return p.ImplementationsDetailed(ctx, at)
 			},
 		},
 	}
@@ -72,7 +72,7 @@ type navTool struct {
 	name string
 	desc string
 	pool *navigate.Pool
-	run  func(context.Context, *navigate.Pool, navigate.Pos, navArgs) ([]navigate.Location, error)
+	run  func(context.Context, *navigate.Pool, navigate.Pos, navArgs) (navigate.LocationQueryResult, error)
 }
 
 func (t *navTool) Name() string { return t.name }
@@ -119,18 +119,67 @@ func (t *navTool) Call(ctx context.Context, raw json.RawMessage) (map[string]int
 	if col < 1 {
 		col = 1
 	}
-	locs, err := t.run(ctx, t.pool, navigate.Pos{File: a.File, Line: a.Line, Col: col}, a)
+	result, err := t.run(ctx, t.pool, navigate.Pos{File: a.File, Line: a.Line, Col: col}, a)
+	return navLocationResult(result, err), nil
+}
+
+// navLocationResult renders the status-preserving position-query result. The
+// text fallback stays location-only for resolved calls, preserving consumers
+// of the original line format, while empty/unsupported/unavailable outcomes are
+// now distinct in both text and structuredContent. In particular, ready_empty
+// never claims the symbol is external; LSP null is not sufficient evidence for
+// that conclusion.
+func navLocationResult(result navigate.LocationQueryResult, err error) map[string]interface{} {
+	status := result.Status
+	if err != nil || status == "" {
+		status = navigate.LocationQueryUnavailable
+	}
+	structured := map[string]interface{}{
+		"status":    string(status),
+		"locations": structuredLocations(result.Locations),
+	}
+
 	if err != nil {
-		return mcp.TextResult(fmt.Sprintf("%s failed: %v", t.name, err), true), nil
+		structured["message"] = err.Error()
+		return mcp.StructuredResult("unavailable: "+err.Error(), structured, true)
 	}
-	if len(locs) == 0 {
-		return mcp.TextResult("no results", false), nil
+
+	switch status {
+	case navigate.LocationQueryResolved:
+		if len(result.Locations) == 0 {
+			structured["status"] = string(navigate.LocationQueryReadyEmpty)
+			return mcp.StructuredResult("ready_empty: language server returned no locations", structured, false)
+		}
+		var b strings.Builder
+		for _, l := range result.Locations {
+			fmt.Fprintf(&b, "%s:%d:%d\n", l.File, l.Start.Line, l.Start.Col)
+		}
+		return mcp.StructuredResult(strings.TrimRight(b.String(), "\n"), structured, false)
+	case navigate.LocationQueryReadyEmpty:
+		return mcp.StructuredResult("ready_empty: language server returned no locations", structured, false)
+	case navigate.LocationQueryUnsupported:
+		return mcp.StructuredResult("unsupported: language server does not implement this navigation method", structured, false)
+	default:
+		return mcp.StructuredResult("unavailable: navigation request did not produce an authoritative result", structured, true)
 	}
-	var b strings.Builder
-	for _, l := range locs {
-		fmt.Fprintf(&b, "%s:%d:%d\n", l.File, l.Start.Line, l.Start.Col)
+}
+
+func structuredLocations(locs []navigate.Location) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(locs))
+	for _, loc := range locs {
+		out = append(out, map[string]interface{}{
+			"file": loc.File,
+			"start": map[string]interface{}{
+				"line":   loc.Start.Line,
+				"column": loc.Start.Col,
+			},
+			"end": map[string]interface{}{
+				"line":   loc.End.Line,
+				"column": loc.End.Col,
+			},
+		})
 	}
-	return mcp.TextResult(strings.TrimRight(b.String(), "\n"), false), nil
+	return out
 }
 
 // symbolsResult renders a Symbol slice the ADR 0018 pinned way: one
@@ -161,7 +210,7 @@ func (t *findSymbolTool) Name() string { return "find_symbol" }
 
 func (t *findSymbolTool) Descriptor() map[string]interface{} {
 	return map[string]interface{}{
-		"name": "find_symbol",
+		"name":        "find_symbol",
 		"description": "Find symbols by name across a workspace via a real language server (LSP workspace/symbol) — a fuzzy/substring match, not an exact resolver. Returns Symbol[] as name\\tkind\\tfile:line:col, one per line. Route by root; omit lang to merge every language server ALREADY live for that root (a cold root with no live server yet returns no results — warm it first with find_definition/symbols_overview, or pass lang to spawn it directly).",
 		"inputSchema": map[string]interface{}{
 			"type": "object",

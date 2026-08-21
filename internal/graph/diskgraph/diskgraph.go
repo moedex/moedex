@@ -20,6 +20,7 @@ package diskgraph
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha256"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -933,6 +934,21 @@ func (g *Graph) Generation() uint64 {
 		return 0
 	}
 	return g.generation
+}
+
+// BuildID returns the content identity of the complete persisted graph artifact.
+// It is intentionally derived from the mmap bytes rather than generation alone:
+// two independently rebuilt graphs can both be generation 1 while containing
+// different edges. Consumers can therefore use BuildID as the graph portion of
+// a cache key without depending on filesystem paths or modification times.
+//
+// Like every mmap-backed Graph method, BuildID must not race with Close.
+func (g *Graph) BuildID() string {
+	if g == nil || g.data == nil {
+		return ""
+	}
+	sum := sha256.Sum256(g.data)
+	return fmt.Sprintf("%x", sum[:])
 }
 
 // Names returns the distinct edge names interned in the file, sorted.

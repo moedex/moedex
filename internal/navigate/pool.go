@@ -604,33 +604,49 @@ func (p *Pool) routingLang(fileLang string) string {
 // language while workspaceRoot's root resolution is unaffected.
 
 func (p *Pool) Definition(ctx context.Context, at Pos) ([]Location, error) {
+	return legacyLocations(p.DefinitionDetailed(ctx, at))
+}
+
+// DefinitionDetailed is Definition with an outcome that distinguishes a
+// successful empty response, unsupported method, and unavailable server.
+func (p *Pool) DefinitionDetailed(ctx context.Context, at Pos) (LocationQueryResult, error) {
 	p.nQueries.Add(1)
 	fileLang, root := workspaceRoot(at.File)
 	nav, err := p.NavigatorFor(ctx, p.routingLang(fileLang), root)
 	if err != nil {
-		return nil, err
+		return LocationQueryResult{Status: LocationQueryUnavailable}, err
 	}
-	return nav.Definition(ctx, at)
+	return nav.DefinitionDetailed(ctx, at)
 }
 
 func (p *Pool) References(ctx context.Context, at Pos, includeDecl bool) ([]Location, error) {
+	return legacyLocations(p.ReferencesDetailed(ctx, at, includeDecl))
+}
+
+// ReferencesDetailed is References with a status-preserving result.
+func (p *Pool) ReferencesDetailed(ctx context.Context, at Pos, includeDecl bool) (LocationQueryResult, error) {
 	p.nQueries.Add(1)
 	fileLang, root := workspaceRoot(at.File)
 	nav, err := p.NavigatorFor(ctx, p.routingLang(fileLang), root)
 	if err != nil {
-		return nil, err
+		return LocationQueryResult{Status: LocationQueryUnavailable}, err
 	}
-	return nav.References(ctx, at, includeDecl)
+	return nav.ReferencesDetailed(ctx, at, includeDecl)
 }
 
 func (p *Pool) Implementations(ctx context.Context, at Pos) ([]Location, error) {
+	return legacyLocations(p.ImplementationsDetailed(ctx, at))
+}
+
+// ImplementationsDetailed is Implementations with a status-preserving result.
+func (p *Pool) ImplementationsDetailed(ctx context.Context, at Pos) (LocationQueryResult, error) {
 	p.nQueries.Add(1)
 	fileLang, root := workspaceRoot(at.File)
 	nav, err := p.NavigatorFor(ctx, p.routingLang(fileLang), root)
 	if err != nil {
-		return nil, err
+		return LocationQueryResult{Status: LocationQueryUnavailable}, err
 	}
-	return nav.Implementations(ctx, at)
+	return nav.ImplementationsDetailed(ctx, at)
 }
 
 // DocumentSymbol is file-routed exactly like Definition/References/

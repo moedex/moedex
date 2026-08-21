@@ -52,6 +52,9 @@ const (
 // compiled only with the onnx build tag. Embedder is injected so tagged tests
 // and offline callers share the same embed.BuildStore path.
 type GraphBuildOptions struct {
+	// Context cancels optional external graph passes before graph publication.
+	// Nil uses context.Background.
+	Context          context.Context
 	SimilarTopK      int
 	SimilarThreshold float64
 	Embedder         embed.Embedder
@@ -80,6 +83,11 @@ type GraphBuildOptions struct {
 	LSPRequestTimeout time.Duration
 	// LSPStats, when non-nil, receives coverage counters from the lsp-tagged pass.
 	LSPStats *LSPGraphStats
+
+	// lspPatternGroupsOnly keeps production full builds and incremental refreshes
+	// scoped to the Pattern groups being reconciled. The exhaustive discovery
+	// mode remains private to focused legacy-coverage tests.
+	lspPatternGroupsOnly bool
 }
 
 const (
@@ -110,14 +118,28 @@ func DefaultLSPConcurrency() int {
 // LSPGraphStats describes one systematic call-graph sweep. It is populated only
 // in lsp-tagged builds; default builds leave it at the zero value.
 type LSPGraphStats struct {
-	EligibleFiles        int
-	DocumentRequests     int
-	DiscoveredSymbols    int
-	PrioritizedSymbols   int
-	ReferenceRequests    int
-	FailedRequests       int
-	RestrictedWorkspaces int
-	CallEdges            int
+	EligibleFiles                int
+	DocumentRequests             int
+	DiscoveredSymbols            int
+	PrioritizedSymbols           int
+	ReferenceRequests            int
+	FailedRequests               int
+	RestrictedWorkspaces         int
+	CallEdges                    int
+	PatternCallEdges             int
+	CallGroups                   int
+	ReconciledCallGroups         int
+	PrunedPatternEdges           int
+	RetainedUncertainCallGroups  int
+	ProjectedReferenceRequests   int
+	ProjectedDefinitionRequests  int
+	ResolvedReferenceRequests    int
+	EmptyReferenceRequests       int
+	UnsupportedReferenceRequests int
+	UnavailableReferenceRequests int
+	SkippedReferenceRequests     int
+	ReferenceLatencyTotal        time.Duration
+	ReferenceLatencyMax          time.Duration
 }
 
 // GraphPath returns the graph adjacency file path under dir.
@@ -260,21 +282,44 @@ func (s *graphSweep) buildAllEdges(builder *diskgraph.Builder, emit *graphEmitte
 	report.Schedule = schedule
 
 	crossRelevant := make(map[string]bool)
-	if err := s.addDefinitionNodes(builder); err != nil {
-		return report, err
-	}
 	for i, name := range s.names {
-		for j := range edgeResults[i].Edges {
-			if err := emit.Add(edgeResults[i].Edges[j].Key, edgeResults[i].Edges[j].Edge); err != nil {
-				return report, err
-			}
-		}
 		if edgeResults[i].CrossShard {
 			crossRelevant[name] = true
 		}
 	}
-	if err := addLSPCallEdges(context.Background(), builder, s.merged, s.idxs, emit.seen, crossRelevant, generation, opts); err != nil {
+	callGroups := patternCallGroups(edgeResults)
+	buildCtx := opts.Context
+	if buildCtx == nil {
+		buildCtx = context.Background()
+	}
+	// Production LSP work is driven exclusively by the Pattern groups being
+	// reconciled. The legacy exhaustive helper remains available to focused tests,
+	// but a full graph build must not reintroduce the all-file documentSymbol
+	// sweep that dominated corpus build time.
+	reconcileOpts := opts
+	reconcileOpts.lspPatternGroupsOnly = true
+	reconciliation, err := collectLSPPatternReconciliation(buildCtx, s.merged, s.idxs, callGroups, crossRelevant, reconcileOpts)
+	if err != nil {
 		return report, err
+	}
+	if err := s.addDefinitionNodes(builder); err != nil {
+		return report, err
+	}
+	for i := range s.names {
+		for j := range edgeResults[i].Edges {
+			if reconciliation.prunes(edgeResults[i].Edges[j]) {
+				continue
+			}
+			if err := emit.Add(edgeResults[i].Edges[j].Key, edgeResults[i].Edges[j].Edge); err != nil {
+				return report, err
+			}
+		}
+	}
+	if err := addReconciledLSPCalls(builder, emit.seen, reconciliation, generation); err != nil {
+		return report, err
+	}
+	if opts.LSPStats != nil {
+		*opts.LSPStats = reconciliation.stats
 	}
 	if err := addSimilarToEdges(context.Background(), builder, s.merged, s.idxs, emit.seen, opts); err != nil {
 		return report, err

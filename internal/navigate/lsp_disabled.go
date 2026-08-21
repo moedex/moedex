@@ -83,18 +83,27 @@ var ErrServerDead = errors.New("navigate: language server died")
 // NewLSP always fails in the default build.
 func NewLSP(ctx context.Context, cfg Config) (*LSP, error) { return nil, errNoLSP }
 
-func (*LSP) Definition(context.Context, Pos) ([]Location, error)      { return nil, errNoLSP }
+func (*LSP) Definition(context.Context, Pos) ([]Location, error)       { return nil, errNoLSP }
 func (*LSP) References(context.Context, Pos, bool) ([]Location, error) { return nil, errNoLSP }
-func (*LSP) Implementations(context.Context, Pos) ([]Location, error) { return nil, errNoLSP }
-func (*LSP) Close() error                                             { return nil }
+func (*LSP) Implementations(context.Context, Pos) ([]Location, error)  { return nil, errNoLSP }
+func (*LSP) DefinitionDetailed(context.Context, Pos) (LocationQueryResult, error) {
+	return LocationQueryResult{Status: LocationQueryUnavailable}, errNoLSP
+}
+func (*LSP) ReferencesDetailed(context.Context, Pos, bool) (LocationQueryResult, error) {
+	return LocationQueryResult{Status: LocationQueryUnavailable}, errNoLSP
+}
+func (*LSP) ImplementationsDetailed(context.Context, Pos) (LocationQueryResult, error) {
+	return LocationQueryResult{Status: LocationQueryUnavailable}, errNoLSP
+}
+func (*LSP) Close() error { return nil }
 
 // Alive is part of the surface the Pool relies on. The stub is never stored by
 // the Pool (NewLSP fails first), so the value is moot.
 func (*LSP) Alive() bool { return false }
 
-func (*LSP) SetOverlay(context.Context, string, []byte) error  { return errNoLSP }
-func (*LSP) DropOverlay(context.Context, string) error         { return errNoLSP }
-func (*LSP) NotifyChanged(context.Context, ...string) error    { return errNoLSP }
+func (*LSP) SetOverlay(context.Context, string, []byte) error { return errNoLSP }
+func (*LSP) DropOverlay(context.Context, string) error        { return errNoLSP }
+func (*LSP) NotifyChanged(context.Context, ...string) error   { return errNoLSP }
 
 func (*LSP) WorkspaceSymbol(context.Context, string) ([]Symbol, error) { return nil, errNoLSP }
 func (*LSP) DocumentSymbol(context.Context, string) ([]Symbol, error)  { return nil, errNoLSP }

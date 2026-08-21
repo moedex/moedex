@@ -28,6 +28,7 @@ package server
 // corpus" is answerable per edge.
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -81,6 +82,25 @@ type GraphRefreshStats struct {
 // The result is identical to BuildGraph's for the same shard set, edge for edge
 // and in the same order; only the per-edge generation stamps differ.
 func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) {
+	return RefreshGraphWithOptions(dir, GraphBuildOptions{})
+}
+
+// RefreshGraphWithOptions is RefreshGraph plus the optional tagged passes used
+// by BuildGraphWithOptions. The default wrapper remains byte-for-byte
+// pass-through in builds without those tags.
+func RefreshGraphWithOptions(dir string, opts GraphBuildOptions) (path string, stats GraphRefreshStats, err error) {
+	if math.IsNaN(opts.LSPRequestsPerSecond) || math.IsInf(opts.LSPRequestsPerSecond, 0) || opts.LSPRequestsPerSecond < 0 {
+		return "", stats, fmt.Errorf("server: graph LSP requests/second must be finite and non-negative")
+	}
+	if opts.LSPConcurrency < 0 {
+		return "", stats, fmt.Errorf("server: graph LSP concurrency must be non-negative")
+	}
+	if opts.LSPRequestTimeout < 0 {
+		return "", stats, fmt.Errorf("server: graph LSP request timeout must be non-negative")
+	}
+	if opts.LSPStats != nil {
+		*opts.LSPStats = LSPGraphStats{}
+	}
 	sweep, err := openGraphSweep(dir)
 	if err != nil {
 		return "", stats, err
@@ -98,7 +118,7 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 		stats.FullRebuild = true
 		stats.Reason = reason
 		stats.Generation = diskgraph.FirstGeneration
-		path, err = sweep.rebuildAll(dir, &stats)
+		path, err = sweep.rebuildAll(dir, &stats, opts)
 		return path, stats, err
 	}
 	defer func() {
@@ -167,14 +187,14 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 				continue
 			}
 			// An edge from one of the whole-corpus passes (HTTP, manifest,
-			// hierarchy, injection, queries, renders, LSP calls, similarity) —
+			// hierarchy, injection, queries, renders, legacy unnamed LSP calls,
+			// similarity) —
 			// none of these have a symbol name, so the per-name dirty/eligible
 			// check above can never keep them. The six tag-independent passes
 			// are always regenerated fresh below (see addWholeCorpusEdges), so
 			// their previous copies are neither carried nor dropped here: they
-			// are simply superseded. LSP-call and SIMILAR_TO edges need runtime
-			// resources (a language-server pool, an embedder) this incremental
-			// path does not have, so they are carried forward instead, but only
+			// are simply superseded. Legacy unnamed LSP-call and SIMILAR_TO edges
+			// cannot be attributed to a dirty name, so they are carried forward, but only
 			// when neither endpoint's blob was removed by this delta — an
 			// unmodified pair of blobs cannot have produced a different edge.
 			edge, ok := previous.EdgeAt(i)
@@ -212,6 +232,22 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 	for i, name := range dirtyNames {
 		recomputedByName[name] = recomputed[i].Edges
 	}
+	crossRelevant := make(map[string]bool)
+	for i, name := range dirtyNames {
+		if recomputed[i].CrossShard {
+			crossRelevant[name] = true
+		}
+	}
+	refreshCtx := opts.Context
+	if refreshCtx == nil {
+		refreshCtx = context.Background()
+	}
+	refreshOpts := opts
+	refreshOpts.lspPatternGroupsOnly = true
+	reconciliation, err := collectLSPPatternReconciliation(refreshCtx, sweep.merged, sweep.idxs, patternCallGroups(recomputed), crossRelevant, refreshOpts)
+	if err != nil {
+		return "", stats, err
+	}
 
 	builder := diskgraph.NewBuilder()
 	builder.SetGeneration(stats.Generation)
@@ -225,6 +261,9 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 			stats.NamesRecomputed++
 			before := builder.NumEdges()
 			for i := range edges {
+				if reconciliation.prunes(edges[i]) {
+					continue
+				}
 				if err := emit.Add(edges[i].Key, edges[i].Edge); err != nil {
 					return "", stats, err
 				}
@@ -242,7 +281,7 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 			if !ok {
 				return "", stats, fmt.Errorf("server: graph refresh lost edge %d of the previous graph", c.edge)
 			}
-			if err := builder.AddEdge(key, edge); err != nil {
+			if err := emit.Add(key, edge); err != nil {
 				return "", stats, err
 			}
 			stats.EdgesCarried++
@@ -264,10 +303,17 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 		if edge.Type == diskgraph.EdgeSimilarTo && edge.Confidence == graph.Candidate {
 			edge.Confidence = graph.Pattern
 		}
-		if err := builder.AddEdge(key, edge); err != nil {
+		if err := emit.Add(key, edge); err != nil {
 			return "", stats, err
 		}
 		stats.EdgesCarried++
+	}
+	if err := addReconciledLSPCalls(builder, emit.seen, reconciliation, stats.Generation); err != nil {
+		return "", stats, err
+	}
+	stats.LSP = reconciliation.stats
+	if opts.LSPStats != nil {
+		*opts.LSPStats = reconciliation.stats
 	}
 
 	// The six tag-independent whole-corpus passes are cheap pure functions of
@@ -370,17 +416,20 @@ func openPreviousGraph(dir string) (*diskgraph.Graph, string) {
 // pass BuildGraphWithOptions does — every edge family, not just the per-name
 // sweep — so this path and a full BuildGraph produce the same graph, as the
 // package doc for RefreshGraph promises.
-func (s *graphSweep) rebuildAll(dir string, stats *GraphRefreshStats) (string, error) {
+func (s *graphSweep) rebuildAll(dir string, stats *GraphRefreshStats, opts GraphBuildOptions) (string, error) {
 	builder := diskgraph.NewBuilder()
 	builder.SetGeneration(stats.Generation)
 	s.recordCorpusRoster(builder)
 	emit := newGraphEmitter(builder)
 
-	report, err := s.buildAllEdges(builder, emit, stats.Generation, GraphBuildOptions{})
+	report, err := s.buildAllEdges(builder, emit, stats.Generation, opts)
 	if err != nil {
 		return "", err
 	}
 	stats.Schedule = report.Schedule
+	if opts.LSPStats != nil {
+		stats.LSP = *opts.LSPStats
+	}
 
 	stats.NamesRecomputed = len(s.names)
 	stats.EdgesRecomputed = int(builder.NumEdges())
