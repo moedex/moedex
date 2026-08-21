@@ -11,6 +11,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -250,17 +251,20 @@ func (r *GraphRunner) runOne(ctx context.Context, item GraphGold, k int) (GraphQ
 		return GraphQueryReport{}, nil, fmt.Errorf("decode structured graph result: %w", err)
 	}
 
+	stableNodeKeys, err := stableGraphNodeKeys(payload.Nodes)
+	if err != nil {
+		return GraphQueryReport{}, nil, err
+	}
 	nodeKeys := make(map[string]string, len(payload.Nodes))
 	rankedNodes := make([]string, 0, len(payload.Nodes))
-	for _, node := range payload.Nodes {
-		key, err := stableGraphNodeKey(node)
-		if err != nil {
-			return GraphQueryReport{}, nil, err
-		}
+	nodeRankingSeen := make(map[string]struct{}, len(payload.Nodes))
+	for i, node := range payload.Nodes {
+		key := stableNodeKeys[i]
 		nodeKeys[node.ID] = key
-		rankedNodes = append(rankedNodes, key)
+		rankedNodes, _ = appendUniqueRanking(rankedNodes, nodeRankingSeen, key)
 	}
 	rankedEdges := make([]string, 0, len(payload.Edges))
+	edgeRankingSeen := make(map[string]struct{}, len(payload.Edges))
 	tiers := make(map[string][2]int)
 	for _, edge := range payload.Edges {
 		source, sourceOK := nodeKeys[edge.Source]
@@ -269,7 +273,11 @@ func (r *GraphRunner) runOne(ctx context.Context, item GraphGold, k int) (GraphQ
 			return GraphQueryReport{}, nil, fmt.Errorf("edge %s -> %s references a node absent from production ordering", edge.Source, edge.Target)
 		}
 		key := source + "|" + edge.Type + "|" + target
-		rankedEdges = append(rankedEdges, key)
+		var added bool
+		rankedEdges, added = appendUniqueRanking(rankedEdges, edgeRankingSeen, key)
+		if !added {
+			continue
+		}
 		counts := tiers[edge.Confidence.Tier]
 		if item.EdgeLabels[key] >= 1 {
 			counts[0]++
@@ -389,7 +397,85 @@ type graphEvalNode struct {
 	Locations []struct {
 		Repo string `json:"repo"`
 		Path string `json:"path"`
+		Line int    `json:"line"`
 	} `json:"locations"`
+}
+
+func appendUniqueRanking(ranked []string, seen map[string]struct{}, key string) ([]string, bool) {
+	if _, duplicate := seen[key]; duplicate {
+		return ranked, false
+	}
+	seen[key] = struct{}{}
+	return append(ranked, key), true
+}
+
+// stableGraphNodeKeys preserves the human-authored repo/path#symbol key for
+// unique nodes while making collisions injective. A Type keeps the legacy base
+// key when a file also defines a same-named constructor/method; the other nodes
+// receive deterministic kind/line/ID suffixes. Existing gold remains readable,
+// and distinct graph nodes can no longer silently share one judgment.
+func stableGraphNodeKeys(nodes []graphEvalNode) ([]string, error) {
+	bases := make([]string, len(nodes))
+	groups := make(map[string][]int, len(nodes))
+	for i, node := range nodes {
+		base, err := stableGraphNodeKey(node)
+		if err != nil {
+			return nil, err
+		}
+		bases[i] = base
+		groups[base] = append(groups[base], i)
+	}
+	out := append([]string(nil), bases...)
+	for base, indexes := range groups {
+		if len(indexes) < 2 {
+			continue
+		}
+		canonical := indexes[0]
+		for _, idx := range indexes[1:] {
+			if nodeCollisionOrder(nodes[idx]) < nodeCollisionOrder(nodes[canonical]) {
+				canonical = idx
+			}
+		}
+		kindCounts := make(map[string]int)
+		for _, idx := range indexes {
+			if idx != canonical {
+				kindCounts[nodes[idx].Kind]++
+			}
+		}
+		used := map[string]struct{}{base: {}}
+		for _, idx := range indexes {
+			if idx == canonical {
+				continue
+			}
+			node := nodes[idx]
+			suffix := node.Kind
+			if suffix == "" {
+				suffix = "node"
+			}
+			if kindCounts[node.Kind] > 1 && len(node.Locations) > 0 {
+				suffix += ":" + strconv.Itoa(node.Locations[0].Line)
+			}
+			key := base + "@" + suffix
+			if _, collision := used[key]; collision {
+				key += ":" + node.ID
+			}
+			used[key] = struct{}{}
+			out[idx] = key
+		}
+	}
+	return out, nil
+}
+
+func nodeCollisionOrder(node graphEvalNode) string {
+	priority := "1"
+	if node.Kind == "Type" || node.Kind == "Table" {
+		priority = "0"
+	}
+	line := 0
+	if len(node.Locations) > 0 {
+		line = node.Locations[0].Line
+	}
+	return priority + "\x00" + node.Kind + "\x00" + fmt.Sprintf("%012d", line) + "\x00" + node.ID
 }
 
 func stableGraphNodeKey(node graphEvalNode) (string, error) {
@@ -447,13 +533,13 @@ func LoadGraphGoldFile(path string) (GraphGoldFile, error) {
 // CalibrateGraphFloors applies the fixed mechanical rule to a reviewed baseline.
 func CalibrateGraphFloors(baseline GraphReport) GraphFloors {
 	return GraphFloors{
-		Recall: baseline.MeanRecall - 0.07,
-		MRR:    baseline.MeanMRR - 0.07,
-		NDCG:   baseline.MeanNDCG - 0.07,
+		Recall: math.Max(0, baseline.MeanRecall-0.07),
+		MRR:    math.Max(0, baseline.MeanMRR-0.07),
+		NDCG:   math.Max(0, baseline.MeanNDCG-0.07),
 		TierPrecision: map[string]float64{
-			"Pattern":  baseline.PerTierPrecision["Pattern"] - 0.10,
-			"Verified": baseline.PerTierPrecision["Verified"] - 0.10,
-			"Proven":   baseline.PerTierPrecision["Proven"] - 0.10,
+			"Pattern":  math.Max(0, baseline.PerTierPrecision["Pattern"]-0.10),
+			"Verified": math.Max(0, baseline.PerTierPrecision["Verified"]-0.10),
+			"Proven":   math.Max(0, baseline.PerTierPrecision["Proven"]-0.10),
 		},
 	}
 }
@@ -480,12 +566,12 @@ func (f GraphFloors) Check(report GraphReport) error {
 	return nil
 }
 
-// HermeticGraphFloors are mechanically derived from the first reviewed
-// testdata/graph-corpus baseline (Recall 1, MRR 1, NDCG 0.9745884476, and 1.0
-// precision for Pattern/Verified/Proven).
+// HermeticGraphFloors are mechanically derived from the reviewed
+// testdata/graph-corpus baseline after production-key deduplication (1.0 for
+// Recall, MRR, NDCG, and Pattern/Verified/Proven precision).
 func HermeticGraphFloors() GraphFloors {
 	return GraphFloors{
-		Recall: 0.93, MRR: 0.93, NDCG: 0.904588447623813,
+		Recall: 0.93, MRR: 0.93, NDCG: 0.93,
 		TierPrecision: map[string]float64{"Pattern": 0.90, "Verified": 0.90, "Proven": 0.90},
 	}
 }

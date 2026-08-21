@@ -70,6 +70,8 @@ type clusterListResult struct {
 	Available     bool             `json:"available"`
 	Status        string           `json:"status"`
 	Generation    uint64           `json:"generation"`
+	ObservedNodes int              `json:"observed_nodes"`
+	ObservedEdges int              `json:"observed_edges"`
 	EligibleNodes int              `json:"eligible_nodes"`
 	EligibleEdges int              `json:"eligible_edges"`
 	Offset        int              `json:"offset"`
@@ -82,6 +84,8 @@ type clusterDetailResult struct {
 	Available     bool            `json:"available"`
 	Status        string          `json:"status"`
 	Generation    uint64          `json:"generation"`
+	ObservedNodes int             `json:"observed_nodes"`
+	ObservedEdges int             `json:"observed_edges"`
 	EligibleNodes int             `json:"eligible_nodes"`
 	EligibleEdges int             `json:"eligible_edges"`
 	Offset        int             `json:"offset"`
@@ -145,6 +149,15 @@ func (t *listClustersTool) Call(ctx context.Context, raw json.RawMessage) (map[s
 		}
 		return mcp.StructuredResult("list_clusters unavailable: "+result.Guidance, result, false), nil
 	}
+	if sidecar.Status == cluster.StatusUnderCovered {
+		result := clusterUnavailableResult{
+			Status: cluster.StatusUnderCovered, GraphGeneration: sidecar.Generation,
+			ObservedNodes: sidecar.ObservedNodes, ObservedEdges: sidecar.ObservedEdges,
+			EligibleNodes: sidecar.EligibleNodes, EligibleEdges: sidecar.EligibleEdges, Cap: sidecar.Cap,
+			Guidance: fmt.Sprintf("eligible topology covers only %d of %d graph nodes (<1%%); improve edge resolution or rebuild before treating fragments as communities", sidecar.EligibleNodes, sidecar.ObservedNodes),
+		}
+		return mcp.StructuredResult("list_clusters unavailable: "+result.Guidance, result, false), nil
+	}
 
 	if args.ClusterID == nil {
 		end := pageEnd(offset, limit, len(sidecar.Clusters))
@@ -157,6 +170,7 @@ func (t *listClustersTool) Call(ctx context.Context, raw json.RawMessage) (map[s
 			summaries = append(summaries, clusterSummary{ClusterID: community.ClusterID, Label: community.Label, MemberCount: community.MemberCount})
 		}
 		result := clusterListResult{Available: true, Status: cluster.StatusAvailable, Generation: sidecar.Generation,
+			ObservedNodes: sidecar.ObservedNodes, ObservedEdges: sidecar.ObservedEdges,
 			EligibleNodes: sidecar.EligibleNodes, EligibleEdges: sidecar.EligibleEdges,
 			Offset: offset, Limit: limit, Total: len(sidecar.Clusters), Clusters: summaries}
 		return mcp.StructuredResult(fmt.Sprintf("list_clusters: %d of %d summaries", len(summaries), len(sidecar.Clusters)), result, false), nil
@@ -179,6 +193,7 @@ func (t *listClustersTool) Call(ctx context.Context, raw json.RawMessage) (map[s
 		paged := community
 		paged.Members = append([]cluster.Node{}, community.Members[start:end]...)
 		result := clusterDetailResult{Available: true, Status: cluster.StatusAvailable, Generation: sidecar.Generation,
+			ObservedNodes: sidecar.ObservedNodes, ObservedEdges: sidecar.ObservedEdges,
 			EligibleNodes: sidecar.EligibleNodes, EligibleEdges: sidecar.EligibleEdges,
 			Offset: offset, Limit: limit, TotalMembers: community.MemberCount, Cluster: paged}
 		return mcp.StructuredResult(fmt.Sprintf("list_clusters: cluster %d members %d-%d of %d", community.ClusterID, start, end, community.MemberCount), result, false), nil
@@ -209,7 +224,7 @@ func clusterMaxNodes() (int, error) {
 }
 
 func isClusterEdge(edge diskgraph.Edge) bool {
-	if edge.Confidence < graph.Verified {
+	if edge.Confidence < graph.Pattern {
 		return false
 	}
 	switch edge.Type {
@@ -253,7 +268,10 @@ func ensureClusterSidecar(dir string, generation uint64) (cluster.BuildReport, e
 
 func detectSnapshotClusters(ctx context.Context, snapshot *graphSnapshot, cap int) (cluster.Sidecar, error) {
 	start := time.Now()
-	sidecar := cluster.Sidecar{Version: cluster.SidecarVersion, Generation: snapshot.graph.Generation(), Cap: cap, Clusters: []cluster.Cluster{}}
+	sidecar := cluster.Sidecar{
+		Version: cluster.SidecarVersion, Generation: snapshot.graph.Generation(), Cap: cap,
+		ObservedNodes: snapshot.graph.NumNodes(), ObservedEdges: snapshot.graph.NumEdges(), Clusters: []cluster.Cluster{},
+	}
 	type eligibleEdge struct {
 		source, target diskgraph.Key
 		weight         float64
@@ -282,6 +300,12 @@ func detectSnapshotClusters(ctx context.Context, snapshot *graphSnapshot, cap in
 	sidecar.EligibleNodes = len(nodeKeys)
 	if sidecar.EligibleNodes > cap {
 		sidecar.Status = cluster.StatusOverCap
+		sidecar.Clusters = []cluster.Cluster{}
+		sidecar.BuildMillis = time.Since(start).Milliseconds()
+		return sidecar, nil
+	}
+	if cluster.UnderCovered(sidecar.EligibleNodes, sidecar.ObservedNodes) {
+		sidecar.Status = cluster.StatusUnderCovered
 		sidecar.Clusters = []cluster.Cluster{}
 		sidecar.BuildMillis = time.Since(start).Milliseconds()
 		return sidecar, nil

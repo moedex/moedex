@@ -19,12 +19,12 @@ func TestBuildGraphPersistsVerifiedAdjacency(t *testing.T) {
 	callerSHA := diskstore.GitBlobSHA1(callerContent)
 
 	target := index.New()
-	target.AddFile("target", "target.go", "/target/target.go", targetSHA, targetContent)
+	target.AddFile("repo", "target.go", "/repo/target.go", targetSHA, targetContent)
 	if err := diskstore.Save(target, filepath.Join(dir, "shard-0000.idx")); err != nil {
 		t.Fatal(err)
 	}
 	caller := index.New()
-	caller.AddFile("caller", "caller.go", "/caller/caller.go", callerSHA, callerContent)
+	caller.AddFile("repo", "caller.go", "/repo/caller.go", callerSHA, callerContent)
 	if err := diskstore.Save(caller, filepath.Join(dir, "shard-0001.idx")); err != nil {
 		t.Fatal(err)
 	}
@@ -113,6 +113,38 @@ func TestBuildGraphWithOptionsUsesRequestedGeneration(t *testing.T) {
 	}
 }
 
+func TestBuildGraphSuppressesCrossRepositoryPatternBindings(t *testing.T) {
+	dir := t.TempDir()
+	targetContent := []byte("package dependency\n\nfunc RegisterType() {}\n")
+	callerContent := []byte("package checkout\n\nfunc RegisterCheckout() { RegisterType() }\n")
+	targetSHA := diskstore.GitBlobSHA1(targetContent)
+	callerSHA := diskstore.GitBlobSHA1(callerContent)
+	ix := index.New()
+	ix.AddFile("unrelated-dependency", "register.go", "/unrelated/register.go", targetSHA, targetContent)
+	ix.AddFile("checkout", "checkout.go", "/checkout/checkout.go", callerSHA, callerContent)
+	if err := diskstore.Save(ix, filepath.Join(dir, "shard-0000.idx")); err != nil {
+		t.Fatal(err)
+	}
+	path, report, err := BuildGraph(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Counts.SuppressedCrossRepoPattern == 0 {
+		t.Fatalf("build did not account for impossible cross-repo Pattern binding: %+v", report.Counts)
+	}
+	g, err := diskgraph.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	callerOffset := uint64(strings.Index(string(callerContent), "RegisterCheckout"))
+	for _, edge := range g.Load(callerSHA, callerOffset) {
+		if edge.Type == diskgraph.EdgeCalls && edge.TargetBlob == targetSHA {
+			t.Fatalf("external RegisterType call bound to unrelated corpus definition: %#v", edge)
+		}
+	}
+}
+
 func TestBuildGraphFromDedupedShards(t *testing.T) {
 	dir := t.TempDir()
 	targetContent := []byte("package target\n\nfunc Target() {}\n")
@@ -120,9 +152,9 @@ func TestBuildGraphFromDedupedShards(t *testing.T) {
 	targetSHA := diskstore.GitBlobSHA1(targetContent)
 	callerSHA := diskstore.GitBlobSHA1(callerContent)
 	target := index.New()
-	target.AddFile("target", "target.go", "/target/target.go", targetSHA, targetContent)
+	target.AddFile("repo", "target.go", "/repo/target.go", targetSHA, targetContent)
 	caller := index.New()
-	caller.AddFile("caller", "caller.go", "/caller/caller.go", callerSHA, callerContent)
+	caller.AddFile("repo", "caller.go", "/repo/caller.go", callerSHA, callerContent)
 
 	writer, err := diskstore.NewContentStoreWriter()
 	if err != nil {

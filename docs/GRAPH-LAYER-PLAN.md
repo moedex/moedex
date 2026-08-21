@@ -167,9 +167,14 @@ Every generated and persisted edge carries one shared confidence enum and an
 exact source span. **Proven** (`1.0`) is reserved for LSP-confirmed or manifest
 relationships, **Verified** (`0.85`) for AST/attribute matches, **Pattern**
 (`0.6`) for regex convention matches, and **Candidate** (`0.3`) for unverified
-name candidates. Scores are derived from the enum and cannot drift from it;
-semantic similarity edges retain Candidate provenance while exposing their
-exact cosine in a separate `similarity` field. The v2 mmap sidecar interns the
+name candidates. Scores are derived from the enum and cannot drift from it.
+Semantic similarity edges are Pattern-tier, so the default graph floor exposes
+them, while their exact cosine remains separate in `similarity`. Cheap
+name-based Pattern edges are constrained to repositories shared by source and
+target; a missing same-repository definition is treated as external/unresolved,
+not bound to an arbitrary corpus symbol. Verified EF query edges additionally
+require a unique same-repository type/table target consistent with the source's
+C# namespace/import scope. The v2 mmap sidecar interns the
 evidence blob SHA and stores its 64-bit byte offset and length; graph MCP results
 render confidence as `{tier, score}` and evidence as
 `{blob_sha, byte_offset, byte_length}`.
@@ -183,30 +188,37 @@ paired `search_context` budget case for every record. `make graph-eval` runs tha
 hermetic tier directly. The self-hosted tier uses `make graph-eval-private` with
 `MOEDEX_GRAPH_EVAL_SHARDS` and a reviewed, mounted `MOEDEX_GRAPH_GOLD` file containing
 at least 30 queries, explicit coverage tags for the required graph scenarios,
-reviewed hard-distractor labels, and mechanically derived floors. Candidate precision and UDCG
-remain logged watches; Pattern/Verified/Proven precision and aggregate
-Recall/MRR/NDCG are hard gates.
+reviewed hard-distractor labels, and mechanically derived floors. Duplicate
+`source|type|target` edges are scored once, and same-file/same-symbol node-key
+collisions receive deterministic kind/line suffixes. Floors are clamped at zero
+after subtracting their fixed margins. Candidate precision and UDCG remain
+logged watches; Pattern/Verified/Proven precision and aggregate Recall/MRR/NDCG
+are hard gates.
 
 ### Service clustering — **delivered (phase 7)**
 
 [`internal/graph/cluster`](../internal/graph/cluster) applies deterministic
 Louvain modularity-gain moves to a weighted, undirected view of the persisted
-edge graph. Parallel relationships add weight, tier scores (or the separate
-cosine metric for `SIMILAR_TO`) supply edge weight, and definitions with no usable relationship remain singleton
-communities. Stable cluster ordering and dominant repository/namespace labels
-make repeated responses reproducible.
+edge graph. Parallel relationships add weight and tier scores supply edge
+weight. Definitions with no eligible relationship are omitted instead of
+becoming singleton communities. Stable cluster ordering and dominant
+repository/namespace labels make repeated responses reproducible.
 
 Graph build/refresh precomputes a versioned, generation-bound
-`corpus-graph.clusters.json` sidecar from Verified/Proven `calls`, `http_calls`,
-`imports`, and manifest `depends_on` edges only. Unrelated singleton nodes are not
-materialized. The default eligible-node cap is 250,000
+`corpus-graph.clusters.json` sidecar from Pattern-or-better `calls`, `http_calls`,
+`imports`, and manifest `depends_on` edges only. Pattern is necessary because
+regex verification is the corpus's normal ceiling for call/import topology.
+Unrelated singleton nodes are not materialized. The default eligible-node cap is 250,000
 (`MOEDEX_GRAPH_CLUSTER_MAX_NODES`); an over-cap build persists counts and status but
-never partial communities.
+never partial communities. A topology covering less than 1% of observed graph
+nodes persists `under_covered` instead of publishing fragments as communities.
 
 `moedex-serve` exposes paginated sidecar reads as `list_clusters` on both stdio and
 HTTP MCP surfaces. `{offset?,limit?}` returns summaries without members;
 `{cluster_id,offset?,limit?}` returns one cluster's member page (default 50, maximum
-200). Missing, stale, and over-cap sidecars return explicit unavailable results.
+200). Missing, stale, under-covered, and over-cap sidecars return explicit
+unavailable results with observed/eligible counts and rebuild/configuration
+guidance.
 
 ## Bridge architecture: trigram-accelerated graph construction
 
@@ -269,8 +281,8 @@ These are capabilities I *assumed* Codegraph had before investigating. It doesn'
 Phase 13 is implemented behind the existing `onnx` tag. The tagged indexer
 embeds one whole-definition chunk per content-addressed symbol, performs an
 exact corpus-wide cosine top-K pass, and persists directed `SIMILAR_TO` edges
-with Candidate provenance and confidence score equal to the exact cosine; the
-definition body is their evidence span. Top-K and threshold are configurable with
+at Pattern confidence with exact cosine stored separately; the definition body
+is their evidence span. Top-K and threshold are configurable with
 `MOEDEX_GRAPH_SIMILAR_TOP_K` and `MOEDEX_GRAPH_SIMILAR_THRESHOLD`. Graphs with
 at most 4,096 definitions use exact all-pairs cosine. Larger graphs use
 deterministic angular-LSH candidate generation followed by exact cosine

@@ -158,11 +158,12 @@ type GraphScheduleStats struct {
 // GraphBuildCounts makes graph construction auditable by source shape,
 // confidence, relationship, and enclosing-symbol resolution.
 type GraphBuildCounts struct {
-	SourceClassification    map[string]int `json:"source_classification"`
-	Confidence              map[string]int `json:"confidence"`
-	EdgeType                map[string]int `json:"edge_type"`
-	Enclosing               map[string]int `json:"enclosing"`
-	SuppressedRawCandidates int            `json:"suppressed_raw_candidates"`
+	SourceClassification       map[string]int `json:"source_classification"`
+	Confidence                 map[string]int `json:"confidence"`
+	EdgeType                   map[string]int `json:"edge_type"`
+	Enclosing                  map[string]int `json:"enclosing"`
+	SuppressedRawCandidates    int            `json:"suppressed_raw_candidates"`
+	SuppressedCrossRepoPattern int            `json:"suppressed_cross_repo_pattern"`
 }
 
 // BuildGraph generates, verifies, and persists the graph for every exported
@@ -234,7 +235,7 @@ func BuildGraphWithOptions(dir string, opts GraphBuildOptions) (path string, rep
 		report.Cluster, err = buildClusterSidecar(dir)
 	}
 	if err == nil {
-		report.Counts, err = measureGraphBuildCounts(dir, int(sweep.suppressedRawCandidates.Load()))
+		report.Counts, err = measureGraphBuildCounts(dir, int(sweep.suppressedRawCandidates.Load()), int(sweep.suppressedCrossRepoPatterns.Load()))
 	}
 	return path, report, err
 }
@@ -272,7 +273,7 @@ func (s *graphSweep) buildAllEdges(builder *diskgraph.Builder, emit *graphEmitte
 			crossRelevant[name] = true
 		}
 	}
-	if err := addLSPCallEdges(context.Background(), builder, s.merged, s.idxs, emit.seen, crossRelevant, opts); err != nil {
+	if err := addLSPCallEdges(context.Background(), builder, s.merged, s.idxs, emit.seen, crossRelevant, generation, opts); err != nil {
 		return report, err
 	}
 	if err := addSimilarToEdges(context.Background(), builder, s.merged, s.idxs, emit.seen, opts); err != nil {
@@ -381,11 +382,16 @@ type graphSweep struct {
 	sites map[string][]blobSite
 	// identity maps each blob SHA to the roster token persisted in the graph.
 	identity map[string]string
+	// reposBySHA is the sorted repository identity set for each content blob.
+	// Pattern target filtering touches this for every candidate edge, so it is
+	// built once rather than allocating maps in the hot fan-out loop.
+	reposBySHA map[string][]string
 
 	closers []io.Closer
 	content io.Closer
 
-	suppressedRawCandidates atomic.Int64
+	suppressedRawCandidates     atomic.Int64
+	suppressedCrossRepoPatterns atomic.Int64
 }
 
 // openGraphSweep loads dir's shard set and derives everything a graph pass needs
@@ -400,8 +406,9 @@ func openGraphSweep(dir string) (sweep *graphSweep, err error) {
 		return nil, err
 	}
 	s := &graphSweep{
-		sites: make(map[string][]blobSite),
-		paths: paths,
+		sites:      make(map[string][]blobSite),
+		reposBySHA: make(map[string][]string),
+		paths:      paths,
 	}
 	if contentStore != nil {
 		s.content = contentStore
@@ -447,11 +454,24 @@ func openGraphSweep(dir string) (sweep *graphSweep, err error) {
 	exts := make([]string, 0, 4)
 	for sha, sites := range s.sites {
 		exts = exts[:0]
+		repoSet := make(map[string]struct{})
 		for _, site := range sites {
-			exts = append(exts, blobExtensions(s.idxs[site.shard].Blob(site.blob)))
+			blob := s.idxs[site.shard].Blob(site.blob)
+			exts = append(exts, blobExtensions(blob))
+			for _, file := range blob.Files {
+				if file.Repo != "" {
+					repoSet[file.Repo] = struct{}{}
+				}
+			}
 		}
 		sort.Strings(exts)
 		s.identity[sha] = sha + "\x00" + strings.Join(exts, "\x01")
+		repos := make([]string, 0, len(repoSet))
+		for repo := range repoSet {
+			repos = append(repos, repo)
+		}
+		sort.Strings(repos)
+		s.reposBySHA[sha] = repos
 	}
 	if s.corpus, err = candidates.NewCorpus(merged, s.idxs...); err != nil {
 		return nil, err
@@ -530,11 +550,11 @@ func saveGraph(builder *diskgraph.Builder, dir string) (string, error) {
 	return path, nil
 }
 
-func measureGraphBuildCounts(dir string, suppressed int) (counts GraphBuildCounts, err error) {
+func measureGraphBuildCounts(dir string, suppressedRaw, suppressedCrossRepo int) (counts GraphBuildCounts, err error) {
 	counts = GraphBuildCounts{
 		SourceClassification: make(map[string]int), Confidence: make(map[string]int),
 		EdgeType: make(map[string]int), Enclosing: make(map[string]int),
-		SuppressedRawCandidates: suppressed,
+		SuppressedRawCandidates: suppressedRaw, SuppressedCrossRepoPattern: suppressedCrossRepo,
 	}
 	snapshot, err := openGraphSnapshotWithClusters(dir, false)
 	if err != nil {
@@ -593,6 +613,14 @@ func (s *graphSweep) computeEdgesForPreparedRange(name string, prepared *candida
 		if sc.Source.Start < 0 || sc.Target.Start < 0 {
 			return nil, fmt.Errorf("server: graph edge %q has a negative byte offset", name)
 		}
+		// Cheap regex verification proves the source is code, not which
+		// same-named definition it resolves to. Repository identity is the hard
+		// boundary for Pattern edges: a source with no definition in its own repo
+		// is external/unresolved, not a license to bind to arbitrary corpus code.
+		if sc.Confidence == graphverify.Pattern && !s.blobSHAsShareRepository(sourceBlob.SHA, targetBlob.SHA) {
+			s.suppressedCrossRepoPatterns.Add(1)
+			continue
+		}
 
 		sourceOffset := uint64(sc.Source.Start)
 		resolvedEnclosing := false
@@ -621,6 +649,26 @@ func (s *graphSweep) computeEdgesForPreparedRange(name string, prepared *candida
 		})
 	}
 	return out, nil
+}
+
+func (s *graphSweep) blobSHAsShareRepository(leftSHA, rightSHA string) bool {
+	leftRepos := s.reposBySHA[leftSHA]
+	rightRepos := s.reposBySHA[rightSHA]
+	if len(leftRepos) == 0 || len(rightRepos) == 0 {
+		return true
+	}
+	left, right := 0, 0
+	for left < len(leftRepos) && right < len(rightRepos) {
+		switch {
+		case leftRepos[left] == rightRepos[right]:
+			return true
+		case leftRepos[left] < rightRepos[right]:
+			left++
+		default:
+			right++
+		}
+	}
+	return false
 }
 
 // emit generates, verifies, and hands every edge for name to add, stamped with

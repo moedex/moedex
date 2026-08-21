@@ -792,6 +792,7 @@ func (s *graphSnapshot) traceConsumers(ctx context.Context, name string, minConf
 		conf[rel.Source] = maxTier(conf[rel.Source], rel.Confidence)
 		distances[rel.Source] = 1
 	}
+	pruneDisconnectedRoots(conf, distances, roots, relations)
 	return s.makeResult("trace_consumers", name, 1, conf, distances, roots, relations), nil
 }
 
@@ -889,7 +890,26 @@ func (s *graphSnapshot) traverse(
 			visited[key] = true
 		}
 	}
+	pruneDisconnectedRoots(confidence, distances, roots, relations)
 	return s.makeResult(tool, query, depth, confidence, distances, roots, relations), nil
+}
+
+func pruneDisconnectedRoots(confidence map[diskgraph.Key]graph.ConfidenceTier, distances map[diskgraph.Key]int, roots []diskgraph.Key, relations map[string]graphRelation) {
+	if len(relations) == 0 {
+		return
+	}
+	incident := make(map[diskgraph.Key]bool, len(relations)*2)
+	for _, relation := range relations {
+		incident[relation.Source] = true
+		incident[relation.Target] = true
+	}
+	for _, root := range roots {
+		if incident[root] {
+			continue
+		}
+		delete(confidence, root)
+		delete(distances, root)
+	}
 }
 
 // incoming scans the mmap adjacency records without retaining a reverse graph.
@@ -936,10 +956,25 @@ func relationFrom(source diskgraph.Key, edge diskgraph.Edge) graphRelation {
 }
 
 func addRelation(dst map[string]graphRelation, rel graphRelation) {
-	id := keyID(rel.Source) + "\x00" + keyID(rel.Target) + "\x00" + strconv.FormatUint(uint64(rel.Type), 10) + "\x00" + rel.Evidence.BlobSHA + "\x00" + strconv.FormatUint(rel.Evidence.ByteOffset, 10) + "\x00" + strconv.FormatUint(rel.Evidence.ByteLength, 10)
-	if old, ok := dst[id]; !ok || rel.weight() > old.weight() {
+	// A relationship is source|type|target. Multiple evidence offsets support
+	// the same claim; returning each as another graph edge wastes agent context
+	// and inflates evaluator denominators. Retain the strongest relationship and
+	// use stable evidence order only to break an equal-weight tie.
+	id := keyID(rel.Source) + "\x00" + keyID(rel.Target) + "\x00" + strconv.FormatUint(uint64(rel.Type), 10)
+	old, ok := dst[id]
+	if !ok || rel.weight() > old.weight() || rel.weight() == old.weight() && evidenceLess(rel.Evidence, old.Evidence) {
 		dst[id] = rel
 	}
+}
+
+func evidenceLess(left, right graph.Evidence) bool {
+	if left.BlobSHA != right.BlobSHA {
+		return left.BlobSHA < right.BlobSHA
+	}
+	if left.ByteOffset != right.ByteOffset {
+		return left.ByteOffset < right.ByteOffset
+	}
+	return left.ByteLength < right.ByteLength
 }
 
 func (s *graphSnapshot) makeResult(tool, query string, depth int, confidence map[diskgraph.Key]graph.ConfidenceTier, distances map[diskgraph.Key]int, roots []diskgraph.Key, relations map[string]graphRelation) GraphQueryResult {
@@ -1002,20 +1037,36 @@ func (s *graphSnapshot) makeResult(tool, query string, depth int, confidence map
 		}
 		return a.ID < b.ID
 	})
+	nodeRank := make(map[string]int, len(result.Nodes))
+	for i, node := range result.Nodes {
+		nodeRank[node.ID] = i
+	}
 	sort.Slice(result.Edges, func(i, j int) bool {
-		if result.Edges[i].Source != result.Edges[j].Source {
-			return result.Edges[i].Source < result.Edges[j].Source
+		a, b := result.Edges[i], result.Edges[j]
+		aDepth := max(nodeRank[a.Source], nodeRank[a.Target])
+		bDepth := max(nodeRank[b.Source], nodeRank[b.Target])
+		if aDepth != bDepth {
+			return aDepth < bDepth
 		}
-		if result.Edges[i].Target != result.Edges[j].Target {
-			return result.Edges[i].Target < result.Edges[j].Target
+		if a.Confidence.Score != b.Confidence.Score {
+			return a.Confidence.Score > b.Confidence.Score
 		}
-		if result.Edges[i].Type != result.Edges[j].Type {
-			return result.Edges[i].Type < result.Edges[j].Type
+		if nodeRank[a.Source] != nodeRank[b.Source] {
+			return nodeRank[a.Source] < nodeRank[b.Source]
 		}
-		if result.Edges[i].Evidence.BlobSHA != result.Edges[j].Evidence.BlobSHA {
-			return result.Edges[i].Evidence.BlobSHA < result.Edges[j].Evidence.BlobSHA
+		if nodeRank[a.Target] != nodeRank[b.Target] {
+			return nodeRank[a.Target] < nodeRank[b.Target]
 		}
-		return result.Edges[i].Evidence.ByteOffset < result.Edges[j].Evidence.ByteOffset
+		if a.Type != b.Type {
+			return a.Type < b.Type
+		}
+		if a.Source != b.Source {
+			return a.Source < b.Source
+		}
+		if a.Target != b.Target {
+			return a.Target < b.Target
+		}
+		return evidenceLess(a.Evidence, b.Evidence)
 	})
 	return result
 }

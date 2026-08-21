@@ -13,7 +13,7 @@ func TestSidecarRoundTripAndGenerationBinding(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "clusters.json")
 	want := Sidecar{
 		Version: SidecarVersion, Generation: 7, Status: StatusAvailable,
-		EligibleNodes: 2, EligibleEdges: 1, Cap: 10,
+		ObservedNodes: 2, ObservedEdges: 1, EligibleNodes: 2, EligibleEdges: 1, Cap: 10,
 		Clusters: []Cluster{{ClusterID: 1, Label: "svc", MemberCount: 2, Members: []Node{{ID: "a"}, {ID: "b"}}}},
 	}
 	if err := Save(path, want); err != nil {
@@ -62,13 +62,19 @@ func TestSidecarRejectsPartialOverCapAndUnorderedMembers(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "clusters.json")
 	partial := Sidecar{Version: SidecarVersion, Generation: 1, Status: StatusOverCap,
-		EligibleNodes: 2, Cap: 1, Clusters: []Cluster{{ClusterID: 1, Label: "svc", MemberCount: 1, Members: []Node{{ID: "a"}}}}}
+		ObservedNodes: 2, EligibleNodes: 2, Cap: 1, Clusters: []Cluster{{ClusterID: 1, Label: "svc", MemberCount: 1, Members: []Node{{ID: "a"}}}}}
 	if err := Save(path, partial); err == nil {
 		t.Fatal("partial over-cap communities accepted")
 	}
 	unordered := Sidecar{Version: SidecarVersion, Generation: 1, Status: StatusAvailable,
-		EligibleNodes: 2, Cap: 2, Clusters: []Cluster{{ClusterID: 1, Label: "svc", MemberCount: 2, Members: []Node{{ID: "b"}, {ID: "a"}}}}}
+		ObservedNodes: 2, EligibleNodes: 2, Cap: 2, Clusters: []Cluster{{ClusterID: 1, Label: "svc", MemberCount: 2, Members: []Node{{ID: "b"}, {ID: "a"}}}}}
 	if err := Save(path, unordered); err == nil {
 		t.Fatal("unordered sidecar members accepted")
+	}
+	partialUnderCovered := Sidecar{Version: SidecarVersion, Generation: 1, Status: StatusUnderCovered,
+		ObservedNodes: 202, ObservedEdges: 1, EligibleNodes: 2, EligibleEdges: 1, Cap: 250,
+		Clusters: []Cluster{{ClusterID: 1, Label: "svc", MemberCount: 2, Members: []Node{{ID: "a"}, {ID: "b"}}}}}
+	if err := Save(path, partialUnderCovered); err == nil {
+		t.Fatal("under-covered communities accepted as representative")
 	}
 }

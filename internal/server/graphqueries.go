@@ -11,16 +11,18 @@ import (
 
 	"moedex/internal/graph"
 	"moedex/internal/graph/diskgraph"
+	"moedex/internal/index"
 	"moedex/internal/symbol"
 )
 
 // QueriesReport accounts for one query-edge extraction pass.
 type QueriesReport struct {
-	DbContextsScanned   int
+	DbContextsScanned    int
 	DbSetProperties      int
 	QuerySitesFound      int
 	QueriesEdges         int
 	UnresolvedProperties int
+	UnresolvedTargets    int
 }
 
 // dbSetEntry is one DbSet<T> property declaration: the entity type name and
@@ -42,6 +44,9 @@ var (
 	// contextSetRE matches context.Set<T>() explicit access.
 	// Group 1 = the entity type name.
 	contextSetRE = regexp.MustCompile(`\b(?:_?context|_dbContext|_ctx|_?db)\s*\.\s*Set\s*<\s*([A-Za-z_][A-Za-z0-9_.]*)\s*>`)
+
+	csharpNamespaceRE = regexp.MustCompile(`(?m)^[\t ]*namespace[\t ]+([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s*(?:;|\{)`)
+	csharpUsingRE     = regexp.MustCompile(`(?m)^[\t ]*(?:global[\t ]+)?using[\t ]+(?:static[\t ]+)?([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)[\t ]*;`)
 )
 
 // addQueryEdges scans every .cs blob to build a DbSet property registry, then
@@ -56,7 +61,10 @@ func addQueryEdges(
 	processed := make(map[string]bool, len(sweep.sites))
 
 	// Phase A: build the DbSet property registry.
-	registry := make(map[string]string) // propertyName → entityName
+	// repo -> propertyName -> entity names. A corpus-global property map makes
+	// every DbContext.Carts declaration compete with every other repository and
+	// can even change by map iteration order.
+	registry := make(map[string]map[string]map[string]struct{})
 	for sha, sites := range sweep.sites {
 		if processed[sha] {
 			continue
@@ -78,9 +86,20 @@ func addQueryEdges(
 			if queryMasked(mask, m[0]) {
 				continue
 			}
-			entityName := queryLastName(string(blob.Content[m[2]:m[3]]))
+			entityName := strings.TrimSpace(string(blob.Content[m[2]:m[3]]))
 			propertyName := string(blob.Content[m[4]:m[5]])
-			registry[propertyName] = entityName
+			for _, file := range blob.Files {
+				if file.Repo == "" {
+					continue
+				}
+				if registry[file.Repo] == nil {
+					registry[file.Repo] = make(map[string]map[string]struct{})
+				}
+				if registry[file.Repo][propertyName] == nil {
+					registry[file.Repo][propertyName] = make(map[string]struct{})
+				}
+				registry[file.Repo][propertyName][entityName] = struct{}{}
+			}
 			report.DbSetProperties++
 		}
 		report.DbContextsScanned++
@@ -117,13 +136,13 @@ func addQueryEdges(
 				continue
 			}
 			propertyName := string(blob.Content[m[2]:m[3]])
-			entityName, ok := registry[propertyName]
+			entityName, ok := queryRegistryEntity(registry, blob, propertyName)
 			if !ok {
 				report.UnresolvedProperties++
 				continue
 			}
 			report.QuerySitesFound++
-			if err := emitQueryEdge(builder, sweep, seen, blob.SHA, syms, m[0], m[1]-m[0], entityName, &report); err != nil {
+			if err := emitQueryEdge(builder, sweep, seen, blob, syms, m[0], m[1]-m[0], entityName, &report); err != nil {
 				return report, err
 			}
 		}
@@ -133,9 +152,9 @@ func addQueryEdges(
 			if queryMasked(mask, m[0]) {
 				continue
 			}
-			entityName := queryLastName(string(blob.Content[m[2]:m[3]]))
+			entityName := strings.TrimSpace(string(blob.Content[m[2]:m[3]]))
 			report.QuerySitesFound++
-			if err := emitQueryEdge(builder, sweep, seen, blob.SHA, syms, m[0], m[1]-m[0], entityName, &report); err != nil {
+			if err := emitQueryEdge(builder, sweep, seen, blob, syms, m[0], m[1]-m[0], entityName, &report); err != nil {
 				return report, err
 			}
 		}
@@ -144,24 +163,46 @@ func addQueryEdges(
 	return report, nil
 }
 
+func queryRegistryEntity(registry map[string]map[string]map[string]struct{}, blob *index.Blob, property string) (string, bool) {
+	entities := make(map[string]struct{})
+	for _, file := range blob.Files {
+		for entity := range registry[file.Repo][property] {
+			entities[entity] = struct{}{}
+		}
+	}
+	if len(entities) != 1 {
+		return "", false
+	}
+	for entity := range entities {
+		return entity, true
+	}
+	return "", false
+}
+
 // emitQueryEdge resolves an entity type name and emits an EdgeQueries edge
 // from the enclosing symbol at the query site to the entity definition.
 func emitQueryEdge(
 	builder *diskgraph.Builder,
 	sweep *graphSweep,
 	seen map[persistedGraphEdge]struct{},
-	sourceBlobSHA string,
+	sourceBlob *index.Blob,
 	syms []symbol.Symbol,
 	evidenceOffset int,
 	evidenceLength int,
 	entityName string,
 	report *QueriesReport,
 ) error {
+	if sourceBlob == nil || sourceBlob.SHA == "" {
+		report.UnresolvedTargets++
+		return nil
+	}
+	sourceBlobSHA := sourceBlob.SHA
 	// Find enclosing symbol for the source node.
 	sourceOffset := queryEnclosingOffset(syms, evidenceOffset)
 
-	defs := sweep.merged.Definitions(entityName)
+	defs := resolveQueryTargets(sweep, sourceBlob, entityName)
 	if len(defs) == 0 {
+		report.UnresolvedTargets++
 		return nil
 	}
 
@@ -209,6 +250,101 @@ func emitQueryEdge(
 		report.QueriesEdges++
 	}
 	return nil
+}
+
+// resolveQueryTargets promotes only the target half of an EF relationship that
+// can be resolved. The query syntax proves a DbSet access; repository identity,
+// symbol kind, and C# namespace/imports prove which entity definition it names.
+// Ambiguous targets emit no Verified edge.
+func resolveQueryTargets(sweep *graphSweep, sourceBlob *index.Blob, entityName string) []symbol.ShardRef {
+	shortName := queryLastName(entityName)
+	defs := sweep.merged.Definitions(shortName)
+	if len(defs) == 0 {
+		return nil
+	}
+	qualifiedNamespace := ""
+	if i := strings.LastIndexByte(entityName, '.'); i >= 0 {
+		qualifiedNamespace = entityName[:i]
+	}
+	allowedNamespaces := csharpNamespacesInScope(sourceBlob.Content)
+	type candidate struct {
+		ref       symbol.ShardRef
+		namespace string
+	}
+	var sameRepo []candidate
+	seen := make(map[diskgraph.Key]struct{})
+	for _, def := range defs {
+		if def.Shard < 0 || def.Shard >= len(sweep.idxs) || def.Start < 0 {
+			continue
+		}
+		targetBlob := sweep.idxs[def.Shard].Blob(def.Blob)
+		if targetBlob == nil || targetBlob.SHA == "" || !sweep.blobSHAsShareRepository(sourceBlob.SHA, targetBlob.SHA) {
+			continue
+		}
+		kind, ok := queryDefinitionKind(sweep, def)
+		if !ok || (kind != symbol.Type && kind != symbol.Table) {
+			continue
+		}
+		key := diskgraph.Key{BlobSHA: targetBlob.SHA, SymbolOffset: uint64(def.Start)}
+		if _, duplicate := seen[key]; duplicate {
+			continue
+		}
+		seen[key] = struct{}{}
+		sameRepo = append(sameRepo, candidate{ref: def, namespace: csharpNamespace(targetBlob.Content)})
+	}
+	var matched []symbol.ShardRef
+	for _, candidate := range sameRepo {
+		if qualifiedNamespace != "" {
+			if candidate.namespace == qualifiedNamespace {
+				matched = append(matched, candidate.ref)
+			}
+			continue
+		}
+		if allowedNamespaces[candidate.namespace] {
+			matched = append(matched, candidate.ref)
+		}
+	}
+	if len(matched) == 1 {
+		return matched
+	}
+	if len(matched) > 1 {
+		return nil
+	}
+	if len(sameRepo) == 1 {
+		return []symbol.ShardRef{sameRepo[0].ref}
+	}
+	return nil
+}
+
+func queryDefinitionKind(sweep *graphSweep, def symbol.ShardRef) (symbol.Kind, bool) {
+	if def.Shard < 0 || def.Shard >= len(sweep.symbols) {
+		return symbol.KindUnknown, false
+	}
+	for _, candidate := range sweep.symbols[def.Shard].Symbols(def.Blob) {
+		if candidate.NameStart == def.Start {
+			return candidate.Kind, true
+		}
+	}
+	return symbol.KindUnknown, false
+}
+
+func csharpNamespacesInScope(content []byte) map[string]bool {
+	out := make(map[string]bool)
+	if namespace := csharpNamespace(content); namespace != "" {
+		out[namespace] = true
+	}
+	for _, match := range csharpUsingRE.FindAllSubmatch(content, -1) {
+		out[string(match[1])] = true
+	}
+	return out
+}
+
+func csharpNamespace(content []byte) string {
+	match := csharpNamespaceRE.FindSubmatch(content)
+	if len(match) < 2 {
+		return ""
+	}
+	return string(match[1])
 }
 
 // queryEnclosingOffset returns the NameStart of the innermost enclosing

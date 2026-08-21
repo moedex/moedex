@@ -328,6 +328,9 @@ func TestBuildGraphLSPPersistsProvenInterfaceDispatch(t *testing.T) {
 			if edge.Confidence != graph.Proven || edge.Confidence.Score() != 1.0 {
 				t.Fatalf("LSP call confidence = %s / %.2f, want Proven / 1.0", edge.Confidence, edge.Confidence.Score())
 			}
+			if edge.Name != "Do" || edge.Generation != diskgraph.FirstGeneration {
+				t.Fatalf("LSP call provenance = name %q generation %d, want Do at generation %d", edge.Name, edge.Generation, diskgraph.FirstGeneration)
+			}
 			if edge.Evidence.ByteOffset != callDo || edge.Evidence.ByteLength != 2 {
 				t.Fatalf("LSP call evidence = %+v, want Do at %d", edge.Evidence, callDo)
 			}

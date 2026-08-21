@@ -277,9 +277,13 @@ func printGraphStats(stats server.GraphRefreshStats) {
 	if stats.Counts.SuppressedRawCandidates > 0 {
 		fmt.Printf("  graph quality: suppressed %d raw Candidate occurrence edge(s)\n", stats.Counts.SuppressedRawCandidates)
 	}
+	if stats.Counts.SuppressedCrossRepoPattern > 0 {
+		fmt.Printf("  graph quality: suppressed %d cross-repository Pattern binding(s)\n", stats.Counts.SuppressedCrossRepoPattern)
+	}
 	if stats.Cluster.Status != "" {
-		fmt.Printf("  clusters: status=%s eligible=%d node(s)/%d edge(s), cap=%d, communities=%d, build=%dms\n",
-			stats.Cluster.Status, stats.Cluster.EligibleNodes, stats.Cluster.EligibleEdges,
+		fmt.Printf("  clusters: status=%s eligible=%d/%d node(s), %d/%d edge(s), cap=%d, communities=%d, build=%dms\n",
+			stats.Cluster.Status, stats.Cluster.EligibleNodes, stats.Cluster.ObservedNodes,
+			stats.Cluster.EligibleEdges, stats.Cluster.ObservedEdges,
 			stats.Cluster.Cap, stats.Cluster.Clusters, stats.Cluster.BuildMillis)
 	}
 	if stats.Counts.EdgeType != nil {

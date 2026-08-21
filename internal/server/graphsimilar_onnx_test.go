@@ -167,14 +167,14 @@ func assertSimilarPair(t *testing.T, graph *diskgraph.Graph, sourceSHA, sourceNa
 	if similar[0].TargetBlob != targetSHA || similar[0].TargetOffset != targetOffset {
 		t.Fatalf("%s SIMILAR_TO = %#v, want %s at %s:%d", sourceName, similar[0], targetName, targetSHA, targetOffset)
 	}
-	if similar[0].Confidence != graphmodel.Candidate {
-		t.Fatalf("%s SIMILAR_TO confidence = %s, want Candidate", sourceName, similar[0].Confidence)
+	if similar[0].Confidence != graphmodel.Pattern {
+		t.Fatalf("%s SIMILAR_TO confidence = %s, want Pattern", sourceName, similar[0].Confidence)
 	}
 	if similar[0].Similarity < DefaultSimilarThreshold {
 		t.Fatalf("%s SIMILAR_TO cosine similarity = %.4f, want >= %.2f", sourceName, similar[0].Similarity, DefaultSimilarThreshold)
 	}
-	if got := similar[0].Confidence.Score(); got != graphmodel.Candidate.Score() {
-		t.Fatalf("%s confidence score = %.4f, want Candidate %.4f", sourceName, got, graphmodel.Candidate.Score())
+	if got := similar[0].Confidence.Score(); got != graphmodel.Pattern.Score() {
+		t.Fatalf("%s confidence score = %.4f, want Pattern %.4f", sourceName, got, graphmodel.Pattern.Score())
 	}
 	if similar[0].Evidence.BlobSHA != sourceSHA {
 		t.Fatalf("%s SIMILAR_TO evidence blob = %q, want %q", sourceName, similar[0].Evidence.BlobSHA, sourceSHA)

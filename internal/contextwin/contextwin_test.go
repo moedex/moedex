@@ -312,6 +312,32 @@ func TestDifferentFilesStaySeparate(t *testing.T) {
 	}
 }
 
+func TestMergeAcrossOneBlankLine(t *testing.T) {
+	content := []byte("first\n\nthird\n")
+	got := mergeFile([]candidate{
+		{startLine: 1, endLine: 1, content: content, score: 1, salientLine: 1},
+		{startLine: 3, endLine: 3, content: content, score: .9, salientLine: 3},
+	})
+	if len(got) != 1 || got[0].startLine != 1 || got[0].endLine != 3 {
+		t.Fatalf("one-blank-line ranges did not coalesce: %+v", got)
+	}
+}
+
+func TestImportDominatedBlockRanksAfterImplementation(t *testing.T) {
+	header := "using System;\nusing System.Linq;\nusing Product.Domain;\nusing Product.Cart;\n"
+	implementation := "public Order Checkout(Cart cart) {\n    return domain.Register(cart.Domain);\n}\n"
+	ix := index.New()
+	ix.AddFile("r", "Controller.cs", "/abs/Controller.cs", sha(header), []byte(header))
+	ix.AddFile("r", "Checkout.cs", "/abs/Checkout.cs", sha(implementation), []byte(implementation))
+	win := Assemble(ix, []rank.RankedResult{
+		{Blob: 0, Files: []index.FileRef{ref("r", "Controller.cs", "/abs/Controller.cs")}, Score: 1, LineSpans: []rank.LineSpan{span(1, 4)}},
+		{Blob: 1, Files: []index.FileRef{ref("r", "Checkout.cs", "/abs/Checkout.cs")}, Score: .5, LineSpans: []rank.LineSpan{span(1, 3)}},
+	}, Options{TokenBudget: 100, ContextLines: 1})
+	if len(win.Blocks) < 1 || win.Blocks[0].RelPath != "Checkout.cs" {
+		t.Fatalf("import-dominated header outranked implementation: %+v", win.Blocks)
+	}
+}
+
 // ---- Token budget / truncation ----
 
 func TestTokenBudgetTruncates(t *testing.T) {
@@ -370,7 +396,7 @@ func TestFirstBlockClippedToBudget(t *testing.T) {
 	}
 }
 
-func TestLargeEnclosingSymbolFallsBackBeforeClipping(t *testing.T) {
+func TestLargeEnclosingSymbolClipsAroundSalient(t *testing.T) {
 	var src strings.Builder
 	for i := 1; i <= 400; i++ {
 		if i == 200 {
@@ -391,8 +417,8 @@ func TestLargeEnclosingSymbolFallsBackBeforeClipping(t *testing.T) {
 	if len(win.Blocks) != 1 {
 		t.Fatalf("blocks = %d, want 1", len(win.Blocks))
 	}
-	if win.Blocks[0].Clipped {
-		t.Fatalf("400-line symbol should fall back to the small heuristic window before clipping: %+v", win.Blocks[0])
+	if !win.Blocks[0].Clipped {
+		t.Fatalf("400-line symbol should remain the selected scope and clip around its salient line: %+v", win.Blocks[0])
 	}
 	if !strings.Contains(win.Blocks[0].Text, "salient_call()") {
 		t.Fatalf("fallback lost salient line: %q", win.Blocks[0].Text)

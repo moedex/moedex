@@ -51,10 +51,11 @@ type lspDefinitionJob struct {
 type lspConfirmedCall struct {
 	source   diskgraph.Key
 	target   diskgraph.Key
+	name     string
 	evidence graph.Evidence
 }
 
-func addLSPCallEdges(ctx context.Context, builder *diskgraph.Builder, merged *symbol.Corpus, shards []*index.Index, seen map[persistedGraphEdge]struct{}, crossRelevant map[string]bool, opts GraphBuildOptions) error {
+func addLSPCallEdges(ctx context.Context, builder *diskgraph.Builder, merged *symbol.Corpus, shards []*index.Index, seen map[persistedGraphEdge]struct{}, crossRelevant map[string]bool, generation uint64, opts GraphBuildOptions) error {
 	rate := opts.LSPRequestsPerSecond
 	if rate == 0 {
 		rate = DefaultLSPRequestsPerSecond
@@ -96,6 +97,8 @@ func addLSPCallEdges(ctx context.Context, builder *diskgraph.Builder, merged *sy
 			TargetOffset: call.target.SymbolOffset,
 			Confidence:   graph.Proven,
 			Evidence:     call.evidence,
+			Name:         call.name,
+			Generation:   generation,
 		}
 		record := persistedGraphEdge{
 			sourceBlob:     call.source.BlobSHA,
@@ -469,6 +472,7 @@ func collectLSPReferenceGroup(ctx context.Context, nav lspGraphNavigator, jobs [
 			call := lspConfirmedCall{
 				source: diskgraph.Key{BlobSHA: callerFile.blob.SHA, SymbolOffset: uint64(enclosing.NameStart)},
 				target: job.target,
+				name:   job.name,
 				evidence: graph.Evidence{
 					BlobSHA: callerFile.blob.SHA, ByteOffset: uint64(start), ByteLength: uint64(end - start),
 				},

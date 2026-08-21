@@ -27,7 +27,7 @@ func TestMCPHTTPListsAndCallsListClusters(t *testing.T) {
 	}
 	if err := cluster.Save(server.ClusterPath(dir), cluster.Sidecar{
 		Version: cluster.SidecarVersion, Generation: diskgraph.FirstGeneration,
-		Status: cluster.StatusAvailable, EligibleNodes: 1, EligibleEdges: 1, Cap: server.DefaultClusterMaxNodes,
+		Status: cluster.StatusAvailable, ObservedNodes: 1, ObservedEdges: 1, EligibleNodes: 1, EligibleEdges: 1, Cap: server.DefaultClusterMaxNodes,
 		Clusters: []cluster.Cluster{{
 			ClusterID: 1, Label: "billing", MemberCount: 1,
 			Members: []cluster.Node{{ID: "cluster-sha:23", Name: "StandaloneService", Repo: "billing", Path: "service.go", Line: 3}},

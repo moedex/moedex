@@ -10,6 +10,7 @@ func TestStableGraphNodeKeyRequiresIntentionalNamelessKind(t *testing.T) {
 	named.Locations = append(named.Locations, struct {
 		Repo string `json:"repo"`
 		Path string `json:"path"`
+		Line int    `json:"line"`
 	}{Repo: "orders", Path: "api/handler.go"})
 	if got, err := stableGraphNodeKey(named); err != nil || got != "orders/api/handler.go#Handle" {
 		t.Fatalf("named stable key = %q, %v", got, err)
@@ -20,6 +21,33 @@ func TestStableGraphNodeKeyRequiresIntentionalNamelessKind(t *testing.T) {
 	if _, err := stableGraphNodeKey(graphEvalNode{ID: "sha:11", Kind: "unknown"}); err == nil {
 		t.Fatal("unknown nameless node unexpectedly received a node-ID fallback")
 	}
+}
+
+func TestStableGraphNodeKeysDisambiguateSameFileAndSymbol(t *testing.T) {
+	nodes := []graphEvalNode{
+		graphEvalNamedNode("type-id", "Cart", "Type", "repo", "Entities/Cart.cs", 10),
+		graphEvalNamedNode("method-id", "Cart", "Method", "repo", "Entities/Cart.cs", 20),
+	}
+	got, err := stableGraphNodeKeys(nodes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got[0] != "repo/Entities/Cart.cs#Cart" || got[1] != "repo/Entities/Cart.cs#Cart@Method" {
+		t.Fatalf("collision keys = %v", got)
+	}
+	if got[0] == got[1] {
+		t.Fatal("same-file Type and Method collapsed to one judgment key")
+	}
+}
+
+func graphEvalNamedNode(id, symbol, kind, repo, path string, line int) graphEvalNode {
+	node := graphEvalNode{ID: id, Symbol: symbol, Kind: kind}
+	node.Locations = append(node.Locations, struct {
+		Repo string `json:"repo"`
+		Path string `json:"path"`
+		Line int    `json:"line"`
+	}{Repo: repo, Path: path, Line: line})
+	return node
 }
 
 func TestGraphEvalArgumentsRequireJSONObject(t *testing.T) {
@@ -76,6 +104,38 @@ func TestGraphFloorsRequireEveryHardTier(t *testing.T) {
 	report := GraphReport{MeanRecall: 1, MeanMRR: 1, MeanNDCG: 1, PerTierPrecision: map[string]float64{"Pattern": 1, "Verified": 1, "Proven": 1}}
 	if err := floors.Check(report); err == nil {
 		t.Fatal("missing Proven precision floor accepted")
+	}
+}
+
+func TestCalibrateGraphFloorsClampsLowBaselinesAtZero(t *testing.T) {
+	baseline := GraphReport{
+		MeanRecall: .05, MeanMRR: .06, MeanNDCG: .07,
+		PerTierPrecision: map[string]float64{"Pattern": .00038, "Verified": .101, "Proven": .4692},
+	}
+	floors := CalibrateGraphFloors(baseline)
+	if floors.Recall != 0 || floors.MRR != 0 || floors.NDCG != 0 || floors.TierPrecision["Pattern"] != 0 {
+		t.Fatalf("negative calibrated floors were not clamped: %+v", floors)
+	}
+	if floors.TierPrecision["Verified"] <= 0 || floors.TierPrecision["Proven"] <= 0 {
+		t.Fatalf("positive tier floors were lost: %+v", floors)
+	}
+	if err := floors.Check(baseline); err != nil {
+		t.Fatalf("calibrated floors rejected their own baseline: %v", err)
+	}
+}
+
+func TestUniqueProductionRankingRetainsFirstOccurrence(t *testing.T) {
+	seen := map[string]struct{}{}
+	var ranked []string
+	for _, key := range []string{"a|calls|b", "a|calls|b", "a|uses_type|b"} {
+		var added bool
+		ranked, added = appendUniqueRanking(ranked, seen, key)
+		if key == "a|calls|b" && len(ranked) == 2 && added {
+			t.Fatal("duplicate production edge was retained")
+		}
+	}
+	if len(ranked) != 2 || ranked[0] != "a|calls|b" || ranked[1] != "a|uses_type|b" {
+		t.Fatalf("deduped ranking = %v", ranked)
 	}
 }
 

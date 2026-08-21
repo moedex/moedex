@@ -149,8 +149,9 @@ type Node = Key
 
 // Edge is one outgoing adjacency record. TargetBlob is a git blob SHA.
 // Confidence is one of the four provenance-backed tiers. EdgeSimilarTo also
-// persists its cosine metric separately in Similarity; that metric does not
-// change the edge's Candidate provenance.
+// persists its cosine metric separately in Similarity. Production ONNX
+// neighbors are Pattern-tier evidence: the embedding comparison is a verified
+// mechanism, while the semantic relationship is not language-server proven.
 //
 // Name is the symbol name whose candidate sweep produced the edge, and
 // Generation is the refresh that last computed it — an edge carried forward

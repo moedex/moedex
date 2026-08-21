@@ -155,7 +155,7 @@ MCP tools/call search_context
           └─▶ contextwin.Assemble            (internal/contextwin/contextwin.go)
                  ├─ expand each salient LineSpan to its enclosing block
                  │    (symbol.Index.Enclosing when wired, else brace/indent heuristic)
-                 ├─ merge overlapping/adjacent blocks per file
+                 ├─ merge blocks separated by at most one blank line per file
                  └─ emit best-first under a token budget ──▶ ContextWindow
                         └─▶ GraphToolset.Neighbors     (internal/server/graphneighbors.go)
                                ├─ anchor each block to graph nodes by path + line range
@@ -204,15 +204,16 @@ Results carry the fused score, the raw BM25/cosine components, and the salient
 extraction.
 
 [`contextwin.Assemble`](internal/contextwin/contextwin.go) expands each span into a
-block, merges overlapping/touching blocks within a file, walks results best-first
-(score desc, then originating order, then path, then start line — fully
-deterministic), and packs blocks under the token budget
-(`ceil(len(text)/4)` per block, `DefaultTokenBudget = 8000`). The first block is
-always emitted even if it alone exceeds budget; after that, a block that would
-push the running total over budget is skipped (not a break) so a later, smaller,
-lower-scored block still gets a chance to fit in the remainder — maximizing
-budget use rather than emitting a strict score-prefix. Any skip sets `Truncated`.
-The MCP layer renders the window as text under `path:start-end (score)` headers.
+block, merges blocks separated by at most one blank line within a file, demotes
+blocks whose nonblank content is more than 70% imports/header syntax, and walks
+results best-first (score desc, then originating order, then path, then start line
+— fully deterministic). It packs blocks under the token budget
+(`ceil(len(text)/4)` per block, `DefaultTokenBudget = 8000`). A first block that
+would overflow is deterministically clipped around its highest-ranked salient
+line; later over-budget blocks are skipped so smaller blocks can still fit.
+`Clipped` means returned source was narrowed, while `Truncated` means candidates
+were omitted. `TokenEstimate` never exceeds `TokenBudget`. The MCP layer renders
+the window as text under `path:start-end (score)` headers.
 
 ---
 
@@ -382,6 +383,8 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
   `onnx`-tagged `moedex-index`, the graph pass additionally embeds every unique
   symbol definition through `embed.BuildStore` and emits each definition's
   top-K `SIMILAR_TO` neighbors whose cosine clears the configured threshold.
+  These edges are Pattern-tier—visible at the default confidence floor—while
+  preserving exact cosine in the separate similarity field.
   `MOEDEX_GRAPH_SIMILAR_TOP_K` (default 5, zero disables) and
   `MOEDEX_GRAPH_SIMILAR_THRESHOLD` (default 0.60) tune that offline pass; the
   default pure-Go indexer cannot emit semantic edges.
@@ -405,8 +408,9 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
   `graph_depth > 1` mean "callers of callers" rather than an undirected blob. Scope is
   stated rather than implied: incoming reference/import edges are deliberately NOT
   annotated (the highest-volume edge class in the graph — `impact_analysis` owns that
-  question), each bucket is capped at `MaxNeighborsPerBucket` with a `truncated` flag
-  rather than silently trimmed, and a block whose symbols have no edges gets a
+  question), each bucket records its true pre-cap total and is capped at
+  `MaxNeighborsPerBucket`; `truncated` is derived from those totals and omitted
+  entries render as `+N more (of M total)`. A block whose symbols have no edges gets a
   **present, empty** annotation so "graph off" and "nothing found" stay distinguishable.
   Cost: the sidecar stores only forward adjacency, so every incoming lane of every
   block shares **one** reverse sweep per hop via `diskgraph.EachEdge` — a linear,

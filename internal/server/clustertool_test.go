@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,8 +60,8 @@ func TestListClustersToolReturnsCommunitiesAndSingletons(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if build.EligibleNodes != 2 || build.EligibleEdges != 1 {
-		t.Fatalf("cluster eligibility = %+v, want only the Verified/Proven edge endpoints", build)
+	if build.EligibleNodes != 3 || build.EligibleEdges != 2 {
+		t.Fatalf("cluster eligibility = %+v, want Pattern+ call endpoints", build)
 	}
 
 	tools, err := OpenGraphTools(dir)
@@ -90,16 +91,16 @@ func TestListClustersToolReturnsCommunitiesAndSingletons(t *testing.T) {
 	if len(listed.Clusters) != 1 || listed.Total != 1 {
 		t.Fatalf("clusters = %#v, want one eligible connected community", listed)
 	}
-	if listed.Clusters[0].Label != "accounts" || listed.Clusters[0].MemberCount != 2 {
-		t.Errorf("summary = %+v, want accounts pair", listed.Clusters[0])
+	if listed.Clusters[0].Label != "accounts" || listed.Clusters[0].MemberCount != 3 {
+		t.Errorf("summary = %+v, want Pattern+ connected community", listed.Clusters[0])
 	}
 	detailResult, err := clusterTool.Call(context.Background(), json.RawMessage(`{"cluster_id":1,"limit":1}`))
 	if err != nil {
 		t.Fatal(err)
 	}
 	detail, ok := detailResult["structuredContent"].(clusterDetailResult)
-	if !ok || detail.TotalMembers != 2 || len(detail.Cluster.Members) != 1 {
-		t.Fatalf("paginated detail = %#v, want 1 of 2 members", detailResult["structuredContent"])
+	if !ok || detail.TotalMembers != 3 || len(detail.Cluster.Members) != 1 {
+		t.Fatalf("paginated detail = %#v, want 1 of 3 members", detailResult["structuredContent"])
 	}
 	emptyResult, err := clusterTool.Call(context.Background(), json.RawMessage(`{"cluster_id":1,"offset":99}`))
 	if err != nil {
@@ -154,6 +155,54 @@ func TestClusterBuildOverCapPublishesNoPartialCommunities(t *testing.T) {
 	unavailable, ok := result["structuredContent"].(clusterUnavailableResult)
 	if !ok || unavailable.Status != cluster.StatusOverCap || unavailable.Cap != 1 {
 		t.Fatalf("over-cap tool result = %#v", result["structuredContent"])
+	}
+}
+
+func TestClusterBuildUnderCoveredIsUnavailable(t *testing.T) {
+	dir := t.TempDir()
+	if err := diskstore.Save(index.New(), filepath.Join(dir, "shard-0000.idx")); err != nil {
+		t.Fatal(err)
+	}
+	builder := diskgraph.NewBuilder()
+	a := diskgraph.Key{BlobSHA: "edge-a", SymbolOffset: 1}
+	b := diskgraph.Key{BlobSHA: "edge-b", SymbolOffset: 1}
+	if err := builder.AddEdge(a, diskgraph.Edge{
+		Type: diskgraph.EdgeCalls, TargetBlob: b.BlobSHA, TargetOffset: b.SymbolOffset,
+		Confidence: graph.Pattern, Evidence: graph.Evidence{BlobSHA: a.BlobSHA, ByteOffset: 1, ByteLength: 1},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := builder.AddNode(b); err != nil {
+		t.Fatal(err)
+	}
+	// Two eligible nodes among 202 observed nodes is below the 1% coverage floor.
+	for i := 0; i < 200; i++ {
+		if err := builder.AddNode(diskgraph.Key{BlobSHA: fmt.Sprintf("isolated-%03d", i), SymbolOffset: 1}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := builder.Save(GraphPath(dir)); err != nil {
+		t.Fatal(err)
+	}
+	report, err := buildClusterSidecar(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Status != cluster.StatusUnderCovered || report.ObservedNodes != 202 || report.EligibleNodes != 2 || report.Clusters != 0 {
+		t.Fatalf("under-covered report = %+v", report)
+	}
+	tools, err := OpenGraphTools(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tools.Close()
+	result, err := graphHandler(t, tools, "list_clusters").Call(context.Background(), json.RawMessage(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	unavailable, ok := result["structuredContent"].(clusterUnavailableResult)
+	if !ok || unavailable.Available || unavailable.Status != cluster.StatusUnderCovered || unavailable.EligibleNodes != 2 {
+		t.Fatalf("under-covered tool result = %#v", result["structuredContent"])
 	}
 }
 
@@ -279,6 +328,9 @@ func writeClusterPair(t *testing.T) string {
 	builder := diskgraph.NewBuilder()
 	if err := builder.AddEdge(a, diskgraph.Edge{Type: diskgraph.EdgeCalls, TargetBlob: b.BlobSHA, TargetOffset: b.SymbolOffset,
 		Confidence: graph.Verified, Evidence: graph.Evidence{BlobSHA: a.BlobSHA, ByteOffset: a.SymbolOffset, ByteLength: 1}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := builder.AddNode(b); err != nil {
 		t.Fatal(err)
 	}
 	if err := builder.Save(GraphPath(dir)); err != nil {

@@ -248,6 +248,40 @@ func TestGraphConfidenceFloorFiltersBeforeTraversal(t *testing.T) {
 	}
 }
 
+func TestGraphResultsCoalesceDuplicateRelationshipEvidence(t *testing.T) {
+	source := diskgraph.Key{BlobSHA: "source", SymbolOffset: 1}
+	target := diskgraph.Key{BlobSHA: "target", SymbolOffset: 2}
+	relations := make(map[string]graphRelation)
+	addRelation(relations, graphRelation{Source: source, Target: target, Type: diskgraph.EdgePublishes,
+		Confidence: graph.Pattern, Evidence: graph.Evidence{BlobSHA: "source", ByteOffset: 20, ByteLength: 1}})
+	addRelation(relations, graphRelation{Source: source, Target: target, Type: diskgraph.EdgePublishes,
+		Confidence: graph.Verified, Evidence: graph.Evidence{BlobSHA: "source", ByteOffset: 10, ByteLength: 1}})
+	if len(relations) != 1 {
+		t.Fatalf("duplicate source|type|target relationships = %d, want 1", len(relations))
+	}
+	for _, relation := range relations {
+		if relation.Confidence != graph.Verified || relation.Evidence.ByteOffset != 10 {
+			t.Fatalf("coalesced relationship = %+v, want strongest evidence", relation)
+		}
+	}
+}
+
+func TestGraphTraversalPrunesDisconnectedNameCollisionRoots(t *testing.T) {
+	connected := diskgraph.Key{BlobSHA: "connected", SymbolOffset: 1}
+	disconnected := diskgraph.Key{BlobSHA: "collision", SymbolOffset: 1}
+	target := diskgraph.Key{BlobSHA: "target", SymbolOffset: 1}
+	confidence := rootsWithConfidence([]diskgraph.Key{connected, disconnected})
+	distances := rootsWithDistance([]diskgraph.Key{connected, disconnected})
+	relations := map[string]graphRelation{"edge": {Source: connected, Target: target, Type: diskgraph.EdgeQueries, Confidence: graph.Verified}}
+	pruneDisconnectedRoots(confidence, distances, []diskgraph.Key{connected, disconnected}, relations)
+	if _, ok := confidence[disconnected]; ok {
+		t.Fatal("same-named root with no matching relationship survived traversal")
+	}
+	if _, ok := confidence[connected]; !ok {
+		t.Fatal("connected root was pruned")
+	}
+}
+
 func TestTraceConsumersReturnsEveryPublisherAndConsumer(t *testing.T) {
 	fixture := newGraphFixture(t)
 	result, _ := callGraphTool(t, graphHandler(t, fixture.tools, "trace_consumers"), `{"name":"OrderSubmitted"}`)

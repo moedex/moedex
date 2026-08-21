@@ -8,7 +8,8 @@
 //  1. expands each salient span to its enclosing code block — using real symbol
 //     boundaries when Options.EnclosingBytes is wired (cmd/mcp supplies the
 //     symbol layer), falling back to a brace/indent heuristic otherwise,
-//  2. merges overlapping/adjacent blocks within the same file,
+//  2. merges overlapping blocks and blocks separated by at most one blank line
+//     within the same file,
 //  3. walks results best-first, emitting blocks until the token budget is spent,
 //  4. estimates tokens so the whole window fits an agent's budget.
 //
@@ -23,6 +24,7 @@ package contextwin
 import (
 	"bytes"
 	"sort"
+	"strings"
 	"unicode/utf8"
 
 	"moedex/internal/index"
@@ -96,6 +98,7 @@ type candidate struct {
 	blob                   uint64  // originating blob ID (for symbol scoping)
 	salientLine            int     // highest-ranked salient line retained through merging
 	salientOrder           int     // originating result order for salient-line tie breaking
+	importDominated        bool    // true when >70% of non-blank lines are import/header syntax
 }
 
 // Assemble turns ranked results into a token-budgeted, deduplicated,
@@ -127,9 +130,9 @@ type candidate struct {
 // never a panic.
 //
 // Merge rule: within a single file (keyed by AbsPath) blocks are merged when
-// they overlap OR touch (adjacent, i.e. next.start <= cur.end+1). The merged
-// block spans the union of line ranges and keeps the maximum Score of its parts.
-// Blocks in different files never merge.
+// they overlap, touch, or have one blank line between them (that is,
+// next.start <= cur.end+2). The merged block spans the union of line ranges and
+// keeps the maximum Score of its parts. Blocks in different files never merge.
 //
 // Budget / truncation rule: blocks are emitted best-first (Score desc; ties
 // broken by originating result order, then file path, then start line — fully
@@ -175,7 +178,7 @@ func Assemble(ix *index.Index, results []rank.RankedResult, opts Options) Contex
 		}
 		ref := res.Files[0]
 		for _, span := range res.LineSpans {
-			start, end := expandSpanScoped(lines, blob.Content, res.Blob, span, ctxLines, budget, opts.EnclosingBytes)
+			start, end := expandSpanScoped(lines, blob.Content, res.Blob, span, ctxLines, opts.EnclosingBytes)
 			c := candidate{
 				repo:         ref.Repo,
 				relPath:      ref.RelPath,
@@ -198,15 +201,21 @@ func Assemble(ix *index.Index, results []rank.RankedResult, opts Options) Contex
 		}
 	}
 
-	// 3. Merge overlapping/adjacent candidates within each file.
+	// 3. Merge candidates separated by at most one blank line within each file.
 	var merged []candidate
 	for _, absPath := range fileOrder {
 		merged = append(merged, mergeFile(byFile[absPath])...)
+	}
+	for i := range merged {
+		merged[i].importDominated = isImportDominated(merged[i])
 	}
 
 	// 4. Walk best-first under the token budget.
 	sort.SliceStable(merged, func(i, j int) bool {
 		a, b := merged[i], merged[j]
+		if a.importDominated != b.importDominated {
+			return !a.importDominated
+		}
 		if a.score != b.score {
 			return a.score > b.score // higher score first
 		}
@@ -316,7 +325,7 @@ func clamp(v, lo, hi int) int {
 // The byte offset queried is the start of the span's first line (clamped),
 // because the symbol layer keys on definition ranges and the span's opening line
 // is the most reliable anchor inside the enclosing definition.
-func expandSpanScoped(lines [][]byte, content []byte, blob uint64, span rank.LineSpan, ctxLines, tokenBudget int, enc func(uint64, int) (int, int, bool)) (int, int) {
+func expandSpanScoped(lines [][]byte, content []byte, blob uint64, span rank.LineSpan, ctxLines int, enc func(uint64, int) (int, int, bool)) (int, int) {
 	if enc != nil {
 		n := len(lines)
 		startLine := clamp(span.StartLine, 1, n)
@@ -332,13 +341,7 @@ func expandSpanScoped(lines [][]byte, content []byte, blob uint64, span rank.Lin
 			if eLine < sLine {
 				eLine = sLine
 			}
-			// Very large enclosing symbols are worse agent context than the existing
-			// local brace/indent expansion. Fall back before budget clipping when the
-			// symbol alone costs more than twice the whole requested window.
-			scopeCost := estimateTokens(sliceLines(content, sLine, eLine))
-			if scopeCost <= tokenBudget || scopeCost-tokenBudget <= tokenBudget {
-				return sLine, eLine
-			}
+			return sLine, eLine
 		}
 	}
 	return expandSpan(lines, span, ctxLines)
@@ -586,27 +589,80 @@ func indentOf(line []byte) int {
 	return n
 }
 
-// mergeFile merges overlapping/adjacent candidates (all from one file), via the
-// shared rank.MergeLineRanges adjacency rule. Input order need not be sorted;
-// output is sorted by start line. A merged candidate keeps the max Score (and
-// that result's Lexical/Dense/order) of its parts.
+// mergeFile merges candidates that overlap, touch, or have one blank line
+// between them. Input order need not be sorted; output is sorted by start line.
+// A merged candidate keeps the max Score (and that result's
+// Lexical/Dense/order) of its parts.
 func mergeFile(cands []candidate) []candidate {
-	return rank.MergeLineRanges(cands,
-		func(c candidate) (int, int) { return c.startLine, c.endLine },
-		func(a, b candidate) candidate {
-			if b.endLine > a.endLine {
-				a.endLine = b.endLine
+	if len(cands) == 0 {
+		return nil
+	}
+	sort.SliceStable(cands, func(i, j int) bool {
+		if cands[i].startLine != cands[j].startLine {
+			return cands[i].startLine < cands[j].startLine
+		}
+		return cands[i].endLine < cands[j].endLine
+	})
+	out := []candidate{cands[0]}
+	for _, next := range cands[1:] {
+		cur := &out[len(out)-1]
+		// Inclusive ranges separated by one blank line have start=end+2.
+		if next.startLine > cur.endLine+2 {
+			out = append(out, next)
+			continue
+		}
+		if next.endLine > cur.endLine {
+			cur.endLine = next.endLine
+		}
+		if next.score > cur.score || (next.score == cur.score && next.salientOrder < cur.salientOrder) {
+			cur.score = next.score
+			cur.lexical = next.lexical
+			cur.dense = next.dense
+			cur.salientLine = next.salientLine
+			cur.salientOrder = next.salientOrder
+		}
+		if next.order < cur.order {
+			cur.order = next.order
+		}
+	}
+	return out
+}
+
+func isImportDominated(c candidate) bool {
+	lines := splitLines(c.content)
+	if len(lines) == 0 {
+		return false
+	}
+	start := clamp(c.startLine, 1, len(lines))
+	end := clamp(c.endLine, start, len(lines))
+	nonBlank, imports := 0, 0
+	inGoImportBlock := false
+	for lineNo, raw := range lines {
+		trimmed := strings.TrimSpace(string(raw))
+		if strings.HasPrefix(trimmed, "import (") || trimmed == "import(" {
+			inGoImportBlock = true
+		}
+		inside := lineNo+1 >= start && lineNo+1 <= end
+		if inside && trimmed != "" {
+			nonBlank++
+			if inGoImportBlock || isImportLine(trimmed) {
+				imports++
 			}
-			if b.score > a.score || (b.score == a.score && b.salientOrder < a.salientOrder) {
-				a.score = b.score
-				a.lexical = b.lexical
-				a.dense = b.dense
-				a.salientLine = b.salientLine
-				a.salientOrder = b.salientOrder
-			}
-			if b.order < a.order {
-				a.order = b.order
-			}
-			return a
-		})
+		}
+		if inGoImportBlock && trimmed == ")" {
+			inGoImportBlock = false
+		}
+		if lineNo+1 > end {
+			break
+		}
+	}
+	return nonBlank > 0 && imports*10 > nonBlank*7
+}
+
+func isImportLine(line string) bool {
+	return strings.HasPrefix(line, "using ") || strings.HasPrefix(line, "global using ") ||
+		strings.HasPrefix(line, "import ") || strings.HasPrefix(line, "import\t") ||
+		strings.HasPrefix(line, "from ") && strings.Contains(line, " import ") ||
+		strings.HasPrefix(line, "use ") || strings.HasPrefix(line, "#include") ||
+		strings.HasPrefix(line, "require(") || strings.HasPrefix(line, "require ")
 }

@@ -47,6 +47,7 @@ func TestPrivateGraphGoldGate(t *testing.T) {
 	if err := gold.Floors.Check(report); err != nil {
 		t.Fatal(err)
 	}
+	derived := graphcore.CalibrateGraphFloors(report)
 	var clusterTool interface {
 		Call(context.Context, json.RawMessage) (map[string]interface{}, error)
 	}
@@ -73,11 +74,17 @@ func TestPrivateGraphGoldGate(t *testing.T) {
 		t.Fatal(err)
 	}
 	var clusterStatus struct {
-		Available bool `json:"available"`
+		Available bool   `json:"available"`
+		Status    string `json:"status"`
 	}
-	if err := json.Unmarshal(clusterPayload, &clusterStatus); err != nil || !clusterStatus.Available {
-		t.Fatalf("list_clusters sidecar unavailable: %s (%v)", clusterPayload, err)
+	if err := json.Unmarshal(clusterPayload, &clusterStatus); err != nil || clusterStatus.Status == "" {
+		t.Fatalf("list_clusters returned no explicit status: %s (%v)", clusterPayload, err)
 	}
-	t.Logf("private graph gate: n=%d recall=%.4f precision=%.4f MRR=%.4f NDCG=%.4f UDCG-watch=%.4f tier-precision=%v mean-tool-latency=%s cluster-latency=%s",
-		len(report.Queries), report.MeanRecall, report.MeanPrec, report.MeanMRR, report.MeanNDCG, report.MeanUDCG, report.PerTierPrecision, report.MeanToolDuration, clusterDuration)
+	if clusterStatus.Available != (clusterStatus.Status == "available") {
+		t.Fatalf("list_clusters availability/status disagree: %s", clusterPayload)
+	}
+	t.Logf("private graph gate: n=%d recall=%.4f precision=%.4f MRR=%.4f NDCG=%.4f UDCG-watch=%.4f tier-precision=%v mean-tool-latency=%s cluster-status=%s cluster-latency=%s",
+		len(report.Queries), report.MeanRecall, report.MeanPrec, report.MeanMRR, report.MeanNDCG, report.MeanUDCG, report.PerTierPrecision, report.MeanToolDuration, clusterStatus.Status, clusterDuration)
+	t.Logf("mechanically derived floors: recall=%.15g MRR=%.15g NDCG=%.15g tier-precision=%v",
+		derived.Recall, derived.MRR, derived.NDCG, derived.TierPrecision)
 }

@@ -9,9 +9,13 @@ import (
 )
 
 const (
-	SidecarVersion  = 1
-	StatusAvailable = "available"
-	StatusOverCap   = "over_cap"
+	SidecarVersion     = 2
+	StatusAvailable    = "available"
+	StatusOverCap      = "over_cap"
+	StatusUnderCovered = "under_covered"
+
+	MinCoverageNumerator   = 1
+	MinCoverageDenominator = 100
 )
 
 // Sidecar is the generation-bound, independently versioned cluster artifact.
@@ -20,6 +24,8 @@ type Sidecar struct {
 	Version       int       `json:"version"`
 	Generation    uint64    `json:"generation"`
 	Status        string    `json:"status"`
+	ObservedNodes int       `json:"observed_nodes"`
+	ObservedEdges int       `json:"observed_edges"`
 	EligibleNodes int       `json:"eligible_nodes"`
 	EligibleEdges int       `json:"eligible_edges"`
 	Cap           int       `json:"cap"`
@@ -29,6 +35,8 @@ type Sidecar struct {
 
 type BuildReport struct {
 	Status        string `json:"status"`
+	ObservedNodes int    `json:"observed_nodes"`
+	ObservedEdges int    `json:"observed_edges"`
 	EligibleNodes int    `json:"eligible_nodes"`
 	EligibleEdges int    `json:"eligible_edges"`
 	Cap           int    `json:"cap"`
@@ -38,7 +46,8 @@ type BuildReport struct {
 
 func (s Sidecar) Report() BuildReport {
 	return BuildReport{
-		Status: s.Status, EligibleNodes: s.EligibleNodes, EligibleEdges: s.EligibleEdges,
+		Status: s.Status, ObservedNodes: s.ObservedNodes, ObservedEdges: s.ObservedEdges,
+		EligibleNodes: s.EligibleNodes, EligibleEdges: s.EligibleEdges,
 		Cap: s.Cap, Clusters: len(s.Clusters), BuildMillis: s.BuildMillis,
 	}
 }
@@ -121,11 +130,14 @@ func validateSidecar(sidecar Sidecar) error {
 	if sidecar.Version != SidecarVersion {
 		return fmt.Errorf("cluster: sidecar version %d is unsupported (want %d)", sidecar.Version, SidecarVersion)
 	}
-	if sidecar.Status != StatusAvailable && sidecar.Status != StatusOverCap {
+	if sidecar.Status != StatusAvailable && sidecar.Status != StatusOverCap && sidecar.Status != StatusUnderCovered {
 		return fmt.Errorf("cluster: invalid sidecar status %q", sidecar.Status)
 	}
-	if sidecar.EligibleNodes < 0 || sidecar.EligibleEdges < 0 || sidecar.Cap < 1 || sidecar.BuildMillis < 0 {
+	if sidecar.ObservedNodes < 0 || sidecar.ObservedEdges < 0 || sidecar.EligibleNodes < 0 || sidecar.EligibleEdges < 0 || sidecar.Cap < 1 || sidecar.BuildMillis < 0 {
 		return fmt.Errorf("cluster: invalid negative counts or non-positive cap")
+	}
+	if sidecar.EligibleNodes > sidecar.ObservedNodes || sidecar.EligibleEdges > sidecar.ObservedEdges {
+		return fmt.Errorf("cluster: eligible counts exceed observed graph")
 	}
 	if sidecar.Status == StatusOverCap {
 		if sidecar.EligibleNodes <= sidecar.Cap {
@@ -133,6 +145,18 @@ func validateSidecar(sidecar Sidecar) error {
 		}
 		if len(sidecar.Clusters) != 0 {
 			return fmt.Errorf("cluster: over_cap sidecar must not contain partial communities")
+		}
+		return nil
+	}
+	if sidecar.Status == StatusUnderCovered {
+		if !UnderCovered(sidecar.EligibleNodes, sidecar.ObservedNodes) {
+			return fmt.Errorf("cluster: under_covered status has representative coverage")
+		}
+		if sidecar.EligibleNodes > sidecar.Cap {
+			return fmt.Errorf("cluster: under_covered status exceeds cap")
+		}
+		if len(sidecar.Clusters) != 0 {
+			return fmt.Errorf("cluster: under_covered sidecar must not publish unrepresentative communities")
 		}
 		return nil
 	}
@@ -164,4 +188,11 @@ func validateSidecar(sidecar Sidecar) error {
 		return fmt.Errorf("cluster: %d clustered members do not match %d eligible nodes", totalMembers, sidecar.EligibleNodes)
 	}
 	return nil
+}
+
+// UnderCovered reports whether eligible topology represents less than one
+// percent of the observed graph. Integer cross-multiplication keeps the status
+// deterministic and avoids floating-point boundary drift.
+func UnderCovered(eligible, observed int) bool {
+	return observed > 0 && eligible*MinCoverageDenominator < observed*MinCoverageNumerator
 }

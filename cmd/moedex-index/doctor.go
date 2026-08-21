@@ -311,6 +311,8 @@ func checkShardDir(d *doctorReport, dir string) {
 			d.warnf(section, "cluster sidecar unavailable: %s", info.ClusterOpenErr)
 		case info.ClusterStatus == "over_cap":
 			d.warnf(section, "cluster sidecar over cap: %d eligible node(s), %d edge(s), cap %d — raise MOEDEX_GRAPH_CLUSTER_MAX_NODES and rebuild if clustering is required", info.ClusterEligibleNodes, info.ClusterEligibleEdges, info.ClusterCap)
+		case info.ClusterStatus == "under_covered":
+			d.warnf(section, "cluster sidecar under-covered: %d of %d graph node(s) eligible — communities are unavailable until representative topology is rebuilt", info.ClusterEligibleNodes, info.GraphNodes)
 		default:
 			d.ok(section, "cluster sidecar %s: %d eligible node(s), %d edge(s), cap %d", info.ClusterStatus, info.ClusterEligibleNodes, info.ClusterEligibleEdges, info.ClusterCap)
 		}

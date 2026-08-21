@@ -343,9 +343,11 @@ func TestRefreshGraphLinksNewDefinitionFromUnchangedCaller(t *testing.T) {
 		}
 	}
 
-	// A different repo starts defining the name the untouched caller uses.
+	// A different file in the same repository starts defining the name the
+	// untouched caller uses. Cross-repository Pattern binding is intentionally
+	// suppressed because it cannot distinguish dependencies from name collisions.
 	defContent := "package def\n\nfunc Lonesome() {}\n"
-	files = append(files, graphFile{repo: "def", path: "def.go", content: defContent})
+	files = append(files, graphFile{repo: "caller", path: "def.go", content: defContent})
 	writeGraphShards(t, dir, files, 1)
 
 	path, stats, err := RefreshGraph(dir)
@@ -388,8 +390,8 @@ func TestRefreshGraphNoticesRefiledContent(t *testing.T) {
 	dir := t.TempDir()
 	callerBody := "package caller\n\nfunc Caller() { Target() }\n"
 	files := []graphFile{
-		{repo: "target", path: "target.go", content: "package target\n\nfunc Target() {}\n"},
-		{repo: "caller", path: "caller.txt", content: callerBody},
+		{repo: "fixture", path: "target.go", content: "package target\n\nfunc Target() {}\n"},
+		{repo: "fixture", path: "caller.txt", content: callerBody},
 	}
 	writeGraphShards(t, dir, files, 1)
 	path, _, err := BuildGraph(dir)
@@ -593,6 +595,95 @@ func TestRefreshGraphUnchangedCorpusRemovesLegacyRawCandidates(t *testing.T) {
 	}
 	if records := readGraph(t, path); len(records) != 0 {
 		t.Fatalf("legacy raw Candidate survived unchanged refresh: %#v", records)
+	}
+}
+
+func TestRefreshGraphUnchangedCorpusRemovesLegacyCrossRepoPatterns(t *testing.T) {
+	dir := t.TempDir()
+	sourceContent := []byte("package source\n\nfunc Caller() { Target() }\n")
+	targetContent := []byte("package target\n\nfunc Target() {}\n")
+	files := []graphFile{
+		{repo: "source", path: "source.go", content: string(sourceContent)},
+		{repo: "unrelated", path: "target.go", content: string(targetContent)},
+	}
+	writeGraphShards(t, dir, files, 2)
+
+	sourceSHA := diskstore.GitBlobSHA1(sourceContent)
+	targetSHA := diskstore.GitBlobSHA1(targetContent)
+	sourceOffset := uint64(strings.Index(string(sourceContent), "Caller"))
+	targetOffset := uint64(strings.Index(string(targetContent), "Target"))
+	evidenceOffset := uint64(strings.LastIndex(string(sourceContent), "Target"))
+	builder := diskgraph.NewBuilder()
+	builder.AddCorpusEntry(sourceSHA + "\x00.go")
+	builder.AddCorpusEntry(targetSHA + "\x00.go")
+	if err := builder.AddEdge(diskgraph.Key{BlobSHA: sourceSHA, SymbolOffset: sourceOffset}, diskgraph.Edge{
+		Type: diskgraph.EdgeCalls, TargetBlob: targetSHA, TargetOffset: targetOffset,
+		Confidence: graph.Pattern, Name: "Target", Generation: diskgraph.FirstGeneration,
+		Evidence: graph.Evidence{BlobSHA: sourceSHA, ByteOffset: evidenceOffset, ByteLength: uint64(len("Target"))},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := builder.Save(GraphPath(dir)); err != nil {
+		t.Fatal(err)
+	}
+
+	path, stats, err := RefreshGraph(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.Unchanged || stats.Counts.SuppressedCrossRepoPattern != 1 {
+		t.Fatalf("legacy cross-repo cleanup stats = %+v", stats)
+	}
+	if records := readGraph(t, path); len(records) != 0 {
+		t.Fatalf("legacy cross-repo Pattern survived refresh: %#v", records)
+	}
+}
+
+func TestRefreshGraphUpgradesLegacySemanticConfidence(t *testing.T) {
+	dir := t.TempDir()
+	leftContent := []byte("package fixture\n\nfunc AlphaSimilar() {}\n")
+	rightContent := []byte("package fixture\n\nfunc BetaSimilar() {}\n")
+	files := []graphFile{
+		{repo: "fixture", path: "left.go", content: string(leftContent)},
+		{repo: "fixture", path: "right.go", content: string(rightContent)},
+	}
+	writeGraphShards(t, dir, files, 2)
+	leftSHA := diskstore.GitBlobSHA1(leftContent)
+	rightSHA := diskstore.GitBlobSHA1(rightContent)
+	leftOffset := uint64(strings.Index(string(leftContent), "AlphaSimilar"))
+	rightOffset := uint64(strings.Index(string(rightContent), "BetaSimilar"))
+	builder := diskgraph.NewBuilder()
+	builder.AddCorpusEntry(leftSHA + "\x00.go")
+	builder.AddCorpusEntry(rightSHA + "\x00.go")
+	if err := builder.AddEdge(diskgraph.Key{BlobSHA: leftSHA, SymbolOffset: leftOffset}, diskgraph.Edge{
+		Type: diskgraph.EdgeSimilarTo, TargetBlob: rightSHA, TargetOffset: rightOffset,
+		Confidence: graph.Candidate, Similarity: .9,
+		Evidence: graph.Evidence{BlobSHA: leftSHA, ByteOffset: leftOffset, ByteLength: uint64(len("AlphaSimilar"))},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := builder.Save(GraphPath(dir)); err != nil {
+		t.Fatal(err)
+	}
+
+	path, stats, err := RefreshGraph(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.Unchanged {
+		t.Fatal("legacy Candidate semantic edge did not trigger migration")
+	}
+	var found bool
+	for _, record := range readGraph(t, path) {
+		if record.edge.Type == diskgraph.EdgeSimilarTo {
+			found = true
+			if record.edge.Confidence != graph.Pattern {
+				t.Fatalf("semantic confidence = %s, want Pattern", record.edge.Confidence)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("semantic edge was dropped during migration")
 	}
 }
 

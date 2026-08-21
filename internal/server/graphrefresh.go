@@ -110,20 +110,20 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 
 	added, removed := sweep.contentDelta(previous)
 	stats.BlobsAdded, stats.BlobsRemoved = len(added), len(removed)
-	legacyRawCandidates := sweep.hasRawCandidateSources(previous)
-	if len(added) == 0 && len(removed) == 0 && !legacyRawCandidates {
+	legacyQualityEdges := sweep.hasLegacyQualityEdges(previous)
+	if len(added) == 0 && len(removed) == 0 && !legacyQualityEdges {
 		stats.Unchanged = true
 		stats.Generation = previous.Generation()
 		stats.NamesCarried = len(sweep.names)
 		stats.EdgesCarried = previous.NumEdges()
 		stats.Cluster, err = ensureClusterSidecar(dir, previous.Generation())
 		if err == nil {
-			stats.Counts, err = measureGraphBuildCounts(dir, 0)
+			stats.Counts, err = measureGraphBuildCounts(dir, 0, 0)
 		}
 		return GraphPath(dir), stats, err
 	}
-	if legacyRawCandidates {
-		stats.Reason = "legacy raw Candidate edges require cleanup"
+	if legacyQualityEdges {
+		stats.Reason = "legacy graph-quality edges require cleanup"
 	}
 
 	dirty := sweep.dirtyNames(previous, added, removed)
@@ -156,6 +156,11 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 				if edge.Confidence == graph.Candidate && !sweep.sourceResolvesToSymbol(key) {
 					stats.EdgesDropped++
 					sweep.suppressedRawCandidates.Add(1)
+					continue
+				}
+				if edge.Confidence == graph.Pattern && !sweep.blobSHAsShareRepository(key.BlobSHA, edge.TargetBlob) {
+					stats.EdgesDropped++
+					sweep.suppressedCrossRepoPatterns.Add(1)
 					continue
 				}
 				carried[name] = append(carried[name], carriedGraphEdge{node: uint32(node), edge: uint32(i)})
@@ -256,6 +261,9 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 		if !ok {
 			return "", stats, fmt.Errorf("server: graph refresh lost edge %d of the previous graph", c.edge)
 		}
+		if edge.Type == diskgraph.EdgeSimilarTo && edge.Confidence == graph.Candidate {
+			edge.Confidence = graph.Pattern
+		}
 		if err := builder.AddEdge(key, edge); err != nil {
 			return "", stats, err
 		}
@@ -277,7 +285,7 @@ func RefreshGraph(dir string) (path string, stats GraphRefreshStats, err error) 
 		stats.Cluster, err = buildClusterSidecar(dir)
 	}
 	if err == nil {
-		stats.Counts, err = measureGraphBuildCounts(dir, int(sweep.suppressedRawCandidates.Load()))
+		stats.Counts, err = measureGraphBuildCounts(dir, int(sweep.suppressedRawCandidates.Load()), int(sweep.suppressedCrossRepoPatterns.Load()))
 	}
 	return path, stats, err
 }
@@ -294,11 +302,19 @@ func (s *graphSweep) sourceResolvesToSymbol(key diskgraph.Key) bool {
 	return false
 }
 
-func (s *graphSweep) hasRawCandidateSources(previous *diskgraph.Graph) bool {
+func (s *graphSweep) hasLegacyQualityEdges(previous *diskgraph.Graph) bool {
 	resolved := make(map[diskgraph.Key]bool)
 	checked := make(map[diskgraph.Key]bool)
 	found := false
 	previous.EachEdge(func(source diskgraph.Key, edge diskgraph.Edge) bool {
+		if edge.Type == diskgraph.EdgeSimilarTo && edge.Confidence == graph.Candidate {
+			found = true
+			return false
+		}
+		if edge.Confidence == graph.Pattern && edge.Name != "" && !s.blobSHAsShareRepository(source.BlobSHA, edge.TargetBlob) {
+			found = true
+			return false
+		}
 		if edge.Confidence != graph.Candidate {
 			return true
 		}
@@ -374,7 +390,7 @@ func (s *graphSweep) rebuildAll(dir string, stats *GraphRefreshStats) (string, e
 		stats.Cluster, err = buildClusterSidecar(dir)
 	}
 	if err == nil {
-		stats.Counts, err = measureGraphBuildCounts(dir, int(s.suppressedRawCandidates.Load()))
+		stats.Counts, err = measureGraphBuildCounts(dir, int(s.suppressedRawCandidates.Load()), int(s.suppressedCrossRepoPatterns.Load()))
 	}
 	return path, err
 }

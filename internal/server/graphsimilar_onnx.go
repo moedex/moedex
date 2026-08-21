@@ -126,7 +126,7 @@ func addSimilarToEdges(ctx context.Context, builder *diskgraph.Builder, merged *
 			Type:         diskgraph.EdgeSimilarTo,
 			TargetBlob:   target.BlobSHA,
 			TargetOffset: target.SymbolOffset,
-			Confidence:   graph.Candidate,
+			Confidence:   graph.Pattern,
 			Evidence:     sourceDefinition.evidence,
 			Similarity:   float64(pair.Score),
 		}

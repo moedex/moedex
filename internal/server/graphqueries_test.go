@@ -1,9 +1,14 @@
 package server
 
 import (
+	"path/filepath"
+	"strings"
 	"testing"
 
+	"moedex/internal/diskstore"
+	"moedex/internal/graph"
 	"moedex/internal/graph/diskgraph"
+	"moedex/internal/index"
 	"moedex/internal/symbol"
 )
 
@@ -203,5 +208,63 @@ func TestQueryEdgeIntegration(t *testing.T) {
 	// Verify the edge type constant exists and has the expected string.
 	if diskgraph.EdgeQueries.String() != "queries" {
 		t.Errorf("EdgeQueries.String() = %q, want %q", diskgraph.EdgeQueries.String(), "queries")
+	}
+}
+
+func TestQueryEdgesResolveSameRepoImportedTypeOnly(t *testing.T) {
+	dir := t.TempDir()
+	contextContent := []byte(`using App.Entities;
+namespace App.Data;
+public class AppContext : DbContext {
+    public DbSet<Cart> Carts { get; set; }
+}`)
+	queryContent := []byte(`using App.Entities;
+namespace App.Data;
+public class Repository {
+    public void Load() {
+        var carts = context.Carts.ToList();
+    }
+}`)
+	entityContent := []byte("namespace App.Entities;\npublic class Cart {}\n")
+	modelContent := []byte("namespace App.Models;\npublic class Cart { public Cart() {} }\n")
+	externalContent := []byte("namespace Other.Entities;\npublic class Cart {}\n")
+	ix := index.New()
+	add := func(repo, rel string, content []byte) string {
+		sha := diskstore.GitBlobSHA1(content)
+		ix.AddFile(repo, rel, filepath.Join("/corpus", repo, rel), sha, content)
+		return sha
+	}
+	add("app", "Data/AppContext.cs", contextContent)
+	querySHA := add("app", "Data/Repository.cs", queryContent)
+	entitySHA := add("app", "Entities/Cart.cs", entityContent)
+	modelSHA := add("app", "Models/Cart.cs", modelContent)
+	externalSHA := add("other", "Entities/Cart.cs", externalContent)
+	if err := diskstore.Save(ix, filepath.Join(dir, "shard-0000.idx")); err != nil {
+		t.Fatal(err)
+	}
+	path, _, err := BuildGraph(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g, err := diskgraph.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	sourceOffset := uint64(strings.Index(string(queryContent), "Load"))
+	var queries []diskgraph.Edge
+	for _, edge := range g.Load(querySHA, sourceOffset) {
+		if edge.Type == diskgraph.EdgeQueries {
+			queries = append(queries, edge)
+		}
+	}
+	if len(queries) != 1 {
+		t.Fatalf("query target fan-out = %#v, want one imported entity type", queries)
+	}
+	if queries[0].TargetBlob != entitySHA || queries[0].Confidence != graph.Verified {
+		t.Fatalf("query target = %#v, want App.Entities.Cart Verified", queries[0])
+	}
+	if queries[0].TargetBlob == modelSHA || queries[0].TargetBlob == externalSHA {
+		t.Fatalf("query bound to namespace/repository distractor: %#v", queries[0])
 	}
 }
