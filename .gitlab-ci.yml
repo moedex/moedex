@@ -83,8 +83,10 @@ parity:
 
 # --- graph-eval-private: reviewed private graph quality (self-hosted) -----
 # Configure these as runner/project variables (they are paths, not secrets):
-#   * MOEDEX_GRAPH_EVAL_SHARDS — absolute path to the mounted managed shards.
-#   * MOEDEX_GRAPH_GOLD — absolute path to the mounted reviewed gold JSON file.
+#   * CI_MOEDEX_GRAPH_EVAL_SHARDS — mounted managed shards directory.
+#   * CI_MOEDEX_GRAPH_GOLD — mounted reviewed gold JSON file.
+# They map to the production variable names only in this job so `make health`
+# continues to run the hermetic tier on ordinary shared runners.
 #
 # A Verified-precision failure is more likely to expose insufficient label
 # coverage than a product regression: the 0.9 floor comes from a 1.0 baseline
@@ -94,6 +96,9 @@ graph-eval-private:
   stage: parity
   tags:
     - moedex-corpus
+  variables:
+    MOEDEX_GRAPH_EVAL_SHARDS: "$CI_MOEDEX_GRAPH_EVAL_SHARDS"
+    MOEDEX_GRAPH_GOLD: "$CI_MOEDEX_GRAPH_GOLD"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "push"'
       changes:
