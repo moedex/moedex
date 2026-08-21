@@ -815,5 +815,16 @@ func dot(a, b Vector) float32 {
 	for i := range a {
 		sum += a[i] * b[i]
 	}
+	// The inputs are unit-normalized, but float32 normalization and accumulation
+	// can cross the mathematical cosine boundary by a few ULPs. Clamp only that
+	// rounding envelope: materially out-of-range values remain visible to strict
+	// persistence validation instead of being disguised as valid similarities.
+	const roundingTolerance = float32(1e-5)
+	if sum > 1 && sum <= 1+roundingTolerance {
+		return 1
+	}
+	if sum < -1 && sum >= -1-roundingTolerance {
+		return -1
+	}
 	return sum
 }

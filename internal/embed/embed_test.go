@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"hash/fnv"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -269,6 +270,31 @@ func TestSimilar_RejectsInvalidThreshold(t *testing.T) {
 	}
 	if _, err := store.Similar(context.Background(), 1, 1.01); err == nil {
 		t.Fatal("Similar threshold > 1: want error")
+	}
+}
+
+func TestDotClampsCosineRoundingOvershoot(t *testing.T) {
+	// A cosine is mathematically bounded by [-1, 1], but float32 normalization
+	// and accumulation can leave a vector within one ULP of unit norm on the
+	// high side. This reproduces the graph-build failure seen with a persisted
+	// similarity of 1.0000003576278687.
+	v := Vector{math.Nextafter32(1, 2)}
+
+	var raw float32
+	for i := range v {
+		raw += v[i] * v[i]
+	}
+	if raw <= 1 {
+		t.Fatalf("fixture does not reproduce float32 overshoot: raw dot = %.10f", raw)
+	}
+	if got := dot(v, v); got != 1 {
+		t.Fatalf("dot(normalized, normalized) = %.10f, want clamped cosine 1", got)
+	}
+	if got := dot(Vector{-v[0]}, v); got != -1 {
+		t.Fatalf("negative dot = %.10f, want clamped cosine -1", got)
+	}
+	if got := dot(Vector{1.001}, Vector{1}); got <= 1 {
+		t.Fatalf("materially invalid dot = %.10f, want it left out of range", got)
 	}
 }
 
