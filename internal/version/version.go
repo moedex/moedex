@@ -5,31 +5,39 @@
 // so making the build identity visible is a guardrail, not a nicety.
 //
 // The commit/dirty/time come from the VCS info `go build` embeds automatically
-// (runtime/debug.ReadBuildInfo) — no -ldflags wiring required. Tag is an optional
-// human label that CAN be set via -ldflags "-X moedex/internal/version.Tag=v0.3".
+// (runtime/debug.ReadBuildInfo). Canonical Makefile builds additionally inject a
+// deterministic dirty-source digest. Tag is an optional human label that CAN be
+// set via -ldflags "-X moedex/internal/version.Tag=v0.3".
 package version
 
 import (
 	"fmt"
 	"runtime/debug"
+	"strings"
 )
 
 // Tag is an optional human version label, settable via
 // -ldflags "-X moedex/internal/version.Tag=...". Empty -> reported as "dev".
 var Tag = ""
 
+// SourceDigest is the deterministic Git-visible worktree digest injected by
+// canonical Makefile builds. Direct dirty `go build` invocations leave it empty
+// and are reported honestly as dirty.unknown.
+var SourceDigest = ""
+
 // Info is a binary's resolved build identity.
 type Info struct {
 	Tag      string // optional human label, or "dev"
 	Commit   string // VCS revision embedded by `go build`, or "unknown"
 	Modified bool   // working tree was dirty at build time
+	Source   string // dirty worktree source digest, or empty when unstamped
 	Time     string // VCS commit time (RFC3339), if known
 	Go       string // Go toolchain version
 }
 
 // Get resolves the running binary's build identity from the embedded build info.
 func Get() Info {
-	info := Info{Tag: Tag, Commit: "unknown"}
+	info := Info{Tag: Tag, Commit: "unknown", Source: SourceDigest}
 	if info.Tag == "" {
 		info.Tag = "dev"
 	}
@@ -49,17 +57,45 @@ func Get() Info {
 	return info
 }
 
-// CommitShort is the commit truncated to 12 chars with a +dirty marker; "unknown"
-// passes through. This is the field doctor compares across binaries to spot skew.
+// CommitShort is the commit truncated to 12 chars with a content-specific dirty
+// suffix; "unknown" passes through. This is the field doctor compares across
+// binaries to spot skew.
 func (i Info) CommitShort() string {
 	c := i.Commit
 	if len(c) > 12 {
 		c = c[:12]
 	}
 	if i.Modified {
-		c += "+dirty"
+		c += "+dirty." + i.sourceIdentity()
 	}
 	return c
+}
+
+// MCP returns the compact running-binary identity advertised in MCP
+// serverInfo.version. Tagged builds are <tag>+<commit>; untagged builds are
+// dev+<commit>; a dirty worktree appends .dirty.<source-digest>.
+func MCP() string {
+	return Get().MCP()
+}
+
+// MCP returns this Info in the same compact form used on the wire.
+func (i Info) MCP() string {
+	commit := i.Commit
+	if len(commit) > 12 {
+		commit = commit[:12]
+	}
+	identity := i.Tag + "+" + commit
+	if i.Modified {
+		identity += ".dirty." + i.sourceIdentity()
+	}
+	return identity
+}
+
+func (i Info) sourceIdentity() string {
+	if source := strings.TrimSpace(i.Source); source != "" {
+		return source
+	}
+	return "unknown"
 }
 
 // Line is the single, machine-parseable line printed by every binary's -version

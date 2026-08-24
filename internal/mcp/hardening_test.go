@@ -16,8 +16,8 @@ import (
 // blockingSearcher blocks until released (or ctx is cancelled), letting tests
 // force overlapping in-flight requests and exercise the timeout path.
 type blockingSearcher struct {
-	release chan struct{} // closed to let all calls proceed
-	inFlight int32        // peak concurrent calls observed
+	release  chan struct{} // closed to let all calls proceed
+	inFlight int32         // peak concurrent calls observed
 	peak     int32
 }
 
@@ -74,6 +74,12 @@ func encodeLines(t *testing.T, msgs ...interface{}) *bytes.Buffer {
 	t.Helper()
 	var in bytes.Buffer
 	enc := json.NewEncoder(&in)
+	if err := enc.Encode(legacyInitialize("bootstrap")); err != nil {
+		t.Fatal(err)
+	}
+	if err := enc.Encode(map[string]interface{}{"jsonrpc": "2.0", "method": "notifications/initialized"}); err != nil {
+		t.Fatal(err)
+	}
 	for _, m := range msgs {
 		if err := enc.Encode(m); err != nil {
 			t.Fatal(err)
@@ -90,6 +96,9 @@ func decodeResponses(t *testing.T, out *bytes.Buffer) []response {
 		var r response
 		if err := dec.Decode(&r); err != nil {
 			t.Fatalf("decode response: %v", err)
+		}
+		if string(r.ID) == `"bootstrap"` {
+			continue
 		}
 		resps = append(resps, r)
 	}
@@ -227,16 +236,19 @@ func TestOutputNotInterleavedUnderConcurrency(t *testing.T) {
 
 	// Each non-empty output line must independently decode as one response.
 	lines := bytes.Split(bytes.TrimRight(out.Bytes(), "\n"), []byte("\n"))
-	if len(lines) != n {
-		t.Fatalf("want %d framed lines, got %d", n, len(lines))
-	}
 	seen := map[int]bool{}
 	for i, ln := range lines {
 		var r response
 		if err := json.Unmarshal(ln, &r); err != nil {
 			t.Fatalf("line %d not a clean JSON object (interleaved?): %v\nfirst 80 bytes: %q", i, err, ln[:min(80, len(ln))])
 		}
+		if string(r.ID) == `"bootstrap"` {
+			continue
+		}
 		seen[idOf(t, r)] = true
+	}
+	if len(seen) != n {
+		t.Fatalf("want %d framed tool responses, got %d", n, len(seen))
 	}
 	for i := 0; i < n; i++ {
 		if !seen[i] {
@@ -254,10 +266,12 @@ func (m *multiSearcher) SearchContext(_ context.Context, q string, _, _ int) (co
 	}, nil
 }
 
-// TestOversizedRequestRejected: a request line larger than the cap must not OOM
-// or crash; the server emits a parse error and stops cleanly.
+// TestOversizedRequestRejected: a request line larger than the cap must not OOM,
+// crash, or reach the searcher. The SDK closes the malformed stdio session
+// without fabricating a JSON-RPC reply for bytes it did not parse.
 func TestOversizedRequestRejected(t *testing.T) {
-	s := NewServer(&fakeSearcher{}, WithMaxRequestBytes(256))
+	searcher := &fakeSearcher{}
+	s := NewServer(searcher, WithMaxRequestBytes(256))
 	// A single line well over the cap.
 	huge := toolCall(1, strings.Repeat("x", 5000))
 	in := encodeLines(t, huge)
@@ -272,11 +286,11 @@ func TestOversizedRequestRejected(t *testing.T) {
 	}
 
 	resps := decodeResponses(t, &out)
-	if len(resps) != 1 {
-		t.Fatalf("want 1 (parse error) response, got %d", len(resps))
+	if len(resps) != 0 {
+		t.Fatalf("oversized request produced %d tool responses, want none", len(resps))
 	}
-	if resps[0].Error == nil || resps[0].Error.Code != codeParseError {
-		t.Fatalf("want parse error for oversized request, got %+v", resps[0].Error)
+	if searcher.gotQuery != "" {
+		t.Fatalf("oversized request reached searcher with %q", searcher.gotQuery)
 	}
 }
 
@@ -363,6 +377,8 @@ func TestBlankLinesAndNotificationsSkipped(t *testing.T) {
 	var in bytes.Buffer
 	in.WriteString("\n")
 	enc := json.NewEncoder(&in)
+	_ = enc.Encode(legacyInitialize("bootstrap"))
+	_ = enc.Encode(map[string]interface{}{"jsonrpc": "2.0", "method": "notifications/initialized"})
 	_ = enc.Encode(map[string]interface{}{"jsonrpc": "2.0", "method": "notifications/initialized"})
 	in.WriteString("   \n")
 	_ = enc.Encode(map[string]interface{}{"jsonrpc": "2.0", "id": 9, "method": "tools/list"})

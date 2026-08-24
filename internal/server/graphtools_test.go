@@ -496,6 +496,12 @@ func TestGraphToolsetReloadSwapsInNewGenerationOnSuccess(t *testing.T) {
 
 func TestGraphToolInputValidation(t *testing.T) {
 	fixture := newGraphFixture(t)
+	impactSchema := graphHandler(t, fixture.tools, "impact_analysis").Specification().InputSchema
+	for _, keyword := range []string{"oneOf", "anyOf", "allOf"} {
+		if _, exists := impactSchema[keyword]; exists {
+			t.Fatalf("impact_analysis input schema contains host-incompatible root %s: %#v", keyword, impactSchema)
+		}
+	}
 	tests := []struct {
 		tool string
 		args string
@@ -521,6 +527,11 @@ func TestGraphToolInputValidation(t *testing.T) {
 			isError, ok := result["isError"].(bool)
 			if !ok || !isError {
 				t.Fatalf("invalid input accepted: %#v", result)
+			}
+			meta := result["_meta"].(map[string]interface{})
+			identity := meta[mcp.SnapshotMetaKey].(mcp.SnapshotIdentity)
+			if identity.Cacheable {
+				t.Fatalf("invalid input was marked cacheable: %+v", identity)
 			}
 		})
 	}

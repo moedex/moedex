@@ -65,6 +65,37 @@ func pad4(i int) string {
 	return string(s)
 }
 
+func TestRankCorpusSearchContextReturnsExactCorpusAndBlobIdentity(t *testing.T) {
+	const content = "package billing\n\nfunc Refund(id string) error { return nil }\n"
+	dir := buildDedupedDir(t, map[string]map[string]string{
+		"billing": {"refund.go": content},
+	})
+	rc, err := OpenRank(context.Background(), dir, RankConfig{TopK: 5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = rc.Close() })
+
+	result, err := rc.SearchContextWithSnapshot(context.Background(), "Refund", 800, 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Window.Blocks) != 1 {
+		t.Fatalf("blocks=%d", len(result.Window.Blocks))
+	}
+	wantSHA := diskstore.GitBlobSHA1([]byte(content))
+	if got := result.Window.Blocks[0].BlobSHA; got != wantSHA {
+		t.Fatalf("block blob_sha=%q want %q", got, wantSHA)
+	}
+	identity := result.Snapshot.Normalize()
+	if !identity.Cacheable || identity.CorpusFingerprint != rc.corpusFingerprint {
+		t.Fatalf("snapshot=%+v", identity)
+	}
+	if len(identity.BlobSHAs) != 1 || identity.BlobSHAs[0] != wantSHA {
+		t.Fatalf("blob_shas=%v want [%s]", identity.BlobSHAs, wantSHA)
+	}
+}
+
 // conceptEmbedder is a deterministic, network-free Embedder for tests. It
 // projects text onto two concept axes by substring, so lexically-disjoint text
 // about the same concept (the doc says "Authenticate", the query says "verify

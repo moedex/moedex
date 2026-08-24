@@ -17,6 +17,13 @@ WORK       ?= $(CURDIR)/.parity-work
 
 GOBIN := $(shell go env GOPATH)/bin
 
+# Canonical builds bind dirty binaries to the exact Git-visible worktree that
+# produced them. The linker value is intentionally computed lazily so non-build
+# targets do not pay for it.
+SOURCE_DIGEST = $(shell go run ./internal/version/buildmeta)
+VERSION_LDFLAGS = -X moedex/internal/version.SourceDigest=$(SOURCE_DIGEST)
+GO_BUILD = go build -ldflags "$(VERSION_LDFLAGS)"
+
 # Canonical install location for the moedex binaries. ONE directory holds them all
 # so PATH can never resolve a stale shadow (the skew that caused the index-loss
 # incident). Override with `make install BINDIR=/somewhere/bin`.
@@ -26,7 +33,7 @@ BINDIR       ?= $(HOME)/.local/bin
 # and scale (dev, generic name) are intentionally excluded.
 INSTALL_CMDS := moedex moedex-index moedex-corpus moedex-mcp
 
-.PHONY: verify parity graph-eval graph-eval-private setup setup-lsp build vet test roundtrip health clean build-dense test-dense build-simd vet-simd build-lsp test-lsp vet-lsp bench-setops bench-real bench-latency install install-dense install-bins install-finish
+.PHONY: verify parity graph-eval graph-eval-private setup setup-lsp build vet test roundtrip health clean build-dense test-dense build-simd vet-simd build-lsp test-lsp vet-lsp bench-setops bench-real bench-latency install install-dense install-bins install-finish require-source-digest require-clean
 
 # Real-index benchmark knobs.
 BENCHOUT  ?= $(CURDIR)/.bench
@@ -49,9 +56,15 @@ graph-eval:
 graph-eval-private: graph-eval
 	go test ./internal/eval -run '^TestPrivateGraphGoldGate$$' -count=1 -v
 
-build:
+require-source-digest:
+	@test -n "$(SOURCE_DIGEST)" || { echo "unable to compute source digest"; exit 1; }
+
+require-clean:
+	@go run ./internal/version/buildmeta -check-clean
+
+build: require-source-digest
 	@echo "=== go build ./... (AC-A1) ==="
-	go build ./...
+	$(GO_BUILD) ./...
 
 vet:
 	@echo "=== go vet ./... (AC-A2) ==="
@@ -95,11 +108,12 @@ setup-lsp:
 ## install: build every operational binary and install it to BINDIR (default
 ## ~/.local/bin), with the PURE-GO moedex-serve, then remove any stale moedex-*
 ## shadow from GOPATH/bin so PATH can't resolve an old build. For the warm daemon
-## use `install-dense` (the dense serve). Binaries are VCS-stamped by `go build`
+## use `install-dense` (the dense serve). Installation requires a clean worktree;
+## binaries are VCS-stamped by `go build` plus the canonical source digest wiring
 ## (see `<bin> -version`).
 install: install-bins
 	@echo "=== moedex-serve (pure-Go) -> $(BINDIR) ==="
-	@go build -o "$(BINDIR)/moedex-serve" ./cmd/moedex-serve
+	@$(GO_BUILD) -o "$(BINDIR)/moedex-serve" ./cmd/moedex-serve
 	@$(MAKE) --no-print-directory install-finish
 
 ## install-dense: like install, but moedex-serve is the warm-daemon build with the
@@ -109,17 +123,17 @@ install: install-bins
 ## the language servers on PATH (gopls, csharp-ls, …) — see deploy/com.moedex.serve.plist.
 install-dense: install-bins
 	@echo '=== moedex-index (-tags "onnx lsp") -> $(BINDIR) ==='
-	@go build -tags "onnx lsp" -o "$(BINDIR)/moedex-index" ./cmd/moedex-index
+	@$(GO_BUILD) -tags "onnx lsp" -o "$(BINDIR)/moedex-index" ./cmd/moedex-index
 	@echo '=== moedex-serve (-tags "onnx lsp") -> $(BINDIR) ==='
-	@go build -tags "onnx lsp" -o "$(BINDIR)/moedex-serve" ./cmd/moedex-serve
+	@$(GO_BUILD) -tags "onnx lsp" -o "$(BINDIR)/moedex-serve" ./cmd/moedex-serve
 	@$(MAKE) --no-print-directory install-finish
 
 # install-bins / install-finish are internal helpers for install / install-dense.
-install-bins:
+install-bins: require-clean require-source-digest
 	@mkdir -p "$(BINDIR)"
 	@for c in $(INSTALL_CMDS); do \
 		echo "=== $$c -> $(BINDIR) ==="; \
-		go build -o "$(BINDIR)/$$c" ./cmd/$$c || exit 1; \
+		$(GO_BUILD) -o "$(BINDIR)/$$c" ./cmd/$$c || exit 1; \
 	done
 
 install-finish:
@@ -137,11 +151,11 @@ install-finish:
 ## Embeds the st-codesearch-distilroberta code model (int8, ~78MB) into the binary.
 ## The default build stays pure-Go with zero ML deps; only this target pulls them
 ## in. Run requires the ONNX Runtime shared library at run time (ONNXRUNTIME_LIB_PATH).
-build-dense:
+build-dense: require-source-digest
 	@echo "=== go build -tags onnx ./cmd/moedex-index ==="
-	go build -tags onnx -o moedex-index-dense ./cmd/moedex-index
+	$(GO_BUILD) -tags onnx -o moedex-index-dense ./cmd/moedex-index
 	@echo "=== go build -tags onnx ./cmd/moedex-serve ==="
-	go build -tags onnx -o moedex-serve-dense ./cmd/moedex-serve
+	$(GO_BUILD) -tags onnx -o moedex-serve-dense ./cmd/moedex-serve
 	@echo "built ./moedex-index-dense and ./moedex-serve-dense (set ONNXRUNTIME_LIB_PATH)"
 
 ## test-dense: run the onnx-tagged embedder, semantic-graph, and indexer tests.
@@ -159,9 +173,9 @@ test-dense:
 ## `make build` stays pure Go on every arch (the kernel falls back to goIntersect
 ## anywhere this triple isn't satisfied), and go.mod is untouched (archsimd ships
 ## with the toolchain, it is not a module dependency).
-build-simd:
+build-simd: require-source-digest
 	@echo "=== GOEXPERIMENT=simd GOARCH=amd64 go build -tags moedex_simd ./... ==="
-	GOEXPERIMENT=simd GOOS=$(shell go env GOOS) GOARCH=amd64 go build -tags moedex_simd ./...
+	GOEXPERIMENT=simd GOOS=$(shell go env GOOS) GOARCH=amd64 $(GO_BUILD) -tags moedex_simd ./...
 	@echo "built (amd64). The native kernel runs only on an amd64 CPU with AVX2."
 
 ## vet-simd: type-check the build-tagged SIMD kernel + its differential test
@@ -177,11 +191,11 @@ vet-simd:
 ## find-references. The client is pure stdlib; language servers are external
 ## binaries supplied on PATH. The default build stays pure-Go and does not
 ## compile or launch this arm.
-build-lsp:
+build-lsp: require-source-digest
 	@echo "=== go build -tags lsp ./cmd/moedex-nav ==="
-	go build -tags lsp -o moedex-nav ./cmd/moedex-nav
+	$(GO_BUILD) -tags lsp -o moedex-nav ./cmd/moedex-nav
 	@echo "=== go build -tags lsp ./cmd/moedex-index ==="
-	go build -tags lsp -o moedex-index-lsp ./cmd/moedex-index
+	$(GO_BUILD) -tags lsp -o moedex-index-lsp ./cmd/moedex-index
 	@echo "built ./moedex-nav and ./moedex-index-lsp (language servers required at run time)"
 
 ## test-lsp: run the lsp-tagged navigation tests under the race detector. They

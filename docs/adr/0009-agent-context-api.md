@@ -11,7 +11,7 @@ The research pass named the **absence of a first-class agent/RAG context API the
 Expose the index as an **agent tool**, not a grep server: return **ranked, deduplicated, symbol-scoped, token-budgeted context blocks** over **MCP** (JSON-RPC/stdio), via the `search_context` tool.
 
 - `internal/contextwin.Assemble` takes the ranked results ([0006](./0006-rrf-hybrid-ranking.md)), expands each salient `LineSpan` to its **enclosing block** (`symbol.Index.Enclosing` when wired — [0008](./0008-polyglot-symbol-sidecar.md) — else the brace/indent heuristic), merges blocks separated by at most one blank line per file, and demotes import/header-dominated blocks before its deterministic budget walk. An overflowing first block is clipped around its highest-ranked salient line, including a UTF-8-safe prefix when one line alone exceeds capacity. `Clipped` means returned source was narrowed; `Truncated` means lower-ranked candidates were omitted. The running estimate (`ceil(len/4)`) never exceeds the budget (`DefaultTokenBudget = 8000`).
-- `internal/mcp` serves `search_context` (args: `query` required, `token_budget`/`top_k` optional), rendering each block under a `path:start-end (score)` header. Single-repo via `cmd/moedex-mcp`; whole-corpus via `moedex-serve -mcp` ([0010](./0010-warm-serving-spine.md)).
+- `internal/mcp` serves `search_context` (args: `query` required, `token_budget`/`top_k` optional), rendering each block under a `path:start-end (score)` header. Single-repo via `cmd/moedex-mcp`; whole-corpus via `moedex-serve -mcp` ([0010](./0010-warm-serving-spine.md)). The official SDK transport, dual-era protocol negotiation, typed output, and snapshot identity contract are specified in [0022](./0022-mcp-sdk-contract-and-snapshot-identity.md).
 
 ## Consequences
 **Positive**
@@ -27,4 +27,4 @@ Expose the index as an **agent tool**, not a grep server: return **ranked, dedup
 The single-repo call chain (`cmd/moedex-mcp`) and the whole-corpus chain (`moedex-serve -mcp` → `server.RankCorpus` implementing `mcp.ContextSearcher`) both serve `search_context` over stdio. The MCP path is hardened: 30 s per-call timeout, 8-way concurrency, 1 MiB message / 8 KiB query caps, panic recovery (`internal/mcp`, `hardening_test.go`). The UDCG (distraction-aware) metric was added precisely to measure whether returned context is dense with relevant blocks rather than padded with distractors ([0014](./0014-eval-harness-gold-gate.md)).
 
 ## Related
-[0006](./0006-rrf-hybrid-ranking.md), [0008](./0008-polyglot-symbol-sidecar.md), [0010](./0010-warm-serving-spine.md), [0014](./0014-eval-harness-gold-gate.md).
+[0006](./0006-rrf-hybrid-ranking.md), [0008](./0008-polyglot-symbol-sidecar.md), [0010](./0010-warm-serving-spine.md), [0014](./0014-eval-harness-gold-gate.md), [0022](./0022-mcp-sdk-contract-and-snapshot-identity.md).

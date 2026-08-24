@@ -90,6 +90,7 @@ type GraphLocation struct {
 	Path    string `json:"path,omitempty"`
 	AbsPath string `json:"abs_path,omitempty"`
 	Line    int    `json:"line,omitempty"`
+	BlobSHA string `json:"blob_sha,omitempty"`
 }
 
 // GraphNode is the structured MCP representation of a graph node. Query roots
@@ -362,7 +363,7 @@ func locationsFor(blob *index.Blob, off int) []GraphLocation {
 	line := blob.LineOf(off)
 	out := make([]GraphLocation, 0, len(blob.Files))
 	for _, file := range blob.Files {
-		out = append(out, GraphLocation{Repo: file.Repo, Path: file.RelPath, AbsPath: file.AbsPath, Line: line})
+		out = append(out, GraphLocation{Repo: file.Repo, Path: file.RelPath, AbsPath: file.AbsPath, Line: line, BlobSHA: blob.SHA})
 	}
 	return out
 }
@@ -486,6 +487,18 @@ type graphTool struct {
 
 func (t *graphTool) Name() string { return t.name }
 
+func (t *graphTool) Specification() mcp.ToolSpecification {
+	return specificationForDescriptor(t.Descriptor())
+}
+
+func specificationForDescriptor(desc map[string]interface{}) mcp.ToolSpecification {
+	return mcp.NewToolSpecification(
+		desc["name"].(string),
+		desc["description"].(string),
+		desc["inputSchema"].(map[string]interface{}),
+	)
+}
+
 func (t *graphTool) Descriptor() map[string]interface{} {
 	depth := map[string]interface{}{
 		"type":        "integer",
@@ -536,13 +549,9 @@ func (t *graphTool) Descriptor() map[string]interface{} {
 	case "impact_analysis":
 		description = "Return the transitive closure of graph dependents for exactly one file or symbol, up to the requested depth."
 		schema["properties"] = map[string]interface{}{
-			"file":   map[string]interface{}{"type": "string", "minLength": 1, "description": "Absolute, repo-relative, or suffix file path."},
-			"symbol": map[string]interface{}{"type": "string", "minLength": 1, "description": "Exact symbol name."},
+			"file":   map[string]interface{}{"type": "string", "minLength": 1, "description": "Absolute, repo-relative, or suffix file path. Supply exactly one of file or symbol."},
+			"symbol": map[string]interface{}{"type": "string", "minLength": 1, "description": "Exact symbol name. Supply exactly one of file or symbol."},
 			"depth":  depth,
-		}
-		schema["oneOf"] = []interface{}{
-			map[string]interface{}{"required": []string{"file"}},
-			map[string]interface{}{"required": []string{"symbol"}},
 		}
 	}
 	if properties, ok := schema["properties"].(map[string]interface{}); ok {
@@ -578,21 +587,21 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 			MinConfidence string `json:"min_confidence"`
 		}
 		if err := decodeGraphArgs(raw, &args); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		args.Symbol = strings.TrimSpace(args.Symbol)
 		if err := validateGraphString("symbol", args.Symbol); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		hops := defaultTraceDepth
 		if args.Hops != nil {
 			hops = *args.Hops
 		}
 		if err := validateDepth("hops", hops); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		if minConfidence, err = graph.ParseMinConfidence(args.MinConfidence); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		result, err = snap.traceCalls(ctx, args.Symbol, hops, minConfidence)
 	case "trace_consumers":
@@ -601,14 +610,14 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 			MinConfidence string `json:"min_confidence"`
 		}
 		if err := decodeGraphArgs(raw, &args); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		args.Name = strings.TrimSpace(args.Name)
 		if err := validateGraphString("name", args.Name); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		if minConfidence, err = graph.ParseMinConfidence(args.MinConfidence); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		result, err = snap.traceConsumers(ctx, args.Name, minConfidence)
 	case "trace_hierarchy":
@@ -618,21 +627,21 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 			MinConfidence string `json:"min_confidence"`
 		}
 		if err := decodeGraphArgs(raw, &args); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		args.Symbol = strings.TrimSpace(args.Symbol)
 		if err := validateGraphString("symbol", args.Symbol); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		hops := defaultTraceDepth
 		if args.Hops != nil {
 			hops = *args.Hops
 		}
 		if err := validateDepth("hops", hops); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		if minConfidence, err = graph.ParseMinConfidence(args.MinConfidence); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		result, err = snap.traceHierarchy(ctx, args.Symbol, hops, minConfidence)
 	case "trace_queries":
@@ -642,21 +651,21 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 			MinConfidence string `json:"min_confidence"`
 		}
 		if err := decodeGraphArgs(raw, &args); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		args.Symbol = strings.TrimSpace(args.Symbol)
 		if err := validateGraphString("symbol", args.Symbol); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		hops := defaultTraceDepth
 		if args.Hops != nil {
 			hops = *args.Hops
 		}
 		if err := validateDepth("hops", hops); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		if minConfidence, err = graph.ParseMinConfidence(args.MinConfidence); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		result, err = snap.traceQueries(ctx, args.Symbol, hops, minConfidence)
 	case "trace_renders":
@@ -666,21 +675,21 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 			MinConfidence string `json:"min_confidence"`
 		}
 		if err := decodeGraphArgs(raw, &args); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		args.Symbol = strings.TrimSpace(args.Symbol)
 		if err := validateGraphString("symbol", args.Symbol); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		hops := defaultTraceDepth
 		if args.Hops != nil {
 			hops = *args.Hops
 		}
 		if err := validateDepth("hops", hops); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		if minConfidence, err = graph.ParseMinConfidence(args.MinConfidence); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		result, err = snap.traceRenders(ctx, args.Symbol, hops, minConfidence)
 	case "impact_analysis":
@@ -691,21 +700,21 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 			MinConfidence string  `json:"min_confidence"`
 		}
 		if err := decodeGraphArgs(raw, &args); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		if (args.File == nil) == (args.Symbol == nil) {
-			return invalidGraphArgs(fmt.Errorf("exactly one of file or symbol is required")), nil
+			return invalidGraphArgs(fmt.Errorf("exactly one of file or symbol is required"), snap), nil
 		}
 		file, symbol := "", ""
 		if args.File != nil {
 			file = strings.TrimSpace(*args.File)
 			if err := validateGraphString("file", file); err != nil {
-				return invalidGraphArgs(err), nil
+				return invalidGraphArgs(err, snap), nil
 			}
 		} else {
 			symbol = strings.TrimSpace(*args.Symbol)
 			if err := validateGraphString("symbol", symbol); err != nil {
-				return invalidGraphArgs(err), nil
+				return invalidGraphArgs(err, snap), nil
 			}
 		}
 		depth := defaultImpactDepth
@@ -713,10 +722,10 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 			depth = *args.Depth
 		}
 		if err := validateDepth("depth", depth); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		if minConfidence, err = graph.ParseMinConfidence(args.MinConfidence); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		result, err = snap.impactAnalysis(ctx, file, symbol, depth, minConfidence)
 	default:
@@ -725,7 +734,7 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 	if err != nil {
 		return nil, err
 	}
-	return graphStructuredResult(result), nil
+	return snap.graphStructuredResult(result), nil
 }
 
 func decodeGraphArgs(raw json.RawMessage, dst interface{}) error {
@@ -771,16 +780,46 @@ func validateDepth(field string, value int) error {
 	return nil
 }
 
-func invalidGraphArgs(err error) map[string]interface{} {
-	return mcp.TextResult("invalid arguments: "+err.Error(), true)
+func invalidGraphArgs(err error, snapshots ...*graphSnapshot) map[string]interface{} {
+	message := "invalid arguments: " + err.Error()
+	if len(snapshots) > 0 && snapshots[0] != nil {
+		return snapshots[0].errorResult("invalid_arguments", message)
+	}
+	return mcp.StructuredToolError("invalid_arguments", message, mcp.SnapshotIdentity{Cacheable: false})
 }
 
-func graphStructuredResult(result GraphQueryResult) map[string]interface{} {
-	return mcp.StructuredResult(
+func (s *graphSnapshot) graphStructuredResult(result GraphQueryResult) map[string]interface{} {
+	identity := s.identity()
+	for _, node := range result.Nodes {
+		identity.BlobSHAs = append(identity.BlobSHAs, node.BlobSHA)
+	}
+	for _, edge := range result.Edges {
+		identity.BlobSHAs = append(identity.BlobSHAs, edge.Evidence.BlobSHA)
+	}
+	return mcp.StructuredResultWithSnapshot(
 		fmt.Sprintf("%s returned %d node(s) and %d edge(s)", result.Tool, len(result.Nodes), len(result.Edges)),
 		result,
 		false,
+		identity,
 	)
+}
+
+func (s *graphSnapshot) identity(blobSHAs ...string) mcp.SnapshotIdentity {
+	return mcp.SnapshotIdentity{
+		Cacheable:         true,
+		CorpusFingerprint: s.corpusFingerprint,
+		GraphGeneration:   s.graph.Generation(),
+		GraphBuildID:      s.buildID,
+		BlobSHAs:          blobSHAs,
+	}.Normalize()
+}
+
+func (s *graphSnapshot) structuredResult(text string, structured any, isError bool, blobSHAs ...string) map[string]interface{} {
+	return mcp.StructuredResultWithSnapshot(text, structured, isError, s.identity(blobSHAs...))
+}
+
+func (s *graphSnapshot) errorResult(code, message string, blobSHAs ...string) map[string]interface{} {
+	return mcp.StructuredToolError(code, message, s.identity(blobSHAs...))
 }
 
 func (s *graphSnapshot) traceCalls(ctx context.Context, symbol string, hops int, minConfidence graph.ConfidenceTier) (GraphQueryResult, error) {

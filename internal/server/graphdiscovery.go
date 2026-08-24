@@ -40,6 +40,10 @@ type discoveryTool struct {
 
 func (t *discoveryTool) Name() string { return t.name }
 
+func (t *discoveryTool) Specification() mcp.ToolSpecification {
+	return specificationForDescriptor(t.Descriptor())
+}
+
 func (t *discoveryTool) Descriptor() map[string]interface{} {
 	schema := map[string]interface{}{
 		"type":                 "object",
@@ -70,6 +74,14 @@ func (t *discoveryTool) Descriptor() map[string]interface{} {
 				"minLength": 1,
 				"description": "Relative file path within the repository. If not an exact match," +
 					" the tool falls back to suffix matching (e.g. 'OrderService.cs' finds 'src/Services/OrderService.cs').",
+			},
+			"start_line": map[string]interface{}{
+				"type": "integer", "minimum": 1,
+				"description": "Optional first 1-based line to return (default 1).",
+			},
+			"end_line": map[string]interface{}{
+				"type": "integer", "minimum": 1,
+				"description": "Optional inclusive final line; omitted reads to the file or tool limit.",
 			},
 		}
 		schema["required"] = []string{"path"}
@@ -138,7 +150,7 @@ func (t *discoveryTool) Call(ctx context.Context, raw json.RawMessage) (map[stri
 			Filter *string `json:"filter"`
 		}
 		if err := decodeOptionalArgs(raw, &args); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		filter := ""
 		if args.Filter != nil {
@@ -148,7 +160,7 @@ func (t *discoveryTool) Call(ctx context.Context, raw json.RawMessage) (map[stri
 
 	case "graph_schema":
 		if err := rejectExtraArgs(raw); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		return snap.graphSchemaResult(), nil
 
@@ -160,11 +172,11 @@ func (t *discoveryTool) Call(ctx context.Context, raw json.RawMessage) (map[stri
 			EndLine   *int    `json:"end_line"`
 		}
 		if err := decodeOptionalArgs(raw, &args); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		args.Path = strings.TrimSpace(args.Path)
 		if args.Path == "" {
-			return invalidGraphArgs(fmt.Errorf("path must not be empty")), nil
+			return invalidGraphArgs(fmt.Errorf("path must not be empty"), snap), nil
 		}
 		repo := ""
 		if args.Repo != nil {
@@ -190,28 +202,28 @@ func (t *discoveryTool) Call(ctx context.Context, raw json.RawMessage) (map[stri
 			MinConfidence string `json:"min_confidence"`
 		}
 		if err := decodeGraphArgs(raw, &args); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		args.Symbol = strings.TrimSpace(args.Symbol)
 		if err := validateGraphString("symbol", args.Symbol); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		hops := defaultTraceDepth
 		if args.Hops != nil {
 			hops = *args.Hops
 		}
 		if err := validateDepth("hops", hops); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		minConfidence, err := graph.ParseMinConfidence(args.MinConfidence)
 		if err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		result, err := snap.graphNeighbors(ctx, args.Symbol, hops, minConfidence)
 		if err != nil {
 			return nil, err
 		}
-		return graphStructuredResult(result), nil
+		return snap.graphStructuredResult(result), nil
 
 	case "list_symbols":
 		var args struct {
@@ -220,7 +232,7 @@ func (t *discoveryTool) Call(ctx context.Context, raw json.RawMessage) (map[stri
 			Query *string `json:"query"`
 		}
 		if err := decodeOptionalArgs(raw, &args); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		kind, repo, query := "", "", ""
 		if args.Kind != nil {
@@ -233,7 +245,7 @@ func (t *discoveryTool) Call(ctx context.Context, raw json.RawMessage) (map[stri
 			query = strings.TrimSpace(*args.Query)
 		}
 		if kind == "" && repo == "" && query == "" {
-			return invalidGraphArgs(fmt.Errorf("at least one of kind, repo, or query is required")), nil
+			return invalidGraphArgs(fmt.Errorf("at least one of kind, repo, or query is required"), snap), nil
 		}
 		return snap.listSymbols(kind, repo, query), nil
 
@@ -243,11 +255,11 @@ func (t *discoveryTool) Call(ctx context.Context, raw json.RawMessage) (map[stri
 			Prefix *string `json:"prefix"`
 		}
 		if err := decodeGraphArgs(raw, &args); err != nil {
-			return invalidGraphArgs(err), nil
+			return invalidGraphArgs(err, snap), nil
 		}
 		args.Repo = strings.TrimSpace(args.Repo)
 		if args.Repo == "" {
-			return invalidGraphArgs(fmt.Errorf("repo must not be empty")), nil
+			return invalidGraphArgs(fmt.Errorf("repo must not be empty"), snap), nil
 		}
 		prefix := ""
 		if args.Prefix != nil {
@@ -343,7 +355,7 @@ func (s *graphSnapshot) listRepos(filter string) map[string]interface{} {
 	if r.Repos == nil {
 		r.Repos = []repoSummary{}
 	}
-	return mcp.StructuredResult(
+	return s.structuredResult(
 		fmt.Sprintf("list_repos: %d repositories", len(repos)),
 		r, false,
 	)
@@ -351,7 +363,7 @@ func (s *graphSnapshot) listRepos(filter string) map[string]interface{} {
 
 func (s *graphSnapshot) graphSchemaResult() map[string]interface{} {
 	s.ensureSchema()
-	return mcp.StructuredResult(
+	return s.structuredResult(
 		fmt.Sprintf("graph_schema: generation %d, build %s, %d nodes (%d kinds), %d edges (%d types)",
 			s.schemaInfo.Generation, s.schemaInfo.BuildID,
 			s.schemaInfo.TotalNodes, len(s.schemaInfo.NodeKinds),
@@ -363,6 +375,7 @@ func (s *graphSnapshot) graphSchemaResult() map[string]interface{} {
 type sourceResult struct {
 	Repo      string `json:"repo"`
 	Path      string `json:"path"`
+	BlobSHA   string `json:"blob_sha"`
 	Lines     int    `json:"lines"`
 	StartLine int    `json:"start_line"`
 	EndLine   int    `json:"end_line"`
@@ -376,9 +389,9 @@ func (s *graphSnapshot) readSource(repo, path string, startLine, endLine int) (m
 	blob, foundRepo, foundPath := s.findBlob(repo, path)
 	if blob == nil {
 		if repo != "" {
-			return mcp.TextResult(fmt.Sprintf("file not found: %s in repo %s", path, repo), true), nil
+			return s.errorResult("not_found", fmt.Sprintf("file not found: %s in repo %s", path, repo)), nil
 		}
-		return mcp.TextResult(fmt.Sprintf("file not found: %s", path), true), nil
+		return s.errorResult("not_found", fmt.Sprintf("file not found: %s", path)), nil
 	}
 
 	lines := bytes.Split(blob.Content, []byte("\n"))
@@ -391,7 +404,7 @@ func (s *graphSnapshot) readSource(repo, path string, startLine, endLine int) (m
 		endLine = totalLines
 	}
 	if startLine > totalLines {
-		return mcp.TextResult(fmt.Sprintf("start_line %d exceeds file length (%d lines)", startLine, totalLines), true), nil
+		return s.errorResult("invalid_arguments", fmt.Sprintf("start_line %d exceeds file length (%d lines)", startLine, totalLines), blob.SHA), nil
 	}
 
 	selected := lines[startLine-1 : endLine]
@@ -401,15 +414,16 @@ func (s *graphSnapshot) readSource(repo, path string, startLine, endLine int) (m
 	r := sourceResult{
 		Repo:      foundRepo,
 		Path:      foundPath,
+		BlobSHA:   blob.SHA,
 		Lines:     totalLines,
 		StartLine: startLine,
 		EndLine:   endLine,
 		Truncated: truncated,
 		Content:   content,
 	}
-	return mcp.StructuredResult(
+	return s.structuredResult(
 		content,
-		r, false,
+		r, false, blob.SHA,
 	), nil
 }
 
@@ -457,11 +471,12 @@ func (s *graphSnapshot) graphNeighbors(ctx context.Context, symbol string, hops 
 }
 
 type symbolEntry struct {
-	Name string `json:"name"`
-	Kind string `json:"kind"`
-	Repo string `json:"repo,omitempty"`
-	Path string `json:"path,omitempty"`
-	Line int    `json:"line,omitempty"`
+	Name    string `json:"name"`
+	Kind    string `json:"kind"`
+	Repo    string `json:"repo,omitempty"`
+	Path    string `json:"path,omitempty"`
+	Line    int    `json:"line,omitempty"`
+	BlobSHA string `json:"blob_sha"`
 }
 
 func (s *graphSnapshot) listSymbols(kind, repo, query string) map[string]interface{} {
@@ -481,7 +496,7 @@ func (s *graphSnapshot) listSymbols(kind, repo, query string) map[string]interfa
 				continue
 			}
 
-			entry := symbolEntry{Name: name, Kind: meta.Kind}
+			entry := symbolEntry{Name: name, Kind: meta.Kind, BlobSHA: key.BlobSHA}
 			if len(meta.Locations) > 0 {
 				entry.Repo = meta.Locations[0].Repo
 				entry.Path = meta.Locations[0].Path
@@ -525,9 +540,13 @@ done:
 	if r.Symbols == nil {
 		r.Symbols = []symbolEntry{}
 	}
-	return mcp.StructuredResult(
+	var blobSHAs []string
+	for _, entry := range results {
+		blobSHAs = append(blobSHAs, entry.BlobSHA)
+	}
+	return s.structuredResult(
 		fmt.Sprintf("list_symbols: %d result(s)", len(results)),
-		r, false,
+		r, false, blobSHAs...,
 	)
 }
 
@@ -544,7 +563,7 @@ func (s *graphSnapshot) fileTree(repo, prefix string) (map[string]interface{}, e
 
 	files := s.repoFiles[repo]
 	if files == nil {
-		return mcp.TextResult(fmt.Sprintf("repository not found: %s", repo), true), nil
+		return s.errorResult("not_found", fmt.Sprintf("repository not found: %s", repo)), nil
 	}
 
 	var paths []string
@@ -571,7 +590,7 @@ func (s *graphSnapshot) fileTree(repo, prefix string) (map[string]interface{}, e
 	if r.Files == nil {
 		r.Files = []string{}
 	}
-	return mcp.StructuredResult(
+	return s.structuredResult(
 		fmt.Sprintf("file_tree: %d file(s) in %s", len(paths), repo),
 		r, false,
 	), nil

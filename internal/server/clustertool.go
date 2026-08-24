@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"moedex/internal/graph"
@@ -32,6 +33,10 @@ func (g *GraphToolset) ClusterTool() mcp.ToolHandler { return &listClustersTool{
 type listClustersTool struct{ owner *GraphToolset }
 
 func (t *listClustersTool) Name() string { return "list_clusters" }
+
+func (t *listClustersTool) Specification() mcp.ToolSpecification {
+	return specificationForDescriptor(t.Descriptor())
+}
 
 func (t *listClustersTool) Descriptor() map[string]interface{} {
 	return map[string]interface{}{
@@ -137,7 +142,7 @@ func (t *listClustersTool) Call(ctx context.Context, raw json.RawMessage) (map[s
 		if snapshot.clusterErr != nil {
 			result.Guidance += ": " + snapshot.clusterErr.Error()
 		}
-		return mcp.StructuredResult("list_clusters unavailable: "+result.Guidance, result, false), nil
+		return snapshot.structuredResult("list_clusters unavailable: "+result.Guidance, result, false), nil
 	}
 	sidecar := snapshot.clusters
 	if sidecar.Status == cluster.StatusOverCap {
@@ -147,7 +152,7 @@ func (t *listClustersTool) Call(ctx context.Context, raw json.RawMessage) (map[s
 			EligibleNodes: sidecar.EligibleNodes, EligibleEdges: sidecar.EligibleEdges, Cap: sidecar.Cap,
 			Guidance: fmt.Sprintf("eligible graph has %d nodes, above cap %d; raise MOEDEX_GRAPH_CLUSTER_MAX_NODES and rebuild", sidecar.EligibleNodes, sidecar.Cap),
 		}
-		return mcp.StructuredResult("list_clusters unavailable: "+result.Guidance, result, false), nil
+		return snapshot.structuredResult("list_clusters unavailable: "+result.Guidance, result, false), nil
 	}
 	if sidecar.Status == cluster.StatusUnderCovered {
 		result := clusterUnavailableResult{
@@ -156,7 +161,7 @@ func (t *listClustersTool) Call(ctx context.Context, raw json.RawMessage) (map[s
 			EligibleNodes: sidecar.EligibleNodes, EligibleEdges: sidecar.EligibleEdges, Cap: sidecar.Cap,
 			Guidance: fmt.Sprintf("eligible topology covers only %d of %d graph nodes (<1%%); improve edge resolution or rebuild before treating fragments as communities", sidecar.EligibleNodes, sidecar.ObservedNodes),
 		}
-		return mcp.StructuredResult("list_clusters unavailable: "+result.Guidance, result, false), nil
+		return snapshot.structuredResult("list_clusters unavailable: "+result.Guidance, result, false), nil
 	}
 
 	if args.ClusterID == nil {
@@ -173,7 +178,7 @@ func (t *listClustersTool) Call(ctx context.Context, raw json.RawMessage) (map[s
 			ObservedNodes: sidecar.ObservedNodes, ObservedEdges: sidecar.ObservedEdges,
 			EligibleNodes: sidecar.EligibleNodes, EligibleEdges: sidecar.EligibleEdges,
 			Offset: offset, Limit: limit, Total: len(sidecar.Clusters), Clusters: summaries}
-		return mcp.StructuredResult(fmt.Sprintf("list_clusters: %d of %d summaries", len(summaries), len(sidecar.Clusters)), result, false), nil
+		return snapshot.structuredResult(fmt.Sprintf("list_clusters: %d of %d summaries", len(summaries), len(sidecar.Clusters)), result, false), nil
 	}
 
 	for i, community := range sidecar.Clusters {
@@ -196,9 +201,15 @@ func (t *listClustersTool) Call(ctx context.Context, raw json.RawMessage) (map[s
 			ObservedNodes: sidecar.ObservedNodes, ObservedEdges: sidecar.ObservedEdges,
 			EligibleNodes: sidecar.EligibleNodes, EligibleEdges: sidecar.EligibleEdges,
 			Offset: offset, Limit: limit, TotalMembers: community.MemberCount, Cluster: paged}
-		return mcp.StructuredResult(fmt.Sprintf("list_clusters: cluster %d members %d-%d of %d", community.ClusterID, start, end, community.MemberCount), result, false), nil
+		var blobSHAs []string
+		for _, member := range paged.Members {
+			if cut := strings.LastIndexByte(member.ID, ':'); cut > 0 {
+				blobSHAs = append(blobSHAs, member.ID[:cut])
+			}
+		}
+		return snapshot.structuredResult(fmt.Sprintf("list_clusters: cluster %d members %d-%d of %d", community.ClusterID, start, end, community.MemberCount), result, false, blobSHAs...), nil
 	}
-	return mcp.TextResult(fmt.Sprintf("cluster_id %d not found", *args.ClusterID), true), nil
+	return snapshot.errorResult("not_found", fmt.Sprintf("cluster_id %d not found", *args.ClusterID)), nil
 }
 
 func pageEnd(offset, limit, total int) int {

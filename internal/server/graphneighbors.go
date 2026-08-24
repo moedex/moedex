@@ -107,18 +107,43 @@ func (g *GraphToolset) Neighbors(ctx context.Context, blocks []contextwin.Contex
 // NeighborsWithConfidence applies minConfidence before traversal, so a weak
 // edge can neither be returned nor act as a bridge to a later node.
 func (g *GraphToolset) NeighborsWithConfidence(ctx context.Context, blocks []contextwin.ContextBlock, depth int, minConfidence graph.ConfidenceTier) ([]mcp.BlockNeighbors, error) {
+	result, err := g.NeighborsWithSnapshot(ctx, blocks, depth, minConfidence)
+	return result.Neighbors, err
+}
+
+// NeighborsWithSnapshot captures annotations and graph identity from one
+// acquisition so a concurrent reload cannot tear the response stamp.
+func (g *GraphToolset) NeighborsWithSnapshot(ctx context.Context, blocks []contextwin.ContextBlock, depth int, minConfidence graph.ConfidenceTier) (mcp.GraphAnnotationResult, error) {
 	if depth <= 0 || len(blocks) == 0 {
-		return nil, nil
+		return mcp.GraphAnnotationResult{}, nil
 	}
 	if depth > maxGraphDepth {
 		depth = maxGraphDepth
 	}
 	snap := g.acquire()
 	if snap == nil {
-		return nil, nil
+		return mcp.GraphAnnotationResult{}, nil
 	}
 	defer snap.wg.Done()
-	return snap.neighbors(ctx, blocks, depth, minConfidence)
+	neighbors, err := snap.neighbors(ctx, blocks, depth, minConfidence)
+	if err != nil {
+		return mcp.GraphAnnotationResult{}, err
+	}
+	identity := snap.identity()
+	for _, block := range blocks {
+		identity.BlobSHAs = append(identity.BlobSHAs, block.BlobSHA)
+	}
+	for _, annotation := range neighbors {
+		for _, bucket := range [][]mcp.Neighbor{annotation.Callers, annotation.Callees, annotation.Consumers, annotation.Publishers, annotation.DependsOn, annotation.SimilarTo} {
+			for _, neighbor := range bucket {
+				if cut := strings.LastIndexByte(neighbor.ID, ':'); cut > 0 {
+					identity.BlobSHAs = append(identity.BlobSHAs, neighbor.ID[:cut])
+				}
+				identity.BlobSHAs = append(identity.BlobSHAs, neighbor.EvidenceBlobSHA)
+			}
+		}
+	}
+	return mcp.GraphAnnotationResult{Neighbors: neighbors, Snapshot: identity.Normalize()}, nil
 }
 
 func (s *graphSnapshot) neighbors(ctx context.Context, blocks []contextwin.ContextBlock, depth int, minConfidence graph.ConfidenceTier) ([]mcp.BlockNeighbors, error) {
@@ -322,15 +347,16 @@ func neighborWeight(n mcp.Neighbor) float64 {
 func (s *graphSnapshot) neighborOf(key diskgraph.Key, rel graphRelation, direction string, hops int, anchor string) mcp.Neighbor {
 	meta := s.nodes[key]
 	neighbor := mcp.Neighbor{
-		ID:         keyID(key),
-		Symbol:     meta.Symbol,
-		Kind:       meta.Kind,
-		Edge:       rel.Type.String(),
-		Direction:  direction,
-		Hops:       hops,
-		Anchor:     anchor,
-		Confidence: graph.ConfidenceOf(rel.Confidence),
-		Similarity: rel.Similarity,
+		ID:              keyID(key),
+		Symbol:          meta.Symbol,
+		Kind:            meta.Kind,
+		Edge:            rel.Type.String(),
+		Direction:       direction,
+		Hops:            hops,
+		Anchor:          anchor,
+		Confidence:      graph.ConfidenceOf(rel.Confidence),
+		Similarity:      rel.Similarity,
+		EvidenceBlobSHA: rel.Evidence.BlobSHA,
 	}
 	locations := meta.Locations
 	if locations == nil {

@@ -32,6 +32,12 @@ Add an **opt-in structured result mode** to `search_context`. Default behavior i
 unchanged (text), preserving every existing consumer and [0009](./0009-agent-context-api.md)'s
 contract byte-for-byte.
 
+**2026-08-24 amendment:** [0022](./0022-mcp-sdk-contract-and-snapshot-identity.md)
+supersedes the opt-in portion of this decision. `structuredContent` is now always
+present and validates against the advertised output schema; `format` controls only
+the text fallback. Blocks also carry the canonical indexed `blob_sha`, while the
+numeric `blob` remains a process/snapshot-local provenance field.
+
 - New optional arg `format` on the tool: `"text"` (default) | `"structured"`.
   Add it to `toolDescriptor` and `callParams.Arguments` (`internal/mcp/mcp.go:368-391`).
 - When `format == "structured"`, `callTool` returns the window as a JSON object in

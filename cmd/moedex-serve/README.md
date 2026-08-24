@@ -308,6 +308,35 @@ Only `query` is required; `token_budget`, `top_k`, `format`, `graph_depth`, and
 optional (`top_k` defaults to `-top-k`). An empty query is reported as a tool-level
 error rather than a protocol error.
 
+All 19 tools advertise both input and output JSON schemas. Every call returns typed
+`structuredContent` plus the existing text fallback; `format` changes only that text
+presentation. Tools are annotated read-only, non-destructive, idempotent, and
+closed-world. Schema roots are closed objects without composition keywords for host
+portability; each output lists its success properties plus the optional structured
+error `{"error":{"code":"...","message":"..."}}`. Runtime validation remains
+authoritative for constraints such as `impact_analysis` requiring exactly one of
+`file` or `symbol`.
+
+Every result also carries `_meta["dev.moedex/snapshot"]`. Rank/graph responses name
+the exact acquired corpus fingerprint and graph generation/build ID; returned source
+is anchored by sorted, unique Git `blob_shas`. Compare the full graph tuple before
+combining separate calls and prefer `blob_sha` for content cache keys. Live navigation
+hashes the queried and returned files using Git's blob SHA-1. Unreadable files remain
+in the useful result under `unanchored_paths` and force `cacheable:false`. Tool
+errors are always non-cacheable; anchored `ready_empty` and `unsupported` navigation
+answers remain cacheable. `_meta["dev.moedex/server"]` identifies the running binary
+on every success and error, independently of whether a data snapshot was acquired.
+
+The MCP lifecycle uses the official Go SDK. Streamable HTTP discovery serves current
+protocol `2026-07-28`; initialize-era clients negotiate at `2025-11-25`. Both reject
+JSON-RPC batches. Discovery and `tools/list` are publicly cacheable for five minutes,
+and the process-fixed catalog advertises `listChanged:false`. Current HTTP requests
+must supply `MCP-Protocol-Version`, `Mcp-Method`, and `Mcp-Name` for tool calls.
+`serverInfo.version` is the running build (`tag+commit` or `dev+commit`, with
+`.dirty.<source-digest>` appended for canonical modified builds). Direct unstamped
+dirty builds report `.dirty.unknown`; canonical install targets require a clean
+worktree.
+
 The token estimate is a hard upper bound: `token_estimate` never exceeds the
 requested `token_budget`. If the best symbol/source block is too large it is narrowed
 around the highest-ranked salient line and reports `clipped: true` on both the block
@@ -336,9 +365,9 @@ Text renders this as `Symbol [Tier] (repo/path:line)`.
 
 `graph_depth` controls the radius: **1** by default (the direct neighborhood), up to
 10, and **0 turns the annotation off**. Each lane traverses in one fixed direction, so
-`graph_depth: 2` means "callers of callers", not an undirected blob. Both output
-formats carry it — `text` as one `[graph] ...` line under each block header,
-`structured` as a typed `neighbors` object per block.
+`graph_depth: 2` means "callers of callers", not an undirected blob. Both text
+fallback presentations carry it as one `[graph] ...` line under each block header,
+and structured output always carries a typed `neighbors` object per block.
 
 `min_confidence` accepts `Candidate`, `Pattern`, `Verified`, or `Proven` and defaults
 to `Pattern`. The same argument is available on every standalone traversal tool.
@@ -400,12 +429,11 @@ sweep. A group without an exact positive—or with partial, unsupported, unavail
 or multi-context coverage—retains the existing Pattern siblings; an empty response
 alone never suppresses them.
 
-The MCP server applies hardening defaults: a 30 s per-call timeout, 8-way handler
-concurrency, a 1 MiB cap on a single JSON-RPC message, and an 8 KiB cap on the
-query string. Requests are decoded by a single reader, handled by a bounded
-worker pool, and written by a single serialized writer, so responses may complete
-out of order (legal under JSON-RPC — each reply carries its request id) but output
-framing is never interleaved.
+The MCP server applies hardening defaults around the SDK: a 30 s per-call timeout,
+8-way handler concurrency, a 1 MiB cap on a single request, and an 8 KiB cap on the
+query string. Request cancellation propagates through Streamable HTTP and into
+search, graph, and navigation work; panic isolation prevents a handler failure from
+terminating the process.
 
 ## The dense arm
 

@@ -74,6 +74,9 @@ type RankCorpus struct {
 	tokenCached bool                    // true when the token index was loaded from a persisted sidecar
 	symsCached  bool                    // true when the symbol index was loaded from a persisted sidecar
 	searcher    *mcp.IndexSearcher
+	// corpusFingerprint is captured from the shard/content set at open time and
+	// remains bound to this RankCorpus across hot reloads.
+	corpusFingerprint string
 	// corpusRoot is the directory the corpus was built under, recovered from the
 	// shard dir's manifest.json (parity.Manifest.Root). Empty if the manifest is
 	// absent/unreadable. It lets the MCP layer emit each hit's full
@@ -183,7 +186,7 @@ func OpenRank(ctx context.Context, dir string, cfg RankConfig) (*RankCorpus, err
 	searcher.SetEnclosingBytes(syms.EnclosingBytesFunc())
 
 	ok = true // hand cs ownership to the RankCorpus; the deferred close is now a no-op
-	return &RankCorpus{ix: ix, ti: ti, syms: syms, store: store, content: cs, denseCached: cached, tokenCached: tokenCached, symsCached: symsCached, searcher: searcher, corpusRoot: loadCorpusRoot(dir)}, nil
+	return &RankCorpus{ix: ix, ti: ti, syms: syms, store: store, content: cs, denseCached: cached, tokenCached: tokenCached, symsCached: symsCached, searcher: searcher, corpusRoot: loadCorpusRoot(dir), corpusFingerprint: corpusFingerprint(paths)}, nil
 }
 
 // loadCorpusRoot best-effort reads the corpus build root from the shard dir's
@@ -666,6 +669,25 @@ func chunkOverlap(cfg RankConfig) int {
 // ranked-context searcher.
 func (rc *RankCorpus) SearchContext(ctx context.Context, query string, tokenBudget, topK int) (contextwin.ContextWindow, error) {
 	return rc.searcher.SearchContext(ctx, query, tokenBudget, topK)
+}
+
+// SearchContextWithSnapshot returns data and identity while the caller holds
+// the same RankCorpus reference. The hot-swap holder delegates to this method
+// before releasing its acquired generation.
+func (rc *RankCorpus) SearchContextWithSnapshot(ctx context.Context, query string, tokenBudget, topK int) (mcp.ContextSearchResult, error) {
+	result, err := rc.searcher.SearchContextWithSnapshot(ctx, query, tokenBudget, topK)
+	if err != nil {
+		return mcp.ContextSearchResult{}, err
+	}
+	result.Snapshot.CorpusFingerprint = rc.corpusFingerprint
+	result.Snapshot.Cacheable = true
+	for _, block := range result.Window.Blocks {
+		if block.BlobSHA == "" {
+			result.Snapshot.Cacheable = false
+		}
+	}
+	result.Snapshot = result.Snapshot.Normalize()
+	return result, nil
 }
 
 // NumBlobs reports total blobs in the corpus.

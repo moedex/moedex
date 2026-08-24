@@ -32,6 +32,19 @@ func drive(t *testing.T, s *Server, msgs ...interface{}) []response {
 	t.Helper()
 	var in bytes.Buffer
 	enc := json.NewEncoder(&in)
+	needsHandshake := false
+	for _, msg := range msgs {
+		if envelope, ok := msg.(map[string]interface{}); ok {
+			method, _ := envelope["method"].(string)
+			if method != "initialize" && method != "notifications/initialized" {
+				needsHandshake = true
+			}
+		}
+	}
+	if needsHandshake {
+		_ = enc.Encode(legacyInitialize("bootstrap"))
+		_ = enc.Encode(map[string]interface{}{"jsonrpc": "2.0", "method": "notifications/initialized"})
+	}
 	for _, m := range msgs {
 		if err := enc.Encode(m); err != nil {
 			t.Fatal(err)
@@ -48,26 +61,45 @@ func drive(t *testing.T, s *Server, msgs ...interface{}) []response {
 		if err := dec.Decode(&r); err != nil {
 			t.Fatalf("decode response: %v", err)
 		}
+		if string(r.ID) == `"bootstrap"` {
+			continue
+		}
 		resps = append(resps, r)
 	}
 	return resps
 }
 
+func legacyInitialize(id interface{}) map[string]interface{} {
+	return map[string]interface{}{
+		"jsonrpc": "2.0", "id": id, "method": "initialize",
+		"params": map[string]interface{}{
+			"protocolVersion": legacyProtocolVersion,
+			"capabilities":    map[string]interface{}{},
+			"clientInfo":      map[string]interface{}{"name": "moedex-test", "version": "test"},
+		},
+	}
+}
+
 func TestInitializeHandshake(t *testing.T) {
 	s := NewServer(&fakeSearcher{})
-	resps := drive(t, s, map[string]interface{}{
-		"jsonrpc": "2.0", "id": 1, "method": "initialize",
-	})
+	resps := drive(t, s, legacyInitialize(1))
 	if len(resps) != 1 {
 		t.Fatalf("expected 1 response, got %d", len(resps))
 	}
 	res := resps[0].Result.(map[string]interface{})
-	if res["protocolVersion"] != protocolVersion {
-		t.Errorf("protocolVersion = %v, want %v", res["protocolVersion"], protocolVersion)
+	if res["protocolVersion"] != legacyProtocolVersion {
+		t.Errorf("protocolVersion = %v, want %v", res["protocolVersion"], legacyProtocolVersion)
 	}
 	si := res["serverInfo"].(map[string]interface{})
 	if si["name"] != "moedex" {
 		t.Errorf("serverInfo.name = %v, want moedex", si["name"])
+	}
+	if !strings.Contains(res["instructions"].(string), "token_budget") || !strings.Contains(res["instructions"].(string), "ready_empty") {
+		t.Errorf("initialize instructions incomplete: %v", res["instructions"])
+	}
+	tools := res["capabilities"].(map[string]interface{})["tools"].(map[string]interface{})
+	if value, present := tools["listChanged"]; present && value != false {
+		t.Errorf("tools.listChanged=%v want false", tools["listChanged"])
 	}
 }
 
@@ -122,13 +154,19 @@ func TestToolsCallPassesArgsAndReturnsText(t *testing.T) {
 		t.Errorf("searcher got (%q,%d,%d), want (needle,500,7)", fs.gotQuery, fs.gotBudget, fs.gotTopK)
 	}
 	res := resps[0].Result.(map[string]interface{})
-	if res["isError"] != false {
+	if res["isError"] == true {
 		t.Errorf("isError = %v, want false", res["isError"])
 	}
 	content := res["content"].([]interface{})
 	text := content[0].(map[string]interface{})["text"].(string)
 	if !strings.Contains(text, "a.go:3-5") || !strings.Contains(text, "func A()") {
 		t.Errorf("rendered text missing block header/body:\n%s", text)
+	}
+	if _, ok := res["structuredContent"].(map[string]interface{}); !ok {
+		t.Fatalf("default text presentation omitted structuredContent: %T", res["structuredContent"])
+	}
+	if meta, ok := res["_meta"].(map[string]interface{}); !ok || meta[SnapshotMetaKey] == nil {
+		t.Fatalf("default result missing snapshot metadata: %v", res["_meta"])
 	}
 }
 
@@ -153,7 +191,7 @@ func TestToolsCallStructuredFormat(t *testing.T) {
 		},
 	})
 	res := resps[0].Result.(map[string]interface{})
-	if res["isError"] != false {
+	if res["isError"] == true {
 		t.Errorf("isError = %v, want false", res["isError"])
 	}
 	// Text fallback (content) must still be present for clients that ignore structuredContent.
@@ -307,6 +345,17 @@ func TestEmptyQueryIsToolError(t *testing.T) {
 	res := resps[0].Result.(map[string]interface{})
 	if res["isError"] != true {
 		t.Errorf("empty query should set isError=true, got %v", res["isError"])
+	}
+	structured := res["structuredContent"].(map[string]interface{})
+	if structured["error"].(map[string]interface{})["code"] != "tool_error" {
+		t.Fatalf("empty query structured error=%v", structured)
+	}
+	meta := res["_meta"].(map[string]interface{})
+	if meta[SnapshotMetaKey] == nil {
+		t.Fatalf("empty query missing snapshot metadata: %v", meta)
+	}
+	if meta[ServerMetaKey] == nil {
+		t.Fatalf("empty query missing server metadata: %v", meta)
 	}
 }
 

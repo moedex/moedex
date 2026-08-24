@@ -1,13 +1,11 @@
 package mcp
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync/atomic"
 	"testing"
 
 	"moedex/internal/contextwin"
@@ -51,8 +49,8 @@ func TestHTTPInitializeAndToolsList(t *testing.T) {
 		t.Fatalf("initialize error: %+v", resp.Error)
 	}
 	result := resp.Result.(map[string]interface{})
-	if result["protocolVersion"] != protocolVersion {
-		t.Errorf("protocolVersion = %v, want %v", result["protocolVersion"], protocolVersion)
+	if result["protocolVersion"] != legacyProtocolVersion {
+		t.Errorf("protocolVersion = %v, want %v", result["protocolVersion"], legacyProtocolVersion)
 	}
 	si := result["serverInfo"].(map[string]interface{})
 	if si["name"] != "moedex" {
@@ -132,8 +130,8 @@ func TestHTTPParseError(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("malformed body status = %d, want 400", rec.Code)
 	}
-	if resp := decodeRPC(t, rec); resp.Error == nil || resp.Error.Code != codeParseError {
-		t.Errorf("want parse error %d, got %+v", codeParseError, resp.Error)
+	if !strings.Contains(rec.Body.String(), "malformed payload") {
+		t.Errorf("SDK parse error missing from %q", rec.Body.String())
 	}
 }
 
@@ -154,11 +152,8 @@ func TestHTTPOversizedRequestRejected(t *testing.T) {
 func TestHTTPUnknownMethod(t *testing.T) {
 	h := NewServer(&fakeSearcher{}).HTTPHandler()
 	rec := postRPC(t, h, `{"jsonrpc":"2.0","id":9,"method":"does/not/exist"}`)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("unknown method status = %d, want 200", rec.Code)
-	}
-	if resp := decodeRPC(t, rec); resp.Error == nil || resp.Error.Code != codeMethodNotFound {
-		t.Errorf("want method-not-found %d, got %+v", codeMethodNotFound, resp.Error)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("unknown legacy method status = %d, want 400", rec.Code)
 	}
 }
 
@@ -176,85 +171,18 @@ func batchOf(t *testing.T, n int) string {
 	return string(body)
 }
 
-// TestHTTPBatchOversizedRejected confirms a batch array beyond maxBatchSize is
-// rejected outright — with a JSON-RPC invalid-request error and no dispatch at
-// all — rather than processed. Without this cap, a client can pack thousands
-// of tools/call messages into one POST (bounded only by maxRequestBytes) and
-// turn a single request into an unbounded amount of serialized CPU-bound work.
-func TestHTTPBatchOversizedRejected(t *testing.T) {
+// TestHTTPBatchRejected confirms header-less initialize-era clients are pinned
+// to the served 2025-11-25 revision. That prevents the SDK from treating them
+// as pre-2025-06 clients, where JSON-RPC batching was still allowed.
+func TestHTTPBatchRejected(t *testing.T) {
 	fs := &fakeSearcher{}
 	s := NewServer(fs, WithMaxBatchSize(4))
 	h := s.HTTPHandler()
 
-	rec := postRPC(t, h, batchOf(t, 5)) // one over the cap
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("oversized batch status = %d, want 400", rec.Code)
-	}
-	resp := decodeRPC(t, rec)
-	if resp.Error == nil || resp.Error.Code != codeInvalidRequest {
-		t.Fatalf("want invalid-request error %d, got %+v", codeInvalidRequest, resp.Error)
-	}
-	if fs.gotQuery != "" {
-		t.Errorf("searcher was called with query %q — an oversized batch must be rejected before any dispatch", fs.gotQuery)
-	}
-}
-
-// TestHTTPBatchWithinCapAccepted confirms the cap only rejects batches that
-// exceed it — a batch at or under maxBatchSize still runs and answers every
-// item, so the new guard doesn't regress the legacy-batch behavior.
-func TestHTTPBatchWithinCapAccepted(t *testing.T) {
-	fs := &fakeSearcher{win: contextwin.ContextWindow{TokenEstimate: 1}}
-	s := NewServer(fs, WithMaxBatchSize(4))
-	h := s.HTTPHandler()
-
-	rec := postRPC(t, h, batchOf(t, 4)) // exactly at the cap
-	if rec.Code != http.StatusOK {
-		t.Fatalf("in-cap batch status = %d, want 200", rec.Code)
-	}
-	var resps []response
-	if err := json.Unmarshal(rec.Body.Bytes(), &resps); err != nil {
-		t.Fatalf("decode batch response array: %v\nbody: %s", err, rec.Body.String())
-	}
-	if len(resps) != 4 {
-		t.Fatalf("want 4 responses, got %d", len(resps))
-	}
-}
-
-// cancelAfterFirstSearcher cancels the caller-supplied context as soon as its
-// first call completes, letting the test simulate a request that is
-// cancelled/expired partway through a batch.
-type cancelAfterFirstSearcher struct {
-	calls  int32
-	cancel context.CancelFunc
-}
-
-func (c *cancelAfterFirstSearcher) SearchContext(_ context.Context, q string, _, _ int) (contextwin.ContextWindow, error) {
-	atomic.AddInt32(&c.calls, 1)
-	c.cancel() // simulate the client going away / the request deadline firing
-	return contextwin.ContextWindow{
-		Blocks:        []contextwin.ContextBlock{{RelPath: q + ".go", StartLine: 1, EndLine: 1, Text: "x\n"}},
-		TokenEstimate: 1,
-	}, nil
-}
-
-// TestHTTPBatchStopsOnContextCancellation confirms handleHTTPBatch rechecks
-// ctx.Err() before each item and stops dispatching the rest of the batch once
-// the request context is cancelled, instead of draining every remaining
-// message (each its own CPU-bound tools/call) after the client is already
-// gone.
-func TestHTTPBatchStopsOnContextCancellation(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	cs := &cancelAfterFirstSearcher{cancel: cancel}
-	h := NewServer(cs).HTTPHandler()
-
-	const n = 10
-	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(batchOf(t, n))).WithContext(ctx)
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
-
-	if got := atomic.LoadInt32(&cs.calls); got != 1 {
-		t.Fatalf("dispatched %d of %d batch items after cancellation, want exactly 1 (the loop should stop at the next ctx.Err() check)", got, n)
+	for _, size := range []int{1, 4, 5} {
+		rec := postRPC(t, h, batchOf(t, size))
+		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "batching is not supported") {
+			t.Fatalf("batch size %d status=%d body=%s", size, rec.Code, rec.Body.String())
+		}
 	}
 }

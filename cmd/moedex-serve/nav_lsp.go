@@ -77,6 +77,12 @@ type navTool struct {
 
 func (t *navTool) Name() string { return t.name }
 
+func (t *navTool) Specification() mcp.ToolSpecification { return navSpecification(t.Descriptor()) }
+
+func navSpecification(desc map[string]interface{}) mcp.ToolSpecification {
+	return mcp.NewToolSpecification(desc["name"].(string), desc["description"].(string), desc["inputSchema"].(map[string]interface{}))
+}
+
 func (t *navTool) Descriptor() map[string]interface{} {
 	props := map[string]interface{}{
 		"file":   map[string]interface{}{"type": "string", "description": "Absolute path to the source file (must exist on the daemon host)."},
@@ -90,9 +96,10 @@ func (t *navTool) Descriptor() map[string]interface{} {
 		"name":        t.name,
 		"description": t.desc,
 		"inputSchema": map[string]interface{}{
-			"type":       "object",
-			"properties": props,
-			"required":   []string{"file", "line"},
+			"type":                 "object",
+			"additionalProperties": false,
+			"properties":           props,
+			"required":             []string{"file", "line"},
 		},
 	}
 }
@@ -120,7 +127,7 @@ func (t *navTool) Call(ctx context.Context, raw json.RawMessage) (map[string]int
 		col = 1
 	}
 	result, err := t.run(ctx, t.pool, navigate.Pos{File: a.File, Line: a.Line, Col: col}, a)
-	return navLocationResult(result, err), nil
+	return navLocationResult(ctx, a.File, result, err), nil
 }
 
 // navLocationResult renders the status-preserving position-query result. The
@@ -129,45 +136,51 @@ func (t *navTool) Call(ctx context.Context, raw json.RawMessage) (map[string]int
 // now distinct in both text and structuredContent. In particular, ready_empty
 // never claims the symbol is external; LSP null is not sufficient evidence for
 // that conclusion.
-func navLocationResult(result navigate.LocationQueryResult, err error) map[string]interface{} {
+func navLocationResult(ctx context.Context, queryFile string, result navigate.LocationQueryResult, err error) map[string]interface{} {
 	status := result.Status
 	if err != nil || status == "" {
 		status = navigate.LocationQueryUnavailable
 	}
+	paths := []string{queryFile}
+	for _, location := range result.Locations {
+		paths = append(paths, location.File)
+	}
+	hashes, unanchored := mcp.HashFiles(ctx, paths, 4)
+	identity := navigationIdentity(hashes, unanchored)
 	structured := map[string]interface{}{
 		"status":    string(status),
-		"locations": structuredLocations(result.Locations),
+		"locations": structuredLocations(result.Locations, hashes),
 	}
 
 	if err != nil {
 		structured["message"] = err.Error()
-		return mcp.StructuredResult("unavailable: "+err.Error(), structured, true)
+		return mcp.StructuredResultWithSnapshot("unavailable: "+err.Error(), structured, true, identity)
 	}
 
 	switch status {
 	case navigate.LocationQueryResolved:
 		if len(result.Locations) == 0 {
 			structured["status"] = string(navigate.LocationQueryReadyEmpty)
-			return mcp.StructuredResult("ready_empty: language server returned no locations", structured, false)
+			return mcp.StructuredResultWithSnapshot("ready_empty: language server returned no locations", structured, false, identity)
 		}
 		var b strings.Builder
 		for _, l := range result.Locations {
 			fmt.Fprintf(&b, "%s:%d:%d\n", l.File, l.Start.Line, l.Start.Col)
 		}
-		return mcp.StructuredResult(strings.TrimRight(b.String(), "\n"), structured, false)
+		return mcp.StructuredResultWithSnapshot(strings.TrimRight(b.String(), "\n"), structured, false, identity)
 	case navigate.LocationQueryReadyEmpty:
-		return mcp.StructuredResult("ready_empty: language server returned no locations", structured, false)
+		return mcp.StructuredResultWithSnapshot("ready_empty: language server returned no locations", structured, false, identity)
 	case navigate.LocationQueryUnsupported:
-		return mcp.StructuredResult("unsupported: language server does not implement this navigation method", structured, false)
+		return mcp.StructuredResultWithSnapshot("unsupported: language server does not implement this navigation method", structured, false, identity)
 	default:
-		return mcp.StructuredResult("unavailable: navigation request did not produce an authoritative result", structured, true)
+		return mcp.StructuredResultWithSnapshot("unavailable: navigation request did not produce an authoritative result", structured, true, identity)
 	}
 }
 
-func structuredLocations(locs []navigate.Location) []map[string]interface{} {
+func structuredLocations(locs []navigate.Location, hashes map[string]string) []map[string]interface{} {
 	out := make([]map[string]interface{}, 0, len(locs))
 	for _, loc := range locs {
-		out = append(out, map[string]interface{}{
+		item := map[string]interface{}{
 			"file": loc.File,
 			"start": map[string]interface{}{
 				"line":   loc.Start.Line,
@@ -177,24 +190,58 @@ func structuredLocations(locs []navigate.Location) []map[string]interface{} {
 				"line":   loc.End.Line,
 				"column": loc.End.Col,
 			},
-		})
+		}
+		if sha := hashes[loc.File]; sha != "" {
+			item["blob_sha"] = sha
+		}
+		out = append(out, item)
 	}
 	return out
+}
+
+func navigationIdentity(hashes map[string]string, unanchored []string) mcp.SnapshotIdentity {
+	identity := mcp.SnapshotIdentity{Cacheable: len(hashes) > 0 && len(unanchored) == 0, UnanchoredPaths: unanchored}
+	for _, sha := range hashes {
+		identity.BlobSHAs = append(identity.BlobSHAs, sha)
+	}
+	return identity.Normalize()
 }
 
 // symbolsResult renders a Symbol slice the ADR 0018 pinned way: one
 // "name\tkind\tfile:line:col" line per Symbol (Symbol.String), or "no results"
 // text for an empty slice — shared by both name-based tools below.
-func symbolsResult(syms []navigate.Symbol) map[string]interface{} {
-	if len(syms) == 0 {
-		return mcp.TextResult("no results", false)
+func symbolsResult(ctx context.Context, syms []navigate.Symbol, queriedFiles ...string) map[string]interface{} {
+	paths := append([]string(nil), queriedFiles...)
+	for _, symbol := range syms {
+		paths = append(paths, symbol.Loc.File)
 	}
+	hashes, unanchored := mcp.HashFiles(ctx, paths, 4)
+	identity := navigationIdentity(hashes, unanchored)
+	status := "resolved"
+	text := "no results"
 	var b strings.Builder
 	for _, s := range syms {
 		b.WriteString(s.String())
 		b.WriteByte('\n')
 	}
-	return mcp.TextResult(strings.TrimRight(b.String(), "\n"), false)
+	if len(syms) == 0 {
+		status = "ready_empty"
+	} else {
+		text = strings.TrimRight(b.String(), "\n")
+	}
+	structured := map[string]interface{}{"status": status, "symbols": structuredSymbols(syms, hashes)}
+	return mcp.StructuredResultWithSnapshot(text, structured, false, identity)
+}
+
+func structuredSymbols(symbols []navigate.Symbol, hashes map[string]string) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(symbols))
+	for _, symbol := range symbols {
+		locations := structuredLocations([]navigate.Location{symbol.Loc}, hashes)
+		out = append(out, map[string]interface{}{
+			"name": symbol.Name, "kind": symbol.Kind, "location": locations[0],
+		})
+	}
+	return out
 }
 
 // findSymbolTool is the ADR 0018 Tool 1 — LSP workspace/symbol — a name-based,
@@ -208,12 +255,17 @@ type findSymbolTool struct {
 
 func (t *findSymbolTool) Name() string { return "find_symbol" }
 
+func (t *findSymbolTool) Specification() mcp.ToolSpecification {
+	return navSpecification(t.Descriptor())
+}
+
 func (t *findSymbolTool) Descriptor() map[string]interface{} {
 	return map[string]interface{}{
 		"name":        "find_symbol",
 		"description": "Find symbols by name across a workspace via a real language server (LSP workspace/symbol) — a fuzzy/substring match, not an exact resolver. Returns Symbol[] as name\\tkind\\tfile:line:col, one per line. Route by root; omit lang to merge every language server ALREADY live for that root (a cold root with no live server yet returns no results — warm it first with find_definition/symbols_overview, or pass lang to spawn it directly).",
 		"inputSchema": map[string]interface{}{
-			"type": "object",
+			"type":                 "object",
+			"additionalProperties": false,
 			"properties": map[string]interface{}{
 				"query": map[string]interface{}{"type": "string", "description": "Symbol name to search for (fuzzy/substring, server-dependent)."},
 				"root":  map[string]interface{}{"type": "string", "description": "Absolute path to the workspace root (must exist on the daemon host)."},
@@ -242,7 +294,7 @@ func (t *findSymbolTool) Call(ctx context.Context, raw json.RawMessage) (map[str
 	if err != nil {
 		return mcp.TextResult(fmt.Sprintf("find_symbol failed: %v", err), true), nil
 	}
-	return symbolsResult(syms), nil
+	return symbolsResult(ctx, syms), nil
 }
 
 // symbolsOverviewTool is the ADR 0018 Tool 2 — LSP textDocument/documentSymbol
@@ -254,12 +306,17 @@ type symbolsOverviewTool struct {
 
 func (t *symbolsOverviewTool) Name() string { return "symbols_overview" }
 
+func (t *symbolsOverviewTool) Specification() mcp.ToolSpecification {
+	return navSpecification(t.Descriptor())
+}
+
 func (t *symbolsOverviewTool) Descriptor() map[string]interface{} {
 	return map[string]interface{}{
 		"name":        "symbols_overview",
 		"description": "List every top-level and nested declaration in a file via a real language server (LSP textDocument/documentSymbol), flattened. Returns Symbol[] as name\\tkind\\tfile:line:col, one per line.",
 		"inputSchema": map[string]interface{}{
-			"type": "object",
+			"type":                 "object",
+			"additionalProperties": false,
 			"properties": map[string]interface{}{
 				"file": map[string]interface{}{"type": "string", "description": "Absolute path to the source file (must exist on the daemon host)."},
 			},
@@ -284,5 +341,5 @@ func (t *symbolsOverviewTool) Call(ctx context.Context, raw json.RawMessage) (ma
 	if err != nil {
 		return mcp.TextResult(fmt.Sprintf("symbols_overview failed: %v", err), true), nil
 	}
-	return symbolsResult(syms), nil
+	return symbolsResult(ctx, syms, a.File), nil
 }

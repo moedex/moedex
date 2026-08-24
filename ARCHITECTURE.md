@@ -79,7 +79,7 @@ All library code lives under `internal/`; executables under `cmd/`.
 | eval | [`internal/eval`](internal/eval) | IR-metrics + ranker evaluation harness | `GoldQuery`, `NewBinaryGold`; `RecallAtK`, `PrecisionAtK`, `MRR`, `NDCGAtK`; `Runner`, `NewRunner`, `Evaluate`, `Report`, `QueryReport`; `BuildIndexFromCorpus`, `BuildIndexFromFiles` |
 | parity | [`internal/parity`](internal/parity) | Full-corpus exact-match retrieval parity harness + shard-level freshness | `Config`, `RunConfig`, `Run`; `Build`, `Built`, `FileTable`, `DefaultShardBytes`; `Generate`, `Battery`, `Query`, `Bucket`; `QueryResult`, `Verdict`; `WriteReport`, `ReportMeta`; `Manifest`, `ShardManifest`, `RepoHead`, `WriteManifest`, `LoadManifest`, `DetectChanges`, `Changes`, `Rebuild` |
 | server | [`internal/server`](internal/server) | Warm multi-shard serving spine: mmap'd retrieval + ranked agent context + corpus-wide symbol lookup; online graph query/annotation layer; offline graph build bridge, including `lsp`-tagged Proven CALLS and `onnx`-tagged similarity passes | `Corpus`, `Open`, `(*Corpus) Regex/Literal/NumShards/NumBlobs/Close`; `RankCorpus`, `RankConfig`, `OpenRank`, `(*RankCorpus) SearchContext`; `BuildSidecars`, `BuildGraph`, `BuildGraphWithOptions`, `GraphBuildOptions`, `LSPGraphStats`, `GraphFileName`, `GraphPath`; `GraphToolset`, `OpenGraphTools`, `(*GraphToolset) Tools/Neighbors/Reload/Close`; `GraphNode`, `GraphEdge`, `GraphLocation`, `GraphQueryResult`; `SymbolCorpus`, `SymbolSite`, `OpenSymbols`, `(*SymbolCorpus) References/Definitions/DefiningRepos/ReferencingRepos/Locate/Merged/NumShards/NumNames/Close` |
-| mcp | [`internal/mcp`](internal/mcp) | Serve `search_context` over MCP (JSON-RPC/stdio), each result block fused with its graph neighborhood | `ContextSearcher`; `Server`, `NewServer`, `Serve`; `IndexSearcher`, `NewIndexSearcher`, `SetEnclosingBytes`, `SearchContext`; `GraphAnnotator`, `WithGraphAnnotator`, `Neighbor`, `BlockNeighbors`, `NewBlockNeighbors`, `SortNeighbors`, `TrimNeighbors`, `DefaultGraphDepth`, `MaxGraphDepth`, `MaxNeighborsPerBucket` |
+| mcp | [`internal/mcp`](internal/mcp) | Serve typed search, graph, discovery, and navigation tools through the official MCP SDK over stdio and stateless Streamable HTTP; stamp snapshot-bound result identity | `ContextSearcher`, `SnapshotContextSearcher`; `Server`, `NewServer`, `Serve`; `IndexSearcher`, `NewIndexSearcher`, `SetEnclosingBytes`, `SearchContext`; `GraphAnnotator`, `SnapshotGraphAnnotator`, `WithGraphAnnotator`; `ToolSpecification`, `SnapshotIdentity` |
 | corpus | [`internal/corpus`](internal/corpus) | Corpus acquisition + freshness over glab/git (the only package that shells out to them; **not imported by the engine**) | `Runner`, `ExecRunner`; `Config`, `DefaultGroups`; `Project`, `Enumerate`; `Doctor`, `Report`; `CloneArgs`, `CloneProjects`; `Reconcile`, `PlanSync`, `SyncProjects`; `Reindex`; re-exports the `catalog` package's schema (`Catalog`, `Lock`, `LockedProject`, `IsManagedRoot`, `LoadCatalog`, `LoadLock`, `DefaultHost`, …) under its historical names |
 | corpus/catalog | [`internal/corpus/catalog`](internal/corpus/catalog) | Leaf managed-corpus schema (ownership marker + acquisition lock): zero os/exec, zero `Runner` — the seam that lets `internal/ingest` recognize a managed root and read its locked commit without pulling glab/git shell-out machinery into any default-build production binary (review finding F-17) | `Catalog`, `GroupPolicy`, `NewCatalog`, `IsManagedRoot`, `LoadCatalog`, `WriteCatalog`, `CatalogPath`; `Lock`, `LockedProject`, `LockStatus`, `NewLock`, `LoadLock`, `WriteLock`, `LockPath`; `DefaultHost` |
 | navigate | [`internal/navigate`](internal/navigate) | Experimental LSP-precise navigation arm (ADR 0017, `-tags lsp`): type-resolved go-to-def / find-refs / find-impls via an out-of-process language server over a hand-written stdlib JSON-RPC client; multi-language registry sized to the real corpus (csharp ~60% via `csharp-ls`; typescript/js; css/scss via vscode-css-language-server; cfml via `cflsp`; html; sql; go; python; ready-but-unused rust/cpp) — partial-capability servers degrade gracefully (a `-32601` unimplemented method → empty, not error), C#'s `DOTNET_ROOT` is resolved per-launch via `LangSpec.ResolveEnv`, and a shared per-(root,language) server pool with idle-TTL eviction + restart backoff, incremental `didChange` sync, and live-buffer overlays; no new go.mod dep (mirrors the dense arm's build-tag boundary). ADR 0018 adds name-based navigation on top: `workspace/symbol` (root-routed, merges every already-live language server for a polyglot root when no language is pinned) and `textDocument/documentSymbol` (file-routed, flattens the hierarchical `DocumentSymbol` shape and prefers `selectionRange` over the whole declaration range) — both return the named `Symbol` type, not a bare `Location` | `Pos`, `Location`, `Symbol`, `Navigator`; `Config`; `LSP`, `NewLSP`, `(*LSP) Definition/References/Implementations/WorkspaceSymbol/DocumentSymbol/SetOverlay/DropOverlay/NotifyChanged/Alive/Close`; `Pool`, `NewPool`, `(*Pool) Navigator/NavigatorFor/Definition/References/Implementations/WorkspaceSymbol/DocumentSymbol/SetOverlay/DropOverlay/NotifyChanged/Stats/Sweep/Close`; `Stats`; `LangSpec`, `LanguageForPath`, `SpecForLanguage`, `SpecForPath`; `ErrServerDead`; `const LSPCompiled` |
@@ -871,8 +871,8 @@ reloads it with the ranker). `search_context` results are **graph-fused**: each 
 carries a `neighbors` field with its callers, callees, consumers, publishers,
 dependencies, and semantic siblings, controlled per call by `graph_depth` (default 1,
 `0` disables) and `min_confidence` (default Pattern). Edges below the confidence
-floor are excluded before traversal. Both the `text` and `structured` output formats carry it — text as one
-`[graph] ...` line under each block header, `structured` as a typed per-block object.
+floor are excluded before traversal. Structured output always carries a typed
+per-block object; `format` only chooses how the text fallback renders it.
 Context blocks and summaries expose `clipped` independently from `truncated`, and
 the reported token estimate is always within the requested budget. Cluster requests
 page a generation-matched `corpus-graph.clusters.json` built during graph refresh;
@@ -888,6 +888,19 @@ blocks first. Line/import classification is precomputed once per blob.
 fingerprint, and exact graph-artifact build ID alongside node/edge counts. Navigation
 location queries expose `resolved`, `ready_empty`, `unsupported`, and `unavailable`
 outcomes; a successful empty response is never described as proof of an external symbol.
+
+The MCP lifecycle is owned by `github.com/modelcontextprotocol/go-sdk` v1.7.0. It
+serves current `2026-07-28` discovery/per-request envelopes with `2025-11-25`
+initialize fallback, rejects batches, and publishes five-minute public discovery and
+tool-catalog cache hints. All 19 tools always return schema-valid
+`structuredContent` plus a text fallback. Their schemas use host-portable closed
+root objects without composition keywords. `_meta["dev.moedex/snapshot"]` binds
+corpus/graph identities and sorted Git blob SHA values to the snapshots held while
+the result was produced; `_meta["dev.moedex/server"]` identifies the running binary
+even for pre-snapshot errors. Tool errors are always non-cacheable, and no post-result
+current-snapshot lookup is allowed. Canonical dirty builds add a deterministic
+worktree digest to their version, while install targets require a clean tree. See
+[ADR 0022](docs/adr/0022-mcp-sdk-contract-and-snapshot-identity.md).
 
 ### `scale` — corpus sizing tool
 

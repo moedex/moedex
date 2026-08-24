@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"moedex/internal/diskstore"
+	"moedex/internal/mcp"
 	"moedex/internal/navigate"
 )
 
@@ -113,8 +115,7 @@ func TestFindSymbolTool_Descriptor(t *testing.T) {
 	if tool.Name() != "find_symbol" {
 		t.Fatalf("Name() = %q, want find_symbol", tool.Name())
 	}
-	desc := tool.Descriptor()
-	schema, _ := desc["inputSchema"].(map[string]interface{})
+	schema := tool.Specification().InputSchema
 	props, _ := schema["properties"].(map[string]interface{})
 	for _, want := range []string{"query", "root", "lang"} {
 		if _, ok := props[want]; !ok {
@@ -133,8 +134,7 @@ func TestSymbolsOverviewTool_Descriptor(t *testing.T) {
 	if tool.Name() != "symbols_overview" {
 		t.Fatalf("Name() = %q, want symbols_overview", tool.Name())
 	}
-	desc := tool.Descriptor()
-	schema, _ := desc["inputSchema"].(map[string]interface{})
+	schema := tool.Specification().InputSchema
 	props, _ := schema["properties"].(map[string]interface{})
 	if _, ok := props["file"]; !ok {
 		t.Errorf("inputSchema.properties missing %q", "file")
@@ -152,6 +152,99 @@ func containsStr(ss []string, s string) bool {
 		}
 	}
 	return false
+}
+
+func navSnapshot(t *testing.T, result map[string]interface{}) mcp.SnapshotIdentity {
+	t.Helper()
+	meta, ok := result["_meta"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("metadata=%T", result["_meta"])
+	}
+	identity, ok := meta[mcp.SnapshotMetaKey].(mcp.SnapshotIdentity)
+	if !ok {
+		t.Fatalf("snapshot=%T", meta[mcp.SnapshotMetaKey])
+	}
+	return identity.Normalize()
+}
+
+func TestNavLocationResultHashesQueryAndReturnedFiles(t *testing.T) {
+	dir := t.TempDir()
+	queryFile := filepath.Join(dir, "query.go")
+	returnedFile := filepath.Join(dir, "definition.go")
+	queryContent := []byte("package fixture\nfunc use() { Definition() }\n")
+	returnedContent := []byte("package fixture\nfunc Definition() {}\n")
+	if err := os.WriteFile(queryFile, queryContent, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(returnedFile, returnedContent, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	result := navLocationResult(context.Background(), queryFile, navigate.LocationQueryResult{
+		Status: navigate.LocationQueryResolved,
+		Locations: []navigate.Location{{
+			File:  returnedFile,
+			Start: navigate.Pos{File: returnedFile, Line: 2, Col: 6},
+			End:   navigate.Pos{File: returnedFile, Line: 2, Col: 16},
+		}},
+	}, nil)
+	identity := navSnapshot(t, result)
+	wantQuery := diskstore.GitBlobSHA1(queryContent)
+	wantReturned := diskstore.GitBlobSHA1(returnedContent)
+	if !identity.Cacheable || !containsStr(identity.BlobSHAs, wantQuery) || !containsStr(identity.BlobSHAs, wantReturned) {
+		t.Fatalf("snapshot=%+v", identity)
+	}
+	structured := result["structuredContent"].(map[string]interface{})
+	locations := structured["locations"].([]map[string]interface{})
+	if got := locations[0]["blob_sha"]; got != wantReturned {
+		t.Fatalf("location blob_sha=%v want %q", got, wantReturned)
+	}
+}
+
+func TestNavLocationResultKeepsUnreadableLocationUnanchored(t *testing.T) {
+	dir := t.TempDir()
+	queryFile := filepath.Join(dir, "query.go")
+	missing := filepath.Join(dir, "missing.go")
+	if err := os.WriteFile(queryFile, []byte("package fixture\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	result := navLocationResult(context.Background(), queryFile, navigate.LocationQueryResult{
+		Status:    navigate.LocationQueryResolved,
+		Locations: []navigate.Location{{File: missing, Start: navigate.Pos{File: missing, Line: 1, Col: 1}}},
+	}, nil)
+	identity := navSnapshot(t, result)
+	if identity.Cacheable || !containsStr(identity.UnanchoredPaths, missing) {
+		t.Fatalf("snapshot=%+v", identity)
+	}
+	locations := result["structuredContent"].(map[string]interface{})["locations"].([]map[string]interface{})
+	if _, ok := locations[0]["blob_sha"]; ok {
+		t.Fatalf("unreadable location unexpectedly anchored: %v", locations[0])
+	}
+}
+
+func TestSymbolsResultIsStructuredAndContentAnchored(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "symbols.go")
+	content := []byte("package fixture\ntype Shape interface{}\n")
+	if err := os.WriteFile(file, content, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	result := symbolsResult(context.Background(), []navigate.Symbol{{
+		Name: "Shape", Kind: "Interface",
+		Loc: navigate.Location{File: file, Start: navigate.Pos{File: file, Line: 2, Col: 6}},
+	}}, file)
+	structured := result["structuredContent"].(map[string]interface{})
+	if structured["status"] != "resolved" {
+		t.Fatalf("status=%v", structured["status"])
+	}
+	symbols := structured["symbols"].([]map[string]interface{})
+	want := diskstore.GitBlobSHA1(content)
+	location := symbols[0]["location"].(map[string]interface{})
+	if location["blob_sha"] != want {
+		t.Fatalf("symbol location=%v want sha %q", location, want)
+	}
+	if identity := navSnapshot(t, result); !identity.Cacheable || len(identity.BlobSHAs) != 1 || identity.BlobSHAs[0] != want {
+		t.Fatalf("snapshot=%+v", identity)
+	}
 }
 
 func TestFindSymbolTool_Call_MissingArgs_ReturnsError(t *testing.T) {

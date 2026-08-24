@@ -51,7 +51,8 @@ const (
 // ContextBlock is one contiguous, deduplicated slice of a file selected for the
 // agent. Lines are 1-based inclusive.
 type ContextBlock struct {
-	Blob      uint64 // content identity of the contributing blob (cross-call/source dedup key)
+	Blob      uint64 // process-local blob id retained for backwards compatibility
+	BlobSHA   string // canonical Git blob identity of the contributing content
 	Repo      string
 	RelPath   string
 	AbsPath   string
@@ -367,6 +368,7 @@ func Assemble(ix *index.Index, results []rank.RankedResult, opts Options) Contex
 		}
 		win.Blocks = append(win.Blocks, ContextBlock{
 			Blob:      c.blob,
+			BlobSHA:   ix.Blob(c.blob).SHA,
 			Repo:      c.repo,
 			RelPath:   c.relPath,
 			AbsPath:   c.absPath,

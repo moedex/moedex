@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"moedex/internal/contextwin"
+	"moedex/internal/mcp"
 	"moedex/internal/server"
 )
 
@@ -138,4 +139,12 @@ func (h *rankHolder) SearchContext(ctx context.Context, query string, tokenBudge
 	s := h.acquire()
 	defer s.release()
 	return s.rc.SearchContext(ctx, query, tokenBudget, topK)
+}
+
+// SearchContextWithSnapshot keeps the exact rank generation acquired until
+// both the context window and its corpus identity have been captured.
+func (h *rankHolder) SearchContextWithSnapshot(ctx context.Context, query string, tokenBudget, topK int) (mcp.ContextSearchResult, error) {
+	s := h.acquire()
+	defer s.release()
+	return s.rc.SearchContextWithSnapshot(ctx, query, tokenBudget, topK)
 }

@@ -17,6 +17,9 @@ type fakeTool struct {
 }
 
 func (f *fakeTool) Name() string { return f.name }
+func (f *fakeTool) Specification() ToolSpecification {
+	return NewToolSpecification(f.name, "fake", map[string]interface{}{"type": "object"})
+}
 func (f *fakeTool) Descriptor() map[string]interface{} {
 	return map[string]interface{}{"name": f.name, "description": "fake", "inputSchema": map[string]interface{}{"type": "object"}}
 }

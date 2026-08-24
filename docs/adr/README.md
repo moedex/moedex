@@ -25,6 +25,7 @@ These ADRs capture the architectural decisions behind moedex, a clean-room, sing
 | [0019](./0019-moedex-managed-submodule-corpus.md) | Moedex-managed corpus — local Git superproject, curated submodules, and an exact committed corpus lock | Proposed ([program and phases](../plans/0019-managed-submodule-corpus.md)) |
 | [0020](./0020-branch-aware-indexing.md) | Branch-aware indexing — locked Git trees, content-deduped snapshots, honest provenance, and explicit branch scope | Proposed ([program and phases](../plans/0020-branch-aware-indexing.md)) |
 | [0021](./0021-ai-privacy-aware-indexing.md) | AI-privacy-aware indexing — fail-closed level-1 exclusion and policy-aware freshness | Accepted |
+| [0022](./0022-mcp-sdk-contract-and-snapshot-identity.md) | Official MCP SDK contract, typed tool outputs, and snapshot-bound result identity | Accepted |
 
 **Companion docs**: [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) (what the code is today),
 [`../plans/`](../plans/) (implementation plans for proposed decisions),

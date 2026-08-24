@@ -63,6 +63,19 @@ type ConfidenceGraphAnnotator interface {
 	NeighborsWithConfidence(ctx context.Context, blocks []contextwin.ContextBlock, depth int, minConfidence graph.ConfidenceTier) ([]BlockNeighbors, error)
 }
 
+// GraphAnnotationResult binds graph annotations to the exact graph snapshot
+// acquired to compute them.
+type GraphAnnotationResult struct {
+	Neighbors []BlockNeighbors
+	Snapshot  SnapshotIdentity
+}
+
+// SnapshotGraphAnnotator is the freshness-aware production boundary. It avoids
+// a second current-snapshot lookup after graph traversal.
+type SnapshotGraphAnnotator interface {
+	NeighborsWithSnapshot(ctx context.Context, blocks []contextwin.ContextBlock, depth int, minConfidence graph.ConfidenceTier) (GraphAnnotationResult, error)
+}
+
 // WithGraphAnnotator fuses the graph layer into search_context: every returned
 // block is annotated with its graph neighborhood (see BlockNeighbors) unless the
 // caller passes graph_depth=0. Without this option search_context behaves exactly
@@ -94,8 +107,9 @@ type Neighbor struct {
 
 	// Proximity fields are computed relative to the annotated context block and
 	// used only for deterministic ranking. They are not part of the MCP payload.
-	ProximitySameRepo bool `json:"-"`
-	ProximityDepth    int  `json:"-"`
+	ProximitySameRepo bool   `json:"-"`
+	ProximityDepth    int    `json:"-"`
+	EvidenceBlobSHA   string `json:"-"` // metadata-only source consumed by the relationship
 }
 
 // BlockNeighbors is the graph neighborhood of one context block, bucketed by the
