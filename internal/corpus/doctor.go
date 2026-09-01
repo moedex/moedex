@@ -286,11 +286,11 @@ func doctorManagedCleanliness(ctx context.Context, r Runner, root string, lock L
 	failInspect := func(detail string) Check {
 		return Check{Name: "managed recoverable cleanliness", Status: StatusFail, Detail: detail, Fix: "inspect the superproject without mutating it, then restore or commit an intentional snapshot"}
 	}
-	failDirty := func() Check {
+	failDirty := func(detail string) Check {
 		return Check{
 			Name:   "managed recoverable cleanliness",
 			Status: StatusFail,
-			Detail: "tracked managed metadata, gitlinks, or submodule worktrees have local changes",
+			Detail: detail,
 			Fix:    "preserve any local work, then restore the last committed managed snapshot before syncing",
 		}
 	}
@@ -300,7 +300,7 @@ func doctorManagedCleanliness(ctx context.Context, r Runner, root string, lock L
 		return failInspect(redactDiagnostic(err.Error()))
 	}
 	if state == managedDirty {
-		return failDirty()
+		return failDirty("managed superproject metadata or tracked gitlinks have local changes")
 	}
 
 	// Untracked files are not benign inside an indexed submodule: preserve them
@@ -309,6 +309,7 @@ func doctorManagedCleanliness(ctx context.Context, r Runner, root string, lock L
 	// never part of what stageManagedSync stages, so any output here is real,
 	// unstaged local work regardless of whether the superproject index itself
 	// is clean or holds a resumable stage.
+	var dirty []managedDirtyProject
 	for _, project := range lock.Projects {
 		dest := filepath.Join(root, filepath.FromSlash(project.PathWithNamespace))
 		res, err := r.RunEnv(ctx, gitEnv, "git", "-C", dest, "status", "--porcelain", "--untracked-files=all")
@@ -316,8 +317,11 @@ func doctorManagedCleanliness(ctx context.Context, r Runner, root string, lock L
 			return failInspect(commandFailureDetail(err, res, "could not inspect a managed submodule worktree"))
 		}
 		if len(res.Stdout) != 0 {
-			return failDirty()
+			dirty = append(dirty, summarizeManagedDirtyProject(project, res.Stdout))
 		}
+	}
+	if len(dirty) > 0 {
+		return failDirty(formatManagedDirtyProjects(dirty))
 	}
 
 	if state == managedStagedResumable {
@@ -332,6 +336,92 @@ func doctorManagedCleanliness(ctx context.Context, r Runner, root string, lock L
 		}
 	}
 	return Check{Name: "managed recoverable cleanliness", Status: StatusOK, Detail: "tracked snapshot and managed submodule worktrees are clean"}
+}
+
+type managedDirtyProject struct {
+	project   LockedProject
+	paths     []string
+	generated bool
+}
+
+func summarizeManagedDirtyProject(project LockedProject, porcelain []byte) managedDirtyProject {
+	paths := make([]string, 0, 1)
+	generated := true
+	for _, line := range strings.Split(strings.TrimSpace(string(porcelain)), "\n") {
+		if line == "" {
+			continue
+		}
+		path := line
+		if len(line) > 3 {
+			path = strings.TrimSpace(line[3:])
+		}
+		paths = append(paths, path)
+		if len(line) < 2 || line[:2] != "??" || !isKnownMSBuildIntermediate(path) {
+			generated = false
+		}
+	}
+	return managedDirtyProject{project: project, paths: paths, generated: generated && len(paths) > 0}
+}
+
+func isKnownMSBuildIntermediate(path string) bool {
+	normalized := filepath.ToSlash(path)
+	if !strings.HasPrefix(normalized, "obj/") && !strings.Contains(normalized, "/obj/") {
+		return false
+	}
+	for _, suffix := range []string{
+		".AssemblyAttributes.cs",
+		".AssemblyInfo.cs",
+		".AssemblyInfoInputs.cache",
+		".GeneratedMSBuildEditorConfig.editorconfig",
+		".GlobalUsings.g.cs",
+		".AssemblyReference.cache",
+	} {
+		if strings.HasSuffix(normalized, suffix) {
+			return true
+		}
+	}
+	return false
+}
+
+func formatManagedDirtyProjects(dirty []managedDirtyProject) string {
+	pathCount := 0
+	generatedCount := 0
+	for _, project := range dirty {
+		pathCount += len(project.paths)
+		if project.generated {
+			generatedCount++
+		}
+	}
+	detail := fmt.Sprintf("%d managed submodule worktree(s) have local changes across %d path(s)", len(dirty), pathCount)
+	if generatedCount == len(dirty) {
+		detail += "; all are untracked MSBuild intermediates"
+	} else if generatedCount > 0 {
+		detail += fmt.Sprintf("; %d contain only untracked MSBuild intermediates", generatedCount)
+	}
+
+	const maxProjects = 6
+	parts := make([]string, 0, min(len(dirty), maxProjects))
+	for i, project := range dirty {
+		if i == maxProjects {
+			break
+		}
+		firstPath := "unknown path"
+		if len(project.paths) > 0 {
+			firstPath = project.paths[0]
+		}
+		kind := "local change"
+		if project.generated {
+			kind = "MSBuild output"
+		}
+		parts = append(parts, fmt.Sprintf("%s [%s: %s]", project.project.PathWithNamespace, kind, firstPath))
+	}
+	if len(parts) > 0 {
+		detail += ": " + strings.Join(parts, "; ")
+	}
+	if len(dirty) > maxProjects {
+		detail += fmt.Sprintf("; and %d more", len(dirty)-maxProjects)
+	}
+	return detail
 }
 
 func doctorManagedAgreement(ctx context.Context, r Runner, root string, lock Lock) Check {

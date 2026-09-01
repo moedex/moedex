@@ -1,0 +1,13 @@
+{
+  "source_path": "docs/adr/0013-pure-go-defer-simd.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0013: Pure-Go execution; native SIMD kernel deferred (tried, no consistent win at this scale)",
+  "summary": "Ship pure Go by default on all architectures behind an internal/setops kernel boundary; defer a native AVX2 SIMD kernel pending profiling evidence.",
+  "scope": ["internal/setops", "internal/query", "posting-list intersection", "AVX2 SIMD kernel", "simd/archsimd", "moedex_simd build tag", "pure-Go galloping intersect", "regex verification"],
+  "cross_refs": ["../../research/simd-kernel.md", "./0001-single-node-scope-pure-go-default.md", "./0012-search-latency-positional-verify.md"],
+  "locked": true,
+  "precedence": null,
+  "notes": ""
+}

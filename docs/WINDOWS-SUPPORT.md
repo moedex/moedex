@@ -119,7 +119,7 @@ shim is the minimal change.
 
 ### 2. SIGHUP hot-reload — compiles, never fires  *(~0.5–1 day)*
 
-`cmd/moedex-serve/main.go` reloads the warm corpus on `syscall.SIGHUP` (3 sites:
+`internal/app/servecmd/main.go` reloads the warm corpus on `syscall.SIGHUP` (3 sites:
 `runMCP`, `runMCPHTTP`, `runHTTP`). `syscall.SIGHUP` *is* defined on Windows so it
 compiles, but Windows never delivers it — so the daily refresh's "SIGHUP the daemon
 to hot-swap" step would silently do nothing.
@@ -157,7 +157,7 @@ unless you want the dense arm on native Windows.** With `-tags onnx`:
 - The model (`go:embed` ~78 MB int8) and the forked tokenizer are pure Go → already
   portable.
 - Ship `onnxruntime.dll` next to the binary or under `%LOCALAPPDATA%\moedex`, and
-  put its directory on the DLL search path (or co-locate with `moedex-serve.exe`).
+  put its directory on the DLL search path (or co-locate with `moe.exe`).
 
 So Phase 2 = bundle the DLL + a Windows CI build job + ACL the token; the code
 changes are near-zero.
@@ -179,10 +179,10 @@ This is where the real surface area is. Mapping each macOS piece to Windows:
 | `make install` → `~/.local/bin`, rm `~/go/bin` shadows | install `.exe`s to `%LOCALAPPDATA%\Programs\moedex`; add to user `PATH` via `setx`/registry; same shadow-removal idea. |
 | `chmod 0600` token | **`icacls`** to grant only the current user (Go's `os.Chmod` only toggles read-only on Windows — not a real ACL). |
 | `~/.zshrc` env block | user environment variables via `setx` (or `$PROFILE`). |
-| `~/.moedex-index`, `~/.moedex` | `%LOCALAPPDATA%\moedex\index`, `%LOCALAPPDATA%\moedex\corpus` (Go already resolves via `os.UserHomeDir()`; the scripts/plists hardcode unix paths and get replaced). |
-| `moedex-index doctor` launchd checks | swap the `launchctl print` probes for `sc query` / `schtasks /query`, guarded by `runtime.GOOS == "windows"` (the doctor framework is already OS-aware). |
+| `~/.moedex-state`, `~/.moedex` | `%LOCALAPPDATA%\moedex\index`, `%LOCALAPPDATA%\moedex\corpus` (Go already resolves via `os.UserHomeDir()`; the scripts/plists hardcode unix paths and get replaced). |
+| `moedex doctor` launchd checks | swap the `launchctl print` probes for `sc query` / `schtasks /query`, guarded by `runtime.GOOS == "windows"` (the doctor framework is already OS-aware). |
 
-`git` and `glab` both run on Windows, so the corpus tooling (`moedex-corpus`) needs
+`git` and `glab` both run on Windows, so the corpus tooling (`moedex corpus`) needs
 no changes beyond paths.
 
 ---
@@ -196,8 +196,8 @@ daemon serves on `127.0.0.1:8081` and `doctor` is green inside WSL.
 
 **Phase 1 — native pure-Go (≈3.5–5 days).** mmap shim (1) + portable reload (2) +
 service/scheduler + `install-windows.ps1` + doctor Windows checks (+ optional parity
-stub). Dense OFF. Acceptance: `GOOS=windows go build ./...` clean; `moedex-serve.exe`
-runs as a service across reboot; `schtasks` refresh works; `moedex-index.exe doctor`
+stub). Dense OFF. Acceptance: `GOOS=windows go build ./...` clean; `moe.exe serve`
+runs as a service across reboot; `schtasks` refresh works; `moe.exe doctor`
 green on Windows.
 
 **Phase 2 — native dense (≈2–3 days).** Bundle `onnxruntime.dll`, add a Windows CI

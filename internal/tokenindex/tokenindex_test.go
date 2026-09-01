@@ -53,8 +53,8 @@ func TestTokenize(t *testing.T) {
 			"cd", "cdef", "cdefgh", "cdefghij", // start1, len 1..4
 			"ef", "efgh", "efghij", // start2, len 1..3 (run ends)
 			"gh", "ghij", // start3, len 1..2
-			"ij",          // start4, len 1
-			"abcdefghij",  // full run (len 5), appended after the cap
+			"ij",         // start4, len 1
+			"abcdefghij", // full run (len 5), appended after the cap
 		}},
 	}
 	for _, tc := range cases {

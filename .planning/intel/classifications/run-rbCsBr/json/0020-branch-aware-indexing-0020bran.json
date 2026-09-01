@@ -1,0 +1,30 @@
+{
+  "source_path": "docs/plans/0020-branch-aware-indexing.md",
+  "type": "PRD",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Program 0020: Branch-aware indexing",
+  "summary": "Program plan for indexing selected remote branch tips with dedup, honest provenance, explicit query scope, and unchanged unscoped behavior.",
+  "scope": [
+    "branch-aware indexing",
+    "remote branch tips",
+    "managed lock v2 remote heads",
+    "CAS delta refresh",
+    "snapshot manifest v2",
+    "source provenance",
+    "MOEDEX06 shard format",
+    "scoped retrieval",
+    "privacy bootstrap (.ai-privacy.yml)",
+    "parity and capacity gates"
+  ],
+  "cross_refs": [
+    "../adr/0020-branch-aware-indexing.md",
+    "./phases/03-branch-acquisition/PLAN.md",
+    "./phases/04-branch-aware-cas/PLAN.md",
+    "./phases/05-source-provenance-format/PLAN.md",
+    "./phases/06-scoped-serving-rollout/PLAN.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Path is docs/plans/, not docs/adr/. Status: Proposed, and the document explicitly defers the decision to ADR-0020 (linked) rather than making one; no Context/Decision/Consequences structure, so not ADR. Goal/Non-goals plus a numbered completion contract are dominant PRD signals; SPEC signals are weak (no schemas, endpoints, or SLOs, only a phase-delivery table). Re: the requested comparison - the 8 numbered 'Delivery contract' clauses do read as acceptance criteria: each is a binary, verifiable completion condition ('lock records a deterministic and complete remote-head snapshot', 'never requests effective level-1 content', 'gates pass'), reinforced by per-phase 'Exit gate' cells and prohibitive 'Deviation rules'. They are program-level acceptance criteria rather than user-story criteria, which is why confidence is medium rather than high. Structural identity with 0019's contract section was noted but not used as the deciding signal. Filename hash suffix is path-derived, not a computed SHA-256 (no shell available to compute one); the slug is unique within this run."
+}

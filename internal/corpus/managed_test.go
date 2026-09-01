@@ -747,7 +747,6 @@ func TestManagedSyncResumesInterruptedCommitInsteadOfWedging(t *testing.T) {
 // when every line's worktree-status column (the second byte) is blank — any
 // unstaged or untracked change anywhere disqualifies the whole listing.
 
-
 func TestManagedStagedOnly(t *testing.T) {
 	cases := []struct {
 		name string

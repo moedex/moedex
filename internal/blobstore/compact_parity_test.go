@@ -22,7 +22,7 @@ import (
 
 	"moedex/internal/diskstore"
 	"moedex/internal/parity"
-	"moedex/internal/server"
+	server "moedex/internal/serve"
 )
 
 // mustNotFindLiteral fails if an ALREADY-OPEN corpus serves any match for marker —
@@ -234,12 +234,12 @@ func TestCompactionParity(t *testing.T) {
 	// ---- Per-query: postCAS == preCAS == direct == rg; postDedup == preDedup == direct == rg.
 	rg := newRG(t, built.MirrorDir)
 	var (
-		mismatchCASPre   int // compacted CAS != pre-compaction CAS (compaction changed the match set)
-		mismatchDedupPre int // compacted deduped != pre-compaction deduped
-		mismatchCASDir   int // compacted CAS != direct build
-		mismatchDedupDir int // compacted deduped != direct build
+		mismatchCASPre                           int // compacted CAS != pre-compaction CAS (compaction changed the match set)
+		mismatchDedupPre                         int // compacted deduped != pre-compaction deduped
+		mismatchCASDir                           int // compacted CAS != direct build
+		mismatchDedupDir                         int // compacted deduped != direct build
 		underCAS, overCAS, underDedup, overDedup int
-		checkedVsRG, rgSkipped                    int
+		checkedVsRG, rgSkipped                   int
 	)
 	for _, q := range bat.Queries {
 		preCASLocs := corpusQuery(t, preCAS, q)
@@ -318,8 +318,8 @@ func TestCompactionParity(t *testing.T) {
 
 	// ---- Targeted dead/live checks on the post-compaction deduped dir. --------------
 	// Every LIVE marker still surfaces (no live content dropped):
-	mustFindLiteralCtx(t, postDedup, liveNewMarker, "bravo.go")     // churned-in new content
-	mustFindLiteralCtx(t, postDedup, survivorMarker, "delta.go")    // untouched repo
+	mustFindLiteralCtx(t, postDedup, liveNewMarker, "bravo.go")      // churned-in new content
+	mustFindLiteralCtx(t, postDedup, survivorMarker, "delta.go")     // untouched repo
 	mustFindLiteralCtx(t, postDedup, "CrossRepoNeedle", "shared.go") // shared content
 	// Every DEAD marker is GONE (the removed repo + churned-away content). The marker
 	// being absent from the SEARCH RESULTS is the live-side proof; the blob bytes being

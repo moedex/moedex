@@ -1,6 +1,6 @@
 # moedex dense image (optional in-process ONNX embedder).
 #
-# Mirrors `make build-dense` (`go build -tags onnx -o ... ./cmd/moedex-serve`)
+# Mirrors `make build-dense` (`go build -tags onnx -o ... ./cmd/moedex`)
 # but with an explicit -o path, and bundles the ONNX Runtime Linux x64 shared
 # library so the binding can dlopen it at run time. The dense arm is -mcp only
 # (see the moedex-serve package doc + README), so the default CMD is the
@@ -40,7 +40,7 @@ RUN go mod download
 COPY . .
 
 # -tags onnx mirrors `make build-dense` semantics, with an explicit -o path.
-RUN go build -trimpath -tags onnx -o /out/moedex-serve-dense ./cmd/moedex-serve
+RUN go build -trimpath -tags onnx -o /out/moedex ./cmd/moedex
 
 # --- onnx runtime fetch ----------------------------------------------------
 # Download + extract libonnxruntime.so* from the official microsoft/onnxruntime
@@ -75,7 +75,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/* \
  && groupadd -r moedex && useradd -r -g moedex moedex
 
-COPY --from=build   /out/moedex-serve-dense /usr/local/bin/moedex-serve-dense
+COPY --from=build   /out/moedex              /usr/local/bin/moedex
 COPY --from=onnxrt  /out/lib/               /usr/local/lib/
 RUN ldconfig
 
@@ -88,5 +88,5 @@ USER moedex
 # Dense arm is -mcp only. -embed onnx selects the in-process embedder; building
 # it embeds the whole corpus at boot and persists the cache next to the shards,
 # so the shard dir must be mounted :rw (not :ro).
-ENTRYPOINT ["moedex-serve-dense"]
-CMD ["-shard-dir", "/shards", "-mcp", "-embed", "onnx"]
+ENTRYPOINT ["moedex", "mcp"]
+CMD ["--shard-dir", "/shards", "--embed", "onnx"]

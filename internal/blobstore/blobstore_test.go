@@ -13,7 +13,7 @@ import (
 
 	"moedex/internal/diskstore"
 	"moedex/internal/ingest"
-	"moedex/internal/server"
+	server "moedex/internal/serve"
 )
 
 // --- git fixture helpers (adapted from internal/parity/manifest_test.go) ----

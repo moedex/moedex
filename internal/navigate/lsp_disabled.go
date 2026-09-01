@@ -49,6 +49,8 @@ type Config struct {
 	// Logger is an optional structured debug sink (nil falls back to
 	// MOEDEX_LSP_DEBUG, then discard).
 	Logger *slog.Logger
+	// WorkspaceCacheDir stores isolated writable managed-corpus projections.
+	WorkspaceCacheDir string
 
 	// --- Pool production-lifecycle knobs (consumed by Pool, build-arm-agnostic) ---
 
@@ -73,6 +75,9 @@ type Config struct {
 	// now is an unexported test seam for virtual time. nil => time.Now. It is set
 	// only by in-package tests; production callers cannot reach it.
 	now func() time.Time
+
+	// pathMap mirrors the lsp build arm's internal projection mapping.
+	pathMap workspacePathMap
 }
 
 // ErrServerDead mirrors the lsp.go sentinel so callers can branch on

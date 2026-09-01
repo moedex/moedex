@@ -4,13 +4,12 @@
 #
 # What it does:
 #   1. check prerequisites (go, make, onnxruntime, glab/git)
-#   2. build + install all binaries to ONE canonical dir (make install-dense),
-#      removing stale ~/go/bin shadows (the skew that caused the index-loss incident)
+#   2. build + install one moe binary plus compatibility symlinks
 #   3. ensure the index dir + a 0600 auth token
 #   4. add the moedex env block to ~/.zshrc (PATH, MOEDEX_CORPUS, token) if absent
 #   5. render + install the launchd agents (warm daemon + daily refresh) from the
 #      deploy/ templates, (re)bootstrapping only when they actually changed
-#   6. run `moedex-index doctor` to verify
+#   6. run `moedex doctor` to verify
 #
 # It initializes a NEW/empty managed corpus when glab + VPN + Git transport are
 # ready. It never adopts a populated unmarked corpus and never changes live index
@@ -19,26 +18,42 @@
 # Usage:
 #   scripts/install-macos.sh            # do it
 #   scripts/install-macos.sh --dry-run  # show what it WOULD do, change nothing
+#   scripts/install-macos.sh --adopt-legacy-binaries
+#       intentionally replace existing command files in BINDIR
 #
-# Env overrides: BINDIR (default ~/.local/bin), MOEDEX_CORPUS (default ~/.moedex-managed),
-# MOEDEX_INDEX_DIR (default ~/.moedex-index), MOEDEX_CAS_DIR (default
+# Env overrides: BINDIR (default ~/.local/bin), MOEDEX_CORPUS (default ~/.moedex),
+# MOEDEX_INDEX_DIR (default ~/.moedex-state), MOEDEX_CAS_DIR (default
 # $MOEDEX_INDEX_DIR/cas), MOEDEX_SHARD_DIR (default $MOEDEX_INDEX_DIR/shards),
+# MOEDEX_LSP_WORKSPACE_DIR (default $MOEDEX_INDEX_DIR/lsp-workspaces),
 # ONNXRUNTIME_LIB_PATH.
 
 set -euo pipefail
 
 DRY_RUN=0
-[ "${1:-}" = "--dry-run" ] && DRY_RUN=1
+ADOPT_LEGACY_BINARIES=0
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=1 ;;
+    --adopt-legacy-binaries) ADOPT_LEGACY_BINARIES=1 ;;
+    *) printf 'usage: %s [--dry-run] [--adopt-legacy-binaries]\n' "$0" >&2; exit 2 ;;
+  esac
+done
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 BINDIR="${BINDIR:-$HOME/.local/bin}"
-INDEX_DIR="${MOEDEX_INDEX_DIR:-$HOME/.moedex-index}"
-CORPUS="${MOEDEX_CORPUS:-$HOME/.moedex-managed}"
+INDEX_DIR="${MOEDEX_INDEX_DIR:-$HOME/.moedex-state}"
+CORPUS="${MOEDEX_CORPUS:-$HOME/.moedex}"
 CAS_DIR="${MOEDEX_CAS_DIR:-$INDEX_DIR/cas}"
 SHARD_DIR="${MOEDEX_SHARD_DIR:-$INDEX_DIR/shards}"
+LSP_WORKSPACE_DIR="${MOEDEX_LSP_WORKSPACE_DIR:-$INDEX_DIR/lsp-workspaces}"
 LAUNCH_AGENTS="$HOME/Library/LaunchAgents"
 TOKEN_FILE="$INDEX_DIR/auth-token"
-CORPUS_BIN="${MOEDEX_CORPUS_BIN:-$BINDIR/moedex-corpus}"
+MOE_BIN="$BINDIR/moedex"
+if [ -n "${MOEDEX_CORPUS_BIN:-}" ]; then
+  CORPUS_INIT=("$MOEDEX_CORPUS_BIN" init)
+else
+  CORPUS_INIT=("$MOE_BIN" corpus init)
+fi
 ONNX_INTRA_THREADS="${MOEDEX_ONNX_INTRA_OP_THREADS:-0}"
 ONNX_INTER_THREADS="${MOEDEX_ONNX_INTER_OP_THREADS:-0}"
 
@@ -73,26 +88,26 @@ fi
 
 # --- ownership gate: never adopt a populated legacy/user-owned root ---
 CORPUS_NEEDS_INIT=0
-if [ -f "$CORPUS/.moedex/corpus.json" ]; then
+if [ -f "$CORPUS/.moedex.json" ]; then
   log "managed corpus marker present at $CORPUS"
 elif [ -e "$CORPUS" ]; then
   shopt -s nullglob dotglob
   corpus_entries=("$CORPUS"/*)
   shopt -u dotglob
   if [ "${#corpus_entries[@]}" -gt 0 ]; then
-    die "refusing to adopt populated unmarked corpus $CORPUS. Keep it as rollback; initialize a sibling with: MOEDEX_CORPUS=$CORPUS-managed $BINDIR/moedex-corpus init -corpus $CORPUS-managed"
+    die "refusing to adopt populated unmarked corpus $CORPUS. Keep it as rollback; initialize a sibling with: MOEDEX_CORPUS=$CORPUS-managed $MOE_BIN corpus init --corpus $CORPUS-managed"
   fi
   CORPUS_NEEDS_INIT=1
 else
   CORPUS_NEEDS_INIT=1
 fi
 
-# --- 2. build + install binaries (canonical dir, shadows removed) ---
-log "installing binaries to $BINDIR (make install-dense)"
+# --- 2. build + install one binary plus owned compatibility symlinks ---
+log "installing moedex to $BINDIR (make install-dense)"
 if [ "$DRY_RUN" = 1 ]; then
-  log "[dry-run] would run: make -C $REPO install-dense BINDIR=$BINDIR"
+  log "[dry-run] would run: make -C $REPO install-dense BINDIR=$BINDIR ADOPT_LEGACY_BINARIES=$ADOPT_LEGACY_BINARIES"
 else
-  make -C "$REPO" install-dense BINDIR="$BINDIR"
+  make -C "$REPO" install-dense BINDIR="$BINDIR" ADOPT_LEGACY_BINARIES="$ADOPT_LEGACY_BINARIES"
 fi
 case ":$PATH:" in
   *":$BINDIR:"*) : ;;
@@ -104,11 +119,11 @@ if [ "$CORPUS_NEEDS_INIT" = 1 ]; then
   if [ "$DRY_RUN" = 1 ]; then
     log "[dry-run] would initialize managed corpus at $CORPUS (requires active TC VPN, glab auth, and Git transport)"
   else
-    [ -x "$CORPUS_BIN" ] || die "moedex-corpus not found at $CORPUS_BIN after install"
+    [ -x "${CORPUS_INIT[0]}" ] || die "corpus command not found at ${CORPUS_INIT[0]} after install"
     have glab || die "glab is required to initialize the managed corpus"
     have git || die "git is required to initialize the managed corpus"
     log "initializing new managed corpus at $CORPUS"
-    "$CORPUS_BIN" init -corpus "$CORPUS" -no-banner
+    "${CORPUS_INIT[@]}" -corpus "$CORPUS" -no-banner
   fi
 fi
 
@@ -140,7 +155,7 @@ else
     echo "# >>> moedex >>>"
     echo 'export PATH="$HOME/.local/bin:$PATH"'
     echo "export MOEDEX_CORPUS=\"$CORPUS\""
-    echo 'export MOEDEX_TOKEN="$(cat "$HOME/.moedex-index/auth-token" 2>/dev/null)"'
+    echo 'export MOEDEX_TOKEN="$(cat "$HOME/.moedex-state/auth-token" 2>/dev/null)"'
     echo 'export MOEDEX_AUTH_TOKEN="$MOEDEX_TOKEN"'
     echo "# <<< moedex <<<"
   } >> "$ZRC"
@@ -155,6 +170,7 @@ install_agent() {
   rendered="$(sed -e "s|@HOME@|$HOME|g" -e "s|@REPO@|$REPO|g" \
     -e "s|@CORPUS@|$CORPUS|g" -e "s|@CAS_DIR@|$CAS_DIR|g" \
     -e "s|@SHARD_DIR@|$SHARD_DIR|g" -e "s|@ONNX_LIB@|$ONNX_LIB|g" \
+    -e "s|@LSP_WORKSPACE_DIR@|$LSP_WORKSPACE_DIR|g" \
     -e "s|@ONNX_INTRA_THREADS@|$ONNX_INTRA_THREADS|g" \
     -e "s|@ONNX_INTER_THREADS@|$ONNX_INTER_THREADS|g" "$src")"
   domain="gui/$(id -u)"
@@ -195,18 +211,18 @@ install_agent com.moedex.serve   com.moedex.serve.plist
 install_agent com.moedex.refresh com.moedex.refresh.plist
 
 # --- 6. data-presence hints (index is built/cut over separately) ---
-[ -f "$CORPUS/.moedex/corpus.json" ] || [ "$DRY_RUN" = 1 ] || warn "managed corpus marker missing at $CORPUS"
+[ -f "$CORPUS/.moedex.json" ] || [ "$DRY_RUN" = 1 ] || warn "managed corpus marker missing at $CORPUS"
 if ! ls "$SHARD_DIR"/*.idx >/dev/null 2>&1; then
   warn "no shard index at $SHARD_DIR — build it once:"
-  warn "  moedex-index build -corpus $CORPUS -shard-dir $SHARD_DIR"
-  warn "  ONNXRUNTIME_LIB_PATH=$ONNX_LIB moedex-serve -build-embeddings -shard-dir $SHARD_DIR -embed onnx -onnx-runtime $ONNX_LIB"
+  warn "  moedex index build --corpus $CORPUS --shard-dir $SHARD_DIR"
+  warn "  ONNXRUNTIME_LIB_PATH=$ONNX_LIB moedex serve --build-embeddings --shard-dir $SHARD_DIR --embed onnx --onnx-runtime $ONNX_LIB"
 fi
 
 # --- verify ---
 echo
-if [ -x "$BINDIR/moedex-index" ]; then
-  "$BINDIR/moedex-index" doctor -shard-dir "$SHARD_DIR" || true
-elif have moedex-index; then
-  moedex-index doctor -shard-dir "$SHARD_DIR" || true
+if [ -x "$MOE_BIN" ]; then
+  "$MOE_BIN" doctor --shard-dir "$SHARD_DIR" || true
+elif have moe; then
+  moedex doctor --shard-dir "$SHARD_DIR" || true
 fi
 log "done."

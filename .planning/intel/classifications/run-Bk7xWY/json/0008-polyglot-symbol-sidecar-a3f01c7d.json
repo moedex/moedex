@@ -1,0 +1,19 @@
+{
+  "source_path": "docs/adr/0008-polyglot-symbol-sidecar.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0008: Polyglot syntactic symbol layer as a precomputed sidecar — not tree-sitter in the binary",
+  "summary": "Decides to build a precomputed polyglot syntactic symbol sidecar (SYM1) in internal/symbol instead of linking tree-sitter or SCIP into the binary.",
+  "scope": ["internal/symbol", "SYM1 sidecar codec", "BuildMulti", "ExtractorForPath", "context block scoping", "symbol-name ranking arm", "Go/C#/TypeScript/SQL/ColdFusion extractors"],
+  "cross_refs": [
+    "./0009-agent-context-api.md",
+    "./0006-rrf-hybrid-ranking.md",
+    "../../research/symbol-layer.md",
+    "./0001-single-node-scope-pure-go-default.md",
+    "./0007-optional-dense-arm.md"
+  ],
+  "locked": true,
+  "precedence": null,
+  "notes": ""
+}

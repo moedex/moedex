@@ -24,7 +24,7 @@ import (
 
 	"moedex/internal/diskstore"
 	"moedex/internal/index"
-	"moedex/internal/server"
+	server "moedex/internal/serve"
 )
 
 // TestCompactDedupedCarriesOrphanShard is the FIX #1 regression gate.

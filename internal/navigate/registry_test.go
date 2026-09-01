@@ -114,10 +114,10 @@ func TestWorkspaceRoot(t *testing.T) {
 	base := t.TempDir()
 
 	type fixture struct {
-		marker   string // root-marker file to create
-		lang     string // expected language
-		srcRel   string // source file path relative to the marker dir, nested
-		srcExt   string
+		marker string // root-marker file to create
+		lang   string // expected language
+		srcRel string // source file path relative to the marker dir, nested
+		srcExt string
 	}
 	fixtures := []fixture{
 		{"go.mod", "go", "pkg/sub/file", ".go"},

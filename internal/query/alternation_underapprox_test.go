@@ -20,8 +20,8 @@ import (
 // degrade to All (you cannot require the other branch's trigrams).
 func TestAltUnboundedBranchReducesToAll(t *testing.T) {
 	for _, pat := range []string{
-		`foo|[0-9]+`,    // literal | unbounded class
-		`[0-9]+|foo`,    // order swapped (fold must be side-independent)
+		`foo|[0-9]+`,     // literal | unbounded class
+		`[0-9]+|foo`,     // order swapped (fold must be side-independent)
 		`foo|bar|[0-9]+`, // multi-way: the unbounded branch dominates
 		`foo|.*`,         // literal | anything
 		`class|[A-Za-z]+`,

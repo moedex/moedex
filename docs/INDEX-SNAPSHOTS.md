@@ -21,13 +21,13 @@ The first compatibility step copies an existing servable shard directory into a
 snapshot without sharing mutable hard links:
 
 ```sh
-moedex-index snapshot-migrate \
-  -index-dir "$HOME/.moedex-index-next" \
-  -shard-dir "$HOME/.moedex-index/shards-managed"
+moedex index snapshot migrate \
+  -index-dir "$HOME/.moedex-state-next" \
+  -shard-dir "$HOME/.moedex-state/shards-managed"
 
-moedex-index snapshot-list -index-dir "$HOME/.moedex-index-next"
-moedex-index snapshot-inspect -index-dir "$HOME/.moedex-index-next"
-moedex-serve -index-dir "$HOME/.moedex-index-next" -mcp-http 127.0.0.1:8081
+moedex index snapshot list -index-dir "$HOME/.moedex-state-next"
+moedex index snapshot inspect -index-dir "$HOME/.moedex-state-next"
+moedex serve -index-dir "$HOME/.moedex-state-next" -mcp-http 127.0.0.1:8081
 ```
 
 The direct path builds shards, rank data, graph data, clusters, and optionally
@@ -35,16 +35,16 @@ dense vectors inside private staging, and treats any requested component failure
 as publication-blocking:
 
 ```sh
-moedex-index snapshot-build \
-  -index-dir "$HOME/.moedex-index-next" \
-  -corpus "$HOME/.moedex-managed" \
+moedex index snapshot build \
+  -index-dir "$HOME/.moedex-state-next" \
+  -corpus "$HOME/.moedex" \
   -dense
 ```
 
 Rollback validates the selected generation and changes only `CURRENT`:
 
 ```sh
-moedex-index snapshot-rollback -index-dir /path/to/index -id 20260820T120000Z-4
+moedex index snapshot rollback -index-dir /path/to/index -id 20260820T120000Z-4
 ```
 
 The transitional snapshot keeps the serving tree under `serve/` so current

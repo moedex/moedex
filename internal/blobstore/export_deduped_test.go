@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"moedex/internal/diskstore"
-	"moedex/internal/server"
+	server "moedex/internal/serve"
 )
 
 // servedContentBytes sums the inlined blob content across every MOEDEX03/04 shard

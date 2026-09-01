@@ -1,0 +1,30 @@
+{
+  "source_path": "docs/plans/0019-managed-submodule-corpus.md",
+  "type": "PRD",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Program 0019: Moedex-managed submodule corpus",
+  "summary": "Program plan for a Moedex-managed local submodule corpus: init, snapshot, sync, privacy-aware indexing, parity, and sibling cutover.",
+  "scope": [
+    "moedex-corpus init",
+    "managed submodule superproject",
+    "gitmodules and gitlinks",
+    "atomic project lock",
+    "sync reconciliation",
+    "moedex-index lock consumption",
+    ".ai-privacy.yml level-1 exclusion",
+    "default-only search parity",
+    "sibling corpus/index deployment cutover"
+  ],
+  "cross_refs": [
+    "../adr/0019-moedex-managed-submodule-corpus.md",
+    "./phases/01-managed-corpus-foundation/PLAN.md",
+    "./phases/01-managed-corpus-foundation/SUMMARY.md",
+    "./phases/02-managed-corpus-integration/PLAN.md",
+    "./phases/02-managed-corpus-integration/SUMMARY.md",
+    "./phases/02-managed-corpus-integration/ROLLOUT.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Type was operator-assigned (TYPE OVERRIDE: PRD), not inferred, to resolve a type-asymmetry warning with docs/plans/0020-branch-aware-indexing.md; the two are structurally identical program plans and must carry the same type. The seven numbered 'Delivery contract' clauses are to be treated as acceptance criteria suitable for requirement extraction. Status field reads 'In progress (Phase 2 automation complete; operator cutover approval pending)'; locked is false. Document also records non-goals, execution phases, a dependency boundary blocking ADR 0020 work, and four deviation rules. Output filename uses the source slug without a SHA-256 suffix because no hashing tool was available in this environment; the slug is unique within the run."
+}

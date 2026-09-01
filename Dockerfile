@@ -1,7 +1,7 @@
 # moedex default (zero-dependency) image.
 #
-# Builds the warm retrieval daemon (moedex-serve) and the offline shard tool
-# (moedex-index) as fully static, CGO-free binaries with NO build tags — i.e. no
+# Builds the unified moedex shell as a fully static, CGO-free binary with NO build
+# tags — i.e. no
 # ONNX, no dense arm. This is the identity image: pure-Go lexical + symbol +
 # path retrieval with zero runtime dependencies. For the optional in-process
 # dense (ONNX) embedder, use Dockerfile.dense instead.
@@ -36,9 +36,8 @@ RUN go mod download
 
 COPY . .
 
-# Build both operationally relevant binaries. No -tags => no ONNX, no cgo.
-RUN go build -trimpath -ldflags="-s -w" -o /out/moedex-serve ./cmd/moedex-serve \
- && go build -trimpath -ldflags="-s -w" -o /out/moedex-index ./cmd/moedex-index
+# Build the single operational binary. No -tags => no ONNX, no cgo.
+RUN go build -trimpath -ldflags="-s -w" -o /out/moedex ./cmd/moedex
 
 # --- runtime ---------------------------------------------------------------
 # alpine keeps a shell for HEALTHCHECK + `docker exec` debugging. The static
@@ -46,8 +45,7 @@ RUN go build -trimpath -ldflags="-s -w" -o /out/moedex-serve ./cmd/moedex-serve 
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates \
  && addgroup -S moedex && adduser -S -G moedex moedex
-COPY --from=build /out/moedex-serve /usr/local/bin/moedex-serve
-COPY --from=build /out/moedex-index /usr/local/bin/moedex-index
+COPY --from=build /out/moedex /usr/local/bin/moedex
 
 USER moedex
 
@@ -64,8 +62,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
 # Bind 0.0.0.0 INSIDE the container: the container's network namespace is the
 # isolation boundary, and a 127.0.0.1 bind here would be unreachable through a
 # published port (-p). Publish only to the host loopback (-p 127.0.0.1:8080:8080)
-# and front it with a trusted proxy. Always set MOEDEX_AUTH_TOKEN when exposing
-# it (Bearer auth on /search and /stats); the daemon deliberately WARNs on a
-# tokenless non-loopback bind, which is exactly this in-container case.
-ENTRYPOINT ["moedex-serve"]
-CMD ["-shard-dir", "/shards", "-http", "0.0.0.0:8080"]
+# and front it with a trusted proxy. MOEDEX_AUTH_TOKEN is required for this
+# non-loopback in-container bind; startup fails closed without it. For an
+# isolated development container only, append --allow-insecure explicitly.
+ENTRYPOINT ["moedex", "serve"]
+CMD ["--shard-dir", "/shards", "--http", "0.0.0.0:8080"]

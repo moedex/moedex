@@ -47,8 +47,8 @@ func TestDecodePostingsRejectsOffsetOverflow(t *testing.T) {
 		n := binary.PutUvarint(tmp, v)
 		buf = append(buf, tmp[:n]...)
 	}
-	put(0)                        // blob delta -> blob 0
-	put(1)                        // count: one posting in this group
+	put(0)                       // blob delta -> blob 0
+	put(1)                       // count: one posting in this group
 	put(uint64(math.MaxInt) + 1) // offset delta overflows int
 
 	got := DecodePostings(buf)

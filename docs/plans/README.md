@@ -10,6 +10,11 @@ verification contract for one delivery gate.
   resolves same-name Pattern call fan-out with bounded, fail-open LSP work and replaces absolute
   header/test-file ranking gates with composable penalties.
 
+- [Eight binaries to one — shell rearchitecture under Moe](./moe-shell-rearchitecture.md)
+  collapses the eight `cmd/` binaries into a single `moe` CLI/TUI over an unchanged engine,
+  replaces the 49-variable environment sprawl with one config registry, and splits the
+  10,168-line `internal/server` package into build/serve/graph homes.
+
 ## Program phases
 
 | Phase | Execution plan | ADR | Wave | Depends on | Status |

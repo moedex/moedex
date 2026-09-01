@@ -13,7 +13,7 @@ func TestResolveRootDefaultsToManagedCorpus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := filepath.Join(home, ".moedex-managed")
+	want := filepath.Join(home, ".moedex")
 	if got != want {
 		t.Fatalf("ResolveRoot default = %q, want %q", got, want)
 	}

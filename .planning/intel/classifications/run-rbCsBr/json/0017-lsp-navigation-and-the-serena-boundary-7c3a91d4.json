@@ -1,0 +1,19 @@
+{
+  "source_path": "docs/adr/0017-lsp-navigation-and-the-serena-boundary.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0017: LSP-precise navigation — the three conditions to subsume Serena",
+  "summary": "Records the three conditions under which moedex could subsume Serena's LSP navigation role; decision is Proposed, not taken.",
+  "scope": ["LSP navigation", "Serena", "internal/navigate", "language server registry", "Protostar", "symbol sidecar", "moedex-nav"],
+  "cross_refs": [
+    "../../../protostar",
+    "../../../moe",
+    "./0008-polyglot-symbol-sidecar.md",
+    "./0007-optional-dense-arm.md",
+    "./0002-positional-trigram-core-byte-offsets.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Status is 'Proposed' (spike productionized but strategic decision not taken) → locked false despite ADR type."
+}

@@ -21,7 +21,7 @@ import (
 
 	"moedex/internal/ingest"
 	"moedex/internal/parity"
-	"moedex/internal/server"
+	server "moedex/internal/serve"
 )
 
 // TestDeltaDedupedReexportParity is PROOF (1): change one repo, delta-refresh the

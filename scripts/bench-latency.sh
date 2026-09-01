@@ -10,7 +10,7 @@
 #   scripts/bench-latency.sh [N]      # N = samples per query (default 20)
 # Env:
 #   MOEDEX_MCP_URL   (default http://127.0.0.1:8081/mcp)
-#   MOEDEX_TOKEN     (default: read ~/.moedex-index/auth-token)
+#   MOEDEX_TOKEN     (default: read ~/.moedex-state/auth-token)
 #   BUDGET           token_budget   (default 4000)
 #   TOPK             top_k          (default 12)
 
@@ -18,12 +18,12 @@ set -euo pipefail
 
 N="${1:-20}"
 URL="${MOEDEX_MCP_URL:-http://127.0.0.1:8081/mcp}"
-TOKEN="${MOEDEX_TOKEN:-$(cat "$HOME/.moedex-index/auth-token" 2>/dev/null || true)}"
+TOKEN="${MOEDEX_TOKEN:-$(cat "$HOME/.moedex-state/auth-token" 2>/dev/null || true)}"
 BUDGET="${BUDGET:-4000}"
 TOPK="${TOPK:-12}"
 
 if [[ -z "$TOKEN" ]]; then
-  echo "no token: set MOEDEX_TOKEN or create ~/.moedex-index/auth-token" >&2
+  echo "no token: set MOEDEX_TOKEN or create ~/.moedex-state/auth-token" >&2
   exit 1
 fi
 

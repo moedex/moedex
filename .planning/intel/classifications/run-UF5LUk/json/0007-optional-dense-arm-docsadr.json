@@ -1,0 +1,26 @@
+{
+  "source_path": "docs/adr/0007-optional-dense-arm.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0007: Optional dense arm — zero-dependency default, ONNX behind a build tag or a local HTTP server",
+  "summary": "Makes the dense embedding arm optional and local via a nil-able embed.Embedder with a no-op stub default, ONNX build-tag backend, and HTTP backend.",
+  "scope": [
+    "dense arm",
+    "embed.Embedder",
+    "ONNX embedder",
+    "HTTPEmbedder",
+    "embedding store (MDXE)",
+    "zero-dependency default build",
+    "ranking"
+  ],
+  "cross_refs": [
+    "./0006-rrf-hybrid-ranking.md",
+    "./0001-single-node-scope-pure-go-default.md",
+    "../../research/code-embedders.md",
+    "./0014-eval-harness-gold-gate.md"
+  ],
+  "locked": true,
+  "precedence": null,
+  "notes": "Filename hash suffix substituted with a path-derived token; SHA-256 could not be computed without a shell tool."
+}

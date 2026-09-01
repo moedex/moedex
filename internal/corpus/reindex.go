@@ -9,7 +9,7 @@ import (
 )
 
 // casManifestName mirrors blobstore.BlobManifestName — the file that marks an
-// initialized content-addressable store. moedex-corpus checks for it (rather than
+// initialized content-addressable store. moedex corpus checks for it (rather than
 // importing the engine's blobstore) to choose cas-build vs cas-refresh, so the
 // tool stays decoupled from the engine internals it only ever drives through the
 // moedex-index binary.
@@ -22,7 +22,7 @@ type ReindexOptions struct {
 	CASDir     string   // persistent content-addressable store
 	ShardDir   string   // served (deduped) shard dir consumed by moedex-serve
 	ShardBytes int64    // target bytes/shard for the export; 0 = moedex-index default
-	IndexBin   string   // moedex-index binary to drive (default "moedex-index")
+	IndexBin   string   // compatibility override; empty drives the unified "moedex" binary
 	Reload     []string // argv run after a successful export (e.g. ["systemctl","reload","moedex-serve"]); empty = skip
 }
 
@@ -53,10 +53,10 @@ func Reindex(ctx context.Context, r Runner, opts ReindexOptions) (ReindexReport,
 	}
 	bin := opts.IndexBin
 	if bin == "" {
-		bin = "moedex-index"
+		bin = "moedex"
 	}
 	if _, err := r.LookPath(bin); err != nil {
-		return ReindexReport{}, fmt.Errorf("%s not found on PATH — build it with `go build -o moedex-index ./cmd/moedex-index`: %w", bin, err)
+		return ReindexReport{}, fmt.Errorf("%s not found on PATH — install it with `make install`: %w", bin, err)
 	}
 
 	var rep ReindexReport
@@ -105,7 +105,17 @@ func Reindex(ctx context.Context, r Runner, opts ReindexOptions) (ReindexReport,
 // runIndex runs one moedex-index subcommand and captures its stdout summary.
 func runIndex(ctx context.Context, r Runner, bin string, args ...string) (StepResult, error) {
 	name := args[0]
-	res, err := r.Run(ctx, bin, args...)
+	commandArgs := args
+	if filepath.Base(bin) == "moedex" {
+		semantic := map[string][]string{
+			"cas-build": {"index", "cas", "build"}, "cas-refresh": {"index", "cas", "refresh"},
+			"cas-export": {"index", "cas", "export"}, "cas-compact": {"index", "cas", "compact"},
+		}
+		if prefix := semantic[name]; prefix != nil {
+			commandArgs = append(append([]string{}, prefix...), args[1:]...)
+		}
+	}
+	res, err := r.Run(ctx, bin, commandArgs...)
 	out := strings.TrimSpace(string(res.Stdout))
 	if err != nil {
 		return StepResult{Name: name, Output: out}, fmt.Errorf("%s %s: %w", bin, name, err)

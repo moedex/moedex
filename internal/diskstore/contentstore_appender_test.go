@@ -124,8 +124,8 @@ func TestContentStoreAppenderCarriesForwardAndAppendsOnlyNetNew(t *testing.T) {
 // test fails against any 32-bit-truncating decode of dirOff or the per-entry offset.
 func TestContentStoreAppenderLargeOffsetsNoTruncation(t *testing.T) {
 	fourGiB := int64(1) << 32
-	dirOff := fourGiB + (1 << 30)  // 5 GiB: > 4 GiB, low 32 bits = 0x40000000
-	blobAbsOff := fourGiB + 100    // > 4 GiB; low 32 bits (100) != true value
+	dirOff := fourGiB + (1 << 30) // 5 GiB: > 4 GiB, low 32 bits = 0x40000000
+	blobAbsOff := fourGiB + 100   // > 4 GiB; low 32 bits (100) != true value
 	blobLen := int64(64)
 	const sha = "huge-offset-sha"
 	// Sanity: the test premise is that 32-bit truncation would CHANGE these values.

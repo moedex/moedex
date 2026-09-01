@@ -16,11 +16,12 @@
 #   sql-language-server   SQL      (npm -g; pins a transitive dep that 1.7.1 broke)
 #   rust-analyzer .. Rust         (brew; not in the corpus today but kept on request)
 #   clangd ......... C/C++        (ships with Xcode Command Line Tools)
-#   cflsp .......... CFML (~2.2k)  (OPT-IN: --with-cfml; BUILDS EXTERNAL SOURCE)
+#   cflsp .......... CFML (~2.2k)  (OPT-IN: --with-cfml or --cfml-only; BUILDS EXTERNAL SOURCE)
 #
 # Usage:
 #   scripts/install-lsp-servers.sh              # core servers (no CFML build)
 #   scripts/install-lsp-servers.sh --with-cfml  # also build the CFML server from source
+#   scripts/install-lsp-servers.sh --cfml-only  # build only the CFML server from source
 #   scripts/install-lsp-servers.sh --dry-run    # print what it WOULD do, change nothing
 #
 # After running, ensure these are on your shell PATH (the launchd daemon already
@@ -29,10 +30,12 @@
 set -euo pipefail
 
 WITH_CFML=0
+CFML_ONLY=0
 DRY=0
 for a in "$@"; do
   case "$a" in
     --with-cfml) WITH_CFML=1 ;;
+    --cfml-only) WITH_CFML=1; CFML_ONLY=1 ;;
     --dry-run)   DRY=1 ;;
     -h|--help)   sed -n '2,30p' "$0"; exit 0 ;;
     *) echo "unknown flag: $a (see --help)" >&2; exit 2 ;;
@@ -44,8 +47,10 @@ warn() { printf '[lsp] WARN: %s\n' "$*" >&2; }
 have() { command -v "$1" >/dev/null 2>&1; }
 run()  { if [ "$DRY" = 1 ]; then printf '[lsp] DRY: %s\n' "$*"; else log "+ $*"; eval "$*"; fi; }
 
-CFML_DIR="${MOEDEX_TOOLS_DIR:-$HOME/.moedex-tools}/cfc"
+CFML_DIR="${MOEDEX_TOOLS_DIR:-$HOME/.moedex/tools}/cfc"
+CFML_SERVER="$CFML_DIR/cflsp-vscode/out/server.js"
 
+if [ "$CFML_ONLY" != 1 ]; then
 # --- prerequisites -----------------------------------------------------------
 have npm  || warn "npm not found — the TS/Python/CSS/HTML/SQL servers need it (brew install node)"
 have brew || warn "brew not found — rust-analyzer and the .NET SDK install via it"
@@ -95,36 +100,40 @@ fi
 if have clangd; then log "clangd present: $(command -v clangd)"
 else warn "clangd not found — install the Xcode Command Line Tools (xcode-select --install)"
 fi
+fi
 
 # --- CFML: build cflsp from source (OPT-IN) ----------------------------------
 # There is no packaged standalone CFML server. The only viable one is built from
 # softwareCobbler/cfc (the compiler behind the DavidRogers.cflsp VSCode plugin);
 # it implements go-to-DEFINITION only. This BUILDS AND RUNS EXTERNAL SOURCE, so
-# it is opt-in (--with-cfml) — your explicit trust decision.
+# it is opt-in (--with-cfml or --cfml-only) — your explicit trust decision.
 if [ "$WITH_CFML" = 1 ]; then
-  if have cflsp; then
-    log "cflsp present: $(command -v cflsp)"
+  if [ -f "$CFML_SERVER" ]; then
+    log "managed CFML server present: $CFML_SERVER"
   else
+    if have cflsp; then
+      warn "cflsp is on PATH but its managed server bundle is missing at $CFML_SERVER — rebuilding"
+    fi
     log "building CFML server from softwareCobbler/cfc into $CFML_DIR (external source)"
     run "mkdir -p '$(dirname "$CFML_DIR")'"
     if [ ! -d "$CFML_DIR" ]; then
       run "git clone --depth 1 https://github.com/softwareCobbler/cfc.git '$CFML_DIR'"
     fi
     run "( cd '$CFML_DIR' && npm run install-all && npm run build-cflsp-prod )"
-    if [ "$DRY" != 1 ]; then
-      SRV="$(grep -rl onDefinition "$CFML_DIR/cflsp-vscode/out"/*.js 2>/dev/null | head -1 || true)"
-      [ -n "$SRV" ] || { warn "could not locate the built CFML server.js under $CFML_DIR/cflsp-vscode/out — skipping wrapper"; SRV=""; }
-      if [ -n "$SRV" ]; then
-        # Install a wrapper on the npm global bin (already on PATH for the others).
-        BINDIR="$(npm prefix -g 2>/dev/null)/bin"; [ -d "$BINDIR" ] || BINDIR="/usr/local/bin"
-        printf '#!/bin/sh\nexec node "%s" "$@"\n' "$SRV" > "$BINDIR/cflsp"
-        chmod +x "$BINDIR/cflsp"
-        log "installed cflsp wrapper -> $BINDIR/cflsp (server: $SRV)"
-      fi
+  fi
+  if [ "$DRY" != 1 ]; then
+    [ -f "$CFML_SERVER" ] || { warn "build did not produce the official CFML server entrypoint at $CFML_SERVER — skipping wrapper"; CFML_SERVER=""; }
+    if [ -n "$CFML_SERVER" ]; then
+      # Reinstall the wrapper even when the bundle already existed: this repairs
+      # a missing or stale PATH wrapper without rebuilding external source.
+      BINDIR="$(npm prefix -g 2>/dev/null)/bin"; [ -d "$BINDIR" ] || BINDIR="/usr/local/bin"
+      printf '#!/bin/sh\nexec node "%s" "$@"\n' "$CFML_SERVER" > "$BINDIR/cflsp"
+      chmod +x "$BINDIR/cflsp"
+      log "installed cflsp wrapper -> $BINDIR/cflsp (server: $CFML_SERVER)"
     fi
   fi
 else
-  log "skipping CFML (pass --with-cfml to build it from source; it runs external code)"
+  log "skipping CFML (pass --with-cfml or --cfml-only to build it from source; it runs external code)"
 fi
 
 # --- verify ------------------------------------------------------------------

@@ -77,10 +77,10 @@ func buildIndex(blobs map[string]string) *index.Index {
 // verifies, so any divergence is a real bug.
 func TestPositionalEqualsGold(t *testing.T) {
 	blobs := map[string]string{
-		"a.go":    "func Razavi() {}\nvar itemAnswer = 1\n// nothing here\n",
-		"b.go":    "RAZAVI is shouting\nItemAnswer mixed\nrazavi lower\n",
-		"c.go":    "the password field\nPASSWORD reset\nPaSsWoRd here\n",
-		"d.txt":   "user paſſword via long-s\nKelvin K vs K sign\n",
+		"a.go":  "func Razavi() {}\nvar itemAnswer = 1\n// nothing here\n",
+		"b.go":  "RAZAVI is shouting\nItemAnswer mixed\nrazavi lower\n",
+		"c.go":  "the password field\nPASSWORD reset\nPaSsWoRd here\n",
+		"d.txt": "user paſſword via long-s\nKelvin K vs K sign\n",
 		"e.min.js": strings.Repeat("var x=function(y){return z(y)};\n", 50) +
 			"var Razavi_0 = itemAnswer(0);\n" +
 			strings.Repeat("var q=compute(w);\n", 50),

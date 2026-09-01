@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"moedex/internal/search"
-	"moedex/internal/server"
+	server "moedex/internal/serve"
 )
 
 // mustFindLiteral runs q against the corpus and asserts at least one match whose
@@ -113,7 +113,7 @@ func TestBOMAndNonBOMDedupToOneBlobBothPathsSurface(t *testing.T) {
 	const bom = "\xEF\xBB\xBF" // UTF-8 BOM
 	commitGitRepo(t, repo, map[string]string{
 		"with_bom.go": bom + body, // on-disk bytes carry the BOM
-		"no_bom.go":   body,        // identical post-strip content
+		"no_bom.go":   body,       // identical post-strip content
 	})
 
 	// Premise: the two files have DIFFERENT git blob SHAs (one carries the BOM),

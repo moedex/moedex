@@ -20,7 +20,7 @@ import (
 
 	"moedex/internal/diskstore"
 	"moedex/internal/parity"
-	"moedex/internal/server"
+	server "moedex/internal/serve"
 )
 
 // buildBaselineAndStagedDelta builds a 3-repo corpus, a baseline deduped export at

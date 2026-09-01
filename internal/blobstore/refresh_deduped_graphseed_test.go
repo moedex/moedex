@@ -4,8 +4,9 @@ import (
 	"os"
 	"testing"
 
+	graphbuild "moedex/internal/graph/build"
 	"moedex/internal/graph/diskgraph"
-	"moedex/internal/server"
+	server "moedex/internal/serve"
 )
 
 // TestDedupedDeltaCarriesGraphSeed covers the served-side half of the
@@ -18,7 +19,7 @@ func TestDedupedDeltaCarriesGraphSeed(t *testing.T) {
 	requireGit(t)
 	liveDir, casDir, _, _ := buildBaselineAndStagedDelta(t)
 
-	if _, _, err := server.BuildGraph(liveDir); err != nil {
+	if _, _, err := graphbuild.BuildGraph(liveDir); err != nil {
 		t.Fatalf("build baseline graph: %v", err)
 	}
 	baseline, err := diskgraph.Open(server.GraphPath(liveDir))
@@ -61,7 +62,7 @@ func TestDedupedDeltaCarriesGraphSeed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, stats, err := server.RefreshGraph(liveDir)
+	_, stats, err := graphbuild.RefreshGraph(liveDir)
 	if err != nil {
 		t.Fatalf("RefreshGraph over the swapped dir: %v", err)
 	}

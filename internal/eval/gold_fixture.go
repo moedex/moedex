@@ -51,12 +51,12 @@ func CaptureCharge(c Charge) error {
 func BuildIndex(docs []string) {
 }
 `),
-			// Go auth file. Note it never uses the words "login"/"credentials":
-			// it speaks of "authenticate"/"session". A query phrased with the
-			// user-facing synonym ("login credentials") shares NO trigram with
-			// this file's identifiers, so pure lexical cannot find it — the dense
-			// concept arm can (auth axis). This is the dense-favoring case.
-			file("auth/authenticate.go", `package auth
+		// Go auth file. Note it never uses the words "login"/"credentials":
+		// it speaks of "authenticate"/"session". A query phrased with the
+		// user-facing synonym ("login credentials") shares NO trigram with
+		// this file's identifiers, so pure lexical cannot find it — the dense
+		// concept arm can (auth axis). This is the dense-favoring case.
+		file("auth/authenticate.go", `package auth
 
 // Authenticate verifies a user's identity and opens a session.
 func Authenticate(user, secret string) (token string, err error) {

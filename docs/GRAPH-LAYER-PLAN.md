@@ -54,9 +54,9 @@ Identical content indexed once across repos. In a graph, shared/vendored library
 The `byName` inverted index was per-shard. It is now merged into a **corpus-wide name index**, so cross-repo symbol lookup works: "every repo that defines or references `AccountBillingContactChanged`."
 
 - [`symbol.Corpus`](../internal/symbol/corpus.go) — the merge primitive. `Merge`/`AddShard` fold per-shard indices into one `byName` lookup returning `ShardRef`s (shard-qualified blob + byte range + role); `References`/`Definitions`/`DefiningShards`/`ReferencingShards` answer corpus-wide, `EachName` is the enumeration seam phase 3 fans out over. The merged map holds only name → `[shard IDs]` and resolves occurrences **on touch** from the owning shard, so it costs one entry per distinct *name*, not per occurrence.
-- [`server.OpenSymbols`](../internal/server/symbolcorpus.go) — builds it over a real shard dir (one symbol index per shard, merged) and resolves each hit to repo/path/line as a `SymbolSite`; `DefiningRepos`/`ReferencingRepos` are the repo-level answers. Content dedup resolves to every shard carrying the content, with the shared blob SHA as the one-content-node cue.
+- [`graphserve.OpenSymbols`](../internal/graph/serve/symbolcorpus.go) — builds it over a real shard dir (one symbol index per shard, merged) and resolves each hit to repo/path/line as a `SymbolSite`; `DefiningRepos`/`ReferencingRepos` are the repo-level answers. Content dedup resolves to every shard carrying the content, with the shared blob SHA as the one-content-node cue.
 
-Not yet wired to an MCP tool — that is phase 6's surface. `moedex-serve` is untouched.
+Not yet wired to an MCP tool — that is phase 6's surface. The serving command is untouched.
 
 ### Edge candidate generation — **delivered (phase 3)**
 
@@ -91,7 +91,7 @@ The recall-complete half of the two-phase construction below, in
 
 The unscored work list stays in memory as a pipeline intermediate. Phase 4 turns it
 into confidence-annotated edges for phase 5; no MCP surface (phase 6) and no
-`moedex-serve` change belong to candidate generation.
+`moedex serve` changes belong to candidate generation.
 
 ### Edge verification — **delivered (phase 4, regex tier)**
 
@@ -148,15 +148,15 @@ work list as a content-addressed adjacency sidecar:
   for the adjacency key while keeping the call-site itself as a complete
   `{blob_sha, byte_offset, byte_length}` evidence link.
   Identical content repeated across shards folds to one SHA-keyed edge.
-- `moedex-index build`, `refresh`, and the CAS export paths now write
+- `moedex index build`, `refresh`, and the CAS export paths now write
   `corpus-graph.graph` beside `corpus-tokens.tki` and `corpus-symbols.sym`.
 
 ### Graph query MCP tools — **delivered (phase 6)**
 
-`moedex-serve` serves `trace_calls`, `trace_consumers`, `impact_analysis`, and
+`moedex serve` serves `trace_calls`, `trace_consumers`, `impact_analysis`, and
 `list_clusters` on both the stdio and HTTP MCP surfaces — the Codegraph equivalents of
 `graph_trace` and `graph_cluster`, answered from Moedex's own graph store. All four
-share one hot-swappable mmap'd generation ([`internal/server/graphtools.go`](../internal/server/graphtools.go)):
+share one hot-swappable mmap'd generation ([`internal/graph/serve/graphtools.go`](../internal/graph/serve/graphtools.go)):
 a compact symbol/location catalog for rendering, with the adjacency itself left in the
 sidecar mmap and reverse traversals scanned on demand. The phase's remaining piece,
 annotated `search_context`, landed with phase 14 below.
@@ -213,7 +213,7 @@ Unrelated singleton nodes are not materialized. The default eligible-node cap is
 never partial communities. A topology covering less than 1% of observed graph
 nodes persists `under_covered` instead of publishing fragments as communities.
 
-`moedex-serve` exposes paginated sidecar reads as `list_clusters` on both stdio and
+`moedex serve` exposes paginated sidecar reads as `list_clusters` on both stdio and
 HTTP MCP surfaces. `{offset?,limit?}` returns summaries without members;
 `{cluster_id,offset?,limit?}` returns one cluster's member page (default 50, maximum
 200). Missing, stale, under-covered, and over-cap sidecars return explicit
@@ -241,10 +241,10 @@ The core insight: Moedex builds edges **faster than Codegraph** using its trigra
 
 4. Persist graph adjacency file
    Mmap'd adjacency list keyed by blob SHA + symbol offset.
-   Built alongside search index — moedex-index refresh rebuilds postings, symbols, and graph together.
+   Built alongside search index — `moedex index refresh` rebuilds postings, symbols, and graph together.
 
 5. Serve via MCP
-   trace_calls, trace_consumers, impact_analysis on moedex-serve.
+   trace_calls, trace_consumers, impact_analysis on `moedex serve`.
    Also: annotate search_context results with graph neighborhood automatically.
 ```
 
@@ -258,7 +258,7 @@ The core insight: Moedex builds edges **faster than Codegraph** using its trigra
 | 2 | ✅ **Framework classifiers** — Route, Event, Queue, Table, Service node types via pattern matchers over trigram candidates (`internal/classify`, C# only) | Phase 1 | Medium |
 | 3 | ✅ **Edge candidate generation** — trigram fan-out for each definition, cross-shard (`graph/candidates`) | Phase 1 | Low |
 | 4 | ✅ **Edge verification** — language-specific call/import/type confirmation with lossless Pattern/Candidate scoring (regex tier delivered; LSP tier later) | Phase 3 | Medium–High |
-| 5 | ✅ **Graph sidecar persistence** — mmap'd SHA+offset adjacency list (`graph/diskgraph`), built by `moedex-index` alongside the ranking sidecars | Phase 4 | Medium |
+| 5 | ✅ **Graph sidecar persistence** — mmap'd SHA+offset adjacency list (`graph/diskgraph`), built by `moedex index` alongside the ranking sidecars | Phase 4 | Medium |
 | 6 | ✅ **Graph query MCP tools** — trace_calls, trace_consumers, impact_analysis, list_clusters, and (with phase 14) annotated search_context | Phase 5 | Medium |
 | 7 | ✅ **Service clustering** — deterministic Louvain modularity optimization (`graph/cluster`) and `list_clusters` MCP output | Phase 5 | Low |
 
@@ -319,10 +319,10 @@ handles — the endgame of having search and graph in the same engine.
 
 - **The seam.** [`mcp.GraphAnnotator`](../internal/mcp/neighbors.go) is the contract;
   `GraphToolset` implements it in
-  [`internal/server/graphneighbors.go`](../internal/server/graphneighbors.go), and
-  `moedex-serve` wires the two with `mcp.WithGraphAnnotator` on both the stdio and
+  [`internal/graph/serve/graphneighbors.go`](../internal/graph/serve/graphneighbors.go), and
+  `moedex serve` wires the two with `mcp.WithGraphAnnotator` on both the stdio and
   HTTP MCP surfaces. The `mcp` package owns the contract and the rendering only — the
-  mmap'd graph never leaves `internal/server`.
+  mmap'd graph never leaves `internal/graph/serve`.
 - **`graph_depth`** (default 1, `0` disables, max 10) is the per-call control. It is a
   *pointer* in the argument struct, so an omitted argument and an explicit `0` are
   distinguishable rather than colliding on Go's zero value.
@@ -372,7 +372,7 @@ These are Codegraph integrations that share its MCP server but are not code-grap
 - **The default build stays pure Go.** Graph construction and serving use only the standard library. LSP-tier verification is behind the existing `lsp` build tag. Semantic similarity edges are behind the existing `onnx` build tag.
 - **Trigram-first, verify-second.** Every edge discovery starts with a cheap trigram candidate query, then applies the cheapest verifier that reaches the desired confidence tier.
 - **Mmap'd like postings.** The graph adjacency file follows the existing `diskstore` pattern — built offline, served via mmap, never enters the Go heap.
-- **Rebuild with the index.** `moedex-index refresh` rebuilds postings, symbols, tokens, and graph together. No separate graph build pipeline.
+- **Rebuild with the index.** `moedex index refresh` rebuilds postings, symbols, tokens, and graph together. No separate graph build pipeline.
 - **Bounded hot-name scheduling.** Candidate sources are prepared once per name,
   then high-frequency names are split into deterministic source batches of about
   32K candidate pairs. The shared largest-first queue reports its heaviest name

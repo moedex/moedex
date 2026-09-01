@@ -52,12 +52,24 @@ health:
   script:
     - make health
 
+# Compile every optional build-tagged arm on ordinary pushes/MRs. The ONNX and
+# LSP suites are allowed to skip runtime integrations when their external
+# runtime/server is absent; compilation and vetting are not optional.
+tagged-check:
+  stage: gate
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+  script:
+    - make tagged-check
+
 # --- parity: full-corpus ripgrep parity (expensive; gated) ----------------
 # Runs on scheduled pipelines, tags, and any MR touching internal/query,
 # internal/search, or internal/parity (CLAUDE.md: those packages "must keep
 # make verify green"). Needs a self-hosted runner tagged `moedex-corpus` with:
 #   * the managed corpus checked out at $MOEDEX_CORPUS (default
-#     ~/.moedex-managed if unset),
+#     ~/.moedex/corpus if unset),
 #   * ripgrep (`rg`) on PATH,
 #   * enough disk for the .parity-work scratch dir.
 parity:
@@ -105,10 +117,13 @@ graph-eval-private:
         - internal/graph/**/*
         - internal/contextwin/**/*
         - internal/mcp/**/*
-        - internal/server/**/*
+        - internal/serve/**/*
+        - internal/graph/build/**/*
+        - internal/graph/serve/**/*
         - internal/eval/**/*
-        - cmd/moedex-serve/**/*
-        - cmd/moedex-index/**/*
+        - cmd/moedex/**/*
+        - internal/app/servecmd/**/*
+        - internal/app/indexcmd/**/*
         - Makefile
         - .gitlab-ci.yml
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
@@ -131,7 +146,7 @@ graph-eval-private:
         exit 1
       }
   script:
-    - go run ./cmd/moedex-index graph -shard-dir "$MOEDEX_GRAPH_EVAL_SHARDS"
+    - go run ./cmd/moedex graph build -shard-dir "$MOEDEX_GRAPH_EVAL_SHARDS"
     - make graph-eval-private
 
 # --- images: optional manual build + push of both images ------------------

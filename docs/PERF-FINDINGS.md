@@ -1,7 +1,7 @@
 # moedex performance findings — agent query path
 
 _Captured 2026-06-26 on Apple M5 Max, Go 1.26, against the live corpus
-(`~/.moedex-index/shards`: 50,514 blobs / 50,514 docs / 25,508 symbol blobs,
+(`~/.moedex-state/shards`: 50,514 blobs / 50,514 docs / 25,508 symbol blobs,
 **dense arm OFF** — `moedex_corpus_dense_chunks 0`)._
 
 ## TL;DR

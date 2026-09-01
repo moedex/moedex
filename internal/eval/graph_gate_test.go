@@ -11,8 +11,9 @@ import (
 	graphcore "moedex/internal/eval"
 	"moedex/internal/graph"
 	"moedex/internal/graph/diskgraph"
+	graphserve "moedex/internal/graph/serve"
 	"moedex/internal/index"
-	"moedex/internal/server"
+	server "moedex/internal/serve"
 )
 
 func TestHermeticGraphGoldGate(t *testing.T) {
@@ -62,7 +63,7 @@ func TestHermeticGraphGoldGate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tools, err := server.OpenGraphTools(dir)
+	tools, err := graphserve.OpenGraphTools(dir)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -15,7 +15,7 @@ import (
 	"testing"
 
 	"moedex/internal/diskstore"
-	"moedex/internal/server"
+	server "moedex/internal/serve"
 )
 
 // TestCompactionRemovesDeadBlobBytes is the byte-level fixture proof for the CAS pack.

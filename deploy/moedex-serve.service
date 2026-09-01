@@ -2,7 +2,7 @@
 #
 # Install:
 #   sudo install -m 0644 deploy/moedex-serve.service /etc/systemd/system/
-#   sudo install -m 0755 moedex-serve /usr/local/bin/moedex-serve   # your built binary
+#   sudo install -m 0755 moe /usr/local/bin/moe   # your built binary
 #   sudo install -d -m 0750 -o root -g moedex /etc/moedex
 #   sudo install -m 0640 -o root -g moedex \
 #        deploy/moedex-serve.env.example /etc/moedex/moedex-serve.env  # then edit
@@ -35,7 +35,7 @@ EnvironmentFile=/etc/moedex/moedex-serve.env
 # Bind loopback explicitly. -shard-dir is taken from MOEDEX_SHARD_DIR in the
 # EnvironmentFile (the flag default is $MOEDEX_SHARD_DIR), so it does not need to
 # be repeated here; the auth token is read from MOEDEX_AUTH_TOKEN in the env.
-ExecStart=/usr/local/bin/moedex-serve -http 127.0.0.1:8080
+ExecStart=/usr/local/bin/moedex serve --http 127.0.0.1:8080
 
 # systemctl reload -> SIGHUP -> the daemon re-opens MOEDEX_SHARD_DIR and
 # hot-swaps the corpus without dropping in-flight requests.
@@ -68,10 +68,12 @@ MemoryDenyWriteExecute=true
 SystemCallFilter=@system-service
 SystemCallErrorNumber=EPERM
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
-# The HTTP daemon only ever READS the shard dir; keep it read-only here. The
-# refresh unit (which rewrites shards) declares ReadWritePaths instead.
+# The daemon only READS shards. LSP-enabled builds need one explicit writable
+# cache for isolated managed-corpus projections; external servers never receive
+# write access to the canonical corpus.
 # Adjust the path if you change MOEDEX_SHARD_DIR.
 ReadOnlyPaths=/srv/moedex/shards
+ReadWritePaths=/srv/moedex/lsp-workspaces
 
 [Install]
 WantedBy=multi-user.target

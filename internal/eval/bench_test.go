@@ -126,7 +126,7 @@ func BenchmarkSearchRegex_Alternation(b *testing.B) {
 	ix := benchCorpus(b)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := search.Regex(context.Background(), ix,"handler|response|payload"); err != nil {
+		if _, err := search.Regex(context.Background(), ix, "handler|response|payload"); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -139,7 +139,7 @@ func BenchmarkSearchRegex_Class(b *testing.B) {
 	ix := benchCorpus(b)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := search.Regex(context.Background(), ix,"func_[0-9]+"); err != nil {
+		if _, err := search.Regex(context.Background(), ix, "func_[0-9]+"); err != nil {
 			b.Fatal(err)
 		}
 	}

@@ -1,0 +1,18 @@
+{
+  "source_path": "docs/adr/0005-mmap-compact-postings.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0005: mmap'd compact (varint-delta) postings as the memory strategy",
+  "summary": "Persist the index with grouped varint delta-coded posting lists served via mmap so postings never enter the Go heap.",
+  "scope": ["positional postings", "varint delta coding", "mmap", "diskstore.LoadMmap", "internal/index/codec.go", "MOEDEX03 file format", "Go heap memory", "cmd/scale"],
+  "cross_refs": [
+    "./0002-positional-trigram-core-byte-offsets.md",
+    "./0001-single-node-scope-pure-go-default.md",
+    "./0004-content-addressable-blob-store.md",
+    "./0012-search-latency-positional-verify.md"
+  ],
+  "locked": true,
+  "precedence": null,
+  "notes": ""
+}

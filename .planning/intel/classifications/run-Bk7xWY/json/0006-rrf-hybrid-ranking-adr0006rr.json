@@ -1,0 +1,20 @@
+{
+  "source_path": "docs/adr/0006-rrf-hybrid-ranking.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0006: Hybrid multi-arm ranking fused via RRF — not a learned reranker",
+  "summary": "Decides to fuse lexical, path, symbol, and gated dense retrieval arms via Reciprocal Rank Fusion instead of a learned reranker.",
+  "scope": ["Reciprocal Rank Fusion", "internal/rank", "BM25 lexical arm", "path/filename arm", "symbol-name arm", "dense arm", "learned reranker", "gold set eval"],
+  "cross_refs": [
+    "../../ARCHITECTURE.md#design-lineage",
+    "./0008-polyglot-symbol-sidecar.md",
+    "./0007-optional-dense-arm.md",
+    "./0014-eval-harness-gold-gate.md",
+    "../../research/learned-reranker.md",
+    "./0009-agent-context-api.md"
+  ],
+  "locked": true,
+  "precedence": null,
+  "notes": ""
+}

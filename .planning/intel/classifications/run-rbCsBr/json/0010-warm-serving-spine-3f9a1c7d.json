@@ -1,0 +1,19 @@
+{
+  "source_path": "docs/adr/0010-warm-serving-spine.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0010: Warm multi-shard serving spine — mmap retrieval daemon + ranked context, with sidecar persistence and daemon hardening",
+  "summary": "Splits offline shard building from a warm mmap'd serving daemon with corpus-wide ranked context, persisted sidecars, and hardened HTTP surface.",
+  "scope": ["moedex-serve daemon", "moedex-index shard builder", "server.Corpus", "server.RankCorpus", "mmap shard directory", "BM25 token index (TKI1)", "symbol index (SYM1)", "embedding store (MDXE)", "SIGHUP hot-reload", "HTTP auth/TLS hardening"],
+  "cross_refs": [
+    "./0005-mmap-compact-postings.md",
+    "./0009-agent-context-api.md",
+    "./0011-shard-level-freshness.md",
+    "./0001-single-node-scope-pure-go-default.md",
+    "./0004-content-addressable-blob-store.md"
+  ],
+  "locked": true,
+  "precedence": null,
+  "notes": ""
+}

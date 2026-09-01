@@ -1,0 +1,30 @@
+{
+  "source_path": "docs/plans/0019-managed-submodule-corpus.md",
+  "type": "DOC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Program 0019: Moedex-managed submodule corpus",
+  "summary": "Program plan tracking phased delivery of a Moedex-managed submodule corpus: init, sync, privacy-aware indexing, parity, and sibling cutover.",
+  "scope": [
+    "managed submodule corpus",
+    "moedex-corpus init",
+    "moedex-corpus sync",
+    "moedex-index",
+    "superproject lock",
+    ".gitmodules",
+    ".ai-privacy.yml",
+    "default-only parity",
+    "sibling cutover"
+  ],
+  "cross_refs": [
+    "../adr/0019-moedex-managed-submodule-corpus.md",
+    "./phases/01-managed-corpus-foundation/PLAN.md",
+    "./phases/01-managed-corpus-foundation/SUMMARY.md",
+    "./phases/02-managed-corpus-integration/PLAN.md",
+    "./phases/02-managed-corpus-integration/SUMMARY.md",
+    "./phases/02-managed-corpus-integration/ROLLOUT.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Program/execution plan doc. Has goal/non-goals and a numbered 'Delivery contract' (PRD-like acceptance signals) plus phase tables and deviation rules, but no user stories, no decision/consequences sections, and no API/schema contracts. Status is 'In progress', and it defers the decision to ADR 0019 which it references. Classified DOC (planning/context) rather than PRD; ambiguity noted."
+}

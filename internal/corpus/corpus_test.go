@@ -370,8 +370,26 @@ func TestDoctorManagedCleanlinessScopesUntrackedFiles(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(dest, "local-state"), []byte("local"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		if got := doctorManagedCleanliness(t.Context(), ExecRunner{}, root, lock); got.Status != StatusFail {
+		if got := doctorManagedCleanliness(t.Context(), ExecRunner{}, root, lock); got.Status != StatusFail ||
+			!strings.Contains(got.Detail, lock.Projects[0].PathWithNamespace) || !strings.Contains(got.Detail, "local-state") {
 			t.Fatalf("cleanliness = %+v, want untracked submodule failure", got)
+		}
+	})
+
+	t.Run("generated MSBuild output is classified precisely", func(t *testing.T) {
+		root, lock := newRoot(t)
+		dest := filepath.Join(root, filepath.FromSlash(lock.Projects[0].PathWithNamespace))
+		generated := filepath.Join(dest, "src", "obj", "Debug", ".NETFramework,Version=v4.8.AssemblyAttributes.cs")
+		if err := os.MkdirAll(filepath.Dir(generated), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(generated, []byte("generated"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		got := doctorManagedCleanliness(t.Context(), ExecRunner{}, root, lock)
+		if got.Status != StatusFail || !strings.Contains(got.Detail, "all are untracked MSBuild intermediates") ||
+			!strings.Contains(got.Detail, lock.Projects[0].PathWithNamespace) {
+			t.Fatalf("cleanliness = %+v, want classified MSBuild failure", got)
 		}
 	})
 }
@@ -1022,12 +1040,26 @@ func TestReindex_DeltaRefresh(t *testing.T) {
 }
 
 func TestReindex_MissingBinary(t *testing.T) {
-	r := fakeRunner{} // moedex-index not on PATH
+	r := fakeRunner{} // moedex not on PATH
 	_, err := Reindex(context.Background(), r, ReindexOptions{
 		Root: "/corpus", CASDir: t.TempDir(), ShardDir: t.TempDir(),
 	})
-	if err == nil || !strings.Contains(err.Error(), "moedex-index") {
+	if err == nil || !strings.Contains(err.Error(), "moedex") {
 		t.Fatalf("want missing-binary error, got %v", err)
+	}
+}
+
+func TestReindex_DefaultUsesUnifiedSemanticCommands(t *testing.T) {
+	var calls []call
+	r := fakeRunner{paths: map[string]string{"moedex": "/bin/moedex"}, calls: &calls}
+	_, err := Reindex(context.Background(), r, ReindexOptions{
+		Root: "/corpus", CASDir: t.TempDir(), ShardDir: t.TempDir(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(calls) != 2 || !strings.Contains(calls[0].cmd, "moedex index cas build") || !strings.Contains(calls[1].cmd, "moedex index cas export") {
+		t.Fatalf("unified reindex calls = %v", calls)
 	}
 }
 

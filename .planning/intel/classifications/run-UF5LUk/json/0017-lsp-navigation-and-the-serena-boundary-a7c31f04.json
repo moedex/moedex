@@ -1,0 +1,23 @@
+{
+  "source_path": "docs/adr/0017-lsp-navigation-and-the-serena-boundary.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0017: LSP-precise navigation — the three conditions to subsume Serena",
+  "summary": "Records that moedex does not target Serena's LSP navigation role until three conditions (real LSP semantics, concurrency safety, live-buffer freshness) hold.",
+  "scope": ["LSP navigation", "Serena", "internal/navigate", "language server registry", "symbol sidecar", "Protostar", "cmd/moedex-nav"],
+  "cross_refs": [
+    "./0001-single-node-scope-pure-go-default.md",
+    "./0002-positional-trigram-core-byte-offsets.md",
+    "./0004-content-addressable-blob-store.md",
+    "./0007-optional-dense-arm.md",
+    "./0008-polyglot-symbol-sidecar.md",
+    "./0010-warm-serving-spine.md",
+    "./0011-shard-level-freshness.md",
+    "../../../protostar",
+    "../../../moe"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Status is 'Proposed' (conditions met, spike productionized) — not Accepted, so locked=false."
+}

@@ -1,0 +1,13 @@
+{
+  "source_path": "docs/adr/0020-branch-aware-indexing.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0020: Branch-aware indexing from locked Git trees",
+  "summary": "Decides moedex will index selected remote branch tips by reading exact Git trees named by the managed corpus lock, without checking out branches.",
+  "scope": ["branch-aware indexing", "Git trees", "corpus lock", "ProjectSnapshot", "CAS manifest", "FileRef provenance", "ingest.Repo", "freshness"],
+  "cross_refs": ["./0019-moedex-managed-submodule-corpus.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Status is Proposed, not Accepted -> locked false."
+}

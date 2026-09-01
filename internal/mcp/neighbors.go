@@ -6,7 +6,7 @@ package mcp
 // publishes this event" in the SAME response as the code — no second tool call.
 //
 // The mcp package owns only the contract and the rendering. Resolving a block to
-// graph nodes and walking the adjacency sidecar lives in internal/server (which
+// graph nodes and walking the adjacency sidecar lives in internal/graph/serve (which
 // owns the mmap'd graph), wired in through WithGraphAnnotator.
 
 import (

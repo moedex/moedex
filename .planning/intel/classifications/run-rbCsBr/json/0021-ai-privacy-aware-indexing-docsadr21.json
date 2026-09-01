@@ -1,0 +1,25 @@
+{
+  "source_path": "docs/adr/0021-ai-privacy-aware-indexing.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0021: Enforce repository AI-privacy policy at ingestion",
+  "summary": "Enforces root .ai-privacy.yml policy at ingestion: level-1 content never indexed, fail-closed publication, and policy-fingerprinted freshness.",
+  "scope": [
+    ".ai-privacy.yml policy parser",
+    "ingest enforcement",
+    "CAS manifests",
+    "served shards",
+    "parity corpora",
+    "scale and eval indexes",
+    "freshness fingerprint",
+    "LSP live-navigation arm"
+  ],
+  "cross_refs": [
+    "./0019-moedex-managed-submodule-corpus.md",
+    "./0020-branch-aware-indexing.md"
+  ],
+  "locked": true,
+  "precedence": null,
+  "notes": ""
+}

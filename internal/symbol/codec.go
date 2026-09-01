@@ -203,7 +203,7 @@ const minOccurrenceRecordSize = 1 + 1 + 1 + 1 + 1
 // a multi-GB allocation attempt before the per-item bounds-checked reads
 // below ever get a chance to fail cleanly on EOF — reproduced as a
 // panic-worthy allocation that would crash a live-serving daemon on SIGHUP
-// reload, since the only recover() in cmd/moedex-serve wraps HTTP handlers,
+// reload, since the only recover() in internal/app/servecmd wraps HTTP handlers,
 // not the reload goroutine.
 //
 // This is necessarily a coarser bound than diskstore's checkCount (which

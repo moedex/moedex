@@ -32,19 +32,19 @@ var (
 		"public",
 		"namespace",
 		"using System",
-		"café_au_lait",        // exercises multi-byte rune offsets
-		"Σumма",               // non-ASCII begin/end grams
-		"ZZUNIQUEDUPTOKEN",    // present only in deduped twin files
-		"x",                   // length < trigram size: full-scan path
+		"café_au_lait",     // exercises multi-byte rune offsets
+		"Σumма",            // non-ASCII begin/end grams
+		"ZZUNIQUEDUPTOKEN", // present only in deduped twin files
+		"x",                // length < trigram size: full-scan path
 	}
 	regexQueries = []string{
 		`public\s+class`,
 		`namespace\s+[A-Za-z.]+`,
 		`using\s+[A-Za-z.]+;`,
-		`(get|set);`,          // alternation -> OR of trigram queries
-		`[Tt]oken`,            // leading char class -> degrades to All, must stay correct
+		`(get|set);`, // alternation -> OR of trigram queries
+		`[Tt]oken`,   // leading char class -> degrades to All, must stay correct
 		`class\s+[A-Za-z]+`,
-		`.`,                   // matches every non-empty line: All-query degradation
+		`.`, // matches every non-empty line: All-query degradation
 	}
 )
 

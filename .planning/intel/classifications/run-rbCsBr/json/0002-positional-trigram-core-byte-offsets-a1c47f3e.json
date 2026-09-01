@@ -1,0 +1,18 @@
+{
+  "source_path": "docs/adr/0002-positional-trigram-core-byte-offsets.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0002: Keep the positional-trigram retrieval core; byte offsets, not rune offsets",
+  "summary": "Adopts positional trigrams (n=3) with byte offsets as the retrieval primitive, enabling byte-exact ripgrep-parity verification.",
+  "scope": ["positional trigrams", "byte offsets", "internal/trigram", "internal/index", "posting lists", "retrieval core"],
+  "cross_refs": [
+    "../../ARCHITECTURE.md#design-lineage",
+    "./0003-cox-reduction-ripgrep-parity.md",
+    "./0005-mmap-compact-postings.md",
+    "./0012-search-latency-positional-verify.md"
+  ],
+  "locked": true,
+  "precedence": null,
+  "notes": ""
+}

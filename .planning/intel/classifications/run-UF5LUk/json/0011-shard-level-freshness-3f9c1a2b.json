@@ -1,0 +1,13 @@
+{
+  "source_path": "docs/adr/0011-shard-level-freshness.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0011: Shard-level freshness via a git-HEAD manifest — rebuild only affected shards",
+  "summary": "Tracks per-shard repo git HEADs in manifest.json so refresh rebuilds only shards intersecting changed repos.",
+  "scope": ["manifest.json", "moedex-index check", "moedex-index refresh", "shards", "git HEAD freshness", "DetectChanges", "CAS cas-refresh", "warm daemon"],
+  "cross_refs": ["./0010-warm-serving-spine.md", "./0004-content-addressable-blob-store.md"],
+  "locked": true,
+  "precedence": null,
+  "notes": ""
+}

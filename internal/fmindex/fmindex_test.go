@@ -131,8 +131,8 @@ func TestAdversarialInputs(t *testing.T) {
 	}{
 		{"repetitive run hit", "aaaaaaa", "aa"},
 		{"repetitive run miss", "aaaaaaa", "ab"},
-		{"overlapping aa in aaaa", "aaaa", "aa"},      // must be [0,1,2]
-		{"overlapping aba", "abababab", "aba"},        // overlaps at 0,2,4
+		{"overlapping aa in aaaa", "aaaa", "aa"}, // must be [0,1,2]
+		{"overlapping aba", "abababab", "aba"},   // overlaps at 0,2,4
 		{"single byte text hit", "x", "x"},
 		{"single byte text miss", "x", "y"},
 		{"pattern equals whole text", "moedex", "moedex"},

@@ -41,7 +41,7 @@ const LSPCompiled = true
 type Config struct {
 	// Server is the language-server command to launch. If non-empty it is used
 	// verbatim (with Args), bypassing the registry — the explicit-override path
-	// cmd/moedex-nav uses. If empty the command is resolved from the registry by
+	// `moe nav` uses. If empty the command is resolved from the registry by
 	// Language (or defaults to "go"/gopls when Language is also empty).
 	Server string
 	// Args are extra arguments passed to the server command. Consulted only when
@@ -70,6 +70,11 @@ type Config struct {
 	// MOEDEX_LSP_DEBUG env var (any non-empty value enables a stderr text handler)
 	// and otherwise to a discard logger, so call sites never nil-check.
 	Logger *slog.Logger
+	// WorkspaceCacheDir stores isolated writable projections of managed-corpus
+	// repositories. Empty resolves from MOEDEX_LSP_WORKSPACE_DIR, then
+	// MOEDEX_INDEX_DIR/lsp-workspaces, then ~/.moedex-index/lsp-workspaces.
+	// Unmanaged working trees are never projected.
+	WorkspaceCacheDir string
 
 	// --- Pool production-lifecycle knobs (consumed by Pool, build-arm-agnostic) ---
 
@@ -94,6 +99,10 @@ type Config struct {
 	// now is an unexported test seam for virtual time. nil => time.Now. It is set
 	// only by in-package tests; production callers cannot reach it.
 	now func() time.Time
+
+	// pathMap is populated only by Pool after it projects a managed repository.
+	// Direct NewLSP callers retain the zero-value identity mapping.
+	pathMap workspacePathMap
 }
 
 // ErrServerDead is the sentinel returned (wrapped) when a request fails because
@@ -172,6 +181,10 @@ type LSP struct {
 	// log is the resolved structured logger; always non-nil (discard if disabled)
 	// so call sites never nil-check.
 	log *slog.Logger
+
+	// paths keeps the public canonical corpus paths separate from the writable
+	// projection paths exposed to the external language-server process.
+	paths workspacePathMap
 }
 
 // docState tracks one open document's live sync state. Its mutex serializes the
@@ -319,6 +332,14 @@ func NewLSP(ctx context.Context, cfg Config) (*LSP, error) {
 	}
 	procCtx, procCancel := context.WithCancel(context.WithoutCancel(ctx))
 	cmd := exec.CommandContext(procCtx, server, args...)
+	// Pin relative tool output to the declared workspace. rootUri alone is not
+	// an isolation boundary: a language server (or compiler it launches) may
+	// write relative cache paths against its process CWD. Managed roots point at
+	// a writable projection here, so neither form can pollute the canonical
+	// corpus; unmanaged roots get the conventional editor behavior.
+	if cfg.RootDir != "" {
+		cmd.Dir = cfg.RootDir
+	}
 	// Extra environment is appended to the inherited os.Environ(): caller-supplied
 	// cfg.Env first, then the registry spec's resolved env (e.g. DOTNET_ROOT for
 	// csharp-ls). Leaving cmd.Env nil (when both are empty) keeps the current
@@ -342,7 +363,7 @@ func NewLSP(ctx context.Context, cfg Config) (*LSP, error) {
 	// are extremely chatty and would pollute the CLI's stdout/JSON. Surface it
 	// only when debug logging is on (Config.Logger set or MOEDEX_LSP_DEBUG), the
 	// same switch that governs our own structured logs.
-	if cfg.Logger != nil || os.Getenv("MOEDEX_LSP_DEBUG") != "" {
+	if cfg.Logger != nil || lspDebugEnabled() {
 		cmd.Stderr = os.Stderr
 	}
 	if err := cmd.Start(); err != nil {
@@ -364,23 +385,33 @@ func NewLSP(ctx context.Context, cfg Config) (*LSP, error) {
 		initOptions: initOpts,
 		reqTimeout:  cfg.RequestTimeout,
 		log:         resolveLogger(cfg.Logger),
+		paths:       cfg.pathMap,
 	}
 	go c.readLoop(stdout)
 	return c, nil
 }
 
 // resolveLogger picks the structured debug sink: an explicit Config.Logger wins;
-// else MOEDEX_LSP_DEBUG (any non-empty value) enables a stderr text handler at
+// else a truthy MOEDEX_LSP_DEBUG enables a stderr text handler at
 // debug level; else a discard logger so every call site can log unconditionally
 // without a nil check. io.Discard is stdlib — no new dependency.
 func resolveLogger(l *slog.Logger) *slog.Logger {
 	if l != nil {
 		return l
 	}
-	if os.Getenv("MOEDEX_LSP_DEBUG") != "" {
+	if lspDebugEnabled() {
 		return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	}
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
+}
+
+func lspDebugEnabled() bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("MOEDEX_LSP_DEBUG"))) {
+	case "", "0", "false", "no", "off":
+		return false
+	default:
+		return true
+	}
 }
 
 // --- public Navigator surface ----------------------------------------------
@@ -467,21 +498,27 @@ func (c *LSP) Close() error {
 // --- query plumbing ---------------------------------------------------------
 
 func (c *LSP) locationQueryDetailed(ctx context.Context, method string, at Pos, extra map[string]any) (LocationQueryResult, error) {
-	if err := c.ensureInit(ctx, at.File); err != nil {
+	workspaceAt, err := c.paths.toScratchPos(at)
+	if err != nil {
 		return LocationQueryResult{Status: LocationQueryUnavailable}, err
 	}
-	if err := c.ensureFresh(ctx, at.File); err != nil {
+	if err := c.ensureInit(ctx, workspaceAt.File); err != nil {
+		return LocationQueryResult{Status: LocationQueryUnavailable}, err
+	}
+	if err := c.ensureFresh(ctx, workspaceAt.File); err != nil {
 		return LocationQueryResult{Status: LocationQueryUnavailable}, err
 	}
 	params := map[string]any{
-		"textDocument": map[string]any{"uri": pathToURI(at.File)},
-		"position":     posToLSP(at),
+		"textDocument": map[string]any{"uri": pathToURI(workspaceAt.File)},
+		"position":     posToLSP(workspaceAt),
 	}
 	for k, v := range extra {
 		params[k] = v
 	}
 	raw, err := c.call(ctx, method, params)
-	return decodeLocationQueryResult(raw, err, method)
+	result, err := decodeLocationQueryResult(raw, err, method)
+	c.paths.toCanonicalLocations(result.Locations)
+	return result, err
 }
 
 // decodeLocationQueryResult turns the wire response into the honest detailed
@@ -647,7 +684,9 @@ func (c *LSP) WorkspaceSymbol(ctx context.Context, query string) ([]Symbol, erro
 		return nil, err
 	}
 	raw, err := c.call(ctx, "workspace/symbol", map[string]any{"query": query})
-	return decodeSymbolResult(raw, err, "workspace/symbol", "")
+	symbols, err := decodeSymbolResult(raw, err, "workspace/symbol", "")
+	c.paths.toCanonicalSymbols(symbols)
+	return symbols, err
 }
 
 // DocumentSymbol runs the ADR 0018 file-scoped enumeration (LSP
@@ -656,17 +695,23 @@ func (c *LSP) WorkspaceSymbol(ctx context.Context, query string) ([]Symbol, erro
 // DocumentSymbol shape has its Children walked by flattenSymbolNodes; a server
 // returning the flat SymbolInformation shape needs no walk at all).
 func (c *LSP) DocumentSymbol(ctx context.Context, file string) ([]Symbol, error) {
-	if err := c.ensureInit(ctx, file); err != nil {
+	workspaceFile, err := c.paths.toScratch(file)
+	if err != nil {
 		return nil, err
 	}
-	if err := c.ensureFresh(ctx, file); err != nil {
+	if err := c.ensureInit(ctx, workspaceFile); err != nil {
 		return nil, err
 	}
-	uri := pathToURI(file)
+	if err := c.ensureFresh(ctx, workspaceFile); err != nil {
+		return nil, err
+	}
+	uri := pathToURI(workspaceFile)
 	raw, err := c.call(ctx, "textDocument/documentSymbol", map[string]any{
 		"textDocument": map[string]any{"uri": uri},
 	})
-	return decodeSymbolResult(raw, err, "textDocument/documentSymbol", uri)
+	symbols, err := decodeSymbolResult(raw, err, "textDocument/documentSymbol", uri)
+	c.paths.toCanonicalSymbols(symbols)
+	return symbols, err
 }
 
 // ensureInit runs the initialize/initialized handshake exactly once, but is
@@ -1077,10 +1122,14 @@ func offsetToPos(buf []byte, off int) lspPosition {
 // dirty-buffer case ADR 0017 Condition 3 calls out. The server must be
 // initialized first (any prior query, or call it after construction).
 func (c *LSP) SetOverlay(ctx context.Context, file string, content []byte) error {
-	if err := c.ensureInit(ctx, file); err != nil {
+	workspaceFile, err := c.paths.toScratch(file)
+	if err != nil {
 		return err
 	}
-	abs, err := filepath.Abs(file)
+	if err := c.ensureInit(ctx, workspaceFile); err != nil {
+		return err
+	}
+	abs, err := filepath.Abs(workspaceFile)
 	if err != nil {
 		return fmt.Errorf("navigate: abs path: %w", err)
 	}
@@ -1107,11 +1156,19 @@ func (c *LSP) NotifyChanged(ctx context.Context, paths ...string) error {
 	if len(paths) == 0 {
 		return nil
 	}
-	if err := c.ensureInit(ctx, paths[0]); err != nil {
+	workspacePaths := make([]string, len(paths))
+	for i, path := range paths {
+		mapped, err := c.paths.toScratch(path)
+		if err != nil {
+			return err
+		}
+		workspacePaths[i] = mapped
+	}
+	if err := c.ensureInit(ctx, workspacePaths[0]); err != nil {
 		return err
 	}
 	var watched []map[string]any
-	for _, p := range paths {
+	for _, p := range workspacePaths {
 		abs, err := filepath.Abs(p)
 		if err != nil {
 			return fmt.Errorf("navigate: abs path: %w", err)
@@ -1146,7 +1203,11 @@ func (c *LSP) NotifyChanged(ctx context.Context, paths ...string) error {
 // DropOverlay removes a file's overlay and re-syncs the server to the on-disk
 // working-tree content.
 func (c *LSP) DropOverlay(ctx context.Context, file string) error {
-	abs, err := filepath.Abs(file)
+	workspaceFile, err := c.paths.toScratch(file)
+	if err != nil {
+		return err
+	}
+	abs, err := filepath.Abs(workspaceFile)
 	if err != nil {
 		return fmt.Errorf("navigate: abs path: %w", err)
 	}

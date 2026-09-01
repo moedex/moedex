@@ -1,0 +1,19 @@
+{
+  "source_path": "docs/adr/0014-eval-harness-gold-gate.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0014: Evaluation harness + hard gold gate — NDCG floor and a distraction-aware (UDCG) metric",
+  "summary": "Accepted decision to build an in-repo eval harness with a hard CI gold NDCG gate and a distraction-aware UDCG metric.",
+  "scope": ["internal/eval", "evaluation harness", "gold gate", "NDCG", "UDCG", "ranking arms", "gold query set", "CI gate"],
+  "cross_refs": [
+    "./0006-rrf-hybrid-ranking.md",
+    "../../research/learned-reranker.md",
+    "./0009-agent-context-api.md",
+    "./0007-optional-dense-arm.md",
+    "./0003-cox-reduction-ripgrep-parity.md"
+  ],
+  "locked": true,
+  "precedence": null,
+  "notes": ""
+}

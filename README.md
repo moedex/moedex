@@ -1,12 +1,13 @@
-# moedex
+# Moe
 
-moedex is a single-node code-search engine and agent context service built around
+Moe is a single-node code-search engine and agent context service built around
 positional trigrams, content-addressed storage, hybrid ranking, and ripgrep-parity
-correctness.
+correctness. One `moe` executable owns the interactive shell, automation commands,
+indexing, serving, MCP, corpus management, navigation, and diagnostics.
 
-The default build is pure Go. Optional build tags add in-process ONNX embeddings,
-LSP-backed navigation, or an experimental SIMD set-operations kernel without
-changing the default runtime.
+The retrieval engine remains pure Go by default. Optional build tags add in-process
+ONNX embeddings, LSP-backed navigation, or an experimental SIMD set-operations
+kernel.
 
 ## Requirements
 
@@ -15,80 +16,112 @@ changing the default runtime.
 - [ripgrep](https://github.com/BurntSushi/ripgrep) for parity tests
 - Zoekt only for the optional differential oracle (`make setup` installs it)
 
-## Build
+## Build and install
 
 ```sh
 make build
+make install                    # installs to ~/.local/bin by default
 ```
 
-To install the operational binaries into `~/.local/bin`:
-
-```sh
-make install
-```
-
-Override the destination with `make install BINDIR=/path/to/bin`.
+Override the destination with `make install BINDIR=/path/to/bin`. Installation
+writes one real `moe` executable and compatibility symlinks for the former binary
+names. It refuses to overwrite an unfamiliar target; use
+`ADOPT_LEGACY_BINARIES=1` only after confirming that the exact targets should be
+adopted.
 
 ## Quick start
 
-Run a one-shot literal search against any Git repository:
+Search any Git repository without creating a persistent index:
 
 ```sh
-go run ./cmd/moedex -repo /path/to/repository 'SearchContext'
+go run ./cmd/moedex search --repo /path/to/repository 'SearchContext'
 ```
 
-Add `-regex` to interpret the pattern as a regular expression. The command
-indexes the repository in memory, prints each match as `path:line`, and exits.
-
-For a persistent corpus, build a shard directory and start the warm daemon:
+For a persistent corpus, publish an index and start the warm daemon:
 
 ```sh
-go run ./cmd/moedex-index build \
-  -corpus /path/to/corpus \
-  -shard-dir /path/to/shards
-
-go run ./cmd/moedex-serve \
-  -shard-dir /path/to/shards \
-  -http 127.0.0.1:8080
-
+moedex index build --corpus /path/to/corpus --shard-dir /path/to/shards
+moedex serve --shard-dir /path/to/shards --http 127.0.0.1:8080
 curl 'http://127.0.0.1:8080/search?q=SearchContext'
 ```
 
-An existing servable directory can be promoted into an immutable atomic index
-snapshot, then served through its `CURRENT` pointer:
+Set `MOEDEX_INDEX_DIR` for an immutable snapshot root or `MOEDEX_SHARD_DIR` for a
+servable shard directory. `moedex search PATTERN`, bare interactive `moe`, and
+`moedex search --tui` then use that published index by default:
 
 ```sh
-moedex-index snapshot-migrate -index-dir /path/to/index -shard-dir /path/to/shards
-moedex-serve -index-dir /path/to/index -mcp-http 127.0.0.1:8081
+export MOEDEX_SHARD_DIR=/path/to/shards
+moedex search SearchContext        # deterministic one-shot output
+moe                              # interactive TUI when stdin/stdout are TTYs
 ```
 
-`snapshot-list`, `snapshot-inspect`, and `snapshot-rollback` inspect or switch
-complete generations without rewriting their artifacts.
+The TUI debounces queries, cancels stale searches, renders token-budgeted context,
+shows graph relationships when the graph sidecar is present, and copies the
+selected Markdown block with OSC52 on `ctrl+y`. Bare non-TTY invocation prints
+help instead of trying to open an interactive program.
 
-New generations can also be built directly in private staging and published in
-one switch with `moedex-index snapshot-build -corpus ROOT -index-dir DIR`; add
-`-dense` to an ONNX-tagged indexer to include vectors before publication.
+Promote an existing shard directory into an immutable snapshot and serve its
+`CURRENT` generation:
 
-The daemon also serves ranked, deduplicated, token-budgeted context through MCP
-over stdio (`-mcp`) or Streamable HTTP (`-mcp-http 127.0.0.1:8081`). See the
-[`moedex-serve` guide](cmd/moedex-serve/README.md) for its modes, flags, HTTP
-responses, authentication, and reload behavior.
+```sh
+moedex index snapshot migrate --index-dir /path/to/index --shard-dir /path/to/shards
+moedex serve --index-dir /path/to/index --mcp-http 127.0.0.1:8081
+```
 
-## Commands
+`snapshot list`, `snapshot inspect`, and `snapshot rollback` inspect or switch
+complete generations without rewriting artifacts. `snapshot build` stages and
+publishes a new generation atomically; an ONNX-tagged build accepts `-dense`.
+
+Network listeners fail closed: a tokenless non-loopback `--http` or `--mcp-http`
+bind is rejected. Configure `MOEDEX_AUTH_TOKEN`, keep the listener on loopback,
+or pass `--allow-insecure` as an explicit local policy exception. See the
+[serving guide](internal/app/servecmd/README.md) for endpoints, TLS, authentication,
+reload behavior, and deployment hardening.
+
+## Command tree
 
 | Command | Purpose |
 |---|---|
-| `moedex` | Index one repository in memory and run a literal or regex search |
-| `moedex-index` | Build, inspect, refresh, export, and compact servable indexes and the corpus-wide CAS |
-| `moedex-serve` | Serve warm retrieval over HTTP, one-shot queries, or ranked agent context over MCP |
-| `moedex-mcp` | Serve ranked context for one repository over MCP/stdio |
-| `moedex-corpus` | Acquire and refresh a managed corpus |
-| `moedex-parity` | Run the full-corpus correctness gate against ripgrep, gold, and optionally Zoekt |
+| `moedex search [PATTERN]` | Search the published index, a one-off repository, or open the TUI |
+| `moedex index build\|check\|refresh` | Build and maintain servable shard indexes |
+| `moedex index cas …` | Build, refresh, export, and compact the content-addressable store |
+| `moedex index snapshot …` | Build, inspect, migrate, switch, and roll back immutable generations |
+| `moedex graph build\|audit` | Build and audit graph sidecars |
+| `moedex corpus …` | Initialize, synchronize, diagnose, and size managed corpora |
+| `moedex serve` | Serve warm retrieval and MCP endpoints |
+| `moe mcp` | Serve MCP over stdio; `--repo` selects the single-repository mode |
+| `moedex nav def\|refs\|impl` | Run the optional LSP navigation arm |
+| `moedex parity` | Run the full-corpus correctness gate |
+| `moedex doctor` | Diagnose corpus, index, and daemon health |
+| `moedex config` | Show effective settings and provenance; add `--diff` or `--json` |
+| `moedex version` | Print the build identity and compiled dense capability |
+
+Run `moe completion --help` for shell completion generation and `moe man` for a
+roff man page. Global `--config`, `--json`, and `--no-color` flags may appear
+before or after semantic commands.
+
+The old `moedex`, `moedex-index`, `moedex-serve`, `moedex-mcp`, `moedex-corpus`,
+`moedex-parity`, `moedex-nav`, and `scale` names remain direct in-process
+compatibility symlinks for two releases. They print a deprecation warning and
+preserve their legacy arguments; new automation should use the semantic tree.
+
+## Configuration
+
+Existing public `MOEDEX_*` names remain stable. Moe never discovers a config file
+implicitly; load one explicitly with `--config FILE`. Precedence is command flag,
+explicit file, ambient environment, then built-in default. The file is validated
+as typed `KEY=VALUE` input, unknown `MOEDEX_*` keys are fatal, and secrets are
+redacted from `moedex config` output. See [docs/configuration.md](docs/configuration.md)
+for the registry and file format.
+
+Long-running commands emit human progress on stderr. Add `--json` for versioned
+NDJSON progress on stdout, leaving diagnostics on stderr.
 
 ## Validation
 
 ```sh
-make health       # build, vet, and the full unit suite
+make health       # format/import fences, build, vet, and full unit suite
+make tagged-check # ONNX, LSP, and SIMD compile/test gates
 make roundtrip    # persistence and parity round trips
 make parity       # full-corpus parity; set MOEDEX_CORPUS to the corpus root
 make verify       # health + roundtrip + parity
@@ -108,16 +141,14 @@ go test ./internal/search -run TestName -count=1
 | LSP-precise navigation | `make build-lsp` | Language servers on `PATH`; use `make setup-lsp` |
 | Experimental AVX2 set operations | `make build-simd` | amd64 with `GOEXPERIMENT=simd` |
 
-The lexical, path, and symbol retrieval paths remain available without any of
-these optional components.
+The lexical, path, and symbol retrieval paths remain available without optional
+components.
 
 ## Documentation
 
-- [`ARCHITECTURE.md`](ARCHITECTURE.md) describes the implementation, data flow,
-  on-disk formats, and deliberate deferrals.
-- [`docs/adr/`](docs/adr) records architectural decisions and their evidence.
-- [`docs/plans/`](docs/plans) contains implementation plans for proposed work.
-- [`research/`](research) contains exploratory design notes; these are inputs to
-  decisions, not statements of current behavior.
-- [`deploy/README.md`](deploy/README.md) covers macOS, Docker, and systemd
-  deployment.
+- [ARCHITECTURE.md](ARCHITECTURE.md) describes implementation, data flow, on-disk
+  formats, and deliberate deferrals.
+- [docs/adr/](docs/adr) records architectural decisions and evidence.
+- [deploy/README.md](deploy/README.md) covers macOS, Docker, and systemd.
+- [research/](research) contains exploratory inputs, not statements of current
+  behavior.

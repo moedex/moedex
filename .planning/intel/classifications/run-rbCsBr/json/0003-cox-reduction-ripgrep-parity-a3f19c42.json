@@ -1,0 +1,13 @@
+{
+  "source_path": "docs/adr/0003-cox-reduction-ripgrep-parity.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0003: Regex → boolean-trigram (Cox) reduction, verified to ripgrep parity — never under-approximate",
+  "summary": "Reduce regex to a necessary-condition boolean trigram query, verify candidates with Go regexp, and gate ripgrep parity in CI.",
+  "scope": ["Cox reduction", "internal/query", "internal/search", "internal/parity", "cmd/moedex-parity", "ripgrep parity", "trigram candidate selection", "regex verification"],
+  "cross_refs": ["./0012-search-latency-positional-verify.md", "./0002-positional-trigram-core-byte-offsets.md", "./0014-eval-harness-gold-gate.md", "PARITY-REPORT.md"],
+  "locked": true,
+  "precedence": null,
+  "notes": ""
+}

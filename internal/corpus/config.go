@@ -2,6 +2,7 @@ package corpus
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"sort"
 	"strings"
 
+	configpkg "moedex/internal/config"
 	"moedex/internal/corpus/catalog"
 )
 
@@ -48,11 +50,10 @@ func ResolveRoot(explicit string) (string, error) {
 		root = os.Getenv("MOEDEX_CORPUS")
 	}
 	if root == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", err
+		root = configpkg.DefaultCorpusDir()
+		if root == "" {
+			return "", fmt.Errorf("resolve default corpus directory: home directory unavailable")
 		}
-		root = filepath.Join(home, DefaultCorpusDirName)
 	}
 	return filepath.Abs(root)
 }

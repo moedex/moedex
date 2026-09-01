@@ -122,4 +122,3 @@ func TestWriteIndex_DeterministicOrder(t *testing.T) {
 		}
 	}
 }
-

@@ -22,8 +22,7 @@
 # identity has to be provisioned.
 #
 # Install (full runbook in deploy/README.md):
-#   sudo install -m 0755 moedex-corpus /usr/local/bin/moedex-corpus
-#   sudo install -m 0755 moedex-index  /usr/local/bin/moedex-index
+#   sudo install -m 0755 moe /usr/local/bin/moe
 #   sudo install -m 0644 deploy/moedex-sync.service /etc/systemd/system/
 #   sudo install -m 0644 deploy/moedex-sync.timer   /etc/systemd/system/
 #   sudo systemctl daemon-reload && sudo systemctl enable --now moedex-sync.timer
@@ -44,7 +43,7 @@ Group=moedex
 # moedex-corpus's -timeout, generous per-subcommand defaults), but this bounds
 # the parts that flag doesn't reach too, so a hang can never silently swallow
 # an hourly tick with no error and no non-zero exit to alert on. Systemd sends
-# SIGTERM at this limit, which moedex-corpus's own signal handling turns into
+# SIGTERM at this limit, which `moedex corpus` signal handling turns into
 # a clean, reported cancellation rather than a hard kill.
 TimeoutStartSec=5400
 
@@ -55,10 +54,10 @@ EnvironmentFile=/etc/moedex/moedex-serve.env
 # result) prevents CAS and served snapshots from advancing. cas-export's deduped
 # delta path preserves the prior served directory until the replacement is
 # complete and durable.
-ExecStartPre=/usr/local/bin/moedex-corpus doctor -no-banner -corpus ${MOEDEX_CORPUS}
-ExecStart=/usr/local/bin/moedex-corpus sync -no-banner -corpus ${MOEDEX_CORPUS}
-ExecStart=/usr/local/bin/moedex-index cas-refresh -cas-dir ${MOEDEX_CAS_DIR} -corpus ${MOEDEX_CORPUS}
-ExecStart=/usr/local/bin/moedex-index cas-export -deduped -cas-dir ${MOEDEX_CAS_DIR} -shard-dir ${MOEDEX_SHARD_DIR}
+ExecStartPre=/usr/local/bin/moedex corpus doctor --no-banner --corpus ${MOEDEX_CORPUS}
+ExecStart=/usr/local/bin/moedex corpus sync --no-banner --corpus ${MOEDEX_CORPUS}
+ExecStart=/usr/local/bin/moedex index cas refresh --cas-dir ${MOEDEX_CAS_DIR} --corpus ${MOEDEX_CORPUS}
+ExecStart=/usr/local/bin/moedex index cas export --deduped --cas-dir ${MOEDEX_CAS_DIR} --shard-dir ${MOEDEX_SHARD_DIR}
 
 # Hot-reload the running daemon onto the fresh shards (|| true keeps the timer
 # green if the daemon is down). Same mechanism as moedex-refresh; reloading an

@@ -11,7 +11,7 @@ Start with **`README.md`** for the operator-facing entry point. The single most 
 ## Commands
 
 ```bash
-make health        # build + vet + full unit suite — the fast gate (run this before pushing)
+make health        # format/import fences + build + vet + full unit suite
 make build         # go build ./...
 make vet           # go vet ./...
 make test          # go test ./...  (writes test.log; warns on skipped tests)
@@ -33,7 +33,7 @@ CI (`.gitlab-ci.yml`): `make health` runs on every push/MR; `make parity` runs o
 
 ## Key invariants (do not break)
 
-- **The default build is pure Go standard library with zero ML/runtime deps.** Only the `onnx` build tag may pull in the embedder modules; only the `moedex_simd` tag may use archsimd. Keep `go.mod` clean of new deps unless a maintainer agrees.
+- **The default engine is pure Go with zero ML/runtime dependencies.** Shell dependencies are confined to `internal/cli`, `internal/tui`, `internal/render`, and `internal/ui/theme`; only the `onnx` build tag may activate the in-process embedder and only `moedex_simd` may use archsimd.
 - **ripgrep parity: moedex never under-approximates.** The trigram→regex (Cox) reduction must only ever produce a *necessary* condition; candidate blobs are always verified by a real regex engine. Parity is pinned by `internal/search/parity_test.go` (shells out to `rg`) and the full-corpus `internal/parity` harness. Any change to `internal/query`, `internal/search`, or `internal/parity` must keep `make verify` green.
 - **Content identity = git blob SHA.** Dedup happens by SHA across the whole corpus (`internal/blobstore` CAS). Binary blobs (NUL byte) are skipped and a leading UTF-8 BOM is stripped to stay aligned with ripgrep line/match boundaries.
 - The `Tokenize` rule in `internal/tokenindex` is **frozen** (Unicode word-runs, camelCase/acronym case-split, lowercased) — it feeds BM25; changing it shifts ranking.
@@ -46,21 +46,15 @@ All library code is under `internal/`; executables under `cmd/`. See `ARCHITECTU
 
 **Query / serving (Pipeline B):** MCP `search_context` → `mcp.IndexSearcher.SearchContext` → `rank.Ranker.Rank` fuses arms via **Reciprocal Rank Fusion (RRF)**: lexical (trigram candidates + BM25), path-token, symbol-name, optional dense → `contextwin.Assemble` expands salient line spans to enclosing symbol blocks within a token budget.
 
-**Serving spine:** `internal/server` (`Corpus` / `RankCorpus`) opens a multi-shard mmap'd index warm; postings never enter the Go heap.
+**Serving spine:** `internal/serve` (`Corpus` / `RankCorpus`) opens a multi-shard mmap'd index warm; `internal/graph/serve` owns online graph tools and `internal/graph/build` owns offline graph construction.
 
-**Corpus lifecycle:** `internal/corpus` is the **only** package that shells out to `glab`/`git` for acquisition + freshness; it is **never imported by the engine or daemon**. Driven by `cmd/moedex-corpus` (`doctor`/`clone`/`sync`/`groups`), scoped to gitlab.tcdevops.com.
+**Corpus lifecycle:** `internal/corpus` is the **only** package that shells out to `glab`/`git` for acquisition + freshness; it is **never imported by the engine or daemon**. Driven by `moedex corpus`, scoped to gitlab.tcdevops.com.
 
-### Binaries (`cmd/`)
+### Executable (`cmd/`)
 
-| Binary | Role |
-|---|---|
-| `moedex` | CLI: index one repo, run a literal/regex query |
-| `moedex-mcp` | Single-repo MCP server |
-| `moedex-serve` | Warm daemon over a prebuilt shard dir: `-http` API, `-q` one-shot, `-mcp` ranked context (has its own `config.go`/`reload.go`) |
-| `moedex-index` | Offline shard-dir builder/freshness: `build`/`check`/`refresh` + CAS `cas-build`/`cas-refresh`/`cas-export` |
-| `moedex-parity` | Full-corpus parity gate (build + battery + oracles → `PARITY-REPORT.md`, non-zero exit on fail) |
-| `moedex-corpus` | Corpus setup + freshness over glab/git |
-| `scale` | Index many repos, report size/throughput/mmap memory |
+`cmd/moe` is the only executable source. Semantic commands cover search, index,
+graph, corpus, serving, MCP, navigation, parity, doctor, config, and version.
+Former binary names are install-time compatibility symlinks for two releases.
 
 ## Corpus for parity tests
 

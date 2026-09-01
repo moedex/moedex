@@ -2,14 +2,14 @@
 # daemon to hot-reload. Driven by moedex-refresh.timer (or run on demand:
 # `sudo systemctl start moedex-refresh`).
 #
-# moedex-index refresh does an atomic directory swap (build a fresh shard dir,
+# `moedex index refresh` does an atomic directory swap (build a fresh shard dir,
 # then rename it into place), so this unit needs WRITE access to BOTH the shard
 # dir and its PARENT (rename writes the parent directory entry).
 #
 # Install:
 #   sudo install -m 0644 deploy/moedex-refresh.service /etc/systemd/system/
 #   sudo install -m 0644 deploy/moedex-refresh.timer   /etc/systemd/system/
-#   sudo install -m 0755 moedex-index /usr/local/bin/moedex-index
+#   sudo install -m 0755 moe /usr/local/bin/moe
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable --now moedex-refresh.timer
 
@@ -30,7 +30,7 @@ Group=moedex
 EnvironmentFile=/etc/moedex/moedex-serve.env
 
 # refresh -shard-dir DIR  (corpus root defaults to the manifest's Root).
-ExecStart=/usr/local/bin/moedex-index refresh -shard-dir ${MOEDEX_SHARD_DIR}
+ExecStart=/usr/local/bin/moedex index refresh --shard-dir ${MOEDEX_SHARD_DIR}
 
 # After a successful refresh, tell the running daemon to hot-reload the new
 # shards. `|| true` keeps the timer green if the daemon happens to be down.

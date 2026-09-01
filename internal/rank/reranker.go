@@ -26,7 +26,7 @@ import (
 // must go behind a build tag mirroring -tags onnx.
 //
 // DEFAULT OFF: Fusion's zero value is FusionRRF, so the two production callers
-// (cmd/moedex-mcp, internal/server/rankcorpus.go) are behaviorally identical to
+// (internal/app/mcpcmd, internal/serve/rankcorpus.go) are behaviorally identical to
 // today unless they explicitly opt into FusionLinear with an installed model.
 
 // Fusion selects how the per-arm signals are combined into a result's final Score.

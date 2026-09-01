@@ -8,7 +8,8 @@ import (
 	"time"
 
 	graphcore "moedex/internal/eval"
-	"moedex/internal/server"
+	graphserve "moedex/internal/graph/serve"
+	server "moedex/internal/serve"
 )
 
 // TestPrivateGraphGoldGate is the self-hosted tier. The reviewed labels and
@@ -30,7 +31,7 @@ func TestPrivateGraphGoldGate(t *testing.T) {
 	if gold.Floors == nil {
 		t.Fatal("private graph gold has no reviewed/mechanically-derived floors")
 	}
-	tools, err := server.OpenGraphTools(shards)
+	tools, err := graphserve.OpenGraphTools(shards)
 	if err != nil {
 		t.Fatal(err)
 	}

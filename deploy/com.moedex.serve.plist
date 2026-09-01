@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   TEMPLATE — do NOT `cp` this directly. The @PLACEHOLDER@ tokens are filled in by
-  scripts/install-macos.sh (or substitute @HOME@/@SHARD_DIR@/@ONNX_LIB@ yourself).
+  scripts/install-macos.sh (or substitute @HOME@/@SHARD_DIR@/@LSP_WORKSPACE_DIR@/
+  @ONNX_LIB@ yourself).
   Installing the raw template would leave literal placeholder paths and fail.
 
   Warm shared MCP daemon for coding agents. A wrapper shell reads the auth token
@@ -26,7 +27,7 @@
       would miss: $HOME/go/bin (gopls), /opt/homebrew/bin (csharp-ls, cflsp, node,
       dotnet, the vscode-* and ts/pyright servers), $HOME/.dotnet/tools.
     -->
-    <string>TOKEN=$(cat "$HOME/.moedex-index/auth-token"); launchctl setenv MOEDEX_TOKEN "$TOKEN"; export MOEDEX_AUTH_TOKEN="$TOKEN"; export PATH="$HOME/go/bin:/opt/homebrew/bin:$HOME/.dotnet/tools:$PATH"; exec "$HOME/.local/bin/moedex-serve" -shard-dir "@SHARD_DIR@" -mcp-http 127.0.0.1:8081 -embed onnx -onnx-runtime @ONNX_LIB@ -onnx-intra-op-threads @ONNX_INTRA_THREADS@ -onnx-inter-op-threads @ONNX_INTER_THREADS@</string>
+    <string>TOKEN=$(cat "$HOME/.moedex-state/auth-token"); launchctl setenv MOEDEX_TOKEN "$TOKEN"; export MOEDEX_AUTH_TOKEN="$TOKEN"; export MOEDEX_LSP_WORKSPACE_DIR="@LSP_WORKSPACE_DIR@"; export PATH="$HOME/go/bin:/opt/homebrew/bin:$HOME/.dotnet/tools:$PATH"; exec "$HOME/.local/bin/moe" serve --shard-dir "@SHARD_DIR@" --mcp-http 127.0.0.1:8081 --embed onnx --onnx-runtime @ONNX_LIB@ --onnx-intra-op-threads @ONNX_INTRA_THREADS@ --onnx-inter-op-threads @ONNX_INTER_THREADS@</string>
   </array>
 
   <key>RunAtLoad</key>

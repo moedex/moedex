@@ -1,0 +1,32 @@
+{
+  "source_path": "docs/adr/0001-single-node-scope-pure-go-default.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0001: Single-node scope, ~8 GB corpus, pure-Go zero-dependency default",
+  "summary": "Scopes moedex to single-node, internal-first, ~8 GB corpus with a pure-Go default build; a 2026-08-25 amendment narrows the zero-dependency clause.",
+  "scope": [
+    "single-node deployment",
+    "~8 GB corpus envelope",
+    "internal-first trust model",
+    "pure-Go stdlib default build",
+    "MCP surface dependency exception",
+    "github.com/modelcontextprotocol/go-sdk",
+    "cmd/moedex-mcp",
+    "cmd/moedex-serve",
+    "cmd/moedex-index",
+    "dense retrieval arm",
+    "SIMD kernel"
+  ],
+  "cross_refs": [
+    "./0004-content-addressable-blob-store.md",
+    "./0005-mmap-compact-postings.md",
+    "./0007-optional-dense-arm.md",
+    "./0013-pure-go-defer-simd.md",
+    "./0022-mcp-sdk-contract-and-snapshot-identity.md",
+    "../../research/fm-index-cold-tier.md"
+  ],
+  "locked": true,
+  "precedence": null,
+  "notes": "Status: Accepted -> locked. 2026-08-25 amendment records that ADR 0022 supersedes only the 'zero required external dependencies' clause for the MCP surface (go-sdk v1.7.0 required in the untagged build); single-node scope, ~8 GB envelope, internal-first trust model, and stdlib-only retrieval core stand unchanged."
+}

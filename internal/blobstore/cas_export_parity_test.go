@@ -41,7 +41,7 @@ import (
 	"moedex/internal/ingest"
 	"moedex/internal/parity"
 	"moedex/internal/search"
-	"moedex/internal/server"
+	server "moedex/internal/serve"
 )
 
 type managedParityHit struct {

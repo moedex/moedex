@@ -7,7 +7,7 @@ import "sort"
 // A single *Index is SHARD-LOCAL: its blob IDs are positions within one shard's
 // index, and its byName view answers "who defines/references this name" only for
 // the blobs of that shard. The served corpus is many shards (see
-// internal/server), so answering the corpus-wide question — "every shard that
+// internal/graph/serve), so answering the corpus-wide question — "every shard that
 // defines or references AccountBillingContactChanged" — needs a merge across
 // per-shard indices and a blob reference qualified by the shard it came from.
 //

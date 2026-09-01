@@ -2,7 +2,7 @@
 <!--
   TEMPLATE — do NOT `cp` this directly. The @PLACEHOLDER@ tokens are filled in by
   scripts/install-macos.sh (or substitute @HOME@/@REPO@/@CORPUS@/@CAS_DIR@/
-  @SHARD_DIR@ yourself).
+  @SHARD_DIR@/@LSP_WORKSPACE_DIR@ yourself).
 
   Periodic corpus refresh (macOS analog of deploy/moedex-refresh.timer). Runs
   scripts/refresh-corpus.sh daily: sync corpus -> doctor preflight -> rebuild
@@ -39,6 +39,8 @@
     <string>@CAS_DIR@</string>
     <key>MOEDEX_SHARD_DIR</key>
     <string>@SHARD_DIR@</string>
+    <key>MOEDEX_LSP_WORKSPACE_DIR</key>
+    <string>@LSP_WORKSPACE_DIR@</string>
     <key>ONNXRUNTIME_LIB_PATH</key>
     <string>@ONNX_LIB@</string>
     <key>MOEDEX_ONNX_INTRA_OP_THREADS</key>

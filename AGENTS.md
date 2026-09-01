@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-`moedex` is a Go 1.26 module for single-node code search and agent context retrieval. Executables live in `cmd/`, including `cmd/moedex`, `cmd/moedex-index`, `cmd/moedex-serve`, `cmd/moedex-mcp`, `cmd/moedex-parity`, and `cmd/moedex-corpus`. Library code is under `internal/`, grouped by responsibility: indexing in `internal/index`, query reduction in `internal/query`, retrieval in `internal/search`, ranking in `internal/rank`, serving in `internal/server`, MCP support in `internal/mcp`, and persistence in `internal/diskstore` and `internal/blobstore`. Tests sit beside implementation files as `*_test.go`. Design background belongs in `ARCHITECTURE.md`, `docs/adr/`, and `research/`; deployment examples and systemd units are in `deploy/`.
+`moedex` is a Go 1.26 module for single-node code search and agent context retrieval. The single executable lives at `cmd/moe`; its semantic shell and command adapters are in `internal/cli`, `internal/tui`, and `internal/app`. Engine code is under `internal/`, grouped by responsibility: indexing in `internal/index`, query reduction in `internal/query`, retrieval in `internal/search`, ranking in `internal/rank`, warm retrieval in `internal/serve`, offline graph construction in `internal/graph/build`, online graph queries in `internal/graph/serve`, MCP support in `internal/mcp`, and persistence in `internal/diskstore` and `internal/blobstore`. Tests sit beside implementation files as `*_test.go`. Design background belongs in `ARCHITECTURE.md`, `docs/adr/`, and `research/`; deployment examples and systemd units are in `deploy/`.
 
 ## Build, Test, and Development Commands
 

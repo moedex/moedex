@@ -1,0 +1,18 @@
+{
+  "source_path": "docs/adr/0007-optional-dense-arm.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0007: Optional dense arm — zero-dependency default, ONNX behind a build tag or a local HTTP server",
+  "summary": "Makes the dense semantic ranking arm optional and local via a nil-able Embedder interface, with a no-op default, ONNX build-tag backend, and local HTTP backend.",
+  "scope": ["dense arm", "embed.Embedder", "ONNX embedder", "HTTPEmbedder", "embedding store", "RRF hybrid ranking", "zero-dependency build"],
+  "cross_refs": [
+    "./0006-rrf-hybrid-ranking.md",
+    "./0001-single-node-scope-pure-go-default.md",
+    "../../research/code-embedders.md",
+    "./0014-eval-harness-gold-gate.md"
+  ],
+  "locked": true,
+  "precedence": null,
+  "notes": ""
+}

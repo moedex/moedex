@@ -35,7 +35,7 @@ import (
 	"moedex/internal/diskstore"
 	"moedex/internal/ingest"
 	"moedex/internal/parity"
-	"moedex/internal/server"
+	server "moedex/internal/serve"
 )
 
 // compactCorpusRoot resolves the SOURCE corpus to copy from, or "" to skip.
@@ -275,10 +275,10 @@ func TestCompactionParityCorpus(t *testing.T) {
 	// --- Per-query parity: postCAS==preCAS, postDedup==preDedup, post==direct, vs-rg. -
 	rg := newRG(t, built.MirrorDir)
 	var (
-		mismatchCASPre, mismatchDedupPre   int
-		mismatchCASDir, mismatchDedupDir   int
+		mismatchCASPre, mismatchDedupPre         int
+		mismatchCASDir, mismatchDedupDir         int
 		underCAS, overCAS, underDedup, overDedup int
-		checkedVsRG, rgSkipped             int
+		checkedVsRG, rgSkipped                   int
 	)
 	for _, q := range bat.Queries {
 		preCASLocs := corpusQuery(t, preCAS, q)

@@ -312,7 +312,7 @@ func (s *Store) verifyContent(sha string, content []byte) ([]byte, error) {
 // re-verify retrieved content against its claimed SHA key, or nil to disable
 // verification. Gated by the SAME MOEDEX_VERIFY_CONTENT env var as the served
 // content store's default-on verification (diskstore.OpenContentStoreVerified /
-// server.contentHasher in internal/server/dedup.go), so one operator-facing flag
+// serve.contentHasher in internal/serve/dedup.go), so one operator-facing flag
 // controls content-integrity verification consistently across both the CAS pack
 // and its served-side counterpart. Unset (default) verifies; a falsy value
 // ("0"/"false"/"no"/"off", any case) disables it — e.g. for a very large CAS

@@ -14,7 +14,7 @@ import "moedex/internal/corpus/catalog"
 //
 // Everything below just re-exports that schema under its historical names,
 // so every other file in this package (and every existing caller of it, in
-// cmd/moedex-corpus and tests) is unchanged.
+// the `moe corpus` adapter and tests) is unchanged.
 const (
 	ManagedSchemaVersion = catalog.ManagedSchemaVersion
 	ManagedDirName       = catalog.ManagedDirName

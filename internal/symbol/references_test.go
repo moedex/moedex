@@ -215,8 +215,8 @@ func TestSetRefs_FiltersDefinitionRoleAndEmpty(t *testing.T) {
 	// Pass a Definition-role occurrence (should be ignored) plus a real ref.
 	ix.SetRefs(0, []Occurrence{
 		{Name: "Foo", Kind: Func, Role: Definition, Start: 100, End: 103}, // filtered
-		{Name: "", Kind: Func, Role: Reference, Start: 50, End: 50},        // empty name filtered
-		{Name: "Foo", Kind: Func, Role: Reference, Start: 30, End: 33},     // kept
+		{Name: "", Kind: Func, Role: Reference, Start: 50, End: 50},       // empty name filtered
+		{Name: "Foo", Kind: Func, Role: Reference, Start: 30, End: 33},    // kept
 	})
 	refs := ix.References("Foo")
 	// 1 def (from Set) + 1 reference (the only valid one in SetRefs).

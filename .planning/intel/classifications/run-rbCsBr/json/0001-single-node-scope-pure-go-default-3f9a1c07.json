@@ -1,0 +1,35 @@
+{
+  "source_path": "docs/adr/0001-single-node-scope-pure-go-default.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0001: Single-node scope, ~8 GB corpus, pure-Go zero-dependency default",
+  "summary": "Scopes moedex to a single node, internal-first trust model, ~8 GB corpus envelope, and pure-Go default build; a 2026-08-25 amendment supersedes the zero-required-dependency clause for the MCP surface, which now requires the MCP go-sdk in the untagged build while single-node scope, corpus envelope, trust model, and optional dense/SIMD arms stand unchanged.",
+  "scope": [
+    "single-node deployment",
+    "TurnCommerce corpus (~/TCGitlab)",
+    "8 GB corpus envelope",
+    "pure-Go stdlib default build",
+    "external dependencies",
+    "MCP surface",
+    "github.com/modelcontextprotocol/go-sdk",
+    "internal/mcp",
+    "cmd/moedex-mcp",
+    "cmd/moedex-serve",
+    "cmd/moedex-index",
+    "dense retrieval arm",
+    "SIMD kernel",
+    "memory footprint / build vs serve"
+  ],
+  "cross_refs": [
+    "./0004-content-addressable-blob-store.md",
+    "./0005-mmap-compact-postings.md",
+    "./0007-optional-dense-arm.md",
+    "./0013-pure-go-defer-simd.md",
+    "./0022-mcp-sdk-contract-and-snapshot-identity.md",
+    "../../research/fm-index-cold-tier.md"
+  ],
+  "locked": true,
+  "precedence": null,
+  "notes": ""
+}

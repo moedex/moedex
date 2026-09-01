@@ -35,7 +35,8 @@ import (
 // underlying NewLSP returns the "rebuild with -tags lsp" error, which Pool
 // surfaces unchanged.
 type Pool struct {
-	cfg Config
+	cfg        Config
+	workspaces *workspaceManager
 
 	mu      sync.Mutex
 	entries map[string]*poolEntry // key: keyFor(lang, root) — one server per (root,language)
@@ -81,9 +82,9 @@ var ErrCooldown = errors.New("navigate: server cooling down after repeated failu
 // language server can scan the entire workspace after a single query, not just
 // the file that was asked about, so this check has to gate the spawn itself
 // structurally — inside Pool, the one place every current caller (moedex-serve's
-// LSP tools, moedex-nav's CLI, internal/server's graph pass) and any future one
+// LSP tools, `moe nav`, internal/graph/build's graph pass) and any future one
 // shares — rather than relying on each caller to remember to preflight it the
-// way internal/server/graphcalls_lsp.go already does. Lives in pool.go (no
+// way internal/graph/build/graphcalls_lsp.go already does. Lives in pool.go (no
 // build tag) so it is identical in both build arms.
 var ErrPrivacyRestricted = errors.New("navigate: workspace is privacy-restricted (.ai-privacy.yml level 1); refusing to launch an external language server there")
 
@@ -100,7 +101,7 @@ func (p *Pool) goClose(nav *LSP) {
 // Stats is an atomically-sampled snapshot of a Pool's lifetime activity. It is
 // the ADR 0017 Condition-2 observability surface: spawn / restart / eviction
 // counters make the shared-server lifecycle (one server per root, restarted on
-// death) visible to callers and to -stats in cmd/moedex-nav. Zero new deps;
+// death) visible to callers and to `moe nav -stats`. Zero new deps;
 // counters are sync/atomic.Int64 read via Load. Stats lives in pool.go (no build
 // tag) so it exists in both build arms.
 type Stats struct {
@@ -240,7 +241,7 @@ func (p *Pool) recordExhausted(k string, now time.Time) time.Duration {
 // cfg.Server / cfg.Args carry through to every spawned server. When cfg.Server
 // is set the Pool is in legacy single-server mode: it spawns that one command
 // for every (root,language) and ignores per-language registry specs (this keeps
-// cmd/moedex-nav's -server override intact). When cfg.Server is empty each
+// `moe nav`'s -server override intact). When cfg.Server is empty each
 // (root,language) launches its registry server.
 func NewPool(cfg Config) *Pool {
 	// Fill zero values with defaults so a zero Config behaves exactly like the
@@ -254,9 +255,10 @@ func NewPool(cfg Config) *Pool {
 		cfg.MaxBackoff = defaultMaxBackoff
 	}
 	return &Pool{
-		cfg:       cfg,
-		entries:   make(map[string]*poolEntry),
-		cooldowns: make(map[string]*poolCooldown),
+		cfg:        cfg,
+		workspaces: newWorkspaceManager(cfg.WorkspaceCacheDir),
+		entries:    make(map[string]*poolEntry),
+		cooldowns:  make(map[string]*poolCooldown),
 	}
 }
 
@@ -381,8 +383,29 @@ func (p *Pool) NavigatorFor(ctx context.Context, lang, root string) (*LSP, error
 			return nil, err
 		}
 
+		serverRoot, pathMap, isolateErr := p.workspaces.isolate(ctx, root)
+		if isolateErr != nil {
+			ent.err = isolateErr
+			close(ent.ready)
+			p.evict(k, ent)
+			return nil, isolateErr
+		}
+		if pathMap.enabled() {
+			if allowed, perr := ingest.LSPWorkspaceAllowed(pathMap.canonicalRepo); perr != nil || !allowed {
+				if perr == nil {
+					perr = ErrPrivacyRestricted
+				}
+				err := fmt.Errorf("navigate: privacy preflight %s: %w", pathMap.canonicalRepo, perr)
+				ent.err = err
+				close(ent.ready)
+				p.evict(k, ent)
+				return nil, err
+			}
+		}
+
 		cfg := p.cfg
-		cfg.RootDir = root
+		cfg.RootDir = serverRoot
+		cfg.pathMap = pathMap
 		// Registry mode: select the per-language server. Legacy mode (cfg.Server
 		// set) keeps the explicit command and ignores lang for selection.
 		if cfg.Server == "" {
@@ -577,7 +600,7 @@ func (p *Pool) evict(key string, ent *poolEntry) {
 // NavigatorFor's "cfg.Server == "" => cfg.Language = lang") the per-spawn
 // Config.Language, given fileLang — the file's OWN extension-derived language
 // from workspaceRoot. A Pool configured with a pinned Config.Language (forced
-// -lang mode: cmd/moedex-nav's buildConfig sets Config{Language: canon} with
+// -lang mode: the nav command's buildConfig sets Config{Language: canon} with
 // Server left empty so NewLSP's registry branch resolves InitOptions/
 // ResolveEnv) must route EVERY file to that one pinned language, not the
 // file's own — otherwise the first query against a file whose extension

@@ -56,7 +56,7 @@ assert_plist_value() {
 new_fixture() {
   case_dir="$1"
   mkdir -p "$case_dir/corpus/.moedex" "$case_dir/cas" "$case_dir/shards"
-  printf '{}\n' > "$case_dir/corpus/.moedex/corpus.json"
+  printf '{}\n' > "$case_dir/corpus/.moedex.json"
   printf '{}\n' > "$case_dir/cas/blobmanifest.json"
   printf '{}\n' > "$case_dir/shards/manifest.json"
   printf 'deduped fixture\n' > "$case_dir/shards/blobs.dat"
@@ -160,7 +160,7 @@ render_corpus="$render_case/corpus-managed"
 render_cas="$render_case/cas-managed"
 render_shards="$render_case/shards-managed"
 mkdir -p "$render_home" "$render_corpus/.moedex" "$render_cas" "$render_shards"
-printf '{}\n' > "$render_corpus/.moedex/corpus.json"
+printf '{}\n' > "$render_corpus/.moedex.json"
 printf 'runtime fixture\n' > "$render_case/libonnxruntime.dylib"
 env HOME="$render_home" PATH="$BIN:$PATH" TRACE="$TRACE" \
   FAIL_FIRST_BOOTSTRAP=1 \

@@ -27,9 +27,9 @@ import (
 // is a low-dimensional vector where cosine similarity tracks shared CONCEPTS, not
 // shared substrings.
 type conceptEmbedder struct {
-	axes    []string            // concept axis names, index = axis id
-	lexicon map[string]int      // token -> concept axis id
-	tailDim int                 // extra hashed axes for out-of-lexicon tokens
+	axes    []string       // concept axis names, index = axis id
+	lexicon map[string]int // token -> concept axis id
+	tailDim int            // extra hashed axes for out-of-lexicon tokens
 }
 
 // conceptAxes is the hand-authored concept taxonomy. Each axis lists the tokens

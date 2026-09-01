@@ -1,31 +1,32 @@
-# Deploying moedex
+# Deploying Moe
 
 > **macOS quick start.** On a Mac, the whole install is one idempotent command:
 > ```sh
-> ./scripts/install-macos.sh            # build+install binaries, token, launchd agents
+> ./scripts/install-macos.sh            # install moe, token, and launchd agents
 > ./scripts/install-macos.sh --dry-run  # preview, change nothing
 > ```
-> It builds and installs every binary to `~/.local/bin` (removing stale `~/go/bin`
-> shadows), writes a 0600 auth token, adds the env block to `~/.zshrc`, and renders
+> It builds and installs one `moe` executable plus two-release compatibility
+> symlinks in `~/.local/bin`, writes a 0600 auth token, adds the env block to
+> `~/.zshrc`, and renders
 > + bootstraps the `com.moedex.serve` (warm daemon) and `com.moedex.refresh` (daily
 > 14:10 local time) launchd agents from the `deploy/*.plist` templates. For a new
 > or empty corpus path it initializes the managed submodule corpus after the
 > VPN, `glab`, and Git transport checks pass. It refuses a populated unmarked
 > path; index build and live cutover remain explicit sibling-rollout steps.
-> Verify anytime with `moedex-index doctor`. The rest of this file is the manual /
+> Verify anytime with `moedex doctor`. The rest of this file is the manual /
 > Linux (Docker + systemd) path.
 >
 > For a validated sibling cutover, pass all three paths together; the installer
 > renders the serve and refresh agents from the same values:
 > ```sh
-> MOEDEX_CORPUS="$HOME/.moedex-managed" \
-> MOEDEX_CAS_DIR="$HOME/.moedex-index/cas-managed" \
-> MOEDEX_SHARD_DIR="$HOME/.moedex-index/shards-managed" \
+> MOEDEX_CORPUS="$HOME/.moedex" \
+> MOEDEX_CAS_DIR="$HOME/.moedex-state/cas-managed" \
+> MOEDEX_SHARD_DIR="$HOME/.moedex-state/shards-managed" \
 > ./scripts/install-macos.sh
 > ```
 
-Operational guide for running the moedex retrieval daemon (`moedex-serve`) and
-the offline shard tool (`moedex-index`). Two deployment shapes are covered:
+Operational guide for the unified `moe` shell's retrieval daemon and offline
+index commands. Two deployment shapes are covered:
 
 1. **Docker** — the zero-dependency default image, plus an optional dense (ONNX)
    image.
@@ -41,38 +42,36 @@ the offline shard tool (`moedex-index`). Two deployment shapes are covered:
 
 ## Components
 
-| Binary         | Role                                                                 |
-| -------------- | ------------------------------------------------------------------- |
-| `moedex-serve` | Warm retrieval daemon. `-http` (HTTP API), `-mcp` (agent context), or `-q` (one-shot). mmaps shards once; SIGHUP hot-reload; SIGINT/SIGTERM 5s graceful drain. |
-| `moedex-index` | Offline shard tool: `build`, `check`, `refresh`, and the CAS family (`cas-build`/`cas-refresh`/`cas-export`) over a corpus. |
-| `moedex-corpus` | Corpus setup + freshness: managed `init`/`sync`/`doctor`, plus compatibility `clone`, against `gitlab.tcdevops.com` only. |
+| Command | Role |
+| --- | --- |
+| `moedex serve` | Warm retrieval daemon. `--http` (HTTP API), `--mcp` (agent context), or `--q` (one-shot). It mmaps shards once, hot-reloads on SIGHUP, and drains for five seconds on SIGINT/SIGTERM. |
+| `moedex index …` | Offline shard, snapshot, graph, and CAS management over a corpus. |
+| `moedex corpus …` | Corpus setup and freshness, including managed `init`, `sync`, and `doctor`. |
 
 HTTP routes on `-http`: `/healthz` (200 `ok`), `/metrics`, `/stats`, `/search`.
 `/healthz` and `/metrics` stay open even with auth enabled.
 
 ---
 
-## Building the binaries (no Docker)
+## Building the binary (no Docker)
 
 ```sh
-go build -o moedex-serve ./cmd/moedex-serve
-go build -o moedex-index ./cmd/moedex-index
-# dense (in-process ONNX embedder), mirrors `make build-dense`:
-make build-dense          # -> ./moedex-serve-dense  (needs ONNXRUNTIME_LIB_PATH at run time)
+go build -o moedex ./cmd/moe
+# Dense in-process ONNX and LSP arms:
+make build-dense          # -> ./moe-dense; needs ONNXRUNTIME_LIB_PATH at run time
 ```
 
-> **Note.** `make build` runs `go build ./...` (no `-o`); there is no make target
-> that emits a single plain-daemon binary, so build it with `go build -o ...` as
-> above (the Dockerfile does the same).
+`make install` performs guarded installation with compatibility symlinks. A
+direct `go build` is useful when preparing the exact artifact for a deploy host.
 
 ---
 
-## Standing up the corpus from zero (`moedex-corpus`)
+## Standing up the corpus from zero (`moedex corpus`)
 
-`moedex-corpus` owns corpus *acquisition* and *freshness*: it creates a local Git
+`moedex corpus` owns corpus *acquisition* and *freshness*: it creates a local Git
 superproject whose stable-ID submodules and committed lock describe the exact
 curated default-branch snapshot. It uses your own glab auth + access levels and shells
-out to `glab`, `git`, and `moedex-index` — the retrieval engine is never linked
+out to `glab` and `git`; indexing dispatches through the same `moe` process. The engine is never linked
 into it, so the zero-dependency posture of the daemon is preserved.
 
 Prereqs: active TC VPN, the [`glab`](https://gitlab.com/gitlab-org/cli) CLI, and
@@ -81,7 +80,7 @@ Prereqs: active TC VPN, the [`glab`](https://gitlab.com/gitlab-org/cli) CLI, and
 changes anything and reports the external layers separately:
 
 ```sh
-moedex-corpus doctor
+moedex corpus doctor
 #   ✓ authenticated to gitlab.tcdevops.com
 #   ✓ GitLab host/VPN reachable
 #   ✓ Git clone/fetch transport
@@ -94,11 +93,11 @@ moedex-corpus doctor
 populated legacy corpus:
 
 ```sh
-moedex-corpus init -corpus /srv/moedex/corpus-managed
-moedex-index cas-build \
+moedex corpus init -corpus /srv/moedex/corpus-managed
+moedex index cas build \
   -corpus /srv/moedex/corpus-managed \
   -cas-dir /srv/moedex/cas-managed
-moedex-index cas-export -deduped \
+moedex index cas export -deduped \
   -cas-dir /srv/moedex/cas-managed \
   -shard-dir /srv/moedex/shards-managed
 ```
@@ -110,7 +109,7 @@ still maintains independent shallow clones, but marked roots are always lock-dri
 
 **Scope.** By default the built-in curated allowlist (the TurnCommerce top-level
 groups) is used. Override with `-groups FILE`; regenerate a list from an existing
-mirror with `moedex-corpus groups --from-disk > corpus-groups.txt`.
+mirror with `moedex corpus groups --from-disk > corpus-groups.txt`.
 
 **Steady state** — fail-stop sync, CAS refresh, deduped export, sidecars, reload:
 
@@ -136,9 +135,9 @@ and every gate in
 [`ROLLOUT.md`](../docs/plans/phases/02-managed-corpus-integration/ROLLOUT.md).
 
 ```sh
-moedex-corpus doctor -corpus /srv/moedex/corpus-managed
-moedex-index doctor -shard-dir /srv/moedex/shards-managed
-moedex-index check \
+moedex corpus doctor -corpus /srv/moedex/corpus-managed
+moedex doctor -shard-dir /srv/moedex/shards-managed
+moedex index check \
   -corpus /srv/moedex/corpus-managed \
   -shard-dir /srv/moedex/shards-managed
 make parity MOEDEX_CORPUS=/srv/moedex/corpus-managed
@@ -159,7 +158,7 @@ Before relying on the 14:10 macOS run, check each prerequisite independently:
 
 ```sh
 glab auth status --hostname gitlab.tcdevops.com  # credential only
-moedex-corpus doctor -corpus /srv/moedex/corpus-managed  # VPN/API + Git transport + local lock
+moedex corpus doctor -corpus /srv/moedex/corpus-managed  # VPN/API + Git transport + local lock
 ```
 
 An authenticated `glab` session with an expired/disconnected VPN is expected to
@@ -172,21 +171,21 @@ expected to fail the Git transport check.
 
 ---
 
-## Building the corpus (shards) — lower-level (`moedex-index`)
+## Building the corpus (shards) — lower-level (`moedex index`)
 
-`moedex-corpus` (above) drives these for you. Use `moedex-index` directly when the
+`moedex corpus` (above) drives these for you. Use `moedex index` directly when the
 corpus is **already on disk** (no GitLab/glab needed):
 
 ```sh
 # Build a servable shard dir from a corpus root (every git repo beneath it):
-moedex-index build -corpus /srv/moedex/corpus -shard-dir /srv/moedex/shards
+moedex index build -corpus /srv/moedex/corpus -shard-dir /srv/moedex/shards
 
 # Verify a shard dir against its manifest (and optionally the corpus):
-moedex-index check -shard-dir /srv/moedex/shards
+moedex index check -shard-dir /srv/moedex/shards
 
 # Atomically rebuild + swap in fresh shards (corpus root defaults to the
 # manifest's recorded Root):
-moedex-index refresh -shard-dir /srv/moedex/shards
+moedex index refresh -shard-dir /srv/moedex/shards
 ```
 
 `MOEDEX_CORPUS` is the env fallback for `build -corpus`.
@@ -204,7 +203,7 @@ Measured on the ~5.2 GB / 484-repo corpus (953 MB indexed); see ADR
 | --- | --- | --- |
 | **Serve** `-http` (lexical+symbol+path) | ~3 GB RSS (~1 GB heap + reclaimable mmap) | Working set is the **mmap'd postings** (file-backed, reclaimable), not the heap. Comfortable on **8 GB RAM**; ~p50 120 ms / p95 560 ms warm. |
 | **Serve** `-mcp` + dense (float32) | ~4 GB heap | Dense store is ~3.5× indexed content. Want **≥16 GB RAM**; `int8` quantization (future) would cut it ~4×. |
-| **Build / refresh** (`moedex-index`) | ~10 GB peak | The RAM-binding step (the sidecar build loads all content at once; not shard-bounded). Build on a **≥24–32 GB host**, then ship the shard dir to a modest serve host. |
+| **Build / refresh** (`moedex index`) | ~10 GB peak | The RAM-binding step (the sidecar build loads all content at once; not shard-bounded). Build on a **≥24–32 GB host**, then ship the shard dir to a modest serve host. |
 | **Disk** (servable shard dir) | 2.6 GB (no dense) / 5.4 GB (+dense) | Scales ~linearly to ~4 / ~8 GB at an 8 GB corpus. |
 
 **Rule of thumb:** serving is cheap (postings are mmap'd); building is the
@@ -274,7 +273,7 @@ Files (in `deploy/`): `moedex-serve.service`, `moedex-serve.env.example`, and
   network + the service identity authenticated to `gitlab.tcdevops.com` + write
   to the corpus tree. **Recommended** for a GitLab-connected host.
 - **`moedex-refresh.service` + `moedex-refresh.timer`** — reindex only, from a
-  corpus someone else keeps updated on disk (`moedex-index refresh`). No glab/network.
+  corpus someone else keeps updated on disk (`moedex index refresh`). No glab/network.
 
 ### Install
 
@@ -282,9 +281,8 @@ Files (in `deploy/`): `moedex-serve.service`, `moedex-serve.env.example`, and
 # 1. dedicated user
 sudo useradd -r -s /usr/sbin/nologin moedex   # skip if it exists
 
-# 2. binaries
-sudo install -m 0755 moedex-serve /usr/local/bin/moedex-serve
-sudo install -m 0755 moedex-index /usr/local/bin/moedex-index
+# 2. unified binary
+sudo install -m 0755 moe /usr/local/bin/moe
 
 # 3. config + secret (0640 root:moedex)
 sudo install -d -m 0750 -o root -g moedex /etc/moedex
@@ -326,7 +324,6 @@ To pull from GitLab *and* re-index *and* reload on a schedule, use the sync unit
 instead of the refresh units:
 
 ```sh
-sudo install -m 0755 moedex-corpus /usr/local/bin/moedex-corpus
 sudo install -m 0644 deploy/moedex-sync.service /etc/systemd/system/
 sudo install -m 0644 deploy/moedex-sync.timer   /etc/systemd/system/
 # Set the three managed sibling paths in /etc/moedex/moedex-serve.env, and make
@@ -360,7 +357,7 @@ then nothing extra has to be provisioned.
 
 ### Why the refresh unit needs a wider write scope
 
-`moedex-index refresh` builds a fresh shard dir and **atomically renames** it
+`moedex index refresh` builds a fresh shard dir and **atomically renames** it
 into place. A rename writes the **parent** directory entry, so the refresh unit
 declares `ReadWritePaths=/srv/moedex/shards /srv/moedex` (shard dir **and** its
 parent). The serve unit only ever reads shards, so it uses
@@ -368,7 +365,7 @@ parent). The serve unit only ever reads shards, so it uses
 
 ### Refresh cost at scale
 
-`moedex-index refresh` is **shard-level**: it re-ingests every repo that shares a
+`moedex index refresh` is **shard-level**: it re-ingests every repo that shares a
 shard with a changed repo, so its cost depends on how the changes cluster. With no
 repo→shard locality, a **broad** update (many repos advancing at once) touches
 every shard and re-ingests ~all repos — about the same cost as a full rebuild, and
@@ -383,8 +380,8 @@ load). See ADR [`0011`](../docs/adr/0011-shard-level-freshness.md).
 `MOEDEX_AUTH_TOKEN` lives in `/etc/moedex/moedex-serve.env` (mode `0640`,
 `root:moedex`), loaded via `EnvironmentFile=`. When set, `/search` and `/stats`
 require `Authorization: Bearer <token>`; `/healthz` and `/metrics` stay open.
-**This is active in the daemon today** (`-auth-token` / `MOEDEX_AUTH_TOKEN` and
-the unconditional loopback bind are already in `cmd/moedex-serve`). For stronger
+Tokenless non-loopback listeners fail closed unless `--allow-insecure` explicitly
+acknowledges the exposure. For stronger
 secret handling, swap `EnvironmentFile=` for a systemd credential
 (`LoadCredential=` / `systemd-creds`) on hosts that support it.
 
@@ -395,7 +392,7 @@ can `systemctl reload`, or wrap in sudo):
 
 ```cron
 # m h dom mon dow   command  — hourly atomic shard refresh + hot reload
-0 * * * *  /usr/local/bin/moedex-index refresh -shard-dir /srv/moedex/shards && systemctl reload moedex-serve
+0 * * * *  /usr/local/bin/moedex index refresh -shard-dir /srv/moedex/shards && systemctl reload moedex-serve
 ```
 
 ---
@@ -408,7 +405,7 @@ can `systemctl reload`, or wrap in sudo):
   **scheduled pipelines or tags**. Requires a **self-hosted runner** tagged
   `moedex-corpus` that has:
   - the managed corpus on disk at `$MOEDEX_CORPUS` (defaults to
-    `~/.moedex-managed` if unset),
+    `~/.moedex` if unset),
   - **ripgrep (`rg`)** installed,
   - disk headroom for the `.parity-work` scratch dir.
   Publishes `PARITY-REPORT.md` as an artifact.

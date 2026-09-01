@@ -1,0 +1,13 @@
+{
+  "source_path": "docs/adr/0018-name-based-navigation-workspace-symbol.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "ADR 0018: Name-based navigation — `find_symbol` (workspace/symbol) + `symbols_overview` (documentSymbol)",
+  "summary": "Adds name-based LSP navigation tools find_symbol and symbols_overview returning named Symbol results, closing the Protostar name-to-position gap.",
+  "scope": ["find_symbol", "symbols_overview", "workspace/symbol", "textDocument/documentSymbol", "internal/navigate", "cmd/moedex-serve/nav_lsp.go", "LSP Pool", "Symbol type", "MCP tools"],
+  "cross_refs": ["./0017-lsp-navigation-and-the-serena-boundary.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Status is 'Proposed' (though noted implemented same day), so locked=false per Accepted-only rule."
+}

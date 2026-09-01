@@ -78,19 +78,19 @@ All library code lives under `internal/`; executables under `cmd/`.
 | graph/diskgraph | [`internal/graph/diskgraph`](internal/graph/diskgraph) | Graph layer phases 5/9/11/13: offline-built, mmap-served adjacency keyed by git blob SHA + symbol byte offset; v2 fixed-width edge records persist a tier enum plus evidence blob SHA/offset/length, with a separate cosine similarity metric for semantic edges; stronger semantic confirmation upgrades an identical weaker relationship in place | `Key`/`Node`, `Edge`, `EdgeType`; `Builder`, `NewBuilder`, `(*Builder) AddNode/Add/AddEdge/AddOrUpgradeEdge/AddEdges/Save`; `Save`, `Open`, `Load`; `Graph`, `(*Graph) Load/Edges/Keys/EachEdge/NumNodes/NumEdges/Close` |
 | eval | [`internal/eval`](internal/eval) | IR-metrics + ranker evaluation harness | `GoldQuery`, `NewBinaryGold`; `RecallAtK`, `PrecisionAtK`, `MRR`, `NDCGAtK`; `Runner`, `NewRunner`, `Evaluate`, `Report`, `QueryReport`; `BuildIndexFromCorpus`, `BuildIndexFromFiles` |
 | parity | [`internal/parity`](internal/parity) | Full-corpus exact-match retrieval parity harness + shard-level freshness | `Config`, `RunConfig`, `Run`; `Build`, `Built`, `FileTable`, `DefaultShardBytes`; `Generate`, `Battery`, `Query`, `Bucket`; `QueryResult`, `Verdict`; `WriteReport`, `ReportMeta`; `Manifest`, `ShardManifest`, `RepoHead`, `WriteManifest`, `LoadManifest`, `DetectChanges`, `Changes`, `Rebuild` |
-| server | [`internal/server`](internal/server) | Warm multi-shard serving spine: mmap'd retrieval + ranked agent context + corpus-wide symbol lookup; online graph query/annotation layer; offline graph build bridge, including `lsp`-tagged Proven CALLS and `onnx`-tagged similarity passes | `Corpus`, `Open`, `(*Corpus) Regex/Literal/NumShards/NumBlobs/Close`; `RankCorpus`, `RankConfig`, `OpenRank`, `(*RankCorpus) SearchContext`; `BuildSidecars`, `BuildGraph`, `BuildGraphWithOptions`, `GraphBuildOptions`, `LSPGraphStats`, `GraphFileName`, `GraphPath`; `GraphToolset`, `OpenGraphTools`, `(*GraphToolset) Tools/Neighbors/Reload/Close`; `GraphNode`, `GraphEdge`, `GraphLocation`, `GraphQueryResult`; `SymbolCorpus`, `SymbolSite`, `OpenSymbols`, `(*SymbolCorpus) References/Definitions/DefiningRepos/ReferencingRepos/Locate/Merged/NumShards/NumNames/Close` |
+| serve | [`internal/serve`](internal/serve) | Warm multi-shard retrieval and ranked agent context, independent of graph construction/query packages | `Corpus`, `Open`, `(*Corpus) Regex/Literal/NumShards/NumBlobs/Close`; `RankCorpus`, `RankConfig`, `OpenRank`, `(*RankCorpus) SearchContext` |
+| graph/build | [`internal/graph/build`](internal/graph/build) | Offline sidecar and graph construction, including `lsp`-tagged Proven CALLS and `onnx`-tagged similarity passes | `BuildSidecars`, `BuildGraph`, `BuildGraphWithOptions`, `BuildClusterSidecar`, `GraphBuildOptions`, `LSPGraphStats` |
+| graph/serve | [`internal/graph/serve`](internal/graph/serve) | Online graph annotation, traversal, cluster query, and corpus-wide symbol lookup | `GraphToolset`, `OpenGraphTools`, `(*GraphToolset) Tools/Neighbors/Reload/Close`; `SymbolCorpus`, `OpenSymbols` |
+| graph/artifact | [`internal/graph/artifact`](internal/graph/artifact) | Stable graph and cluster artifact filenames shared across the offline/online boundary | `GraphFileName`, `ClusterFileName`, `GraphPath`, `ClusterPath` |
+| shardset | [`internal/shardset`](internal/shardset) | Neutral shard-path and shared-content-store seam used without reversing build/serve dependencies | `Paths`, `OpenSharedContent` |
 | mcp | [`internal/mcp`](internal/mcp) | Serve typed search, graph, discovery, and navigation tools through the official MCP SDK over stdio and stateless Streamable HTTP; stamp snapshot-bound result identity | `ContextSearcher`, `SnapshotContextSearcher`; `Server`, `NewServer`, `Serve`; `IndexSearcher`, `NewIndexSearcher`, `SetEnclosingBytes`, `SearchContext`; `GraphAnnotator`, `SnapshotGraphAnnotator`, `WithGraphAnnotator`; `ToolSpecification`, `SnapshotIdentity` |
 | corpus | [`internal/corpus`](internal/corpus) | Corpus acquisition + freshness over glab/git (the only package that shells out to them; **not imported by the engine**) | `Runner`, `ExecRunner`; `Config`, `DefaultGroups`; `Project`, `Enumerate`; `Doctor`, `Report`; `CloneArgs`, `CloneProjects`; `Reconcile`, `PlanSync`, `SyncProjects`; `Reindex`; re-exports the `catalog` package's schema (`Catalog`, `Lock`, `LockedProject`, `IsManagedRoot`, `LoadCatalog`, `LoadLock`, `DefaultHost`, …) under its historical names |
 | corpus/catalog | [`internal/corpus/catalog`](internal/corpus/catalog) | Leaf managed-corpus schema (ownership marker + acquisition lock): zero os/exec, zero `Runner` — the seam that lets `internal/ingest` recognize a managed root and read its locked commit without pulling glab/git shell-out machinery into any default-build production binary (review finding F-17) | `Catalog`, `GroupPolicy`, `NewCatalog`, `IsManagedRoot`, `LoadCatalog`, `WriteCatalog`, `CatalogPath`; `Lock`, `LockedProject`, `LockStatus`, `NewLock`, `LoadLock`, `WriteLock`, `LockPath`; `DefaultHost` |
-| navigate | [`internal/navigate`](internal/navigate) | Experimental LSP-precise navigation arm (ADR 0017, `-tags lsp`): type-resolved go-to-def / find-refs / find-impls via an out-of-process language server over a hand-written stdlib JSON-RPC client; multi-language registry sized to the real corpus (csharp ~60% via `csharp-ls`; typescript/js; css/scss via vscode-css-language-server; cfml via `cflsp`; html; sql; go; python; ready-but-unused rust/cpp) — partial-capability servers degrade gracefully (a `-32601` unimplemented method → empty, not error), C#'s `DOTNET_ROOT` is resolved per-launch via `LangSpec.ResolveEnv`, and a shared per-(root,language) server pool with idle-TTL eviction + restart backoff, incremental `didChange` sync, and live-buffer overlays; no new go.mod dep (mirrors the dense arm's build-tag boundary). ADR 0018 adds name-based navigation on top: `workspace/symbol` (root-routed, merges every already-live language server for a polyglot root when no language is pinned) and `textDocument/documentSymbol` (file-routed, flattens the hierarchical `DocumentSymbol` shape and prefers `selectionRange` over the whole declaration range) — both return the named `Symbol` type, not a bare `Location` | `Pos`, `Location`, `Symbol`, `Navigator`; `Config`; `LSP`, `NewLSP`, `(*LSP) Definition/References/Implementations/WorkspaceSymbol/DocumentSymbol/SetOverlay/DropOverlay/NotifyChanged/Alive/Close`; `Pool`, `NewPool`, `(*Pool) Navigator/NavigatorFor/Definition/References/Implementations/WorkspaceSymbol/DocumentSymbol/SetOverlay/DropOverlay/NotifyChanged/Stats/Sweep/Close`; `Stats`; `LangSpec`, `LanguageForPath`, `SpecForLanguage`, `SpecForPath`; `ErrServerDead`; `const LSPCompiled` |
-| moedex | [`cmd/moedex`](cmd/moedex) | CLI: index one repo, run a literal/regex query | — |
-| moedex-mcp | [`cmd/moedex-mcp`](cmd/moedex-mcp) | Single-repo MCP server binary | — |
-| moedex-serve | [`cmd/moedex-serve`](cmd/moedex-serve) | Warm retrieval daemon over a prebuilt shard dir: `-http` retrieval API, `-q` one-shot, `-mcp` ranked context | — |
-| moedex-index | [`cmd/moedex-index`](cmd/moedex-index) | Offline shard-dir builder/freshness tool: `build` / `check` / `refresh`, plus the CAS commands `cas-build` / `cas-refresh` / `cas-export` / `cas-compact` | — |
-| scale | [`cmd/scale`](cmd/scale) | Index many repos, report size/throughput/mmap memory | — |
-| moedex-parity | [`cmd/moedex-parity`](cmd/moedex-parity) | Full-corpus parity gate: build + battery + oracles + `PARITY-REPORT.md`, non-zero exit on failure | — |
-| moedex-corpus | [`cmd/moedex-corpus`](cmd/moedex-corpus) | Corpus setup + freshness CLI: `doctor` / `clone` / `sync` (`-reindex`) / `groups`, scoped to gitlab.tcdevops.com | — |
-| moedex-nav | [`cmd/moedex-nav`](cmd/moedex-nav) | CLI for the experimental LSP-precise navigation arm (built only with `-tags lsp`): `-verb def\|refs\|impl` over `FILE:LINE:COL`, `-lang`/`-server` selection, `-overlay` (unsaved-buffer nav), `-notify` (disk-edit invalidation), `-json` output, `-stats` (Pool counters). External language server on PATH; not in the default build. | — |
+| navigate | [`internal/navigate`](internal/navigate) | Experimental LSP-precise navigation arm (ADR 0017, `-tags lsp`): type-resolved go-to-def / find-refs / find-impls via an out-of-process language server over a hand-written stdlib JSON-RPC client; multi-language registry sized to the real corpus (csharp ~60% via `csharp-ls`; typescript/js; css/scss via vscode-css-language-server; cfml via `cflsp`; html; sql; go; python; ready-but-unused rust/cpp) — partial-capability servers degrade gracefully (a `-32601` unimplemented method → empty, not error), C#'s `DOTNET_ROOT` is resolved per-launch via `LangSpec.ResolveEnv`, and a shared per-(root,language) server pool with idle-TTL eviction + restart backoff, incremental `didChange` sync, and live-buffer overlays. Managed-corpus roots are never opened directly by an external server: the pool lazily materializes the exact locked commit into a writable cache and maps all inputs/results between canonical and scratch paths. No new go.mod dep (mirrors the dense arm's build-tag boundary). ADR 0018 adds name-based navigation on top: `workspace/symbol` (root-routed, merges every already-live language server for a polyglot root when no language is pinned) and `textDocument/documentSymbol` (file-routed, flattens the hierarchical `DocumentSymbol` shape and prefers `selectionRange` over the whole declaration range) — both return the named `Symbol` type, not a bare `Location` | `Pos`, `Location`, `Symbol`, `Navigator`; `Config`; `LSP`, `NewLSP`, `(*LSP) Definition/References/Implementations/WorkspaceSymbol/DocumentSymbol/SetOverlay/DropOverlay/NotifyChanged/Alive/Close`; `Pool`, `NewPool`, `(*Pool) Navigator/NavigatorFor/Definition/References/Implementations/WorkspaceSymbol/DocumentSymbol/SetOverlay/DropOverlay/NotifyChanged/Stats/Sweep/Close`; `Stats`; `LangSpec`, `LanguageForPath`, `SpecForLanguage`, `SpecForPath`; `ErrServerDead`; `const LSPCompiled` |
+| cli | [`internal/cli`](internal/cli) | Unified Fang/Cobra command tree, global configuration/progress flags, argv[0] compatibility dispatch | `Execute`, `NewRoot` |
+| tui | [`internal/tui`](internal/tui) | TTY-aware Bubble Tea search shell with debouncing, cancellation, graph panel, and OSC52 copy | `Run`, `IsInteractive`, `Options` |
+| app | [`internal/app`](internal/app) | Command adapters and shared search service; terminal packages never leak into engine code | command-specific `Main`/`MainContext`; `searchservice.Provider` |
+| moe | [`cmd/moe`](cmd/moe) | The single executable front door for search, index, graph, corpus, serve, MCP, navigation, parity, doctor, config, and version | — |
 
 ---
 
@@ -157,21 +157,21 @@ MCP tools/call search_context
                  │    (symbol.Index.Enclosing when wired, else brace/indent heuristic)
                  ├─ merge blocks separated by at most one blank line per file
                  └─ emit best-first under a token budget ──▶ ContextWindow
-                        └─▶ GraphToolset.Neighbors     (internal/server/graphneighbors.go)
+                        └─▶ GraphToolset.Neighbors     (internal/graph/serve/graphneighbors.go)
                                ├─ anchor each block to graph nodes by path + line range
                                ├─ walk callers/callees/consumers/publishers/depends_on/similar_to
                                │    (one shared reverse sweep of the mmap per hop)
                                └─ attach as the block's `neighbors` ──▶ annotated ContextWindow
 ```
 
-The single-repo call chain is wired in
-[`cmd/moedex-mcp/main.go`](cmd/moedex-mcp/main.go): it builds the index + token
+The single-repo call chain is wired through
+[`internal/app/mcpcmd`](internal/app/mcpcmd): it builds the index + token
 index, conditionally builds the dense store, constructs a `rank.Ranker`, wraps it in
 an `mcp.IndexSearcher` (default `topK = 20`), builds the polyglot symbol layer
 (`symbol.BuildMulti`) and wires it both for scoping
 (`searcher.SetEnclosingBytes(symIdx.EnclosingBytesFunc())`) and as a ranking arm
 (`ranker.SetSymbols(symIdx)`), and serves on stdin/stdout. The warm multi-shard
-equivalent is `server.OpenRank` (see [Serving spine](#warm-serving-spine-internalserver--cmdmoedex-serve)).
+equivalent is `serve.OpenRank` (see [Serving spine](#warm-serving-spine-internalserve--internalgraphserve)).
 
 Inside [`Ranker.Rank`](internal/rank/ranker.go) up to four RRF arms run, each
 contributing `1/(RRFk + rank)` at a blob's rank (`RRFk`=60 default):
@@ -246,7 +246,7 @@ All binary sidecar/store formats are little-endian and round-trippable.
 
 | Format | Magic | Writer | Layout |
 |---|---|---|---|
-| Trigram index | `MOEDEX03` (v3) | [`diskstore`](internal/diskstore/diskstore.go) | 48-byte header (magic, version, reserved, numBlobs, numTrigrams, blobOff, postOff), then a **blob section** (per blob: SHA, content, file refs) and a **postings section** (per trigram: 3 bytes + uint64 encLen + varint-delta encoded list). Each list is an individually-addressable byte range so `LoadMmap` can hand out sub-slices. The direct `moedex-index build` path writes this (or `MOEDEX04` for a selective build). |
+| Trigram index | `MOEDEX03` (v3) | [`diskstore`](internal/diskstore/diskstore.go) | 48-byte header (magic, version, reserved, numBlobs, numTrigrams, blobOff, postOff), then a **blob section** (per blob: SHA, content, file refs) and a **postings section** (per trigram: 3 bytes + uint64 encLen + varint-delta encoded list). Each list is an individually-addressable byte range so `LoadMmap` can hand out sub-slices. The direct `moedex index build` path writes this (or `MOEDEX04` for a selective build). |
 | Deduped trigram index | `MOEDEX05` (v5) | [`diskstore/dedupstore.go`](internal/diskstore/dedupstore.go) | The **served-shard-dedup** format. Same 48-byte header shape as `MOEDEX03`, but the **blob section is content-less** (per blob: SHA + file refs only — no inlined content); the postings section is identical. Blob content lives once in the shared content store (below) and is resolved by SHA at load. `LoadMmapDeduped`/`LoadBlobsDeduped` take a `*ContentStore` and serve each blob's content as a zero-copy mmap sub-slice — so a blob whose repos span several shards is stored once for the whole served corpus, and content stays off the Go heap. Written by `blobstore.ExportDedupedShardDir` (`cas-export -deduped`). |
 | Shared content store | `MOECONT1` (v1) | [`diskstore/contentstore.go`](internal/diskstore/contentstore.go) | The single `blobs.dat` backing a deduped (`MOEDEX05`) shard dir. 32-byte header (magic, version, reserved, numBlobs, dirOff), a **content section** (each unique blob's raw bytes, contiguous & unframed so a loader hands out zero-copy mmap sub-slices), then a **directory section** (per blob: sha, absolute contentOff, contentLen). `PutContent` is idempotent on the content hash (cross-shard dedup); the file is written atomically (temp+rename). The SHA is an opaque variable-length key, matching the CAS. **Self-verifying:** because the key is the content hash, the serving path (`OpenContentStoreVerified`) re-hashes every entry against its key at open, so a corrupt store fails the boot rather than silently serving wrong content (default-on; opt out with `MOEDEX_VERIFY_CONTENT=0`). |
 | CAS blob store | `MOEBLOB1` (v1) | [`blobstore`](internal/blobstore/blobstore.go) | Two files. `blobs.pack`: append-only, one record per **unique** blob (`shaLen`+sha, `contentLen`+content) — each unique content stored once for the whole corpus. `blobs.idx`: 32-byte header (magic, version, reserved, numBlobs, packBytes) then per blob a directory entry (sha, packOff, packLen, contentLen), written atomically (temp+rename) only after the pack is fsynced, so a crash never indexes non-durable bytes. The SHA is an opaque variable-length key (SHA-1 today, SHA-256-ready). |
@@ -257,7 +257,7 @@ All binary sidecar/store formats are little-endian and round-trippable.
 The serving layer adds two JSON sidecars that are not part of the index codecs: a
 freshness `manifest.json` (`internal/parity/manifest.go` — repo→shard membership +
 each repo's git HEAD and effective privacy-policy fingerprint) and per-cache `.meta` validators next to the corpus token,
-symbol, and embedding sidecars (`internal/server/rankcorpus.go` — a shard-set
+symbol, and embedding sidecars (`internal/serve/rankcorpus.go` — a shard-set
 fingerprint + blob count, plus the embedding model AND chunk geometry for the
 embedding store and `symbol.ExtractorsVersion` for the symbol index, so a stale
 cache is detected and rebuilt rather than silently reused). The CAS adds a
@@ -273,7 +273,7 @@ The retrieval correctness invariant — **moedex never under-approximates** (it
 returns every line ripgrep does) and returns no spurious lines — is scaled from
 the small `internal/search` parity test to the entire `~/TCGitlab` corpus by
 [`internal/parity`](internal/parity), driven by
-[`cmd/moedex-parity`](cmd/moedex-parity) and gated by `make verify` / `make parity`.
+[`internal/app/paritycmd`](internal/app/paritycmd) and gated by `make verify` / `make parity`.
 
 - **Sharded build.** Building the whole corpus in one in-RAM index would blow the
   posting-map memory wall, so `parity.Build` ingests repos into a sequence of
@@ -309,14 +309,14 @@ This harness surfaced and fixed a real under-approximation: the `internal/search
 verify-stage literal prefilter (`requiredLiterals`) treated a case-folded `OpLiteral`
 (from `(?i)`) as a case-*sensitive* required byte run, dropping other-case matches.
 
-## Warm serving spine (`internal/server` + `cmd/moedex-serve`)
+## Warm serving spine (`internal/serve` + `internal/graph/serve`)
 
 The one-shot CLIs rebuild an index per invocation. The serving spine instead reads a
 **prebuilt shard directory** and answers queries with zero cold-start. The offline
-side ([`cmd/moedex-index`](cmd/moedex-index)) produces and refreshes that directory;
-the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
+side (`moedex index`) produces and refreshes that directory; the daemon
+(`moedex serve`) only ever reads it.
 
-- **Retrieval corpus** ([`server.Corpus`](internal/server/corpus.go)). `Open` mmaps
+- **Retrieval corpus** ([`serve.Corpus`](internal/serve/corpus.go)). `Open` mmaps
   every `*.idx` shard once and holds the mappings for its lifetime, so postings
   never enter the Go heap; each shard loads via `diskstore.LoadMmapDeduped`
   (sharing a corpus-wide content-store mapping) for a deduped (`MOEDEX05`) shard
@@ -324,15 +324,15 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
   scan across all shards (bounded by `NumCPU`) and merge the results; because
   `search.Match` carries absolute/repo/relative paths, matches from independent
   shards merge by concatenation with no cross-shard blob-ID space to reconcile. This
-  backs `moedex-serve -http` (a small JSON `/search` API) and `-q` (one-shot).
-- **Ranked agent context** ([`server.RankCorpus`](internal/server/rankcorpus.go)).
+  backs `moedex serve -http` (a small JSON `/search` API) and `-q` (one-shot).
+- **Ranked agent context** ([`serve.RankCorpus`](internal/serve/rankcorpus.go)).
   `OpenRank` loads only blob *content* from every shard (`diskstore.LoadBlobs` — no
   positional postings, so no RAM wall), concatenates it into one content-only index
   with global blob IDs, and builds the corpus-wide BM25 token index and polyglot
   symbol index, fused by `rank.Ranker` (with `UseTokenCandidates(true)`). It
-  implements `mcp.ContextSearcher`, so `moedex-serve -mcp` serves `search_context`
+  implements `mcp.ContextSearcher`, so `moe mcp` serves `search_context`
   over the whole corpus.
-- **Corpus-wide symbol lookup** ([`server.SymbolCorpus`](internal/server/symbolcorpus.go)).
+- **Corpus-wide symbol lookup** ([`graphserve.SymbolCorpus`](internal/graph/serve/symbolcorpus.go)).
   A single `symbol.Index` is shard-local: its blob IDs are positions inside one
   shard, so it answers "who defines this name" only for that shard's blobs.
   `OpenSymbols` builds one symbol index **per shard** and merges them into a
@@ -367,7 +367,7 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
   the resolved **chunk geometry** (`lines_per_chunk` + `overlap`) — changing the
   window from 40 to 80 must not reuse vectors built for 40-line chunks. Geometry
   absent from a `.meta` is read as the defaults rather than as a mismatch, which is
-  exact (nothing outside `internal/server` can set it) and matters because this is
+  exact (nothing outside `internal/serve` can set it) and matters because this is
   the one sidecar whose invalidation costs a full corpus re-embed:
   `embed.BuildStore` has no reuse path, only `RefreshEmbeddings` does.
   `BuildSidecars` lets the offline indexer pre-warm the token+symbol caches (it
@@ -380,7 +380,7 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
   fixed-width edge record. Confidence scores are derived from the tier at API
   boundaries; `SIMILAR_TO` additionally persists its exact cosine as a separate
   similarity metric. In an
-  `onnx`-tagged `moedex-index`, the graph pass additionally embeds every unique
+  `onnx`-tagged `moedex graph build`, the graph pass additionally embeds every unique
   symbol definition through `embed.BuildStore` and emits each definition's
   top-K `SIMILAR_TO` neighbors whose cosine clears the configured threshold.
   These edges are Pattern-tier—visible at the default confidence floor—while
@@ -388,13 +388,13 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
   `MOEDEX_GRAPH_SIMILAR_TOP_K` (default 5, zero disables) and
   `MOEDEX_GRAPH_SIMILAR_THRESHOLD` (default 0.60) tune that offline pass; the
   default pure-Go indexer cannot emit semantic edges.
-- **Graph-fused search** ([`internal/server/graphneighbors.go`](internal/server/graphneighbors.go),
+- **Graph-fused search** ([`internal/graph/serve/graphneighbors.go`](internal/graph/serve/graphneighbors.go),
   [`internal/mcp/neighbors.go`](internal/mcp/neighbors.go) —
   [`docs/GRAPH-LAYER-PLAN.md`](docs/GRAPH-LAYER-PLAN.md) phase 14). `search_context`
   answers with the graph neighborhood attached, so an agent that found a symbol does
   not need a second tool call to learn what calls it, what it depends on, or who
   publishes the event it handles. `GraphToolset` implements `mcp.GraphAnnotator`;
-  `moedex-serve` wires it with `mcp.WithGraphAnnotator`, and the `graph_depth`
+  `moedex serve` wires it with `mcp.WithGraphAnnotator`, and the `graph_depth`
   argument (default 1, `0` disables, max 10) is the per-call control.
   The join is **positional**: a context block knows a path and a 1-based line range,
   the node catalog knows where every graph node lives, so `anchorsFor` resolves one
@@ -418,7 +418,7 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
   binary-search-and-allocate-per-node shape `Keys()`+`Edges()` would cost on what is
   now a default-on path.
 - **Freshness** ([`internal/parity/manifest.go`](internal/parity/manifest.go)).
-  `moedex-index build` writes a `manifest.json` recording, per shard, which repos
+  `moedex index build` writes a `manifest.json` recording, per shard, which repos
   contributed blobs, and per repo its git HEAD plus privacy fingerprint at ingest.
   `check` compares both values against the manifest (`DetectChanges`), so an
   uncommitted policy-only restriction still triggers a rebuild;
@@ -428,7 +428,7 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
   shard-level (not per-repo) because a content-sized shard interleaves several repos;
   the documented caveats (shard-boundary drift, opaque per-build shard IDs) live in
   the package doc.
-- **Daemon hardening** ([`cmd/moedex-serve`](cmd/moedex-serve)). The `-http` server
+- **Daemon hardening** ([`internal/app/servecmd`](internal/app/servecmd)). The `-http` server
   defends a hostile network: optional **bearer auth** (`Authorization: Bearer`,
   enabled by `-auth-token` or `MOEDEX_AUTH_TOKEN`; `/healthz` and `/metrics` stay
   open), an unconditional **loopback-default bind** (a bare host/port rewrites to
@@ -441,14 +441,14 @@ the daemon ([`cmd/moedex-serve`](cmd/moedex-serve)) only ever reads it.
   (`auto|onnx|http|none`): `auto` picks `onnx` when an ONNX Runtime library path is
   given, else `http` when `MOEDEX_EMBED_URL` is set, else `none`.
 
-## Corpus acquisition & freshness (`internal/corpus` + `cmd/moedex-corpus`)
+## Corpus acquisition & freshness (`internal/corpus` + `moedex corpus`)
 
-Everything above assumes the corpus is already on disk. `moedex-corpus` is the
+Everything above assumes the corpus is already on disk. `moedex corpus` is the
 setup-and-freshness operator that *puts* it there and keeps it current — the one
 component that reaches outside the box, to TurnCommerce's internal GitLab
 (`gitlab.tcdevops.com`, and only that host). It is deliberately quarantined from
 the engine: it lives in its own package, shells out to `glab`, `git`, and the
-`moedex-index` binary behind a `Runner` seam (so all of its logic is unit-tested
+unified `moedex index` command behind a `Runner` seam (so all of its logic is unit-tested
 without a network), and is **never imported by** `internal/*` or the daemon — the
 engine's pure-Go, zero-dependency posture is untouched. The one thing the
 engine *does* need — recognizing a managed corpus root and reading its locked
@@ -475,11 +475,11 @@ default-build production binary (review finding F-17).
   fetch-and-reset the existing (shallow-safe, change-detected) concurrently, with
   optional `-prune` of the gone-on-server repos.
 - **reindex** ([`reindex.go`](internal/corpus/reindex.go)) — `clone`/`sync
-  -reindex` drive the per-blob-delta path through the `moedex-index` binary:
+  -reindex` drive the per-blob-delta path through `moedex index`:
   `cas-build` the first time, else `cas-refresh`, then `cas-export -deduped`
   (delta-aware), then an optional daemon reload.
 
-`cmd/moedex-corpus` is the thin CLI; `deploy/moedex-sync.{service,timer}` run
+`internal/app/corpuscmd` is the application adapter; `deploy/moedex-sync.{service,timer}` run
 `sync -reindex` hourly. The mascot — Moe, an eight-tentacled octopus — is the
 tool's voice (the parallel clones are his tentacles).
 
@@ -532,23 +532,24 @@ tool's voice (the parallel clones are his tentacles).
   type declared elsewhere), and `Report.CandidateBlobs` records the pre-confirmation
   fan-out. Promotion is in-memory today: nothing in the build pipeline runs the pass
   yet, and persisting architectural kinds is phase 5's sidecar work.
-- MCP `search_context` tool over stdio JSON-RPC (single-repo via `cmd/moedex-mcp`,
-  whole-corpus via `moedex-serve -mcp`).
-- A **warm multi-shard serving spine** (`internal/server`, `cmd/moedex-serve`): an
+- MCP `search_context` tool over stdio JSON-RPC (single-repo via `moe mcp --repo`,
+  whole-corpus via `moe mcp`).
+- A **warm multi-shard serving spine** (`internal/serve`, `internal/graph/serve`,
+  `moedex serve`): an
   mmap'd retrieval daemon (`-http`/`-q`) and a ranked agent-context surface (`-mcp`),
   with load-or-build-and-save BM25/symbol/embedding sidecars and daemon hardening
   (bearer auth, loopback default, TLS, slog/metrics, timeouts, SIGHUP hot-reload).
-- **Shard-level freshness** (`internal/parity` manifest + `cmd/moedex-index`
+- **Shard-level freshness** (`internal/parity` manifest + `moedex index`
   `build`/`check`/`refresh`): detect changed repos by git HEAD and rebuild only the
   affected shards.
-- **Corpus acquisition + freshness** (`internal/corpus` + `cmd/moedex-corpus`): a
+- **Corpus acquisition + freshness** (`internal/corpus` + `moedex corpus`): a
   setup tool that checks/guides glab auth (gitlab.tcdevops.com only), shallow-clones
   the curated repo set using the operator's own access, and on a schedule pulls
   fresh + drives the per-blob-delta reindex (`cas-refresh` → `cas-export -deduped`)
-  + reloads the daemon. Shells out to glab/git/moedex-index; the engine never
+  + reloads the daemon. Shells out to glab/git; the engine never
   imports it.
 - **Content-addressable store with global dedup + per-blob delta** (`internal/blobstore`
-  + `cmd/moedex-index` `cas-build`/`cas-refresh`/`cas-export`): a corpus-wide CAS
+  + `moedex index cas build`/`refresh`/`export`): a corpus-wide CAS
   keyed by git blob SHA stores each unique blob exactly once (idempotent `Put` is the
   cross-shard dedup primitive), and `cas-refresh` re-ingests only a changed repo's
   net-new blobs (its co-resident repos are untouched — the win over `parity.Rebuild`).
@@ -598,9 +599,9 @@ tool's voice (the parallel clones are his tentacles).
   is wired to an MCP graph tool yet (phase 6 owns that surface). Phase 5 now
   consumes this scored stream into `internal/graph/diskgraph`: call sites are
   widened to their enclosing source symbol for adjacency, identical cross-shard
-  content is deduplicated by SHA, and `moedex-index` rebuilds the mmap sidecar with
+  content is deduplicated by SHA, and `moedex graph build` rebuilds the mmap sidecar with
   the token and symbol sidecars after build/refresh/export.
-- **Systematic LSP call graphs** (`internal/server/graphcalls_lsp.go`, `-tags lsp`
+- **Systematic LSP call graphs** (`internal/graph/build/graphcalls_lsp.go`, `-tags lsp`
   — graph phase 9): sidecar construction first enumerates every indexed source
   file with `textDocument/documentSymbol`, then calls `find_references` for each
   exported symbol. Names already present in Phase 3 cross-shard candidates sort
@@ -616,11 +617,11 @@ tool's voice (the parallel clones are his tentacles).
   launches an LSP.
 - An IR-metrics evaluation harness (recall@k, precision@k, MRR, nDCG@k).
 - A full-corpus exact-match retrieval parity harness (`internal/parity`,
-  `cmd/moedex-parity`): sharded whole-corpus build, seeded ≥1000-query battery,
+  `moedex parity`): sharded whole-corpus build, seeded ≥1000-query battery,
   ripgrep ground truth + independent gold adjudicator + Zoekt differential,
   gated by `make verify` and reported in `PARITY-REPORT.md`.
 
-**LSP-precise navigation arm (`internal/navigate` + `cmd/moedex-nav`, `-tags lsp`)** —
+**LSP-precise navigation arm (`internal/navigate` + `moedex nav`, `-tags lsp`)** —
 the ADR 0017 spike for whether a future moedex could subsume Serena's navigation
 role. It proves the three conditions ADR 0017 sets as the gate: real LSP
 semantics (type-resolved go-to-def / find-refs / find-impls from an out-of-process
@@ -628,7 +629,13 @@ language server, not the syntactic symbol sidecar), Pool concurrency-safety (one
 server per module root shared across parallel lanes, no thundering-herd spawn,
 transparent restart of a dead server), and live working-tree/overlay freshness
 (`didChange` re-sync, `SetOverlay` over an unsaved in-memory buffer, `NotifyChanged`
-for disk edits). The JSON-RPC client is hand-written against the standard library
+for disk edits). Managed-corpus repositories are the exception to live-tree
+operation: they are immutable acquisition snapshots. Before launching any external
+server, the pool recognizes the managed marker and lock, materializes the exact
+locked commit with `git archive` beneath `MOEDEX_LSP_WORKSPACE_DIR` (defaulting
+beneath the index directory), and translates canonical paths to and from that
+writable projection. Language-server caches and design-time build output therefore
+cannot dirty the corpus or enter the indexed source view. The JSON-RPC client is hand-written against the standard library
 (`os/exec` + `encoding/json` over a Content-Length-framed stdio pipe), so the arm
 adds **no new `go.mod` dependency** — the same build-tag boundary the dense
 ([0007](docs/adr/0007-optional-dense-arm.md)) and SIMD
@@ -639,13 +646,13 @@ go-to-definition only) are proven live in tests; TypeScript/Python are too. SQL
 (`sql-language-server`) is completion-only (no navigation in any SQL LSP) and HTML
 (`vscode-html-language-server`) is shallow; both route and degrade gracefully.
 Servers absent on a machine skip gracefully in tests. CFML requires a one-time
-local build (`~/.moedex-tools/cfc`, wrapped as `cflsp` on PATH).
+local build (`~/.moedex/tools/cfc`, wrapped as `cflsp` on PATH).
 **Setup:** `make setup-lsp` (or `scripts/install-lsp-servers.sh`, `--with-cfml`
-for the external CFML build) installs the servers; `moedex-index doctor` reports
+for the external CFML build) installs the servers; `moedex doctor` reports
 which are present and their capability notes — both enumerate the engine's own
 registry (`navigate.Servers()`) so they never drift from what the daemon routes.
 `navigate.Pool.Stats()` exposes lifetime spawn/restart/eviction/query counters
-(surfaced by `moedex-nav -stats`). This is a spike behind `-tags lsp`; the pure-Go
+(surfaced by `moedex nav ... -stats`). This is a spike behind `-tags lsp`; the pure-Go
 default build is untouched and gains none of it. See ADR 0017 for the full gate.
 Index filtering alone does not make an external language server privacy-safe: it
 may scan an entire workspace or dependencies. ADR 0021 therefore limits the current
@@ -658,7 +665,7 @@ caller (e.g. Protostar's `CodebaseMapper`) holding a *name* rather than a
 merge-every-live-server-for-root when lang is omitted) and `symbols_overview`
 (`textDocument/documentSymbol`, file-routed) are registered as MCP tools
 alongside `find_definition`/`find_references`/`find_implementations` in
-`cmd/moedex-serve/nav_lsp.go` and return named `Symbol{Name, Kind, Loc}` results
+`internal/app/servecmd/nav_lsp.go` and return named `Symbol{Name, Kind, Loc}` results
 (one `name\tkind\tfile:line:col` line each) instead of a bare `Location`.
 
 **Deliberately deferred (design intentions, not yet built)** — tracked in the
@@ -671,15 +678,15 @@ ADRs and [`research/`](research):
   reference one shared content store (`blobs.dat`) by content hash, so the served
   corpus stores each unique blob's content once corpus-wide (footprint ≈ the CAS
   `StoredBytes`) instead of re-inlining it per shard, and the serving spine
-  (`server.Corpus`/`RankCorpus`) resolves content from that one mmap'd store —
+  (`serve.Corpus`/`RankCorpus`) resolves content from that one mmap'd store —
   validated parity-clean against the direct build and ripgrep by the deduped arm of
-  `TestCASExportParityCorpus`. What remains: the legacy `moedex-index refresh` path is
+  `TestCASExportParityCorpus`. What remains: the direct `moedex index refresh` path is
   still shard-level (rebuilds whole affected shards), `cas-export` without `-deduped`
   still writes the inlined `MOEDEX03` bridge (kept as the proven default), and a
   delta-aware deduped re-export (append a changed repo's net-new content + rewrite only
   affected shards, instead of re-exporting the whole dir) is not yet built.
   **Compaction-GC is built**, though, as a separate cheap in-place reclaim pass:
-  `moedex-index cas-compact` (`internal/blobstore/compact.go`'s `CompactCAS` and
+  `moedex index cas compact` (`internal/blobstore/compact.go`'s `CompactCAS` and
   `CompactDedupedShardDir`) rewrites the CAS pack and/or the deduped `blobs.dat`
   from their own live entries — keyed off the blob manifest's / live shards'
   referenced-set — to drop content no repo references anymore, without
@@ -729,7 +736,7 @@ go test ./...         # run the test suite (parity tests shell out to `rg`)
 make verify           # master gate: health + round-trip + full-corpus parity
 make parity           # just the full-corpus parity gate -> PARITY-REPORT.md
 make setup            # one-time: install the Zoekt differential oracle
-make build-dense      # build moedex-serve with the in-process ONNX embedder (-tags onnx)
+make build-dense      # build moe-dense with the in-process ONNX embedder (-tags onnx)
 make test-dense       # run the onnx-tagged embedder test (needs the ONNX Runtime lib)
 ```
 
@@ -737,12 +744,12 @@ The parity tests in `internal/search` and the `internal/parity` harness require
 the `rg` (ripgrep) binary on `PATH`; the Zoekt differential additionally needs
 `zoekt-index`/`zoekt` (install via `make setup`, skipped gracefully if absent).
 `make verify`/`make parity` index the corpus at `MOEDEX_CORPUS` (default
-`~/.moedex-managed`).
+`~/.moedex`).
 
-### `moedex` — one-shot search CLI
+### `moedex search` — one-shot and interactive search
 
 ```sh
-moedex -repo DIR [-regex] PATTERN
+moedex search --repo DIR [--regex] PATTERN
 ```
 
 | Flag | Default | Meaning |
@@ -750,12 +757,14 @@ moedex -repo DIR [-regex] PATTERN
 | `-repo` | `.` | path to a git repo to index |
 | `-regex` | `false` | treat `PATTERN` as a regular expression instead of a literal |
 
-Indexes the repo in memory and prints `relpath:line` for each matching line.
+Indexes the repo in memory and prints `relpath:line` for each matching line. With
+a published `MOEDEX_INDEX_DIR` or `MOEDEX_SHARD_DIR`, omit `--repo`; omit the
+pattern on a TTY to open the interactive search UI.
 
-### `moedex-mcp` — MCP server
+### `moe mcp` — MCP server
 
 ```sh
-moedex-mcp -repo DIR
+moe mcp -repo DIR
 ```
 
 | Flag | Default | Meaning |
@@ -767,8 +776,8 @@ moedex-mcp -repo DIR
 The server ingests the repo, builds the trigram + token indexes and the polyglot
 symbol layer (`symbol.BuildMulti`), optionally builds the dense store, and serves the
 `search_context` tool (args: `query` required, `token_budget` and `top_k` optional)
-over stdin/stdout. `cmd/moedex-mcp` uses the **HTTP** dense backend only; the
-in-process ONNX backend is wired in `moedex-serve` (below).
+over stdin/stdout. The single-repository adapter uses the **HTTP** dense backend;
+the published-index path can use the in-process ONNX backend.
 
 **Dense arm (optional) — environment variables:**
 
@@ -780,17 +789,17 @@ in-process ONNX backend is wired in `moedex-serve` (below).
 Without `MOEDEX_EMBED_URL` the server logs that the dense arm is disabled and runs
 lexical + symbol + path ranking with zero external dependencies.
 
-### `moedex-index` — offline shard-dir builder / freshness
+### `moedex index` — offline shard-dir builder / freshness
 
 ```sh
-moedex-index build   -corpus ROOT -shard-dir DIR [-shard-bytes N] [-force] [-v]
-moedex-index check   -shard-dir DIR [-corpus ROOT]
-moedex-index refresh -shard-dir DIR [-corpus ROOT] [-keep-backup] [-v]
-moedex-index snapshot-migrate  -index-dir DIR -shard-dir LEGACY [-id SNAPSHOT]
-moedex-index snapshot-build    -index-dir DIR -corpus ROOT [-id SNAPSHOT] [-dense]
-moedex-index snapshot-list     [-index-dir DIR]
-moedex-index snapshot-inspect  [-index-dir DIR] [-id SNAPSHOT]
-moedex-index snapshot-rollback [-index-dir DIR] -id SNAPSHOT
+moedex index build   -corpus ROOT -shard-dir DIR [-shard-bytes N] [-force] [-v]
+moedex index check   -shard-dir DIR [-corpus ROOT]
+moedex index refresh -shard-dir DIR [-corpus ROOT] [-keep-backup] [-v]
+moedex index snapshot migrate  -index-dir DIR -shard-dir LEGACY [-id SNAPSHOT]
+moedex index snapshot build    -index-dir DIR -corpus ROOT [-id SNAPSHOT] [-dense]
+moedex index snapshot list     [-index-dir DIR]
+moedex index snapshot inspect  [-index-dir DIR] [-id SNAPSHOT]
+moedex index snapshot rollback [-index-dir DIR] -id SNAPSHOT
 ```
 
 `build` indexes every git repo under `-corpus` into byte-sized `shard-NNNN.idx`
@@ -800,15 +809,15 @@ sidecars. `check` is read-only and prints changed/added/removed repos vs. the
 manifest's recorded git HEADs. `refresh` rebuilds only the affected shards and
 atomically swaps them in (the previous dir is dropped unless `-keep-backup`). For
 `check`/`refresh` the corpus root defaults to the `Root` recorded in the manifest.
-The result is directly servable by `moedex-serve -shard-dir DIR`.
+The result is directly servable by `moedex serve -shard-dir DIR`.
 
 The content-addressable family operates the CAS (`internal/blobstore`):
 
 ```sh
-moedex-index cas-build   -corpus ROOT -cas-dir DIR
-moedex-index cas-refresh -cas-dir DIR [-corpus ROOT]
-moedex-index cas-export  -cas-dir DIR -shard-dir OUT [-shard-bytes N] [-force] [-deduped]
-moedex-index cas-compact [-cas-dir DIR] [-shard-dir DIR]
+moedex index cas build   -corpus ROOT -cas-dir DIR
+moedex index cas refresh -cas-dir DIR [-corpus ROOT]
+moedex index cas export  -cas-dir DIR -shard-dir OUT [-shard-bytes N] [-force] [-deduped]
+moedex index cas compact [-cas-dir DIR] [-shard-dir DIR]
 ```
 
 `cas-build` ingests every repo into a global content-addressed blob store, storing
@@ -818,13 +827,13 @@ stored bytes). `cas-refresh` diffs each repo's current blob set against the mani
 and physically appends only net-new blobs (per-blob delta — co-resident repos are not
 re-ingested), printing the blobs/bytes added and the dedup no-op Puts skipped; the
 corpus root defaults to the manifest's `Root`. `cas-export` materializes a
-servable shard dir + `manifest.json` from the CAS so `moedex-serve` and the parity
+servable shard dir + `manifest.json` from the CAS so `moedex serve` and the parity
 harness consume it unchanged. By default it writes the parity-preserving
 inlined-content bridge (`MOEDEX03`, content re-inlined per shard exactly as a direct
 `build`). With **`-deduped`** it writes the deduped served format instead:
 content-less `MOEDEX05` shards plus one shared `blobs.dat` content store, so each
 unique blob's content is stored once corpus-wide (footprint ≈ the CAS `StoredBytes`)
-rather than re-inlined per shard. `server.Open`/`OpenRank` auto-detect the shared
+rather than re-inlined per shard. `serve.Open`/`OpenRank` auto-detect the shared
 store and resolve content from it — returning byte-identical `(file,line)` matches
 (parity-validated against the direct build and ripgrep). `cas-compact` reclaims
 dead (unreferenced) content in place — rewriting the CAS pack (`-cas-dir`) and/or
@@ -832,13 +841,13 @@ the deduped served store (`-shard-dir`) from their own live entries, keeping onl
 blobs the manifest/live shards still reference — without re-ingesting from git or
 re-exporting from the CAS; pass either or both flags.
 
-### `moedex-serve` — warm retrieval / context daemon
+### `moedex serve` — warm retrieval / context daemon
 
 ```sh
-moedex-serve -shard-dir DIR -http :8080          # retrieval HTTP API (GET /search)
-moedex-serve -shard-dir DIR -q PATTERN [-regex]  # one-shot retrieval query
-moedex-serve -shard-dir DIR -mcp                 # ranked agent context (MCP/stdio)
-moedex-serve -index-dir DIR -mcp-http :8081      # resolve immutable DIR/CURRENT
+moedex serve -shard-dir DIR -http 127.0.0.1:8080          # retrieval HTTP API
+moedex serve -shard-dir DIR -q PATTERN [-regex]           # one-shot query
+moe mcp -shard-dir DIR                                  # ranked MCP/stdio
+moedex serve -index-dir DIR -mcp-http 127.0.0.1:8081      # warm MCP/HTTP
 ```
 
 | Flag | Default | Meaning |
@@ -855,12 +864,15 @@ moedex-serve -index-dir DIR -mcp-http :8081      # resolve immutable DIR/CURRENT
 | `-onnx-intra-op-threads` | `MOEDEX_ONNX_INTRA_OP_THREADS` (`0`) | ONNX threads within operators; zero keeps runtime default |
 | `-onnx-inter-op-threads` | `MOEDEX_ONNX_INTER_OP_THREADS` (`0`) | ONNX threads across graph operators; zero keeps runtime default |
 | `-auth-token` | `MOEDEX_AUTH_TOKEN` | require `Authorization: Bearer <token>` on `-http` (except `/healthz`, `/metrics`) |
+| `-allow-insecure` | `false` | explicitly permit tokenless non-loopback HTTP/MCP listeners |
 | `-tls-cert` / `-tls-key` | _(unset)_ | serve `-http` over HTTPS (set together) |
 | `-request-timeout` | `30s` | per-request HTTP timeout on `-http` |
 | `-limit` | `0` | cap matches printed/returned (0 = no cap) |
 
 The `-http` server exposes `GET /search?q=&regex=&limit=`, plus `/healthz`,
 `/metrics`, and `/stats`. SIGHUP hot-reloads the shard dir without dropping requests.
+Tokenless listeners must use an explicit loopback host; external listeners require
+an auth token or the explicit `-allow-insecure` acknowledgement.
 The dense arm applies to `-mcp` only; with `-embed onnx` (and a `-tags onnx` build)
 the embeddings are computed in-process and persisted next to the shards.
 
@@ -902,10 +914,10 @@ current-snapshot lookup is allowed. Canonical dirty builds add a deterministic
 worktree digest to their version, while install targets require a clean tree. See
 [ADR 0022](docs/adr/0022-mcp-sdk-contract-and-snapshot-identity.md).
 
-### `scale` — corpus sizing tool
+### `moedex corpus scale` — corpus sizing tool
 
 ```sh
-scale ROOT [sampleRegex]          # MOEDEX_MMAP=1 to also measure mmap-loaded heap
+moedex corpus scale ROOT [sampleRegex]   # MOEDEX_MMAP=1 also measures mmap heap
 ```
 
 Walks `ROOT` for git repos, indexes them all into one in-memory index, and reports

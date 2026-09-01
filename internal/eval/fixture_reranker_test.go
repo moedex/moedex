@@ -9,10 +9,10 @@ import (
 
 // TestFixtureLearnedRerankerPlumbing is the hermetic end-to-end A/B for the learned
 // reranker: it proves the whole pipe works without the corpus —
-//   1. extract labeled feature rows from the fixture gold through the Runner,
-//   2. train a LinearReranker (assert the SGD loss actually decreases: real learning),
-//   3. evaluate RRF vs the learned fusion OUT-OF-FOLD through Runner.SetFusion,
-//   4. assert the learned mode is plumbed (produces a Report; recall preserved).
+//  1. extract labeled feature rows from the fixture gold through the Runner,
+//  2. train a LinearReranker (assert the SGD loss actually decreases: real learning),
+//  3. evaluate RRF vs the learned fusion OUT-OF-FOLD through Runner.SetFusion,
+//  4. assert the learned mode is plumbed (produces a Report; recall preserved).
 //
 // This fixture is too small to make a meaningful quality CLAIM (the corpus A/B does
 // that); the assertions here are about CORRECTNESS of the machinery, not a win.
