@@ -16,8 +16,6 @@
 
 default:
   image: golang:1.26
-  tags:
-    - docker-image
 
 variables:
   # Pin the toolchain to the image's Go; never auto-download a toolchain in CI.
@@ -106,8 +104,6 @@ parity:
 # the floor. Check the labels before treating a Verified trip as graph breakage.
 graph-eval-private:
   stage: parity
-  tags:
-    - docker-image
   variables:
     MOEDEX_GRAPH_EVAL_SHARDS: "$CI_MOEDEX_GRAPH_EVAL_SHARDS"
     MOEDEX_GRAPH_GOLD: "$CI_MOEDEX_GRAPH_GOLD"
