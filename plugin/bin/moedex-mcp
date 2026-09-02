@@ -1,0 +1,51 @@
+#!/bin/sh
+# Launcher for the moedex Claude Code plugin's MCP server.
+#
+# Picks between moe's two stdio MCP modes (internal/cli/cli.go's `mcp`
+# command): warm/published-index mode when MOEDEX_SHARD_DIR or
+# MOEDEX_INDEX_DIR is set (no --repo), otherwise ephemeral per-repo mode
+# against $MOEDEX_REPO or the launching cwd.
+#
+# Binary variant: prefers the -tags lsp build (plugin/bin/<os>-<arch>-lsp/moe,
+# adds find_definition/find_references/find_implementations/find_symbol/
+# symbols_overview) when it's been shipped, falling back to the default
+# build. The lsp arm is inert for any language whose server isn't installed
+# (see internal/app/mcpcmd/lspcta.go's CTA in the MCP initialize response), so
+# preferring it costs nothing when no language servers are on PATH. Set
+# MOEDEX_MCP_NO_LSP=1 to force the default build regardless.
+set -eu
+
+os=$(uname -s | tr '[:upper:]' '[:lower:]')
+arch=$(uname -m)
+case "$arch" in
+  x86_64) arch=amd64 ;;
+  aarch64|arm64) arch=arm64 ;;
+esac
+
+bin="${CLAUDE_PLUGIN_ROOT}/plugin/bin/${os}-${arch}/moe"
+lsp_bin="${CLAUDE_PLUGIN_ROOT}/plugin/bin/${os}-${arch}-lsp/moe"
+if [ -z "${MOEDEX_MCP_NO_LSP:-}" ] && [ -x "$lsp_bin" ]; then
+  bin="$lsp_bin"
+fi
+
+if [ ! -x "$bin" ]; then
+  echo "moedex plugin: no prebuilt binary for ${os}-${arch} at $bin" >&2
+  exit 1
+fi
+
+repo="${MOEDEX_REPO:-$PWD}"
+warm=0
+if [ -n "${MOEDEX_SHARD_DIR:-}" ] || [ -n "${MOEDEX_INDEX_DIR:-}" ]; then
+  warm=1
+fi
+
+# MOEDEX_REPO/MOEDEX_MCP_NO_LSP are launcher-only knobs — moedex itself never
+# reads them, so unset before exec: an unregistered MOEDEX_* var otherwise
+# trips the registry's "not registered" warning on every session.
+unset MOEDEX_REPO MOEDEX_MCP_NO_LSP
+
+if [ "$warm" = 1 ]; then
+  exec "$bin" mcp
+else
+  exec "$bin" mcp --repo "$repo"
+fi

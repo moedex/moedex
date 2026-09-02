@@ -39,8 +39,12 @@ func (s *Server) configureOfficial() {
 		Version:     version.MCP(),
 	}
 	s.version = impl.Version
+	instructions := serverInstructions
+	if s.extraInstructions != "" {
+		instructions += "\n\n" + s.extraInstructions
+	}
 	official := sdkmcp.NewServer(impl, &sdkmcp.ServerOptions{
-		Instructions: serverInstructions,
+		Instructions: instructions,
 		Capabilities: &sdkmcp.ServerCapabilities{Tools: &sdkmcp.ToolCapabilities{ListChanged: false}},
 	})
 

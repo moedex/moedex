@@ -40,6 +40,7 @@ import (
 	"syscall"
 	"time"
 
+	"moedex/internal/app/navtools"
 	"moedex/internal/embed"
 	graphserve "moedex/internal/graph/serve"
 	"moedex/internal/mcp"
@@ -419,9 +420,9 @@ func runMCP(shardDir, indexDir string, topK int, embedKind, onnxRuntime string, 
 		}
 	}()
 
-	navtools, navClose := navTools()
+	navHandlers, navClose := navtools.NavTools()
 	defer navClose()
-	tools := append(navtools, graphTools.Tools()...)
+	tools := append(navHandlers, graphTools.Tools()...)
 	srv := mcp.NewServer(holder,
 		mcp.WithTools(tools...),
 		mcp.WithCorpusRoot(rc.CorpusRoot()),
@@ -497,12 +498,12 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 		}
 	}
 
-	navtools, navClose := navTools()
+	navHandlers, navClose := navtools.NavTools()
 	defer navClose()
-	if len(navtools) > 0 {
-		slog.Info("lsp navigation tools enabled", "count", len(navtools))
+	if len(navHandlers) > 0 {
+		slog.Info("lsp navigation tools enabled", "count", len(navHandlers))
 	}
-	tools := append(navtools, graphTools.Tools()...)
+	tools := append(navHandlers, graphTools.Tools()...)
 	mcpSrv := mcp.NewServer(holder,
 		mcp.WithTools(tools...),
 		mcp.WithCorpusRoot(rc.CorpusRoot()),

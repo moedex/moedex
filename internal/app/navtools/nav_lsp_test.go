@@ -1,6 +1,6 @@
 //go:build lsp
 
-package servecmd
+package navtools
 
 import (
 	"context"
@@ -90,12 +90,12 @@ func callTool(t *testing.T, h interface {
 }
 
 // TestNavTools_RegistersFindSymbolAndSymbolsOverview is the integration-point
-// check: navTools() — what the daemon actually wires up via mcp.WithTools —
+// check: NavTools() — what the daemon actually wires up via mcp.WithTools —
 // must include both new tools alongside the three position tools. Every other
 // test in this file constructs a tool struct directly, which would stay green
-// even if navTools() never registered it.
+// even if NavTools() never registered it.
 func TestNavTools_RegistersFindSymbolAndSymbolsOverview(t *testing.T) {
-	tools, closeFn := navTools()
+	tools, closeFn := NavTools()
 	t.Cleanup(func() { _ = closeFn() })
 
 	names := make(map[string]bool)
@@ -104,7 +104,7 @@ func TestNavTools_RegistersFindSymbolAndSymbolsOverview(t *testing.T) {
 	}
 	for _, want := range []string{"find_definition", "find_references", "find_implementations", "find_symbol", "symbols_overview"} {
 		if !names[want] {
-			t.Errorf("navTools() missing %q; got %v", want, names)
+			t.Errorf("NavTools() missing %q; got %v", want, names)
 		}
 	}
 }

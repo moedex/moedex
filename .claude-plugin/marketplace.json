@@ -1,0 +1,20 @@
+{
+  "name": "moedex",
+  "description": "Development marketplace for moedex",
+  "owner": {
+    "name": "Zak Keown",
+    "email": "zak@turncommerce.com"
+  },
+  "plugins": [
+    {
+      "name": "moedex",
+      "description": "Code-search and agent context MCP tools, backed by moedex's trigram engine",
+      "version": "0.1.0",
+      "source": "./",
+      "author": {
+        "name": "Zak Keown",
+        "email": "zak@turncommerce.com"
+      }
+    }
+  ]
+}

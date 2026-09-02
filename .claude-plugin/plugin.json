@@ -1,0 +1,18 @@
+{
+  "name": "moedex",
+  "version": "0.1.0",
+  "description": "Code-search and agent context MCP tools, backed by moedex's trigram engine",
+  "author": {
+    "name": "Zak Keown",
+    "email": "zak@turncommerce.com"
+  },
+  "homepage": "https://gitlab.tcdevops.com/moedex/moedex",
+  "repository": "https://gitlab.tcdevops.com/moedex/moedex",
+  "license": "MIT",
+  "keywords": ["code-search", "mcp", "trigram", "context", "ripgrep"],
+  "mcpServers": {
+    "moedex": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/plugin/bin/moedex-mcp"
+    }
+  }
+}

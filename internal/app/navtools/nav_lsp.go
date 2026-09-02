@@ -1,17 +1,18 @@
 //go:build lsp
 
 // This file is compiled only with `-tags lsp`. It exposes the LSP-precise
-// navigation arm (ADR 0017) as MCP tools on the warm daemon — find_definition /
-// find_references / find_implementations — backed by a shared navigate.Pool that
-// launches one language server per (root, language) and reuses it across all
-// agent sessions. This is the ADR 0017 endgame: one spine serves retrieval
+// navigation arm (ADR 0017) as MCP tools — find_definition / find_references /
+// find_implementations — backed by a shared navigate.Pool that launches one
+// language server per (root, language) and reuses it across all agent
+// sessions. This is the ADR 0017 endgame: one spine serves retrieval
 // (search_context) AND type-resolved navigation, so Moe fuses a single source.
-//
-// The daemon must be built with `-tags lsp` (alongside `onnx` for the dense
-// arm). Without the tag, nav_stub.go registers no navigation tools and the
-// daemon serves search_context exactly as before.
+// Shared by internal/app/servecmd (the warm daemon) and internal/app/mcpcmd
+// (the ephemeral per-repo server) — both must be built with `-tags lsp`
+// (alongside `onnx` for the dense arm) to get it. Without the tag, nav_stub.go
+// registers no navigation tools and the caller serves search_context exactly
+// as before.
 
-package servecmd
+package navtools
 
 import (
 	"context"
@@ -24,11 +25,18 @@ import (
 	"moedex/internal/navigate"
 )
 
-// navTools builds the navigation tools backed by one shared, long-lived Pool.
-// The returned closer shuts the pool (and every spawned language server) down on
-// daemon exit. Idle servers are reaped (IdleTTL) since the daemon is long-lived,
-// and the live-server count is bounded (MaxServers) for a deeply polyglot corpus.
-func navTools() ([]mcp.ToolHandler, func() error) {
+// LSPBuild is true when this binary was built with -tags lsp — a plain
+// compile-time signal callers can use (e.g. to phrase a "navigation is live"
+// vs. "navigation is available if you install/rebuild" message) without
+// inferring it from whether NavTools happened to return any tools.
+const LSPBuild = true
+
+// NavTools builds the navigation tools backed by one shared, long-lived Pool.
+// The returned closer shuts the pool (and every spawned language server) down
+// when the caller is done. Idle servers are reaped (IdleTTL) for a long-lived
+// caller, and the live-server count is bounded (MaxServers) for a deeply
+// polyglot corpus.
+func NavTools() ([]mcp.ToolHandler, func() error) {
 	pool := navigate.NewPool(navigate.Config{
 		IdleTTL:    10 * time.Minute,
 		MaxServers: 24,

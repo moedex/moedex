@@ -120,6 +120,7 @@ func DefaultRegistry() *Registry {
 		{Env: "MOEDEX_EMBED", Flag: "--embed", Kind: Enum, Default: "auto", Allowed: []string{"auto", "onnx", "http", "none"}, Description: "Dense embedder selection", Commands: []string{"serve", "mcp", "index"}},
 		{Env: "MOEDEX_EMBED_URL", Kind: String, Description: "HTTP embedding service URL", Commands: []string{"serve", "mcp"}},
 		{Env: "MOEDEX_EMBED_MODEL", Kind: String, Description: "HTTP embedding model identifier", Commands: []string{"serve", "mcp"}},
+		{Env: "MOEDEX_MCP_SKIP_GRAPH", Kind: Boolean, Default: "false", Description: "Skip the ad-hoc graph/LSP build in ephemeral --repo MCP mode, serving search_context only", Commands: []string{"mcp"}},
 		{Env: "MOEDEX_ONNX_INTRA_OP_THREADS", Flag: "--onnx-intra-op-threads", Kind: Integer, Default: "0", Description: "ONNX threads within operators", Commands: []string{"serve", "index"}},
 		{Env: "MOEDEX_ONNX_INTER_OP_THREADS", Flag: "--onnx-inter-op-threads", Kind: Integer, Default: "0", Description: "ONNX threads across operators", Commands: []string{"serve", "index"}},
 		{Env: "MOEDEX_TLS_CERT", Flag: "--tls-cert", Kind: String, Description: "TLS certificate path", Commands: []string{"serve"}},

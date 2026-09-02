@@ -13,6 +13,10 @@
 /moedex-parity
 /scale
 
+# Claude Code plugin's cross-compiled binaries (built via `make build-plugin`,
+# published as release artifacts — not committed, too large for git history)
+/plugin/bin/*/moe
+
 # Claude Code worktrees (transient; never commit the gitlink)
 .claude/worktrees/
 .DS_Store

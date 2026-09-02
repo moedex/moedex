@@ -100,6 +100,11 @@ type Server struct {
 	// neighborhood. Nil leaves search_context un-annotated.
 	graph GraphAnnotator
 
+	// extraInstructions, when set via WithExtraInstructions, is appended to the
+	// initialize response's Instructions text — a channel the connecting agent
+	// (and, through it, the user) actually sees, unlike stderr.
+	extraInstructions string
+
 	official *officialServer
 }
 
@@ -195,6 +200,17 @@ func WithMaxBatchSize(n int) Option {
 func WithCorpusRoot(root string) Option {
 	return func(s *Server) {
 		s.corpusRoot = root
+	}
+}
+
+// WithExtraInstructions appends text to the initialize response's Instructions
+// field, alongside the built-in tool-usage guidance. Used for a caller-specific,
+// precisely-targeted note the connecting agent will actually see — e.g. the
+// ephemeral single-repo server's LSP-navigation recommendation — rather than
+// stderr output nobody reads. Empty text is a no-op.
+func WithExtraInstructions(text string) Option {
+	return func(s *Server) {
+		s.extraInstructions = text
 	}
 }
 

@@ -35,7 +35,7 @@ INSTALL_RECEIPT := $(BINDIR)/.moedex-install-receipt
 # two releases and dispatch through moedex's argv[0] compatibility table.
 INSTALL_COMPAT := moedex-index moedex-serve moedex-mcp moedex-corpus moedex-parity moedex-nav scale
 
-.PHONY: verify parity graph-eval graph-eval-private setup setup-lsp build vet test roundtrip health fmt-check import-fence tagged-check clean build-dense test-dense build-simd vet-simd build-lsp test-lsp vet-lsp bench-setops bench-real bench-latency install install-dense install-preflight install-bins install-finish require-source-digest require-clean
+.PHONY: verify parity graph-eval graph-eval-private setup setup-lsp build vet test roundtrip health fmt-check import-fence tagged-check clean build-dense test-dense build-simd vet-simd build-lsp test-lsp vet-lsp bench-setops bench-real bench-latency install install-dense install-preflight install-bins install-finish require-source-digest require-clean build-plugin build-plugin-lsp build-plugin-all
 
 # Real-index benchmark knobs.
 BENCHOUT  ?= $(CURDIR)/.bench
@@ -83,6 +83,39 @@ require-clean:
 build: require-source-digest
 	@echo "=== go build ./... (AC-A1) ==="
 	$(GO_BUILD) ./...
+
+## build-plugin: cross-compile the pure-Go default binary for the Claude Code
+## plugin (plugin/bin/<os>-<arch>/moe), no onnx/moedex_simd tags.
+PLUGIN_TARGETS := darwin/arm64 darwin/amd64 linux/arm64 linux/amd64
+build-plugin: require-source-digest
+	@echo "=== cross-compiling plugin binaries ==="
+	@for t in $(PLUGIN_TARGETS); do \
+		os=$${t%/*}; arch=$${t#*/}; \
+		out="plugin/bin/$$os-$$arch/moe"; \
+		mkdir -p "plugin/bin/$$os-$$arch"; \
+		echo "  -> $$out"; \
+		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch $(GO_BUILD) -o "$$out" ./cmd/moedex; \
+	done
+
+## build-plugin-lsp: cross-compile the -tags lsp variant (adds find_definition/
+## find_references/find_implementations/find_symbol/symbols_overview) into
+## plugin/bin/<os>-<arch>-lsp/moe. Still pure Go / no cgo — the LSP arm talks to
+## external language-server *processes* over stdio, so it cross-compiles like
+## the default build. Those servers (gopls, csharp-ls, ...) are a separate,
+## per-machine install (scripts/install-lsp-servers.sh) — this only ships the
+## moedex binary that can drive them when present.
+build-plugin-lsp: require-source-digest
+	@echo "=== cross-compiling -tags lsp plugin binaries ==="
+	@for t in $(PLUGIN_TARGETS); do \
+		os=$${t%/*}; arch=$${t#*/}; \
+		out="plugin/bin/$$os-$$arch-lsp/moe"; \
+		mkdir -p "plugin/bin/$$os-$$arch-lsp"; \
+		echo "  -> $$out"; \
+		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch $(GO_BUILD) -tags lsp -o "$$out" ./cmd/moedex; \
+	done
+
+## build-plugin-all: both plugin binary variants.
+build-plugin-all: build-plugin build-plugin-lsp
 
 vet:
 	@echo "=== go vet ./... (AC-A2) ==="
