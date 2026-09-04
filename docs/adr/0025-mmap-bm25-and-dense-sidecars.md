@@ -11,12 +11,13 @@ ADR 0005 moved positional postings off the heap and named what it did not fix:
 On the live 492-shard corpus (56,978 blobs, 17.6M distinct terms, 40.6M postings,
 953,451 dense chunks) the sidecars were the whole constraint. A probe attributing
 `serve.OpenRank`'s live heap found the BM25 token index at 4,678 MB against 372 MB
-on disk — a 12.6x inflation, because `postings` was a `map[string]map[uint64]int`
+on disk — a 12.58x inflation, because `postings` was a `map[string]map[uint64]int`
 over 17.6M terms averaging 2.3 postings each, so nearly every term paid a full Go
 map header plus a bucket allocation. The dense store held 2,866 MB as 953,451
-separate 3,072-byte slice allocations, holding vectors already written to disk as
-one contiguous block. Together with blob content, `lineStarts`, and the symbol
-index, live heap totaled 8,748 MB.
+separate 3,072-byte slice allocations (768-dimensional float32 vectors, 768 × 4
+bytes each), holding vectors already written to disk as one contiguous block.
+Together with blob content, `lineStarts`, and the symbol index, live heap
+totaled 8,748 MB.
 
 ## Decision
 Make the on-disk format the memory layout for both sidecars, the same discipline
@@ -57,7 +58,7 @@ of parsing them.
   against a 2,974,767,232-byte file, with process max RSS while loading it at
   111 MB — proof the block is aliased, not copied.
 - The rewritten builder is incidentally faster and lighter: **37.0s / 7,223 MB
-  peak heap / 7.91 GB max RSS**, against the original map-of-maps builder's
+  total peak heap / 7.91 GB max RSS**, against the original map-of-maps builder's
   56s / 11,281 MB / 12.86 GB — 1.5x faster and 38% less RSS — because fixing the
   real bottleneck (see refutation 2 below) also fixed wall time.
 - Ranking is unaffected: `internal/eval`'s `TestFixtureMeasurement` produces
@@ -73,9 +74,11 @@ of parsing them.
 - Disk grows to buy addressability: TKI2 is 656 MB against TKI1's 372 MB on the
   reference corpus. Fixed-width CSR costs disk; the trade is what makes the file
   mmap-addressable without decoding 40.6M varints onto the heap.
-- Build peak heap is **7,223 MB**, not the ~1.7 GB this spec projected — see
-  refutation 1. GC headroom, not the algorithm, is now the dominant lever on that
-  number (see Evidence).
+- Build's total peak heap is **7,223 MB**, of which ~1,579 MB is corpus blob
+  content already resident before `Build` runs — so `Build`'s own contribution
+  is **5,644 MB**, not the ~1.7 GB this spec projected. See refutation 1 for the
+  projection comparison. GC headroom, not the algorithm, is now the dominant
+  lever on that number (see Evidence).
 - int8 quantization does not deliver its projected speedup — see refutation 3 —
   so it stays opt-in rather than solving the still-open 2.93 GB mapped-but-touched
   cost of a full f32 dense scan.
@@ -96,12 +99,16 @@ Serving heap, real corpus (56,978 blobs, 17.6M distinct terms, 40.6M postings,
 | symbol index | 84 MB | 84 MB (out of scope) |
 | **total live heap** | **8,748 MB** | **~1,255 MB** |
 
-Index build, same corpus, output byte-identical in every configuration:
+Index build, same corpus, output byte-identical in every configuration. "Peak
+heap" below is **total** process peak heap, which includes ~1,579 MB of corpus
+blob content already resident before `Build` is called — `Build`'s own
+contribution above that baseline is smaller and is what the spec's ~1.7 GB
+projection was actually estimating (see refutation 1):
 
-| builder | wall | peak heap | max RSS |
+| builder | wall | peak heap (total) | max RSS |
 |---|---:|---:|---:|
 | original map-of-maps | 56s | 11,281 MB | 12.86 GB |
-| sort-based (mid-project) | 4m23s | 7,593 MB | 8.78 GB |
+| sort-based (mid-project) | 4m23s | 7,544 MB | 8.78 GB |
 | final (dense per-blob scratch) | 37.0s | 7,223 MB | 7.91 GB |
 
 int8 quantization (opt-in, not the default), measured over 40 real queries drawn
@@ -113,9 +120,13 @@ speedup.
 disproved, not just what it confirmed. All three were projections in the spec
 that this project's own measurement overturned:**
 
-1. *The spec projected a build peak of ~1.7 GB. Actual was 5,965 MB — 3.5x off.*
-   The arithmetic omitted the CSR output arrays coexisting with the build inputs,
-   append-doubling transients, and underestimated the 17.6M-entry dictionary.
+1. *The spec projected a build peak of ~1.7 GB — measuring `Build`'s own
+   contribution above the resident corpus baseline, not total process heap.
+   That contribution came in at 5,965 MB on the sort-based builder where this
+   was first measured — 3.5x off — and still 5,644 MB (3.3x off) on the final,
+   shipped builder.* The arithmetic omitted the CSR output arrays coexisting
+   with the build inputs, append-doubling transients, and underestimated the
+   17.6M-entry dictionary.
 2. *The record sort was never the bottleneck.* A counting scatter replacing the
    40.6M-record comparison sort measured neutral. A CPU profile then showed the
    real cause: `Build` reused one `perBlob` map across blobs, and a Go map never
