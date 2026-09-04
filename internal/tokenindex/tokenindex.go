@@ -182,9 +182,15 @@ func Build(ix *index.Index) *TokenIndex {
 			recs = append(recs, postRec{term: tid, blob: uint32(b.ID), tf: tf})
 		}
 	}
+	// dict is dead the moment tokenizing ends: every term it can produce is
+	// already captured in terms, and recs already holds interned (unsorted)
+	// ids. Dropping it here (~1.2 GB on the reference corpus) frees that
+	// memory before the CSR output arrays are allocated below, rather than
+	// letting it sit live through the whole emit phase.
+	dict = nil
 
-	// Sort the dictionary, then remap ids so that sorting records by term id
-	// yields lexicographic term order with no second pass over the text.
+	// Sort the dictionary, then remap ids so that a term's final rank is
+	// known without a second pass over the text.
 	order := make([]uint32, len(terms))
 	for i := range order {
 		order[i] = uint32(i)
@@ -197,38 +203,52 @@ func Build(ix *index.Index) *TokenIndex {
 	for i := range recs {
 		recs[i].term = remap[recs[i].term]
 	}
-	slices.SortFunc(recs, func(a, b postRec) int {
-		if a.term != b.term {
-			return int(a.term) - int(b.term)
-		}
-		switch {
-		case a.blob < b.blob:
-			return -1
-		case a.blob > b.blob:
-			return 1
-		}
-		return 0
-	})
+	remap = nil
+
+	// Counting scatter instead of a sort over all of recs: after the remap,
+	// term ids are dense in [0, len(terms)), which is exactly the case a
+	// counting sort is built for and a comparison sort (even on a dense key)
+	// wastes O(log n) passes on. Count postings per term, prefix-sum those
+	// counts into postOff, then scatter each record directly to its slot.
+	//
+	// Correctness of the scatter without a per-term sort: recs was appended
+	// blob-by-blob in ascending blob id (the outer loop above walks blob ids
+	// ascending, and each blob contributes at most one record per term), so
+	// recs is already globally ordered by blob. Scattering in that same
+	// order — advancing each term's cursor by one on every hit — places a
+	// term's postings into postBlob/postTF in the order they were visited,
+	// i.e. ascending blob id. That is the same "stable scatter" a bucket
+	// sort performs; it reproduces the (term, blob) sort's output without
+	// ever comparing or moving records against each other.
+	counts := make([]uint32, len(terms))
+	for _, rec := range recs {
+		counts[rec.term]++
+	}
+	ti.postOff = make([]uint32, len(terms)+1)
+	for i, c := range counts {
+		ti.postOff[i+1] = ti.postOff[i] + c
+	}
+	cursor := append([]uint32(nil), ti.postOff[:len(terms)]...)
+
+	ti.postBlob = make([]uint32, len(recs))
+	ti.postTF = make([]uint32, len(recs))
+	for _, rec := range recs {
+		slot := cursor[rec.term]
+		ti.postBlob[slot] = rec.blob
+		ti.postTF[slot] = rec.tf
+		cursor[rec.term]++
+	}
+	recs = nil
+	cursor = nil
+	counts = nil
 
 	ti.termOff = make([]uint32, len(terms)+1)
-	ti.postOff = make([]uint32, len(terms)+1)
 	ti.termText = make([]byte, 0, len(terms)*12)
-	ti.postBlob = make([]uint32, 0, len(recs))
-	ti.postTF = make([]uint32, 0, len(recs))
-
-	r := 0
 	for rank, old := range order {
 		ti.termOff[rank] = uint32(len(ti.termText))
-		ti.postOff[rank] = uint32(len(ti.postBlob))
 		ti.termText = append(ti.termText, terms[old]...)
-		for r < len(recs) && int(recs[r].term) == rank {
-			ti.postBlob = append(ti.postBlob, recs[r].blob)
-			ti.postTF = append(ti.postTF, recs[r].tf)
-			r++
-		}
 	}
 	ti.termOff[len(terms)] = uint32(len(ti.termText))
-	ti.postOff[len(terms)] = uint32(len(ti.postBlob))
 	return ti
 }
 
