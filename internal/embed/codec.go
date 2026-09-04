@@ -46,6 +46,23 @@ const (
 	chunkRecordSize = 32
 	keyRecordSize   = 16
 	vecAlign        = 64
+
+	// maxStoreDim and maxStoreCount ceiling the header's dim/count BEFORE any
+	// multiplication in parseStoreHeader's section-bounds math, so that math
+	// itself can never overflow uint64. Real embedding models run 384-4096
+	// dims, so 2^16 is generous; 2^31 chunks is likewise far past any corpus
+	// this engine indexes. Bounding each individually bounds their product at
+	// 2^47, and the *4 (float32) or *4 (scale) that bounds check applies to
+	// it at 2^49 — comfortably inside uint64 (2^64), so no subsequent
+	// multiplication of a validated dim/count can wrap. Without this, a
+	// crafted or corrupt header's count*dim*4 could wrap uint64 and pass the
+	// bounds check with a falsely-small size — survivable against an
+	// os.ReadFile buffer today, but Task 10 hands parseStoreHeader a mapped
+	// view, where a wrapped check lets a read walk off the mapping (a
+	// page-guarded SIGSEGV, not silent corruption, but still a daemon crash
+	// instead of a clean load error).
+	maxStoreDim   = 1 << 16
+	maxStoreCount = 1 << 31
 )
 
 // ErrLegacyFormat means the file is an older MDXE version this build no longer
@@ -215,6 +232,12 @@ func parseStoreHeader(b []byte, size uint64) (storeHeader, error) {
 	if h.fileLen != size {
 		return h, fmt.Errorf("embed: header says %d bytes, file is %d", h.fileLen, size)
 	}
+	if h.dim > maxStoreDim {
+		return h, fmt.Errorf("embed: corrupt header: dim %d exceeds %d", h.dim, maxStoreDim)
+	}
+	if h.count > maxStoreCount {
+		return h, fmt.Errorf("embed: corrupt header: count %d exceeds %d", h.count, maxStoreCount)
+	}
 	if h.quant != quantF32 && h.quant != quantInt8 {
 		return h, fmt.Errorf("embed: unknown quantization %d", h.quant)
 	}
@@ -271,6 +294,20 @@ func LoadStore(path string) (*Store, error) {
 // mapping that owns b's lifetime, or nil when b is a heap-owned []byte (e.g.
 // from os.ReadFile) that needs no separate release.
 func storeFrom(h storeHeader, b []byte, mm io.Closer) (*Store, error) {
+	// parseStoreHeader validates quant against the KNOWN set (quantF32,
+	// quantInt8) and sizes the vec section's bounds accordingly, but
+	// quantInt8 is known-and-not-yet-decoded here: this loop unconditionally
+	// reads count*dim*4 bytes (float32), four times what an int8 block
+	// holds. Without this guard a quantInt8 file runs the decode past the
+	// validated vec section and panics on a slice-bounds error instead of
+	// failing the load cleanly — and the store is a cache whose .meta
+	// validator treats a load failure as a miss and re-embeds, so a clean
+	// error degrades to lexical-only while a panic takes the process down.
+	// Task 11 replaces this guard with the real int8 decode path.
+	if h.quant != quantF32 {
+		return nil, fmt.Errorf("embed: quantization %d is not supported by this build", h.quant)
+	}
+
 	count := int(h.count)
 	le := binary.LittleEndian
 
