@@ -363,6 +363,22 @@ type Store struct {
 	chunks []Chunk
 	vec    []float32  // len == len(chunks)*dim; unit-normalized, row-major
 	keys   []ChunkKey // parallel to chunks; content keys for incremental reuse (nil for a legacy v1 store)
+
+	quant uint8     // quantF32 or quantInt8; how vec/vecI8 is stored
+	mm    io.Closer // mapping backing the vectors, or nil when heap-built
+}
+
+// Close releases the mapping backing a loaded store. It is a no-op for a store
+// produced by BuildStore, whose vectors are on the Go heap. Close is
+// idempotent. Reading vectors after Close on a mapped store reads unmapped
+// memory.
+func (s *Store) Close() error {
+	if s == nil || s.mm == nil {
+		return nil
+	}
+	err := s.mm.Close()
+	s.mm = nil
+	return err
 }
 
 // vecAt returns chunk i's vector as a sub-slice of the flat block. The result

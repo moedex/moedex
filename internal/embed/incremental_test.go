@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -237,7 +238,7 @@ func TestCheckVecLen_RejectsMismatchedBlock(t *testing.T) {
 	}
 }
 
-// TestStoreCodec_V2RoundTrip checks a v2 store (with keys) round-trips on disk.
+// TestStoreCodec_V2RoundTrip checks a keyed store round-trips on disk.
 func TestStoreCodec_V2RoundTrip(t *testing.T) {
 	e := newFakeEmbedder(16)
 	ix := buildFileIndex(t, map[string]string{
@@ -272,10 +273,11 @@ func TestStore_SaveRefusesKeyless(t *testing.T) {
 	}
 }
 
-// TestStoreCodec_V1BackCompatAndMigrate is the live-migration guard: a legacy v1
-// file (no keys) must load, search, and then re-key via FillKeys to a v2 store —
-// without re-embedding — matching a native v2 build.
-func TestStoreCodec_V1BackCompatAndMigrate(t *testing.T) {
+// TestStoreCodec_V1RejectedAsLegacy guards the MDXE v3 cutover: a v1 file (no
+// key block, the pre-v3 on-disk layout) must be rejected wholesale rather than
+// migrated in place. The store is a cache whose .meta validator already treats
+// any load failure as a miss and re-embeds, so there is no converter.
+func TestStoreCodec_V1RejectedAsLegacy(t *testing.T) {
 	e := newFakeEmbedder(16)
 	ix := buildFileIndex(t, map[string]string{
 		"a.go": "package a\nfunc A() {}\n",
@@ -287,29 +289,9 @@ func TestStoreCodec_V1BackCompatAndMigrate(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "legacy.store")
 	writeV1Store(t, path, native)
 
-	loaded, err := LoadStore(path)
-	if err != nil {
-		t.Fatalf("LoadStore v1: %v", err)
+	if _, err := LoadStore(path); !errors.Is(err, ErrLegacyFormat) {
+		t.Fatalf("LoadStore v1: want ErrLegacyFormat, got %v", err)
 	}
-	if loaded.HasKeys() {
-		t.Fatal("v1 store should load without keys")
-	}
-	if loaded.Len() != native.Len() {
-		t.Fatalf("v1 Len=%d want %d", loaded.Len(), native.Len())
-	}
-	if !reflect.DeepEqual(loaded.vec, native.vec) {
-		t.Fatal("v1 vectors mismatch")
-	}
-
-	// Re-key in place against the same corpus — no embedding — then it must equal
-	// the native v2 store and survive a save/load.
-	if err := loaded.FillKeys(ix); err != nil {
-		t.Fatalf("FillKeys: %v", err)
-	}
-	if !loaded.HasKeys() {
-		t.Fatal("FillKeys did not attach keys")
-	}
-	storesEqual(t, native, loaded)
 }
 
 // TestFillKeys_RejectsMismatchedIndex ensures re-keying against the wrong corpus
@@ -402,7 +384,7 @@ func writeV1Store(t *testing.T, path string, s *Store) {
 	le := binary.LittleEndian
 	var u32 [4]byte
 	var u64 [8]byte
-	w.Write(storeMagic[:])
+	w.Write([]byte(storeMagic4))
 	le.PutUint32(u32[:], 1) // version 1
 	w.Write(u32[:])
 	le.PutUint32(u32[:], uint32(s.dim))

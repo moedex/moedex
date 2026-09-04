@@ -1,8 +1,8 @@
 package embed
 
 import (
-	"bufio"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -10,48 +10,118 @@ import (
 	"path/filepath"
 )
 
-// On-disk format (little-endian, encoding/binary):
+// MDXE v3 on-disk format (all integers little-endian).
 //
-//	magic    [4]byte = "MDXE"
-//	version  uint32  = 2
-//	dim      uint32
-//	count    uint32             // number of chunks
-//	repeat count times:
-//	  blob      uint64
-//	  startLine uint32
-//	  endLine   uint32
-//	  startByte uint64
-//	  endByte   uint64
-//	(v2 only) repeat count times:
-//	  key       [16]byte         // content key = sha256(chunk text)[:16]
-//	repeat count times:
-//	  dim float32 values        // the normalized vector for chunk i
+//	HEADER (64 bytes, zero-padded)
+//	  0  magic     [4]byte "MDXE"
+//	  4  version   uint32 = 3
+//	  8  dim       uint32
+//	  12 count     uint32   number of chunks
+//	  16 quant     uint8    0 = float32, 1 = int8 + per-vector scale
+//	  17 (7 bytes reserved, zero)
+//	  24 chunksOff uint64
+//	  32 keysOff   uint64
+//	  40 vecOff    uint64   ALWAYS a multiple of 64
+//	  48 scaleOff  uint64   quant==1 only; 0 when quant==0
+//	  56 fileLen   uint64
 //
-// Vectors are stored as a contiguous block after the chunk metadata so a future
-// loader can mmap/stream them; here we just read sequentially. Round-trippable.
+//	SECTIONS
+//	  chunks count x 32 bytes: blob u64, startLine u32, endLine u32,
+//	                           startByte u64, endByte u64
+//	  keys   count x 16 bytes
+//	  vec    quant==0: count*dim x float32   (64-byte aligned)
+//	         quant==1: count*dim x int8
+//	  scale  quant==1: count x float32
 //
-// Version history:
-//   - v1: chunk metadata + vectors (no keys). Still loadable; such a store cannot
-//     seed incremental reuse until its keys are filled (see Store.FillKeys).
-//   - v2: adds a content key per chunk, between the chunk metadata and the vectors,
-//     enabling incremental rebuilds that re-embed only changed chunks.
+// vecOff is padded to 64 bytes so mmapslice.Float32s can alias the block and
+// each vector starts on a cache line. Versions 1 and 2 load as ErrLegacyFormat:
+// the store is a CACHE whose .meta validator already forces a rebuild on any
+// load failure, so no converter exists.
+const (
+	storeMagic4     = "MDXE"
+	storeVersion    = 3
+	storeHeaderSize = 64
+	quantF32        = 0
+	quantInt8       = 1
+	chunkRecordSize = 32
+	keyRecordSize   = 16
+	vecAlign        = 64
+)
 
-var storeMagic = [4]byte{'M', 'D', 'X', 'E'}
+// ErrLegacyFormat means the file is an older MDXE version this build no longer
+// parses. Callers treat it as a cache miss and re-embed.
+var ErrLegacyFormat = errors.New("embed: legacy store format; rebuild required")
 
-const storeVersion uint32 = 2
+type storeHeader struct {
+	dim       uint32
+	count     uint32
+	quant     uint8
+	chunksOff uint64
+	keysOff   uint64
+	vecOff    uint64
+	scaleOff  uint64
+	fileLen   uint64
+}
 
-// Save writes the store (chunks + content keys + vectors) to path in format v2.
+func alignUp(n, to uint64) uint64 { return (n + to - 1) &^ (to - 1) }
+
+// Save writes the store (chunks + content keys + vectors) to path in format v3.
 // A non-empty store MUST carry a content key per chunk (HasKeys); Save refuses an
 // inconsistent store rather than persisting one that cannot seed incremental reuse.
 func (s *Store) Save(path string) error {
 	if len(s.chunks) > 0 && !s.HasKeys() {
 		return fmt.Errorf("embed: refusing to save store without content keys (%d chunks, %d keys); call FillKeys first", len(s.chunks), len(s.keys))
 	}
-	// Write to a temp sibling and atomically rename over path: a crash or torn
-	// write must never leave a truncated multi-GB store where a valid one was — the
-	// daemon would load that corrupt sidecar on its next reload and silently drop to
-	// lexical. Rename is atomic within a filesystem; the temp sits in the same dir so
-	// it shares path's filesystem. The original is untouched until the rename.
+	count := uint64(len(s.chunks))
+	dim := uint64(s.dim)
+
+	h := storeHeader{dim: uint32(s.dim), count: uint32(count), quant: quantF32}
+	off := uint64(storeHeaderSize)
+	h.chunksOff = off
+	off += count * chunkRecordSize
+	h.keysOff = off
+	off += count * keyRecordSize
+	h.vecOff = alignUp(off, vecAlign)
+	off = h.vecOff + count*dim*4
+	h.fileLen = off
+
+	buf := make([]byte, h.fileLen)
+	le := binary.LittleEndian
+	copy(buf, storeMagic4)
+	le.PutUint32(buf[4:], storeVersion)
+	le.PutUint32(buf[8:], h.dim)
+	le.PutUint32(buf[12:], h.count)
+	buf[16] = h.quant
+	le.PutUint64(buf[24:], h.chunksOff)
+	le.PutUint64(buf[32:], h.keysOff)
+	le.PutUint64(buf[40:], h.vecOff)
+	le.PutUint64(buf[48:], h.scaleOff)
+	le.PutUint64(buf[56:], h.fileLen)
+
+	for i, c := range s.chunks {
+		r := buf[h.chunksOff+uint64(i)*chunkRecordSize:]
+		le.PutUint64(r[0:], c.Blob)
+		le.PutUint32(r[8:], uint32(c.StartLine))
+		le.PutUint32(r[12:], uint32(c.EndLine))
+		le.PutUint64(r[16:], uint64(c.StartByte))
+		le.PutUint64(r[24:], uint64(c.EndByte))
+	}
+	for i, k := range s.keys {
+		copy(buf[h.keysOff+uint64(i)*keyRecordSize:], k[:])
+	}
+	for i, v := range s.vec {
+		le.PutUint32(buf[h.vecOff+uint64(i)*4:], math.Float32bits(v))
+	}
+	return writeStoreAtomic(path, buf)
+}
+
+// writeStoreAtomic writes buf to path via a temp sibling and atomic rename: a
+// crash or torn write must never leave a truncated multi-GB store where a
+// valid one was — the daemon would load that corrupt sidecar on its next
+// reload and silently drop to lexical. Rename is atomic within a filesystem;
+// the temp sits in the same dir so it shares path's filesystem. The original
+// is untouched until the rename.
+func writeStoreAtomic(path string, buf []byte) error {
 	dir := filepath.Dir(path)
 	f, err := os.CreateTemp(dir, filepath.Base(path)+".tmp-*")
 	if err != nil {
@@ -70,67 +140,7 @@ func (s *Store) Save(path string) error {
 	if err := f.Chmod(0o644); err != nil {
 		return err
 	}
-
-	w := bufio.NewWriter(f)
-	le := binary.LittleEndian
-
-	if _, err := w.Write(storeMagic[:]); err != nil {
-		return err
-	}
-	var u32 [4]byte
-	le.PutUint32(u32[:], storeVersion)
-	if _, err := w.Write(u32[:]); err != nil {
-		return err
-	}
-	le.PutUint32(u32[:], uint32(s.dim))
-	if _, err := w.Write(u32[:]); err != nil {
-		return err
-	}
-	le.PutUint32(u32[:], uint32(len(s.chunks)))
-	if _, err := w.Write(u32[:]); err != nil {
-		return err
-	}
-
-	var u64 [8]byte
-	for _, c := range s.chunks {
-		le.PutUint64(u64[:], c.Blob)
-		if _, err := w.Write(u64[:]); err != nil {
-			return err
-		}
-		le.PutUint32(u32[:], uint32(c.StartLine))
-		if _, err := w.Write(u32[:]); err != nil {
-			return err
-		}
-		le.PutUint32(u32[:], uint32(c.EndLine))
-		if _, err := w.Write(u32[:]); err != nil {
-			return err
-		}
-		le.PutUint64(u64[:], uint64(c.StartByte))
-		if _, err := w.Write(u64[:]); err != nil {
-			return err
-		}
-		le.PutUint64(u64[:], uint64(c.EndByte))
-		if _, err := w.Write(u64[:]); err != nil {
-			return err
-		}
-	}
-
-	// v2 key block: one content key per chunk, in chunk order.
-	for _, k := range s.keys {
-		if _, err := w.Write(k[:]); err != nil {
-			return err
-		}
-	}
-
-	// s.vec is exactly len(chunks)*dim by construction (see vecAt), so it already
-	// writes out as len(chunks) consecutive dim-float32 vectors in chunk order.
-	for _, x := range s.vec {
-		le.PutUint32(u32[:], math.Float32bits(x))
-		if _, err := w.Write(u32[:]); err != nil {
-			return err
-		}
-	}
-	if err := w.Flush(); err != nil {
+	if _, err := f.Write(buf); err != nil {
 		return err
 	}
 	if err := f.Sync(); err != nil {
@@ -167,7 +177,7 @@ func PeekStore(path string) (StoreHeader, error) {
 	if _, err := io.ReadFull(f, hdr[:]); err != nil {
 		return StoreHeader{}, err
 	}
-	if [4]byte{hdr[0], hdr[1], hdr[2], hdr[3]} != storeMagic {
+	if string(hdr[0:4]) != storeMagic4 {
 		return StoreHeader{}, fmt.Errorf("embed: bad magic %q", hdr[0:4])
 	}
 	le := binary.LittleEndian
@@ -178,98 +188,120 @@ func PeekStore(path string) (StoreHeader, error) {
 	}, nil
 }
 
-// LoadStore reads a Store previously written by Save.
+// parseStoreHeader validates every section against size before any offset is
+// used to slice. Same safety boundary as the token index's parseHeader.
+func parseStoreHeader(b []byte, size uint64) (storeHeader, error) {
+	var h storeHeader
+	if uint64(len(b)) < storeHeaderSize {
+		return h, fmt.Errorf("embed: file too small (%d bytes)", len(b))
+	}
+	if string(b[:4]) != storeMagic4 {
+		return h, fmt.Errorf("embed: bad magic %q", b[:4])
+	}
+	le := binary.LittleEndian
+	if v := le.Uint32(b[4:]); v != storeVersion {
+		return h, fmt.Errorf("%w: version %d", ErrLegacyFormat, v)
+	}
+	h = storeHeader{
+		dim:       le.Uint32(b[8:]),
+		count:     le.Uint32(b[12:]),
+		quant:     b[16],
+		chunksOff: le.Uint64(b[24:]),
+		keysOff:   le.Uint64(b[32:]),
+		vecOff:    le.Uint64(b[40:]),
+		scaleOff:  le.Uint64(b[48:]),
+		fileLen:   le.Uint64(b[56:]),
+	}
+	if h.fileLen != size {
+		return h, fmt.Errorf("embed: header says %d bytes, file is %d", h.fileLen, size)
+	}
+	if h.quant != quantF32 && h.quant != quantInt8 {
+		return h, fmt.Errorf("embed: unknown quantization %d", h.quant)
+	}
+	if h.vecOff%vecAlign != 0 {
+		return h, fmt.Errorf("embed: vector block at %d is not %d-byte aligned", h.vecOff, vecAlign)
+	}
+	n := uint64(h.count)
+	d := uint64(h.dim)
+	vecBytes := n * d * 4
+	if h.quant == quantInt8 {
+		vecBytes = n * d
+	}
+	sections := []struct {
+		name string
+		off  uint64
+		n    uint64
+	}{
+		{"chunks", h.chunksOff, n * chunkRecordSize},
+		{"keys", h.keysOff, n * keyRecordSize},
+		{"vec", h.vecOff, vecBytes},
+	}
+	if h.quant == quantInt8 {
+		sections = append(sections, struct {
+			name string
+			off  uint64
+			n    uint64
+		}{"scale", h.scaleOff, n * 4})
+	}
+	for _, s := range sections {
+		end := s.off + s.n
+		if s.off < storeHeaderSize || end < s.off || end > size {
+			return h, fmt.Errorf("embed: section %s [%d,%d) out of bounds for %d-byte file", s.name, s.off, end, size)
+		}
+	}
+	return h, nil
+}
+
+// LoadStore reads path into a heap-backed Store. Task 10 maps it instead.
 func LoadStore(path string) (*Store, error) {
-	f, err := os.Open(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	h, err := parseStoreHeader(b, uint64(len(b)))
+	if err != nil {
+		return nil, err
+	}
+	return storeFrom(h, b, nil)
+}
 
-	r := bufio.NewReader(f)
+// storeFrom decodes a validated header + backing bytes into a Store. Chunks
+// and keys decode eagerly into slices; only the vector block is a candidate
+// for aliasing (Task 10 changes only how vec is obtained here). mm is the
+// mapping that owns b's lifetime, or nil when b is a heap-owned []byte (e.g.
+// from os.ReadFile) that needs no separate release.
+func storeFrom(h storeHeader, b []byte, mm io.Closer) (*Store, error) {
+	count := int(h.count)
 	le := binary.LittleEndian
 
-	var magic [4]byte
-	if _, err := io.ReadFull(r, magic[:]); err != nil {
-		return nil, err
-	}
-	if magic != storeMagic {
-		return nil, fmt.Errorf("embed: bad magic %q", magic[:])
-	}
-
-	var u32 [4]byte
-	if _, err := io.ReadFull(r, u32[:]); err != nil {
-		return nil, err
-	}
-	version := le.Uint32(u32[:])
-	if version != 1 && version != storeVersion {
-		return nil, fmt.Errorf("embed: unsupported version %d", version)
-	}
-	if _, err := io.ReadFull(r, u32[:]); err != nil {
-		return nil, err
-	}
-	dim := int(le.Uint32(u32[:]))
-	if _, err := io.ReadFull(r, u32[:]); err != nil {
-		return nil, err
-	}
-	count := int(le.Uint32(u32[:]))
-
-	s := &Store{dim: dim}
+	s := &Store{dim: int(h.dim), quant: h.quant, mm: mm}
 	if count == 0 {
 		return s, nil
 	}
+
 	s.chunks = make([]Chunk, count)
-
-	var u64 [8]byte
 	for i := 0; i < count; i++ {
-		if _, err := io.ReadFull(r, u64[:]); err != nil {
-			return nil, err
-		}
-		blob := le.Uint64(u64[:])
-		if _, err := io.ReadFull(r, u32[:]); err != nil {
-			return nil, err
-		}
-		startLine := int(le.Uint32(u32[:]))
-		if _, err := io.ReadFull(r, u32[:]); err != nil {
-			return nil, err
-		}
-		endLine := int(le.Uint32(u32[:]))
-		if _, err := io.ReadFull(r, u64[:]); err != nil {
-			return nil, err
-		}
-		startByte := int(le.Uint64(u64[:]))
-		if _, err := io.ReadFull(r, u64[:]); err != nil {
-			return nil, err
-		}
-		endByte := int(le.Uint64(u64[:]))
+		r := b[h.chunksOff+uint64(i)*chunkRecordSize:]
 		s.chunks[i] = Chunk{
-			Blob:      blob,
-			StartLine: startLine,
-			EndLine:   endLine,
-			StartByte: startByte,
-			EndByte:   endByte,
+			Blob:      le.Uint64(r[0:]),
+			StartLine: int(le.Uint32(r[8:])),
+			EndLine:   int(le.Uint32(r[12:])),
+			StartByte: int(le.Uint64(r[16:])),
+			EndByte:   int(le.Uint64(r[24:])),
 		}
 	}
 
-	// v2 key block: one content key per chunk. A v1 store has none, so it loads with
-	// keys=nil — it can still be served and searched, but must be re-keyed (FillKeys)
-	// before it can seed or be re-saved by an incremental rebuild.
-	if version >= 2 {
-		s.keys = make([]ChunkKey, count)
-		for i := 0; i < count; i++ {
-			if _, err := io.ReadFull(r, s.keys[i][:]); err != nil {
-				return nil, err
-			}
-		}
+	s.keys = make([]ChunkKey, count)
+	for i := 0; i < count; i++ {
+		copy(s.keys[i][:], b[h.keysOff+uint64(i)*keyRecordSize:])
 	}
 
+	dim := int(h.dim)
 	s.vec = make([]float32, count*dim)
 	for i := range s.vec {
-		if _, err := io.ReadFull(r, u32[:]); err != nil {
-			return nil, err
-		}
-		s.vec[i] = math.Float32frombits(le.Uint32(u32[:]))
+		s.vec[i] = math.Float32frombits(le.Uint32(b[h.vecOff+uint64(i)*4:]))
 	}
+
 	if err := s.checkVecLen(); err != nil {
 		return nil, err
 	}
