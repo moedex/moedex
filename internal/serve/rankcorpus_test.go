@@ -605,11 +605,16 @@ func TestRankCorpusCorruptSidecarFallsBackToRebuild(t *testing.T) {
 // twice so the second RankCorpus's token index and dense store come from the
 // persisted sidecars (denseCached/tokenCached both true, i.e. mm != nil in
 // both), then asserts Close actually releases them rather than merely
-// returning nil on an object it never touched. TokenIndex.mm and Store.mm are
-// unexported in their own packages and unreachable from here, so the
-// observable proxy for "released" is RankCorpus's own bookkeeping: ti and
-// store are nilled out by Close (mirroring the existing content-store
-// precedent), which a package-external accessor could not see.
+// returning nil on an object it never touched.
+//
+// This proves Close ran and did not skip the loaded sidecars — it does NOT
+// prove the underlying munmap occurred, since TokenIndex.mm and Store.mm are
+// unexported in their own packages and unreachable from here. The observable
+// proxy used instead is RankCorpus's own bookkeeping: ti and store are nilled
+// out by Close (mirroring the existing content-store precedent), which a
+// package-external accessor could not see. The real mapping-level assertion
+// lives at the layer that can see it: tokenindex's own
+// TestLoadedIndexIsBackedByAMapping (internal/tokenindex/codec_test.go).
 func TestRankCorpusCloseReleasesTokenAndDenseMappings(t *testing.T) {
 	dir := buildDedupedDir(t, map[string]map[string]string{
 		"repoA": {"a.go": "refund payment gateway"},

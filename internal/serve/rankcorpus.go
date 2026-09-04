@@ -715,8 +715,14 @@ func (rc *RankCorpus) SearchContextWithSnapshot(ctx context.Context, query strin
 // NumBlobs reports total blobs in the corpus.
 func (rc *RankCorpus) NumBlobs() int { return rc.ix.NumBlobs() }
 
-// NumDocs reports how many documents the BM25 index covers.
-func (rc *RankCorpus) NumDocs() int { return rc.ti.NumDocs() }
+// NumDocs reports how many documents the BM25 index covers, or 0 after Close
+// has released the token index.
+func (rc *RankCorpus) NumDocs() int {
+	if rc.ti == nil {
+		return 0
+	}
+	return rc.ti.NumDocs()
+}
 
 // NumSymbolBlobs reports how many blobs carry extracted symbols.
 func (rc *RankCorpus) NumSymbolBlobs() int { return rc.syms.NumBlobs() }
