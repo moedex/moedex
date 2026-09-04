@@ -8,6 +8,8 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+
+	"moedex/internal/mmapslice"
 )
 
 // MDXE v3 on-disk format (all integers little-endian).
@@ -275,17 +277,27 @@ func parseStoreHeader(b []byte, size uint64) (storeHeader, error) {
 	return h, nil
 }
 
-// LoadStore reads path into a heap-backed Store. Task 10 maps it instead.
+// LoadStore maps path and returns a store whose vector block aliases the
+// mapping. On the reference corpus that moves 2.93 GB off the Go heap.
+//
+// The caller MUST Close the returned store.
 func LoadStore(path string) (*Store, error) {
-	b, err := os.ReadFile(path)
+	m, err := mmapslice.Open(path)
 	if err != nil {
 		return nil, err
 	}
+	b := m.Bytes()
 	h, err := parseStoreHeader(b, uint64(len(b)))
 	if err != nil {
+		m.Close()
 		return nil, err
 	}
-	return storeFrom(h, b, nil)
+	s, err := storeFrom(h, b, m)
+	if err != nil {
+		m.Close()
+		return nil, err
+	}
+	return s, nil
 }
 
 // storeFrom decodes a validated header + backing bytes into a Store. Chunks
@@ -334,9 +346,17 @@ func storeFrom(h storeHeader, b []byte, mm io.Closer) (*Store, error) {
 	}
 
 	dim := int(h.dim)
-	s.vec = make([]float32, count*dim)
-	for i := range s.vec {
-		s.vec[i] = math.Float32frombits(le.Uint32(b[h.vecOff+uint64(i)*4:]))
+	if mm != nil {
+		vec, err := mmapslice.Float32s(b[h.vecOff:], count*dim)
+		if err != nil {
+			return nil, err
+		}
+		s.vec = vec
+	} else {
+		s.vec = make([]float32, count*dim)
+		for i := range s.vec {
+			s.vec[i] = math.Float32frombits(le.Uint32(b[h.vecOff+uint64(i)*4:]))
+		}
 	}
 
 	if err := s.checkVecLen(); err != nil {

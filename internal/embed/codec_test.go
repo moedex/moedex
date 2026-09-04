@@ -122,3 +122,37 @@ func TestLoadStoreRejectsV1AndV2AsLegacy(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadedStoreIsBackedByAMapping(t *testing.T) {
+	s := storeFromVectors(t, 4, [][]float32{{1, 0, 0, 0}, {0, 1, 0, 0}})
+	p := filepath.Join(t.TempDir(), "e.store")
+	if err := s.Save(p); err != nil {
+		t.Fatal(err)
+	}
+	got, err := LoadStore(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.mm == nil {
+		t.Fatal("LoadStore returned a heap-backed store; want mmap-backed")
+	}
+	if got.vecAt(1)[1] != 1 {
+		t.Fatalf("mapped vector read back wrong: %v", got.vecAt(1))
+	}
+	if err := got.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+	if err := got.Close(); err != nil {
+		t.Fatalf("Close must be idempotent, got %v", err)
+	}
+}
+
+func TestBuiltStoreCloseIsNoOp(t *testing.T) {
+	s := storeFromVectors(t, 2, [][]float32{{1, 0}})
+	if err := s.Close(); err != nil {
+		t.Fatalf("Close on a built store: %v", err)
+	}
+	if s.Len() != 1 {
+		t.Fatal("a built store must stay usable after Close")
+	}
+}
