@@ -1,6 +1,7 @@
 package tokenindex
 
 import (
+	"encoding/binary"
 	"errors"
 	"os"
 	"path/filepath"
@@ -105,5 +106,76 @@ func TestBuiltIndexCloseIsNoOp(t *testing.T) {
 	}
 	if ti.DocFreq("beta") != 2 {
 		t.Fatal("a built index must stay usable after Close")
+	}
+}
+
+func TestLoadRejectsTruncatedFileAtEveryPrefix(t *testing.T) {
+	ti := Build(threeBlobIndex(t))
+	dir := t.TempDir()
+	full := filepath.Join(dir, "full.tki")
+	if err := Save(ti, full); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(full)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Every proper prefix must be rejected, never panic and never succeed.
+	for n := 0; n < len(b); n++ {
+		p := filepath.Join(dir, "trunc.tki")
+		if err := os.WriteFile(p, b[:n], 0o644); err != nil {
+			t.Fatal(err)
+		}
+		got, err := Load(p)
+		if err == nil {
+			got.Close()
+			t.Fatalf("prefix of %d bytes loaded successfully; want an error", n)
+		}
+	}
+}
+
+func TestLoadRejectsOutOfBoundsSectionOffset(t *testing.T) {
+	ti := Build(threeBlobIndex(t))
+	dir := t.TempDir()
+	p := filepath.Join(dir, "bad.tki")
+	if err := Save(ti, p); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// postBlobOff (header offset 88) points past the end of the file.
+	binary.LittleEndian.PutUint64(b[88:], uint64(len(b))+4096)
+	if err := os.WriteFile(p, b, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(p); err == nil {
+		t.Fatal("an out-of-bounds section offset loaded successfully")
+	}
+}
+
+func TestLoadRejectsNonMonotonicOffsets(t *testing.T) {
+	ti := Build(threeBlobIndex(t))
+	dir := t.TempDir()
+	p := filepath.Join(dir, "bad.tki")
+	if err := Save(ti, p); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h, err := parseHeader(b, uint64(len(b)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Make termOff[0] larger than termOff[1].
+	binary.LittleEndian.PutUint32(b[h.termOffOff:], 0xFFFF)
+	if err := os.WriteFile(p, b, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(p); err == nil {
+		t.Fatal("non-monotonic offsets loaded successfully")
 	}
 }
