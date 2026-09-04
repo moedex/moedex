@@ -461,24 +461,41 @@ func (r *Ranker) lexicalArm(terms []string) []lexScore {
 	}
 	n := float64(r.ti.NumDocs())
 	avgdl := r.ti.AvgDocLen()
-	// idf depends only on the term and the corpus (via DocFreq/NumDocs), not on
-	// the candidate blob, so it is computed once per distinct term here rather
-	// than recomputed for every (blob, term) pair in the loop below.
+	// idf depends only on the term and the corpus, not on the candidate blob,
+	// so it is computed once per distinct term.
+	//
+	// Each term's posting list is ALSO resolved once, here. Calling
+	// ti.TermFreq(t, blob) per (blob, term) pair would re-run the term binary
+	// search over the whole dictionary every time; with 17.6M terms that is
+	// ~24 string comparisons per pair. Instead each term keeps a cursor into
+	// its own ascending posting list, and because cand is ascending too, the
+	// whole nested loop is one merge walk: O(len(cand) + sum of df).
 	idf := make([]float64, len(distinct))
+	lists := make([]tokenindex.PostingList, len(distinct))
+	cursor := make([]int, len(distinct))
 	for i, t := range distinct {
-		df := float64(r.ti.DocFreq(t))
+		lists[i] = r.ti.Postings(t)
+		df := float64(lists[i].Len())
 		idf[i] = math.Log(1 + (n-df+0.5)/(df+0.5))
 	}
+
 	out := make([]lexScore, 0, len(cand))
 	for _, blob := range cand {
 		score := 0.0
 		dl := float64(r.ti.DocLen(blob))
 		denomBase := r.cfg.K1 * (1 - r.cfg.B + r.cfg.B*dl/avgdl)
-		for i, t := range distinct {
-			tf := float64(r.ti.TermFreq(t, blob))
-			if tf == 0 {
-				continue
+		for i := range distinct {
+			p := lists[i]
+			// Advance this term's cursor to the first posting >= blob.
+			c := cursor[i]
+			for c < p.Len() && p.Blob(c) < blob {
+				c++
 			}
+			cursor[i] = c
+			if c >= p.Len() || p.Blob(c) != blob {
+				continue // tf == 0
+			}
+			tf := float64(p.TF(c))
 			denom := tf + denomBase
 			score += idf[i] * (tf * (r.cfg.K1 + 1)) / denom
 		}
@@ -529,16 +546,20 @@ func (r *Ranker) candidateBlobs(terms []string) []uint64 {
 	return out
 }
 
-// tokenCandidateBlobs unions ti.Docs over the query terms — the blobs that
-// actually contain each term. This is the exact BM25 candidate set and needs no
-// trigram index. A term too short or absent simply contributes nothing; if no
-// term matches any document, the result is empty (BM25 would score nothing
-// anyway), so there is no all-blobs fallback to do.
+// tokenCandidateBlobs unions the term postings over the query terms — the blobs
+// that actually contain each term. This is the exact BM25 candidate set and
+// needs no trigram index. A term too short or absent simply contributes
+// nothing; if no term matches any document, the result is empty (BM25 would
+// score nothing anyway), so there is no all-blobs fallback to do.
+//
+// This drops the per-term []uint64 allocation and sort that ti.Docs performed;
+// the ascending output contract is unchanged.
 func (r *Ranker) tokenCandidateBlobs(terms []string) []uint64 {
 	seen := map[uint64]bool{}
 	for _, t := range terms {
-		for _, b := range r.ti.Docs(t) {
-			seen[b] = true
+		p := r.ti.Postings(t)
+		for i := 0; i < p.Len(); i++ {
+			seen[p.Blob(i)] = true
 		}
 	}
 	out := make([]uint64, 0, len(seen))

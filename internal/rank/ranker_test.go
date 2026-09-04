@@ -2,7 +2,9 @@ package rank
 
 import (
 	"context"
+	"fmt"
 	"hash/fnv"
+	"math"
 	"strings"
 	"testing"
 
@@ -636,5 +638,85 @@ func TestNoMatchEmpty(t *testing.T) {
 	}
 	if len(res) != 0 {
 		t.Errorf("expected no results for a non-matching query, got %d: %+v", len(res), res)
+	}
+}
+
+// TestLexicalArmMatchesNaiveBM25 pins the galloping-cursor rewrite against a
+// straightforward per-pair implementation. The cursor walk is only valid
+// because candidateBlobs and tokenCandidateBlobs both return ascending blob
+// ids and CSR posting lists are ascending too; if either ordering is ever lost
+// this test is what catches it.
+func TestLexicalArmMatchesNaiveBM25(t *testing.T) {
+	ix := index.New()
+	ix.AddFile("r", "a.go", "/r/a.go", "sha-a", []byte("refund refund payment gateway"))
+	ix.AddFile("r", "b.go", "/r/b.go", "sha-b", []byte("payment gateway timeout"))
+	ix.AddFile("r", "c.go", "/r/c.go", "sha-c", []byte("refund policy"))
+	ti := tokenindex.Build(ix)
+	r := New(ix, ti, nil, nil, Config{})
+
+	terms := tokenindex.Tokenize([]byte("refund payment"))
+	got := r.lexicalArm(terms)
+
+	// Naive reference: same candidates, same idf, per-pair TermFreq.
+	cand := r.candidateBlobs(terms)
+	seen := map[string]bool{}
+	var distinct []string
+	for _, t := range terms {
+		if !seen[t] {
+			seen[t] = true
+			distinct = append(distinct, t)
+		}
+	}
+	n := float64(ti.NumDocs())
+	avgdl := ti.AvgDocLen()
+	want := map[uint64]float64{}
+	for _, blob := range cand {
+		score := 0.0
+		dl := float64(ti.DocLen(blob))
+		denomBase := r.cfg.K1 * (1 - r.cfg.B + r.cfg.B*dl/avgdl)
+		for _, t := range distinct {
+			df := float64(ti.DocFreq(t))
+			idf := math.Log(1 + (n-df+0.5)/(df+0.5))
+			tf := float64(ti.TermFreq(t, blob))
+			if tf == 0 {
+				continue
+			}
+			score += idf * (tf * (r.cfg.K1 + 1)) / (tf + denomBase)
+		}
+		if score > 0 {
+			want[blob] = score
+		}
+	}
+
+	if len(got) != len(want) {
+		t.Fatalf("got %d scored blobs, want %d", len(got), len(want))
+	}
+	for _, s := range got {
+		w, ok := want[s.blob]
+		if !ok {
+			t.Fatalf("blob %d scored but not in the naive result", s.blob)
+		}
+		if math.Abs(s.score-w) > 1e-12 {
+			t.Fatalf("blob %d score %v != naive %v", s.blob, s.score, w)
+		}
+	}
+}
+
+// TestCandidateBlobsAreAscending guards the precondition the merge-walk cursor
+// depends on: both candidate generators must return strictly ascending blob ids.
+func TestCandidateBlobsAreAscending(t *testing.T) {
+	ix := index.New()
+	for i := 0; i < 40; i++ {
+		ix.AddFile("r", fmt.Sprintf("f%d.go", i), fmt.Sprintf("/r/f%d.go", i), fmt.Sprintf("sha%d", i), []byte("refund payment gateway"))
+	}
+	ti := tokenindex.Build(ix)
+	r := New(ix, ti, nil, nil, Config{})
+	terms := tokenindex.Tokenize([]byte("refund payment"))
+	for _, cand := range [][]uint64{r.candidateBlobs(terms), r.tokenCandidateBlobs(terms)} {
+		for i := 1; i < len(cand); i++ {
+			if cand[i-1] >= cand[i] {
+				t.Fatalf("candidates not ascending at %d: %d then %d", i, cand[i-1], cand[i])
+			}
+		}
 	}
 }
