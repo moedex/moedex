@@ -58,6 +58,7 @@ func Main() {
 		ix.AddFile(f.Repo, f.RelPath, f.AbsPath, f.SHA, f.Content)
 	}
 	ti := tokenindex.Build(ix)
+	defer ti.Close() // no-op for a built (heap-backed) index; documents the contract
 	fmt.Fprintf(os.Stderr, "indexed %d files into %d blobs, %d docs in token index\n",
 		len(files), ix.NumBlobs(), ti.NumDocs())
 

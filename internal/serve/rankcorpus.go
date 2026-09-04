@@ -89,18 +89,27 @@ type RankCorpus struct {
 // (via mcp.WithCorpusRoot) to recover each hit's full path_with_namespace.
 func (rc *RankCorpus) CorpusRoot() string { return rc.corpusRoot }
 
-// Close releases the shared content store mmap (deduped dir) backing the corpus'
-// blob content. It is required for a deduped dir, where the unified index's blob
-// content aliases the shared store's mapping; a legacy dir copies content onto the
-// heap, so Close is a harmless no-op there. Close is idempotent and safe to call
-// even on a RankCorpus over a legacy dir.
+// Close releases every mapping backing the corpus: the shared content store
+// (deduped dirs), and the token index when it was loaded from a persisted
+// sidecar rather than built. Close is idempotent and safe on a corpus over a
+// legacy dir, where content is heap-copied and Close is a no-op.
+//
+// The daemon's rankSnapshot.retire drains readers before calling this, so a
+// hot reload never unmaps under a live query.
 func (rc *RankCorpus) Close() error {
-	if rc.content != nil {
-		err := rc.content.Close()
-		rc.content = nil
-		return err
+	var firstErr error
+	if rc.ti != nil {
+		if err := rc.ti.Close(); err != nil && firstErr == nil {
+			firstErr = err
+		}
 	}
-	return nil
+	if rc.content != nil {
+		if err := rc.content.Close(); err != nil && firstErr == nil {
+			firstErr = err
+		}
+		rc.content = nil
+	}
+	return firstErr
 }
 
 // OpenRank builds the corpus ranker from every "*.idx" shard under dir. When

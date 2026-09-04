@@ -599,3 +599,20 @@ func TestRankCorpusCorruptSidecarFallsBackToRebuild(t *testing.T) {
 		t.Error("re-persisted token sidecar should load on the next open")
 	}
 }
+
+func TestRankCorpusCloseReleasesTokenIndexMapping(t *testing.T) {
+	dir := buildDedupedDir(t, map[string]map[string]string{
+		"repoA": {"a.go": "refund payment gateway"},
+		"repoB": {"b.go": "payment gateway timeout"},
+	})
+	rc, err := OpenRank(context.Background(), dir, RankConfig{TopK: 5})
+	if err != nil {
+		t.Fatalf("OpenRank: %v", err)
+	}
+	if err := rc.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+	if err := rc.Close(); err != nil {
+		t.Fatalf("Close must be idempotent, got %v", err)
+	}
+}
