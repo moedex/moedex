@@ -28,6 +28,7 @@ These ADRs capture the architectural decisions behind moedex, a clean-room, sing
 | [0022](./0022-mcp-sdk-contract-and-snapshot-identity.md) | Official MCP SDK contract, typed tool outputs, and snapshot-bound result identity | Accepted |
 | [0023](./0023-unified-moe-shell.md) | Unified `moe` shell, typed configuration, compatibility window, serving split, and fail-closed listeners | Accepted |
 | [0024](./0024-managed-lsp-workspace-isolation.md) | Immutable managed corpus with disposable locked-commit workspaces for external language servers | Accepted |
+| [0025](./0025-mmap-bm25-and-dense-sidecars.md) | mmap the BM25 and dense sidecars, not just postings — live heap 8,748 MB → ~1,255 MB | Accepted |
 
 **Companion docs**: [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) (what the code is today),
 [`../plans/`](../plans/) (implementation plans for proposed decisions),

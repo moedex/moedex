@@ -1,6 +1,15 @@
 # Move the BM25 and dense sidecars off the Go heap
 
-- **Status:** Approved, not implemented. 0 of 2 phases landed. Measurements below are real (probe against the live 492-shard corpus, 2026-09-03); every projected figure is labelled as a projection.
+- **Status:** Landed, both phases, 2026-09-04. See [ADR 0025](../../adr/0025-mmap-bm25-and-dense-sidecars.md)
+  for the full record. Measured on the same live 492-shard corpus: live heap
+  8,748 MB → ~1,255 MB (token index ~0 MB, dense store 50.9 MB); build 37.0s /
+  7,223 MB peak heap / 7.91 GB max RSS (was 56s / 11,281 MB / 12.86 GB); ranking
+  parity byte-identical across all 34 gold queries; 0 fuzz crashers over 126.7M
+  combined executions. Two projections in this spec did not hold and are recorded
+  as refutations in the ADR: build peak landed at 7,223 MB against a ~1.7 GB
+  projection (root cause was a reused `perBlob` map that never released Swiss-table
+  capacity, not the sort), and int8 quantization measured 0.97x — no scan speedup —
+  against a projected ~4x, so it ships opt-in rather than as the default.
 - **Date:** 2026-09-03
 - **Depth:** feature (new on-disk formats, new resource lifecycle, builder rewrite)
 - **Extends:** [ADR 0005](../../adr/0005-mmap-compact-postings.md)
