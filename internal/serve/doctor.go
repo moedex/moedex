@@ -28,7 +28,7 @@ type ShardDirInfo struct {
 	// Dense embedding sidecar.
 	StoreExists      bool
 	StoreMetaPresent bool
-	StoreVersion     uint32 // 1 = legacy keyless, 2 = incremental-ready
+	StoreVersion     uint32 // 1 = legacy keyless, 2 = incremental-ready, 3 = + section offsets and 64-byte-aligned vector block (mmap-ready)
 	StoreChunks      int
 	StoreModel       string
 	StoreFresh       bool // store meta fingerprint == the current shard set

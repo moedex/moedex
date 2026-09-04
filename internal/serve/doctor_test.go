@@ -51,8 +51,8 @@ func TestInspectShardDir(t *testing.T) {
 	if !info.StoreExists || !info.StoreMetaPresent {
 		t.Fatalf("store should exist with meta, got %+v", info)
 	}
-	if info.StoreVersion != 2 {
-		t.Errorf("StoreVersion = %d, want 2 (incremental-ready)", info.StoreVersion)
+	if info.StoreVersion != 3 {
+		t.Errorf("StoreVersion = %d, want 3 (mmap-ready)", info.StoreVersion)
 	}
 	if info.StoreChunks == 0 {
 		t.Error("StoreChunks should be > 0")
