@@ -95,6 +95,16 @@ func alignUp(n, to uint64) uint64 { return (n + to - 1) &^ (to - 1) }
 // A non-empty store MUST carry a content key per chunk (HasKeys); Save refuses an
 // inconsistent store rather than persisting one that cannot seed incremental reuse.
 func (s *Store) Save(path string) error {
+	if err := s.requireF32("Save"); err != nil {
+		// Save always writes the v3 float32 layout (quant hardcoded below); a
+		// quantized store here would silently produce a structurally valid,
+		// all-zeros float32 file (s.vec is nil for quantInt8) that reloads
+		// without error and scores 0.0 for every query.
+		return err
+	}
+	if err := s.checkVecLen(); err != nil {
+		return err
+	}
 	if len(s.chunks) > 0 && !s.HasKeys() {
 		return fmt.Errorf("embed: refusing to save store without content keys (%d chunks, %d keys); call FillKeys first", len(s.chunks), len(s.keys))
 	}
@@ -147,6 +157,9 @@ func (s *Store) Save(path string) error {
 // is a separate entry point from Save, which always writes float32 —
 // int8 is opt-in and never affects what Save produces.
 func (s *Store) SaveQuantized(path string) error {
+	if err := s.checkVecLen(); err != nil {
+		return err
+	}
 	if len(s.chunks) > 0 && !s.HasKeys() {
 		return fmt.Errorf("embed: refusing to save store without content keys (%d chunks, %d keys); call FillKeys first", len(s.chunks), len(s.keys))
 	}

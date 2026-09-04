@@ -392,6 +392,20 @@ func (s *Store) vecAt(i int) []float32 {
 	return s.vec[i*s.dim : (i+1)*s.dim]
 }
 
+// requireF32 reports an error naming op if the store is quantized. vecAt
+// (and everything built on it — KeyVectors, Similar, SimilarBounded,
+// buildAngularSignatures) reads s.vec directly, which is left nil for a
+// quantInt8 store (storeFrom only populates vecI8/scales); only
+// scoreAgainst branches on s.quant. None of these vector-space paths have an
+// int8 arm today, so they must refuse rather than silently read a nil/wrong
+// slice.
+func (s *Store) requireF32(op string) error {
+	if s.quant != quantF32 {
+		return fmt.Errorf("embed: %s: store is quantized (quant=%d); only float32 stores are supported", op, s.quant)
+	}
+	return nil
+}
+
 // checkVecLen reports whether the flat block's length matches the store's
 // shape (len(vec) == len(chunks)*dim for quantF32, or len(vecI8) ==
 // len(chunks)*dim with one scale per chunk for quantInt8). This is the
@@ -436,6 +450,12 @@ func (s *Store) HasKeys() bool { return len(s.keys) == len(s.chunks) && len(s.ch
 // construction equal, so the choice is immaterial. The returned vectors ALIAS the
 // store's slices (read-only by Search), so reuse costs no extra vector memory.
 func (s *Store) KeyVectors() map[ChunkKey]Vector {
+	if err := s.requireF32("KeyVectors"); err != nil {
+		// KeyVectors' signature has no error return; a quantized store here is a
+		// programming error (no caller builds int8 stores through the incremental
+		// reuse path today), so fail loudly rather than return a wrong map.
+		panic(err)
+	}
 	if !s.HasKeys() {
 		return nil
 	}
@@ -692,6 +712,9 @@ func (s *Store) Similar(ctx context.Context, topK int, threshold float32) ([]Sim
 	if s == nil || topK <= 0 || len(s.chunks) < 2 {
 		return nil, nil
 	}
+	if err := s.requireF32("Similar"); err != nil {
+		return nil, err
+	}
 	if math.IsNaN(float64(threshold)) || threshold < -1 || threshold > 1 {
 		return nil, fmt.Errorf("embed: similarity threshold %g is outside [-1,1]", threshold)
 	}
@@ -786,6 +809,9 @@ func (s *Store) SimilarBounded(ctx context.Context, topK int, threshold float32,
 	var stats SimilarityStats
 	if s == nil || topK <= 0 || len(s.chunks) < 2 {
 		return nil, stats, nil
+	}
+	if err := s.requireF32("SimilarBounded"); err != nil {
+		return nil, stats, err
 	}
 	if math.IsNaN(float64(threshold)) || threshold < -1 || threshold > 1 {
 		return nil, stats, fmt.Errorf("embed: similarity threshold %g is outside [-1,1]", threshold)
@@ -954,6 +980,9 @@ func validateSimilarOptions(opts SimilarOptions, topK int) error {
 }
 
 func buildAngularSignatures(ctx context.Context, s *Store, opts SimilarOptions, progress func(SimilarityProgress)) ([]uint16, error) {
+	if err := s.requireF32("buildAngularSignatures"); err != nil {
+		return nil, err
+	}
 	totalBits := opts.Tables * opts.BitsPerTable
 	dim := s.dim
 	hyperplanes := make([]Vector, totalBits)
