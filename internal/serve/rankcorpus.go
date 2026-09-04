@@ -132,11 +132,25 @@ func OpenRank(ctx context.Context, dir string, cfg RankConfig) (*RankCorpus, err
 	}
 	// For a deduped dir the unified index's blob content aliases cs's mmap, so cs
 	// must stay open for the RankCorpus' lifetime; on any error before we hand
-	// ownership to the returned RankCorpus, close it here to avoid a leaked mapping.
+	// ownership to the returned RankCorpus, close it here to avoid a leaked
+	// mapping. ti and store may likewise be mmapped sidecars (loadPersistedTokens,
+	// loadPersistedStore) rather than heap objects, so they need the same
+	// treatment; both Close methods are nil-receiver-safe. store is only closed
+	// here when it was opened by this call (cfg.Store == nil) — a caller-supplied
+	// prebuilt store is owned by the caller and must survive an OpenRank failure.
+	var ti *tokenindex.TokenIndex
+	var store *embed.Store
 	ok := false
 	defer func() {
-		if !ok && cs != nil {
+		if ok {
+			return
+		}
+		if cs != nil {
 			cs.Close()
+		}
+		ti.Close()
+		if cfg.Store == nil {
+			store.Close()
 		}
 	}()
 
@@ -146,7 +160,8 @@ func OpenRank(ctx context.Context, dir string, cfg RankConfig) (*RankCorpus, err
 	if tokenPath == "" {
 		tokenPath = defaultTokenPath(dir)
 	}
-	ti, tokenCached := loadPersistedTokens(tokenPath, paths, ix.NumBlobs())
+	var tokenCached bool
+	ti, tokenCached = loadPersistedTokens(tokenPath, paths, ix.NumBlobs())
 	if ti == nil {
 		ti = tokenindex.Build(ix)
 		if err := savePersistedTokens(ti, tokenPath, paths, ix.NumBlobs()); err != nil {
@@ -158,7 +173,7 @@ func OpenRank(ctx context.Context, dir string, cfg RankConfig) (*RankCorpus, err
 
 	// Dense arm: a prebuilt store wins; else load a matching persisted sidecar;
 	// else embed the corpus now (and persist if StorePath is set).
-	store := cfg.Store
+	store = cfg.Store
 	cached := false
 	if store == nil && cfg.Emb != nil {
 		if cfg.StorePath != "" {
