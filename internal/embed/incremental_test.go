@@ -55,8 +55,8 @@ func storesEqual(t *testing.T, a, b *Store) {
 	if !reflect.DeepEqual(a.keys, b.keys) {
 		t.Fatalf("keys differ")
 	}
-	if !reflect.DeepEqual(a.vectors, b.vectors) {
-		t.Fatalf("vectors differ:\n a=%+v\n b=%+v", a.vectors, b.vectors)
+	if !reflect.DeepEqual(a.vec, b.vec) {
+		t.Fatalf("vectors differ:\n a=%+v\n b=%+v", a.vec, b.vec)
 	}
 }
 
@@ -83,7 +83,7 @@ func TestIncremental_NilReuseEmbedsEverythingWithKeys(t *testing.T) {
 	for i, c := range s.chunks {
 		text := ix.Blob(c.Blob).Content[c.StartByte:c.EndByte]
 		want := normalize(mustEmbedOne(t, e, string(text)))
-		if !reflect.DeepEqual(s.vectors[i], want) {
+		if !reflect.DeepEqual(s.vecAt(i), []float32(want)) {
 			t.Fatalf("chunk %d vector mismatch", i)
 		}
 	}
@@ -188,7 +188,7 @@ func TestIncremental_DedupsRepeatedNewText(t *testing.T) {
 	if st.Embedded != 1 {
 		t.Fatalf("Embedded=%d want 1 (identical text embedded once)", st.Embedded)
 	}
-	if !reflect.DeepEqual(s.vectors[0], s.vectors[1]) {
+	if !reflect.DeepEqual(s.vecAt(0), s.vecAt(1)) {
 		t.Fatal("identical chunks should share a vector")
 	}
 }
@@ -253,7 +253,7 @@ func TestStoreCodec_V1BackCompatAndMigrate(t *testing.T) {
 	if loaded.Len() != native.Len() {
 		t.Fatalf("v1 Len=%d want %d", loaded.Len(), native.Len())
 	}
-	if !reflect.DeepEqual(loaded.vectors, native.vectors) {
+	if !reflect.DeepEqual(loaded.vec, native.vec) {
 		t.Fatal("v1 vectors mismatch")
 	}
 
@@ -377,8 +377,8 @@ func writeV1Store(t *testing.T, path string, s *Store) {
 		le.PutUint64(u64[:], uint64(c.EndByte))
 		w.Write(u64[:])
 	}
-	for _, v := range s.vectors {
-		for _, x := range v {
+	for i := 0; i < s.Len(); i++ {
+		for _, x := range s.vecAt(i) {
 			le.PutUint32(u32[:], math.Float32bits(x))
 			w.Write(u32[:])
 		}

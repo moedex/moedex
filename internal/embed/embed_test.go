@@ -242,11 +242,7 @@ func TestSimilar_TopKThresholdAndSelfExclusion(t *testing.T) {
 			{Blob: 20},
 			{Blob: 30},
 		},
-		vectors: []Vector{
-			{1, 0},
-			{0.8, 0.6},
-			{-1, 0},
-		},
+		vec: []float32{1, 0, 0.8, 0.6, -1, 0},
 	}
 
 	got, err := store.Similar(context.Background(), 1, 0.75)
@@ -264,9 +260,9 @@ func TestSimilar_TopKThresholdAndSelfExclusion(t *testing.T) {
 
 func TestSimilar_RejectsInvalidThreshold(t *testing.T) {
 	store := &Store{
-		dim:     1,
-		chunks:  []Chunk{{Blob: 1}, {Blob: 2}},
-		vectors: []Vector{{1}, {1}},
+		dim:    1,
+		chunks: []Chunk{{Blob: 1}, {Blob: 2}},
+		vec:    []float32{1, 1},
 	}
 	if _, err := store.Similar(context.Background(), 1, 1.01); err == nil {
 		t.Fatal("Similar threshold > 1: want error")
@@ -275,9 +271,9 @@ func TestSimilar_RejectsInvalidThreshold(t *testing.T) {
 
 func TestSimilarBoundedUsesExactFallbackForSmallStores(t *testing.T) {
 	store := &Store{
-		dim:     2,
-		chunks:  []Chunk{{Blob: 10}, {Blob: 20}, {Blob: 30}},
-		vectors: []Vector{{1, 0}, {0.8, 0.6}, {-1, 0}},
+		dim:    2,
+		chunks: []Chunk{{Blob: 10}, {Blob: 20}, {Blob: 30}},
+		vec:    []float32{1, 0, 0.8, 0.6, -1, 0},
 	}
 
 	want, err := store.Similar(context.Background(), 1, 0.75)
@@ -314,7 +310,7 @@ func TestSimilarBoundedCapsLargeStoreAndIsDeterministic(t *testing.T) {
 		vector = normalize(vector)
 		for member := range perGroup {
 			store.chunks = append(store.chunks, Chunk{Blob: uint64(group*perGroup + member)})
-			store.vectors = append(store.vectors, append(Vector(nil), vector...))
+			store.vec = append(store.vec, vector...)
 		}
 	}
 
@@ -407,7 +403,8 @@ func TestSimilarBoundedRecallsInjectedNearNeighbors(t *testing.T) {
 		}
 		near = normalize(near)
 		store.chunks = append(store.chunks, Chunk{Blob: uint64(group * 2)}, Chunk{Blob: uint64(group*2 + 1)})
-		store.vectors = append(store.vectors, base, near)
+		store.vec = append(store.vec, base...)
+		store.vec = append(store.vec, near...)
 	}
 
 	pairs, _, err := store.SimilarBounded(context.Background(), 1, 0.99, SimilarOptions{
@@ -452,27 +449,13 @@ func TestDotClampsCosineRoundingOvershoot(t *testing.T) {
 	}
 }
 
-// TestSearch_MixedDimStore_ReturnsError guards against a corrupt/mixed-dim
-// store (e.g. an incremental rebuild that reused a vector from a store built
-// with a different embedder) silently scoring every chunk 0 via dot's
-// length-mismatch guard. Search must surface a clear error instead.
-func TestSearch_MixedDimStore_ReturnsError(t *testing.T) {
-	ctx := context.Background()
-	fe := newFakeEmbedder(3)
-	store := &Store{
-		dim:    3,
-		chunks: []Chunk{{Blob: 0}, {Blob: 1}},
-		vectors: []Vector{
-			{1, 0, 0},
-			{1, 0}, // wrong dim
-		},
-		keys: []ChunkKey{{}, {}},
-	}
-	hits, err := store.Search(ctx, fe, "cat", 2)
-	if err == nil {
-		t.Fatalf("Search on mixed-dim store: want error, got hits %v", hits)
-	}
-}
+// TestSearch_MixedDimStore_ReturnsError previously guarded against a
+// corrupt/mixed-dim store (e.g. an incremental rebuild that reused a vector
+// from a store built with a different embedder) silently scoring every chunk
+// 0 via dot's length-mismatch guard. It is removed: a flat vec block of
+// len(chunks)*dim float32s cannot represent a per-chunk dimension at all, so
+// the mixed-dim store it constructed is no longer expressible, not merely
+// undetected. See Store's doc comment and Search's deleted validation sweep.
 
 func TestSaveLoad_RoundTrip(t *testing.T) {
 	ctx := context.Background()
@@ -639,5 +622,61 @@ func TestHTTPEmbedder_Embed_BoundsResponseSize(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "too large") && !strings.Contains(err.Error(), "exceeds") {
 		t.Errorf("error should explain the response was rejected for size, got: %v", err)
+	}
+}
+
+// storeFromVectors builds an in-memory Store over the given vectors: one Chunk
+// and one distinct ChunkKey per vector, and a single flat float32 block.
+func storeFromVectors(t *testing.T, dim int, vecs [][]float32) *Store {
+	t.Helper()
+	s := &Store{
+		dim:    dim,
+		chunks: make([]Chunk, len(vecs)),
+		keys:   make([]ChunkKey, len(vecs)),
+		vec:    make([]float32, 0, len(vecs)*dim),
+	}
+	for i, v := range vecs {
+		if len(v) != dim {
+			t.Fatalf("vector %d has dim %d, want %d", i, len(v), dim)
+		}
+		s.chunks[i] = Chunk{
+			Blob:      uint64(i),
+			StartLine: 1,
+			EndLine:   2,
+			StartByte: 0,
+			EndByte:   len(v),
+		}
+		s.keys[i][0] = byte(i)
+		s.keys[i][1] = byte(i >> 8)
+		s.vec = append(s.vec, v...)
+	}
+	return s
+}
+
+func TestStoreUsesAFlatVectorBlock(t *testing.T) {
+	s := storeFromVectors(t, 4, [][]float32{
+		{1, 0, 0, 0},
+		{0, 1, 0, 0},
+		{0, 0, 1, 0},
+	})
+	if len(s.vec) != 12 {
+		t.Fatalf("flat block length %d, want 12", len(s.vec))
+	}
+	for i := 0; i < s.Len(); i++ {
+		v := s.vecAt(i)
+		if len(v) != 4 {
+			t.Fatalf("vecAt(%d) length %d, want 4", i, len(v))
+		}
+		if v[i] != 1 {
+			t.Fatalf("vecAt(%d)[%d] = %v, want 1", i, i, v[i])
+		}
+	}
+}
+
+func TestVecAtAliasesTheBlock(t *testing.T) {
+	s := storeFromVectors(t, 2, [][]float32{{1, 0}, {0, 1}})
+	s.vec[0] = 9
+	if got := s.vecAt(0)[0]; got != 9 {
+		t.Fatalf("vecAt did not alias the block: got %v", got)
 	}
 }

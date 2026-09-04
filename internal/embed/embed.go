@@ -344,11 +344,23 @@ func wholeBlobChunk(b *index.Blob, numLines int) Chunk {
 // Store is a flat vector store over blob chunks. Vectors are stored
 // L2-normalized so request-time Search reduces to a dot product. Offline
 // all-node similarity can build a transient bounded angular-LSH index.
+//
+// Vectors live in ONE contiguous float32 block rather than a slice of slices.
+// The old shape cost 953,451 separate 3,072-byte allocations plus 23 MB of
+// slice headers on the reference corpus, and made a mapped backing impossible.
+// A flat block also makes a mixed-dimension store structurally impossible,
+// which is what lets Search drop its per-query validation sweep.
 type Store struct {
-	dim     int
-	chunks  []Chunk
-	vectors []Vector   // parallel to chunks; each is unit-normalized
-	keys    []ChunkKey // parallel to chunks; content keys for incremental reuse (nil for a legacy v1 store)
+	dim    int
+	chunks []Chunk
+	vec    []float32  // len == len(chunks)*dim; unit-normalized, row-major
+	keys   []ChunkKey // parallel to chunks; content keys for incremental reuse (nil for a legacy v1 store)
+}
+
+// vecAt returns chunk i's vector as a sub-slice of the flat block. The result
+// aliases the block and must not be modified.
+func (s *Store) vecAt(i int) []float32 {
+	return s.vec[i*s.dim : (i+1)*s.dim]
 }
 
 // Dim returns the stored embedding dimension.
@@ -374,7 +386,7 @@ func (s *Store) KeyVectors() map[ChunkKey]Vector {
 	m := make(map[ChunkKey]Vector, len(s.keys))
 	for i, k := range s.keys {
 		if _, ok := m[k]; !ok {
-			m[k] = s.vectors[i]
+			m[k] = s.vecAt(i)
 		}
 	}
 	return m
@@ -539,7 +551,10 @@ func BuildStoreIncrementalWithProgress(ctx context.Context, ix *index.Index, e E
 	stats.Embedded = len(embedTexts)
 
 	s.chunks = chunks
-	s.vectors = vectors
+	s.vec = make([]float32, 0, len(vectors)*s.dim)
+	for _, v := range vectors {
+		s.vec = append(s.vec, v...)
+	}
 	s.keys = keys
 	return s, stats, nil
 }
@@ -611,14 +626,8 @@ func (s *Store) Similar(ctx context.Context, topK int, threshold float32) ([]Sim
 	if math.IsNaN(float64(threshold)) || threshold < -1 || threshold > 1 {
 		return nil, fmt.Errorf("embed: similarity threshold %g is outside [-1,1]", threshold)
 	}
-	if len(s.vectors) != len(s.chunks) {
-		return nil, fmt.Errorf("embed: %d chunks have %d vectors", len(s.chunks), len(s.vectors))
-	}
-	for i, v := range s.vectors {
-		if len(v) != s.dim {
-			return nil, fmt.Errorf("embed: chunk %d vector dim %d != store dim %d", i, len(v), s.dim)
-		}
-	}
+	// No per-vector dimension sweep: the flat block has exactly len(chunks)*dim
+	// entries by construction, so a mixed-dimension store cannot be represented.
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -646,14 +655,14 @@ func (s *Store) Similar(ctx context.Context, topK int, threshold float32) ([]Sim
 					continue
 				}
 				h := make(scoreHeap, 0, topK)
-				for target, vector := range s.vectors {
+				for target := range s.chunks {
 					if source == target {
 						continue
 					}
 					if target&255 == 0 && ctx.Err() != nil {
 						break
 					}
-					score := dot(s.vectors[source], vector)
+					score := dot(s.vecAt(source), s.vecAt(target))
 					if score < threshold {
 						continue
 					}
@@ -712,14 +721,8 @@ func (s *Store) SimilarBounded(ctx context.Context, topK int, threshold float32,
 	if math.IsNaN(float64(threshold)) || threshold < -1 || threshold > 1 {
 		return nil, stats, fmt.Errorf("embed: similarity threshold %g is outside [-1,1]", threshold)
 	}
-	if len(s.vectors) != len(s.chunks) {
-		return nil, stats, fmt.Errorf("embed: %d chunks have %d vectors", len(s.chunks), len(s.vectors))
-	}
-	for i, vector := range s.vectors {
-		if len(vector) != s.dim {
-			return nil, stats, fmt.Errorf("embed: chunk %d vector dim %d != store dim %d", i, len(vector), s.dim)
-		}
-	}
+	// No per-vector dimension sweep: the flat block has exactly len(chunks)*dim
+	// entries by construction, so a mixed-dimension store cannot be represented.
 	if err := ctx.Err(); err != nil {
 		return nil, stats, err
 	}
@@ -745,7 +748,7 @@ func (s *Store) SimilarBounded(ctx context.Context, topK int, threshold float32,
 	}
 	stats.Approximate = true
 
-	signatures, err := buildAngularSignatures(ctx, s.vectors, opts, opts.Progress)
+	signatures, err := buildAngularSignatures(ctx, s, opts, opts.Progress)
 	if err != nil {
 		return nil, stats, err
 	}
@@ -801,7 +804,7 @@ func (s *Store) SimilarBounded(ctx context.Context, topK int, threshold float32,
 					if i&255 == 0 && ctx.Err() != nil {
 						return
 					}
-					score := dot(s.vectors[source], s.vectors[target])
+					score := dot(s.vecAt(source), s.vecAt(target))
 					if score < threshold {
 						continue
 					}
@@ -881,9 +884,9 @@ func validateSimilarOptions(opts SimilarOptions, topK int) error {
 	return nil
 }
 
-func buildAngularSignatures(ctx context.Context, vectors []Vector, opts SimilarOptions, progress func(SimilarityProgress)) ([]uint16, error) {
+func buildAngularSignatures(ctx context.Context, s *Store, opts SimilarOptions, progress func(SimilarityProgress)) ([]uint16, error) {
 	totalBits := opts.Tables * opts.BitsPerTable
-	dim := len(vectors[0])
+	dim := s.dim
 	hyperplanes := make([]Vector, totalBits)
 	state := uint64(0x6a09e667f3bcc909)
 	for bit := range totalBits {
@@ -902,10 +905,10 @@ func buildAngularSignatures(ctx context.Context, vectors []Vector, opts SimilarO
 		}
 	}
 
-	signatures := make([]uint16, len(vectors)*opts.Tables)
+	signatures := make([]uint16, s.Len()*opts.Tables)
 	var completed atomic.Int64
-	stopProgress := startSimilarityProgress(progress, "index", len(vectors), &completed, nil)
-	workers := min(runtime.GOMAXPROCS(0), len(vectors))
+	stopProgress := startSimilarityProgress(progress, "index", s.Len(), &completed, nil)
+	workers := min(runtime.GOMAXPROCS(0), s.Len())
 	jobs := make(chan int)
 	var wg sync.WaitGroup
 	for range workers {
@@ -921,7 +924,7 @@ func buildAngularSignatures(ctx context.Context, vectors []Vector, opts SimilarO
 					for bit := range opts.BitsPerTable {
 						var projection float32
 						hyperplane := hyperplanes[table*opts.BitsPerTable+bit]
-						for dimension, value := range vectors[source] {
+						for dimension, value := range s.vecAt(source) {
 							projection += value * hyperplane[dimension]
 						}
 						if projection >= 0 {
@@ -935,7 +938,7 @@ func buildAngularSignatures(ctx context.Context, vectors []Vector, opts SimilarO
 		}()
 	}
 sendJobs:
-	for source := range vectors {
+	for source := range s.Len() {
 		select {
 		case jobs <- source:
 		case <-ctx.Done():
@@ -1022,20 +1025,15 @@ func (s *Store) Search(ctx context.Context, e Embedder, query string, topK int) 
 	if s.dim != 0 && len(q) != s.dim {
 		return nil, fmt.Errorf("embed: query dim %d != store dim %d", len(q), s.dim)
 	}
-	// A corrupt/mixed-dim store (e.g. an incremental rebuild that reused a vector
-	// from a store built with a different embedder) would otherwise score the
-	// offending chunks 0 via dot's length-mismatch guard instead of erroring.
-	for i, v := range s.vectors {
-		if len(v) != s.dim {
-			return nil, fmt.Errorf("embed: chunk %d vector dim %d != store dim %d", i, len(v), s.dim)
-		}
-	}
+	// No per-vector dimension sweep: the flat block has exactly len(chunks)*dim
+	// entries by construction, so a mixed-dimension store cannot be represented.
+	// The old check walked all 953,451 vectors on EVERY query to find nothing.
 
 	// Score every chunk by cosine (vectors are unit-normalized, so dot == cosine).
 	// The scan is O(chunks*dim) and dominates query latency at corpus scale, so the
 	// dot products run in parallel across GOMAXPROCS shards (disjoint index ranges,
 	// no synchronization needed — each goroutine writes its own slice region).
-	n := len(s.vectors)
+	n := s.Len()
 	scores := make([]float32, n)
 	workers := runtime.GOMAXPROCS(0)
 	if workers > n {
@@ -1059,7 +1057,7 @@ func (s *Store) Search(ctx context.Context, e Embedder, query string, topK int) 
 		go func(lo, hi int) {
 			defer wg.Done()
 			for i := lo; i < hi; i++ {
-				scores[i] = dot(q, s.vectors[i])
+				scores[i] = dot(q, s.vecAt(i))
 			}
 		}(lo, hi)
 	}

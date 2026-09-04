@@ -122,15 +122,12 @@ func (s *Store) Save(path string) error {
 		}
 	}
 
-	for _, v := range s.vectors {
-		if len(v) != s.dim {
-			return fmt.Errorf("embed: vector dim %d != store dim %d", len(v), s.dim)
-		}
-		for _, x := range v {
-			le.PutUint32(u32[:], math.Float32bits(x))
-			if _, err := w.Write(u32[:]); err != nil {
-				return err
-			}
+	// s.vec is exactly len(chunks)*dim by construction (see vecAt), so it already
+	// writes out as len(chunks) consecutive dim-float32 vectors in chunk order.
+	for _, x := range s.vec {
+		le.PutUint32(u32[:], math.Float32bits(x))
+		if _, err := w.Write(u32[:]); err != nil {
+			return err
 		}
 	}
 	if err := w.Flush(); err != nil {
@@ -222,7 +219,6 @@ func LoadStore(path string) (*Store, error) {
 		return s, nil
 	}
 	s.chunks = make([]Chunk, count)
-	s.vectors = make([]Vector, count)
 
 	var u64 [8]byte
 	for i := 0; i < count; i++ {
@@ -267,15 +263,12 @@ func LoadStore(path string) (*Store, error) {
 		}
 	}
 
-	for i := 0; i < count; i++ {
-		v := make(Vector, dim)
-		for j := 0; j < dim; j++ {
-			if _, err := io.ReadFull(r, u32[:]); err != nil {
-				return nil, err
-			}
-			v[j] = math.Float32frombits(le.Uint32(u32[:]))
+	s.vec = make([]float32, count*dim)
+	for i := range s.vec {
+		if _, err := io.ReadFull(r, u32[:]); err != nil {
+			return nil, err
 		}
-		s.vectors[i] = v
+		s.vec[i] = math.Float32frombits(le.Uint32(u32[:]))
 	}
 	return s, nil
 }
