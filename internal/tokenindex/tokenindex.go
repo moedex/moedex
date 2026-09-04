@@ -77,6 +77,7 @@
 package tokenindex
 
 import (
+	"fmt"
 	"io"
 	"slices"
 	"strings"
@@ -251,6 +252,16 @@ func Build(ix *index.Index) *TokenIndex {
 	// i.e. ascending blob id. That is the same "stable scatter" a bucket
 	// sort performs; it reproduces the (term, blob) sort's output without
 	// ever comparing or moving records against each other.
+	// Bail before the uint32 offsets below can wrap, not after: postOff is
+	// accumulated into uint32 here (Build has no error return, and OpenRank
+	// uses this index whether or not the later persist to disk succeeds), so
+	// a silent wrap here would mean queries run against corrupt offsets with
+	// no error anywhere. Save's own maxU32 checks (codec.go) are
+	// belt-and-braces on the already-wrapped values, not a substitute for
+	// this one. ~20x headroom on the reference corpus today.
+	if uint64(len(recs)) > maxU32 {
+		panic(fmt.Sprintf("tokenindex: %d postings exceeds the %d TKI2 limit", len(recs), maxU32))
+	}
 	counts := make([]uint32, len(terms))
 	for _, rec := range recs {
 		counts[rec.term]++
@@ -276,8 +287,17 @@ func Build(ix *index.Index) *TokenIndex {
 	ti.termOff = make([]uint32, len(terms)+1)
 	ti.termText = make([]byte, 0, len(terms)*12)
 	for rank, old := range order {
+		// Same reasoning as the postings guard above: termOff[rank] is a
+		// uint32 cast of the running termText length, produced before Save
+		// ever sees it, so the wrap has to be caught here.
+		if len(ti.termText) > maxU32 {
+			panic(fmt.Sprintf("tokenindex: term text exceeds %d bytes at term rank %d", maxU32, rank))
+		}
 		ti.termOff[rank] = uint32(len(ti.termText))
 		ti.termText = append(ti.termText, terms[old]...)
+	}
+	if len(ti.termText) > maxU32 {
+		panic(fmt.Sprintf("tokenindex: term text %d bytes exceeds the %d TKI2 limit", len(ti.termText), maxU32))
 	}
 	ti.termOff[len(terms)] = uint32(len(ti.termText))
 	return ti
