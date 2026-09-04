@@ -70,3 +70,40 @@ func TestSaveLoadEmptyIndex(t *testing.T) {
 		t.Fatal("empty index did not round-trip as empty")
 	}
 }
+
+func TestLoadedIndexIsBackedByAMapping(t *testing.T) {
+	ti := Build(threeBlobIndex(t))
+	p := filepath.Join(t.TempDir(), "tokens.tki")
+	if err := Save(ti, p); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.mm == nil {
+		t.Fatal("Load returned a heap-backed index; want an mmap-backed one")
+	}
+	if got.DocFreq("beta") != 2 {
+		t.Fatalf("mapped DocFreq(beta) = %d, want 2", got.DocFreq("beta"))
+	}
+	if err := got.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+	if err := got.Close(); err != nil {
+		t.Fatalf("Close must be idempotent, got %v", err)
+	}
+}
+
+func TestBuiltIndexCloseIsNoOp(t *testing.T) {
+	ti := Build(threeBlobIndex(t))
+	if ti.mm != nil {
+		t.Fatal("Build must not produce a mapped index")
+	}
+	if err := ti.Close(); err != nil {
+		t.Fatalf("Close on a built index: %v", err)
+	}
+	if ti.DocFreq("beta") != 2 {
+		t.Fatal("a built index must stay usable after Close")
+	}
+}

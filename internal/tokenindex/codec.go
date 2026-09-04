@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"moedex/internal/mmapslice"
 	"os"
 	"path/filepath"
 )
@@ -246,13 +247,29 @@ func parseHeader(b []byte, size uint64) (tkiHeader, error) {
 	return h, nil
 }
 
-// Load reads path into a heap-backed TokenIndex. Task 3 replaces the body with
-// an mmap; the signature and semantics are identical either way.
+// Load maps path and returns an index whose arrays alias the mapping. Nothing
+// but the slice headers enters the Go heap, so a 656 MB sidecar costs a few
+// hundred bytes of heap instead of 4.7 GB.
+//
+// The caller MUST Close the returned index; until then the mapping stays
+// resident. Reading any accessor after Close reads unmapped memory and crashes.
 func Load(path string) (*TokenIndex, error) {
-	b, err := os.ReadFile(path)
+	m, err := mmapslice.Open(path)
 	if err != nil {
 		return nil, err
 	}
+	ti, err := loadFrom(m.Bytes())
+	if err != nil {
+		m.Close()
+		return nil, err
+	}
+	ti.mm = m
+	return ti, nil
+}
+
+// loadFrom builds an index over b without owning it. Split out so the fuzz
+// target in Task 5 can drive the parser over arbitrary bytes with no file.
+func loadFrom(b []byte) (*TokenIndex, error) {
 	h, err := parseHeader(b, uint64(len(b)))
 	if err != nil {
 		return nil, err
@@ -262,24 +279,25 @@ func Load(path string) (*TokenIndex, error) {
 		totalLen: int(h.totalLen),
 		termText: b[h.termTextOff : h.termTextOff+h.termTextLen],
 	}
-	ti.docLen = readU32s(b[h.docLenOff:], int(h.docLenCount))
-	ti.termOff = readU32s(b[h.termOffOff:], int(h.numTerms+1))
-	ti.postOff = readU32s(b[h.postOffOff:], int(h.numTerms+1))
-	ti.postBlob = readU32s(b[h.postBlobOff:], int(h.numPostings))
-	ti.postTF = readU32s(b[h.postTFOff:], int(h.numPostings))
+	if ti.docLen, err = mmapslice.Uint32s(b[h.docLenOff:], int(h.docLenCount)); err != nil {
+		return nil, fmt.Errorf("tokenindex: docLen: %w", err)
+	}
+	if ti.termOff, err = mmapslice.Uint32s(b[h.termOffOff:], int(h.numTerms+1)); err != nil {
+		return nil, fmt.Errorf("tokenindex: termOff: %w", err)
+	}
+	if ti.postOff, err = mmapslice.Uint32s(b[h.postOffOff:], int(h.numTerms+1)); err != nil {
+		return nil, fmt.Errorf("tokenindex: postOff: %w", err)
+	}
+	if ti.postBlob, err = mmapslice.Uint32s(b[h.postBlobOff:], int(h.numPostings)); err != nil {
+		return nil, fmt.Errorf("tokenindex: postBlob: %w", err)
+	}
+	if ti.postTF, err = mmapslice.Uint32s(b[h.postTFOff:], int(h.numPostings)); err != nil {
+		return nil, fmt.Errorf("tokenindex: postTF: %w", err)
+	}
 	if err := validateCSR(ti); err != nil {
 		return nil, err
 	}
 	return ti, nil
-}
-
-func readU32s(b []byte, n int) []uint32 {
-	out := make([]uint32, n)
-	le := binary.LittleEndian
-	for i := range out {
-		out[i] = le.Uint32(b[i*4:])
-	}
-	return out
 }
 
 // validateCSR checks the invariants the accessors rely on but the section
