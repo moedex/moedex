@@ -281,11 +281,14 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	}
 
 	// Every term: df and per-blob tf.
-	for term, post := range orig.postings {
+	for i := 0; i < len(orig.termOff)-1; i++ {
+		term := string(orig.termBytes(i))
+		post := orig.Postings(term)
 		if orig.DocFreq(term) != loaded.DocFreq(term) {
 			t.Errorf("DocFreq(%s): orig %d loaded %d", term, orig.DocFreq(term), loaded.DocFreq(term))
 		}
-		for id := range post {
+		for j := 0; j < post.Len(); j++ {
+			id := post.Blob(j)
 			if orig.TermFreq(term, id) != loaded.TermFreq(term, id) {
 				t.Errorf("TermFreq(%s,%d): orig %d loaded %d",
 					term, id, orig.TermFreq(term, id), loaded.TermFreq(term, id))
@@ -294,8 +297,8 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	}
 
 	// Loaded index reports the same term set size.
-	if len(orig.postings) != len(loaded.postings) {
-		t.Errorf("term count: orig %d loaded %d", len(orig.postings), len(loaded.postings))
+	if len(orig.termOff) != len(loaded.termOff) {
+		t.Errorf("term count: orig %d loaded %d", len(orig.termOff)-1, len(loaded.termOff)-1)
 	}
 }
 

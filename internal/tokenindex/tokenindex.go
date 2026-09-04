@@ -77,6 +77,7 @@
 package tokenindex
 
 import (
+	"io"
 	"sort"
 	"unicode"
 	"unicode/utf8"
@@ -84,45 +85,127 @@ import (
 	"moedex/internal/index"
 )
 
-// TokenIndex holds term statistics over all blobs in a corpus.
+// TokenIndex holds term statistics over all blobs in a corpus in a compressed
+// sparse row (CSR) layout that is identical in memory and on disk.
 //
-// Storage layout:
-//   - postings: term -> (blob -> term frequency). The inner map's len is the
-//     document frequency of the term.
-//   - docLen: blob -> token count (sum of all term frequencies in that blob).
-//   - totalLen / numDocs: running totals used to derive AvgDocLen.
+// Storage layout — six parallel arrays, no maps:
+//   - docLen:   blob ID -> token count. Dense; 0 for an unused ID, which matches
+//     DocLen's "0 if unknown" contract exactly.
+//   - termOff:  numTerms+1 offsets into termText. Term i is
+//     termText[termOff[i]:termOff[i+1]].
+//   - termText: every term's bytes, concatenated in ascending lexicographic
+//     order so a term lookup is a binary search.
+//   - postOff:  numTerms+1 offsets into postBlob/postTF. Term i's postings are
+//     the range [postOff[i], postOff[i+1]).
+//   - postBlob: blob IDs, ascending within each term's range.
+//   - postTF:   term frequencies, parallel to postBlob.
+//
+// This replaces a map[string]map[uint64]int that cost 115 bytes per posting.
+// Average document frequency is 2.3, so nearly every term paid a whole Go map
+// header plus a bucket allocation to hold two entries.
+//
+// A TokenIndex is either BUILT (arrays on the Go heap, mm == nil) or LOADED
+// (arrays aliasing an mmap, mm != nil). Every accessor is identical for both;
+// only Close differs. See ADR 0005 for the same discipline applied to postings.
 type TokenIndex struct {
-	postings map[string]map[uint64]int
-	docLen   map[uint64]int
 	numDocs  int
 	totalLen int
+
+	docLen   []uint32
+	termOff  []uint32
+	termText []byte
+	postOff  []uint32
+	postBlob []uint32
+	postTF   []uint32
+
+	// mm is the mapping backing the arrays above, or nil when they are on the
+	// Go heap. Close unmaps it; reading any array after that will crash.
+	mm io.Closer
 }
 
 // Build tokenizes every blob in ix and accumulates term statistics.
 func Build(ix *index.Index) *TokenIndex {
-	ti := &TokenIndex{
-		postings: make(map[string]map[uint64]int),
-		docLen:   make(map[uint64]int),
+	if ix == nil {
+		return fromMaps(0, 0, nil, nil)
 	}
+	postings := make(map[string]map[uint64]int)
+	docLen := make(map[uint64]int)
+	numDocs, totalLen := 0, 0
 	n := ix.NumBlobs()
 	for id := uint64(0); id < uint64(n); id++ {
 		b := ix.Blob(id)
 		if b == nil {
 			continue
 		}
-		ti.numDocs++
+		numDocs++
 		toks := Tokenize(b.Content)
-		ti.docLen[b.ID] = len(toks)
-		ti.totalLen += len(toks)
+		docLen[b.ID] = len(toks)
+		totalLen += len(toks)
 		for _, t := range toks {
-			post := ti.postings[t]
+			post := postings[t]
 			if post == nil {
 				post = make(map[uint64]int)
-				ti.postings[t] = post
+				postings[t] = post
 			}
 			post[b.ID]++
 		}
 	}
+	return fromMaps(numDocs, totalLen, docLen, postings)
+}
+
+// fromMaps converts accumulated maps into the CSR arrays. Task 4 removes the
+// map stage entirely; until then this keeps Build's output shape correct while
+// the representation changes underneath it.
+func fromMaps(numDocs, totalLen int, docLen map[uint64]int, postings map[string]map[uint64]int) *TokenIndex {
+	ti := &TokenIndex{numDocs: numDocs, totalLen: totalLen}
+
+	var maxBlob uint64
+	for id := range docLen {
+		if id > maxBlob {
+			maxBlob = id
+		}
+	}
+	if len(docLen) > 0 {
+		ti.docLen = make([]uint32, maxBlob+1)
+		for id, l := range docLen {
+			ti.docLen[id] = uint32(l)
+		}
+	}
+
+	terms := make([]string, 0, len(postings))
+	for t := range postings {
+		terms = append(terms, t)
+	}
+	sort.Strings(terms)
+
+	numPost := 0
+	for _, p := range postings {
+		numPost += len(p)
+	}
+	ti.termOff = make([]uint32, len(terms)+1)
+	ti.postOff = make([]uint32, len(terms)+1)
+	ti.termText = make([]byte, 0, 16*len(terms))
+	ti.postBlob = make([]uint32, 0, numPost)
+	ti.postTF = make([]uint32, 0, numPost)
+
+	for i, t := range terms {
+		ti.termOff[i] = uint32(len(ti.termText))
+		ti.postOff[i] = uint32(len(ti.postBlob))
+		ti.termText = append(ti.termText, t...)
+
+		post := postings[t]
+		blobs := make([]uint64, 0, len(post))
+		for b := range post {
+			blobs = append(blobs, b)
+		}
+		sort.Slice(blobs, func(a, b int) bool { return blobs[a] < blobs[b] })
+		for _, b := range blobs {
+			ti.postBlob = append(ti.postBlob, uint32(b))
+			ti.postTF = append(ti.postTF, uint32(post[b]))
+		}
+	}
+	ti.termOff[len(terms)] = uint32(len(ti.termText))
+	ti.postOff[len(terms)] = uint32(len(ti.postBlob))
 	return ti
 }
 
@@ -250,21 +333,25 @@ func (ti *TokenIndex) AvgDocLen() float64 {
 }
 
 // DocLen returns the token count of the given blob (0 if unknown).
-func (ti *TokenIndex) DocLen(blob uint64) int { return ti.docLen[blob] }
+func (ti *TokenIndex) DocLen(blob uint64) int {
+	if blob >= uint64(len(ti.docLen)) {
+		return 0
+	}
+	return int(ti.docLen[blob])
+}
 
 // DocFreq returns how many documents contain term. term must already be a
 // single canonical token (the caller runs Tokenize on the query). Returns 0 if
 // the term is absent.
-func (ti *TokenIndex) DocFreq(term string) int { return len(ti.postings[term]) }
+func (ti *TokenIndex) DocFreq(term string) int { return ti.Postings(term).Len() }
 
 // TermFreq returns the number of occurrences of term within blob. term must
 // already be a single canonical token. Returns 0 if absent.
+//
+// This resolves the term on every call. A caller looping over many blobs for
+// the same term should hold a PostingList from Postings instead.
 func (ti *TokenIndex) TermFreq(term string, blob uint64) int {
-	post := ti.postings[term]
-	if post == nil {
-		return 0
-	}
-	return post[blob]
+	return ti.Postings(term).TFOf(blob)
 }
 
 // Docs returns the blob IDs that contain term, in ascending order. term must
@@ -274,14 +361,25 @@ func (ti *TokenIndex) TermFreq(term string, blob uint64) int {
 // index it scores against instead of from a separate trigram index. (Used by the
 // corpus ranker, whose content-only index carries no positional postings.)
 func (ti *TokenIndex) Docs(term string) []uint64 {
-	post := ti.postings[term]
-	if len(post) == 0 {
+	p := ti.Postings(term)
+	if p.Len() == 0 {
 		return nil
 	}
-	out := make([]uint64, 0, len(post))
-	for blob := range post {
-		out = append(out, blob)
+	out := make([]uint64, p.Len())
+	for i := range out {
+		out[i] = p.Blob(i)
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
 	return out
+}
+
+// Close releases the mapping backing a loaded index. It is a no-op for an index
+// produced by Build, whose arrays are on the Go heap. Close is idempotent.
+// Reading any accessor after Close on a loaded index reads unmapped memory.
+func (ti *TokenIndex) Close() error {
+	if ti == nil || ti.mm == nil {
+		return nil
+	}
+	err := ti.mm.Close()
+	ti.mm = nil
+	return err
 }
