@@ -36,7 +36,10 @@
   - **Recommendation:** [a]. `uint32` caps `termText` at 4 GiB (currently 190 MB) and postings at 4.29 B (currently 40.6 M — the corpus would need roughly 6 M blobs to reach it). [b] costs a further 141 MB of mapped pages permanently to buy headroom nothing is near. Widening later is a version bump this plan already establishes the machinery for.
   - **Blocked by:** —
   - **Blocks:** Task 2, Task 3
-  - **Resolution:** _(needs a yes before dispatch)_
+  - **Resolution:** RESOLVED 2026-09-03 — take [a], `uint32`. Save returns an
+    explicit error naming the limit when either field would overflow, so the
+    failure mode is "the corpus outgrew the format", never silent truncation.
+    Widening is a version bump the TKI2 header already supports.
 
 ## Not Yet Specified
 
