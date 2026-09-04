@@ -600,18 +600,69 @@ func TestRankCorpusCorruptSidecarFallsBackToRebuild(t *testing.T) {
 	}
 }
 
-func TestRankCorpusCloseReleasesTokenIndexMapping(t *testing.T) {
+// TestRankCorpusCloseReleasesTokenAndDenseMappings exercises Close over
+// LOADED (mmap-backed) sidecars, not just built ones: it opens the corpus
+// twice so the second RankCorpus's token index and dense store come from the
+// persisted sidecars (denseCached/tokenCached both true, i.e. mm != nil in
+// both), then asserts Close actually releases them rather than merely
+// returning nil on an object it never touched. TokenIndex.mm and Store.mm are
+// unexported in their own packages and unreachable from here, so the
+// observable proxy for "released" is RankCorpus's own bookkeeping: ti and
+// store are nilled out by Close (mirroring the existing content-store
+// precedent), which a package-external accessor could not see.
+func TestRankCorpusCloseReleasesTokenAndDenseMappings(t *testing.T) {
 	dir := buildDedupedDir(t, map[string]map[string]string{
 		"repoA": {"a.go": "refund payment gateway"},
 		"repoB": {"b.go": "payment gateway timeout"},
 	})
-	rc, err := OpenRank(context.Background(), dir, RankConfig{TopK: 5})
-	if err != nil {
-		t.Fatalf("OpenRank: %v", err)
+	cfg := RankConfig{
+		TopK:          5,
+		Emb:           conceptEmbedder{},
+		EmbedModel:    "concept-v1",
+		StorePath:     filepath.Join(dir, "corpus-embeddings.store"),
+		TokenPath:     filepath.Join(dir, "corpus-tokens.tki"),
+		LinesPerChunk: 20,
+		Overlap:       5,
 	}
+
+	// First open builds both sidecars and persists them.
+	first, err := OpenRank(context.Background(), dir, cfg)
+	if err != nil {
+		t.Fatalf("OpenRank build: %v", err)
+	}
+	if err := first.Close(); err != nil {
+		t.Fatalf("Close (build): %v", err)
+	}
+
+	// Second open must LOAD both from the persisted sidecars, so this
+	// RankCorpus's ti and store are mmap-backed (mm != nil), not heap-built.
+	rc, err := OpenRank(context.Background(), dir, cfg)
+	if err != nil {
+		t.Fatalf("OpenRank reload: %v", err)
+	}
+	if !rc.TokensFromCache() {
+		t.Fatal("expected the token index to load from its persisted sidecar")
+	}
+	if !rc.DenseFromCache() {
+		t.Fatal("expected the dense store to load from its persisted sidecar")
+	}
+	if rc.ti == nil || rc.store == nil {
+		t.Fatal("expected both ti and store to be set before Close")
+	}
+
 	if err := rc.Close(); err != nil {
 		t.Fatalf("Close: %v", err)
 	}
+	if rc.ti != nil {
+		t.Error("Close did not release the token index mapping (rc.ti still set)")
+	}
+	if rc.store != nil {
+		t.Error("Close did not release the dense store mapping (rc.store still set)")
+	}
+	if rc.content != nil {
+		t.Error("Close did not release the shared content store (rc.content still set)")
+	}
+
 	if err := rc.Close(); err != nil {
 		t.Fatalf("Close must be idempotent, got %v", err)
 	}

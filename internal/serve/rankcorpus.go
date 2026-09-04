@@ -90,9 +90,11 @@ type RankCorpus struct {
 func (rc *RankCorpus) CorpusRoot() string { return rc.corpusRoot }
 
 // Close releases every mapping backing the corpus: the shared content store
-// (deduped dirs), and the token index when it was loaded from a persisted
-// sidecar rather than built. Close is idempotent and safe on a corpus over a
-// legacy dir, where content is heap-copied and Close is a no-op.
+// (deduped dirs), the token index, and the dense store, each only when loaded
+// from a persisted sidecar rather than built. Close is idempotent and safe on
+// a corpus over a legacy dir, where content is heap-copied and Close is a
+// no-op, and closes every mapping even when an earlier one errors, returning
+// the first error.
 //
 // The daemon's rankSnapshot.retire drains readers before calling this, so a
 // hot reload never unmaps under a live query.
@@ -102,6 +104,13 @@ func (rc *RankCorpus) Close() error {
 		if err := rc.ti.Close(); err != nil && firstErr == nil {
 			firstErr = err
 		}
+		rc.ti = nil
+	}
+	if rc.store != nil {
+		if err := rc.store.Close(); err != nil && firstErr == nil {
+			firstErr = err
+		}
+		rc.store = nil
 	}
 	if rc.content != nil {
 		if err := rc.content.Close(); err != nil && firstErr == nil {
@@ -651,7 +660,11 @@ func BuildSidecars(dir string) (tokenPath, symbolPath string, err error) {
 	}
 	tokenPath = defaultTokenPath(dir)
 	symbolPath = defaultSymbolPath(dir)
-	if err := savePersistedTokens(tokenindex.Build(ix), tokenPath, paths, ix.NumBlobs()); err != nil {
+	ti := tokenindex.Build(ix)
+	// ti is built (not loaded), so Close is a no-op today; the defer documents
+	// the contract at this function-scoped call site rather than relying on that.
+	defer ti.Close()
+	if err := savePersistedTokens(ti, tokenPath, paths, ix.NumBlobs()); err != nil {
 		return "", "", fmt.Errorf("server: persist token index: %w", err)
 	}
 	if err := savePersistedSymbols(symbol.BuildMulti(ix), symbolPath, paths, ix.NumBlobs()); err != nil {
