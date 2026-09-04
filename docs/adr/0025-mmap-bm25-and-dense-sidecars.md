@@ -40,8 +40,10 @@ of parsing them.
   per-query dimension-validation loop is deleted: a flat block makes a
   mixed-dimension store structurally impossible.
 - **`internal/mmapslice`** is the one place `unsafe` lives for both sidecars:
-  `Float32s`/`Uint32s`/`Uint64s` alias a byte slice with alignment and
-  little-endian checks, fuzz-tested against truncated and corrupt input.
+  `Float32s`/`Uint32s`/`Int8s` alias a byte slice with alignment and
+  little-endian checks (`Int8s` has no alignment constraint — single bytes —
+  and is what the int8 dense arm's vector block aliases), fuzz-tested against
+  truncated and corrupt input.
 - Both formats bump their magic/version (`TKI2`, `MDXE` v3) rather than adding a
   migration path. `Load` returns `ErrLegacyFormat` on the old versions; every call
   site already treats a load failure as a cache miss and rebuilds, so no converter

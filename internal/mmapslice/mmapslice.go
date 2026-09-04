@@ -44,6 +44,14 @@ func init() {
 	// order matches the format's declared little-endian order. Every moedex
 	// target (darwin/linux on amd64/arm64) is little-endian; fail loudly rather
 	// than silently returning byte-swapped data if that ever stops being true.
+	//
+	// This package also assumes a 64-bit int: check computes n*size and callers
+	// compute element counts (count*dim in internal/embed/codec.go, len(chunks)*
+	// dim in checkVecLen) in plain int arithmetic. On a 32-bit int a large
+	// count*dim would wrap the same way in both places and agree, passing a
+	// silently truncated store rather than failing. Moot for this project's only
+	// targets (amd64/arm64, both 64-bit), so left as an assumption rather than a
+	// runtime check.
 	var probe uint16 = 1
 	if *(*byte)(unsafe.Pointer(&probe)) != 1 {
 		panic("mmapslice: big-endian architecture is not supported")
@@ -51,7 +59,7 @@ func init() {
 }
 
 // check validates n elements of size bytes against b and returns the base
-// pointer. It is the single place all four reinterpreters get their guards.
+// pointer. It is the single place all three reinterpreters get their guards.
 func check(b []byte, n, size int) (unsafe.Pointer, error) {
 	if n < 0 {
 		return nil, fmt.Errorf("mmapslice: negative element count %d", n)
@@ -89,11 +97,6 @@ func typed[T any](b []byte, n int) ([]T, error) {
 // Uint32s reinterprets the first n*4 bytes of b as a []uint32 without copying.
 func Uint32s(b []byte, n int) ([]uint32, error) {
 	return typed[uint32](b, n)
-}
-
-// Uint64s reinterprets the first n*8 bytes of b as a []uint64 without copying.
-func Uint64s(b []byte, n int) ([]uint64, error) {
-	return typed[uint64](b, n)
 }
 
 // Float32s reinterprets the first n*4 bytes of b as a []float32 without copying.

@@ -25,14 +25,6 @@ func FuzzReinterpretersNeverPanic(f *testing.F) {
 				_ = s[i]
 			}
 		}
-		if s, err := Uint64s(b, n); err == nil {
-			if len(s) != n {
-				t.Fatalf("Uint64s len %d != n %d", len(s), n)
-			}
-			for i := range s {
-				_ = s[i]
-			}
-		}
 		if s, err := Float32s(b, n); err == nil {
 			if len(s) != n {
 				t.Fatalf("Float32s len %d != n %d", len(s), n)
