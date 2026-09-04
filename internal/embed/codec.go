@@ -134,6 +134,65 @@ func (s *Store) Save(path string) error {
 	return writeStoreAtomic(path, buf)
 }
 
+// SaveQuantized writes the store in int8 format (MDXE v3, quant=1): each
+// vector is quantized independently (Quantize) with its own scale, cutting
+// the mapped vector block to roughly a quarter of Save's float32 size. This
+// is a separate entry point from Save, which always writes float32 —
+// int8 is opt-in and never affects what Save produces.
+func (s *Store) SaveQuantized(path string) error {
+	if len(s.chunks) > 0 && !s.HasKeys() {
+		return fmt.Errorf("embed: refusing to save store without content keys (%d chunks, %d keys); call FillKeys first", len(s.chunks), len(s.keys))
+	}
+	count := uint64(len(s.chunks))
+	dim := uint64(s.dim)
+
+	h := storeHeader{dim: uint32(s.dim), count: uint32(count), quant: quantInt8}
+	off := uint64(storeHeaderSize)
+	h.chunksOff = off
+	off += count * chunkRecordSize
+	h.keysOff = off
+	off += count * keyRecordSize
+	h.vecOff = alignUp(off, vecAlign)
+	off = h.vecOff + count*dim
+	h.scaleOff = off
+	off += count * 4
+	h.fileLen = off
+
+	buf := make([]byte, h.fileLen)
+	le := binary.LittleEndian
+	copy(buf, storeMagic4)
+	le.PutUint32(buf[4:], storeVersion)
+	le.PutUint32(buf[8:], h.dim)
+	le.PutUint32(buf[12:], h.count)
+	buf[16] = h.quant
+	le.PutUint64(buf[24:], h.chunksOff)
+	le.PutUint64(buf[32:], h.keysOff)
+	le.PutUint64(buf[40:], h.vecOff)
+	le.PutUint64(buf[48:], h.scaleOff)
+	le.PutUint64(buf[56:], h.fileLen)
+
+	for i, c := range s.chunks {
+		r := buf[h.chunksOff+uint64(i)*chunkRecordSize:]
+		le.PutUint64(r[0:], c.Blob)
+		le.PutUint32(r[8:], uint32(c.StartLine))
+		le.PutUint32(r[12:], uint32(c.EndLine))
+		le.PutUint64(r[16:], uint64(c.StartByte))
+		le.PutUint64(r[24:], uint64(c.EndByte))
+	}
+	for i, k := range s.keys {
+		copy(buf[h.keysOff+uint64(i)*keyRecordSize:], k[:])
+	}
+	for i := range s.chunks {
+		q, scale := Quantize(s.vecAt(i))
+		dst := buf[h.vecOff+uint64(i)*dim:]
+		for j, x := range q {
+			dst[j] = byte(x)
+		}
+		le.PutUint32(buf[h.scaleOff+uint64(i)*4:], math.Float32bits(scale))
+	}
+	return writeStoreAtomic(path, buf)
+}
+
 // writeStoreAtomic writes buf to path via a temp sibling and atomic rename: a
 // crash or torn write must never leave a truncated multi-GB store where a
 // valid one was — the daemon would load that corrupt sidecar on its next
@@ -306,20 +365,6 @@ func LoadStore(path string) (*Store, error) {
 // mapping that owns b's lifetime, or nil when b is a heap-owned []byte (e.g.
 // from os.ReadFile) that needs no separate release.
 func storeFrom(h storeHeader, b []byte, mm io.Closer) (*Store, error) {
-	// parseStoreHeader validates quant against the KNOWN set (quantF32,
-	// quantInt8) and sizes the vec section's bounds accordingly, but
-	// quantInt8 is known-and-not-yet-decoded here: this loop unconditionally
-	// reads count*dim*4 bytes (float32), four times what an int8 block
-	// holds. Without this guard a quantInt8 file runs the decode past the
-	// validated vec section and panics on a slice-bounds error instead of
-	// failing the load cleanly — and the store is a cache whose .meta
-	// validator treats a load failure as a miss and re-embeds, so a clean
-	// error degrades to lexical-only while a panic takes the process down.
-	// Task 11 replaces this guard with the real int8 decode path.
-	if h.quant != quantF32 {
-		return nil, fmt.Errorf("embed: quantization %d is not supported by this build", h.quant)
-	}
-
 	count := int(h.count)
 	le := binary.LittleEndian
 
@@ -346,7 +391,29 @@ func storeFrom(h storeHeader, b []byte, mm io.Closer) (*Store, error) {
 	}
 
 	dim := int(h.dim)
-	if mm != nil {
+	if h.quant == quantInt8 {
+		if mm != nil {
+			vecI8, err := mmapslice.Int8s(b[h.vecOff:], count*dim)
+			if err != nil {
+				return nil, err
+			}
+			s.vecI8 = vecI8
+			scales, err := mmapslice.Float32s(b[h.scaleOff:], count)
+			if err != nil {
+				return nil, err
+			}
+			s.scales = scales
+		} else {
+			s.vecI8 = make([]int8, count*dim)
+			for i := range s.vecI8 {
+				s.vecI8[i] = int8(b[h.vecOff+uint64(i)])
+			}
+			s.scales = make([]float32, count)
+			for i := range s.scales {
+				s.scales[i] = math.Float32frombits(le.Uint32(b[h.scaleOff+uint64(i)*4:]))
+			}
+		}
+	} else if mm != nil {
 		vec, err := mmapslice.Float32s(b[h.vecOff:], count*dim)
 		if err != nil {
 			return nil, err

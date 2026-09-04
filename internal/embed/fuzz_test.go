@@ -34,12 +34,18 @@ func FuzzParseStoreHeaderNeverPanics(f *testing.F) {
 		if err != nil {
 			return
 		}
-		// A successfully parsed store must be safe to exercise fully.
+		// A successfully parsed store must be safe to exercise fully, whichever
+		// quantization it decoded to: vecAt reads the f32 block and scoreAgainst
+		// additionally exercises the int8 block plus its per-vector scale.
+		q := make([]float32, got.dim)
 		for i := 0; i < got.Len(); i++ {
-			v := got.vecAt(i)
-			for j := range v {
-				_ = v[j]
+			if got.quant == quantF32 {
+				v := got.vecAt(i)
+				for j := range v {
+					_ = v[j]
+				}
 			}
+			_ = got.scoreAgainst(q, i)
 		}
 	})
 }

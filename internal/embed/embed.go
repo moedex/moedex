@@ -361,11 +361,13 @@ func wholeBlobChunk(b *index.Blob, numLines int) Chunk {
 type Store struct {
 	dim    int
 	chunks []Chunk
-	vec    []float32  // len == len(chunks)*dim; unit-normalized, row-major
+	vec    []float32  // quantF32 only; len == len(chunks)*dim; unit-normalized, row-major
 	keys   []ChunkKey // parallel to chunks; content keys for incremental reuse (nil for a legacy v1 store)
 
-	quant uint8     // quantF32 or quantInt8; how vec/vecI8 is stored
-	mm    io.Closer // mapping backing the vectors, or nil when heap-built
+	quant  uint8     // quantF32 or quantInt8; which of vec or vecI8/scales is populated
+	vecI8  []int8    // quantInt8 only; len == len(chunks)*dim, row-major
+	scales []float32 // quantInt8 only; len == len(chunks), one scale per chunk
+	mm     io.Closer // mapping backing the vectors, or nil when heap-built
 }
 
 // Close releases the mapping backing a loaded store. It is a no-op for a store
@@ -391,13 +393,25 @@ func (s *Store) vecAt(i int) []float32 {
 }
 
 // checkVecLen reports whether the flat block's length matches the store's
-// shape (len(vec) == len(chunks)*dim). This is the invariant vecAt's slice
-// expression relies on for safety; every construction path (LoadStore, a
-// full or incremental build) must call this before returning a Store, since
-// a violation is silent rather than a crash: vecAt's bounds check is against
-// the backing array's spare capacity, not len(vec), so a too-short block can
-// return zero-padded garbage instead of failing.
+// shape (len(vec) == len(chunks)*dim for quantF32, or len(vecI8) ==
+// len(chunks)*dim with one scale per chunk for quantInt8). This is the
+// invariant vecAt's (and scoreAgainst's) slice expressions rely on for
+// safety; every construction path (LoadStore, a full or incremental build)
+// must call this before returning a Store, since a violation is silent
+// rather than a crash: those slice expressions bounds-check against the
+// backing array's spare capacity, not len(vec)/len(vecI8), so a too-short
+// block can return zero-padded garbage instead of failing.
 func (s *Store) checkVecLen() error {
+	if s.quant == quantInt8 {
+		wantVec := len(s.chunks) * s.dim
+		if len(s.vecI8) != wantVec {
+			return fmt.Errorf("embed: int8 vector block length %d != chunks(%d)*dim(%d)=%d", len(s.vecI8), len(s.chunks), s.dim, wantVec)
+		}
+		if len(s.scales) != len(s.chunks) {
+			return fmt.Errorf("embed: scale block length %d != chunks(%d)", len(s.scales), len(s.chunks))
+		}
+		return nil
+	}
 	want := len(s.chunks) * s.dim
 	if len(s.vec) != want {
 		return fmt.Errorf("embed: vector block length %d != chunks(%d)*dim(%d)=%d", len(s.vec), len(s.chunks), s.dim, want)
@@ -1112,7 +1126,7 @@ func (s *Store) Search(ctx context.Context, e Embedder, query string, topK int) 
 		go func(lo, hi int) {
 			defer wg.Done()
 			for i := lo; i < hi; i++ {
-				scores[i] = dot(q, s.vecAt(i))
+				scores[i] = s.scoreAgainst(q, i)
 			}
 		}(lo, hi)
 	}
