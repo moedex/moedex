@@ -24,7 +24,7 @@ import (
 //	  24 chunksOff uint64
 //	  32 keysOff   uint64
 //	  40 vecOff    uint64   ALWAYS a multiple of 64
-//	  48 scaleOff  uint64   quant==1 only; 0 when quant==0
+//	  48 scaleOff  uint64   quant==1 only; 0 when quant==0; a multiple of 4
 //	  56 fileLen   uint64
 //
 //	SECTIONS
@@ -33,12 +33,18 @@ import (
 //	  keys   count x 16 bytes
 //	  vec    quant==0: count*dim x float32   (64-byte aligned)
 //	         quant==1: count*dim x int8
-//	  scale  quant==1: count x float32
+//	  scale  quant==1: count x float32       (4-byte aligned)
 //
 // vecOff is padded to 64 bytes so mmapslice.Float32s can alias the block and
-// each vector starts on a cache line. Versions 1 and 2 load as ErrLegacyFormat:
-// the store is a CACHE whose .meta validator already forces a rebuild on any
-// load failure, so no converter exists.
+// each vector starts on a cache line. scaleOff is padded to 4 bytes for the
+// same reason at a smaller grain: it is itself a float32 array that
+// mmapslice.Float32s aliases, and that alias fails outright (rather than
+// silently misreading) when the offset isn't 4-byte aligned. The int8 vec
+// block ahead of it has no alignment of its own, so when count*dim isn't a
+// multiple of 4, scaleOff needs explicit padding — it does not inherit
+// vecOff's 64-byte alignment for free. Versions 1 and 2 load as
+// ErrLegacyFormat: the store is a CACHE whose .meta validator already forces
+// a rebuild on any load failure, so no converter exists.
 const (
 	storeMagic4     = "MDXE"
 	storeVersion    = 3
@@ -48,6 +54,7 @@ const (
 	chunkRecordSize = 32
 	keyRecordSize   = 16
 	vecAlign        = 64
+	scaleAlign      = 4
 
 	// maxStoreDim and maxStoreCount ceiling the header's dim/count BEFORE any
 	// multiplication in parseStoreHeader's section-bounds math, so that math
@@ -154,8 +161,8 @@ func (s *Store) SaveQuantized(path string) error {
 	off += count * keyRecordSize
 	h.vecOff = alignUp(off, vecAlign)
 	off = h.vecOff + count*dim
-	h.scaleOff = off
-	off += count * 4
+	h.scaleOff = alignUp(off, scaleAlign)
+	off = h.scaleOff + count*4
 	h.fileLen = off
 
 	buf := make([]byte, h.fileLen)
@@ -304,6 +311,9 @@ func parseStoreHeader(b []byte, size uint64) (storeHeader, error) {
 	}
 	if h.vecOff%vecAlign != 0 {
 		return h, fmt.Errorf("embed: vector block at %d is not %d-byte aligned", h.vecOff, vecAlign)
+	}
+	if h.quant == quantInt8 && h.scaleOff%scaleAlign != 0 {
+		return h, fmt.Errorf("embed: scale block at %d is not %d-byte aligned", h.scaleOff, scaleAlign)
 	}
 	n := uint64(h.count)
 	d := uint64(h.dim)
