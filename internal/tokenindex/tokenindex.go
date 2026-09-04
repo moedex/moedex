@@ -148,7 +148,10 @@ type postRec struct {
 // reduction is what lets a 16 GB machine build the index rather than only
 // serve it. The dominant remaining lever is GC headroom rather than this
 // algorithm: GOGC=25 alone takes peak to 4,974 MB and RSS to 6.39 GB, at
-// about 12% more wall time.
+// about 12% more wall time. Wall time is about 38s for that corpus; it was
+// 4m21s before the per-blob scratch map became a dense array, because a
+// reused Go map walks its whole table on every range and one blob held 63%
+// of the corpus vocabulary.
 func Build(ix *index.Index) *TokenIndex {
 	ti := &TokenIndex{}
 	if ix == nil {
@@ -160,7 +163,18 @@ func Build(ix *index.Index) *TokenIndex {
 	dict := make(map[string]uint32)
 	var terms []string
 	var recs []postRec
-	perBlob := make(map[uint32]uint32)
+	// Per-blob term frequencies live in a dense scratch array indexed by term
+	// id, with touched listing the ids this blob actually hit, rather than in a
+	// reused map[uint32]uint32. A Go map never gives capacity back: clear keeps
+	// the table (golang/go#70617), so a map reused across blobs stays sized for
+	// the LARGEST blob in the corpus forever, and both clear and range walk the
+	// whole table rather than the live entries. One generated file with ~11M
+	// distinct terms therefore taxed every one of the other 57k blobs, and
+	// `for tid, tf := range perBlob` alone was 74% of the whole build. Indexing
+	// an array costs 4 bytes per distinct term (70 MB on the reference corpus)
+	// and makes the flush O(distinct terms in THIS blob).
+	var termTF []uint32
+	var touched []uint32
 
 	n := ix.NumBlobs()
 	for id := uint64(0); id < uint64(n); id++ {
@@ -176,18 +190,25 @@ func Build(ix *index.Index) *TokenIndex {
 		ti.docLen[b.ID] = uint32(len(toks))
 		ti.totalLen += len(toks)
 
-		clear(perBlob)
+		touched = touched[:0]
 		for _, t := range toks {
 			tid, ok := dict[t]
 			if !ok {
 				tid = uint32(len(terms))
 				dict[t] = tid
 				terms = append(terms, t)
+				termTF = append(termTF, 0)
 			}
-			perBlob[tid]++
+			if termTF[tid] == 0 {
+				touched = append(touched, tid)
+			}
+			termTF[tid]++
 		}
-		for tid, tf := range perBlob {
-			recs = append(recs, postRec{term: tid, blob: uint32(b.ID), tf: tf})
+		// Flush this blob's postings and reset only the slots it used, so the
+		// scratch array is clean for the next blob without a full sweep.
+		for _, tid := range touched {
+			recs = append(recs, postRec{term: tid, blob: uint32(b.ID), tf: termTF[tid]})
+			termTF[tid] = 0
 		}
 	}
 	// dict is dead the moment tokenizing ends: every term it can produce is
@@ -196,6 +217,8 @@ func Build(ix *index.Index) *TokenIndex {
 	// memory before the CSR output arrays are allocated below, rather than
 	// letting it sit live through the whole emit phase.
 	dict = nil
+	termTF = nil
+	touched = nil
 
 	// Sort the dictionary, then remap ids so that a term's final rank is
 	// known without a second pass over the text.
