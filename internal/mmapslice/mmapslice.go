@@ -73,39 +73,36 @@ func check(b []byte, n, size int) (unsafe.Pointer, error) {
 	return p, nil
 }
 
-// Uint32s reinterprets the first n*4 bytes of b as a []uint32 without copying.
-func Uint32s(b []byte, n int) ([]uint32, error) {
-	p, err := check(b, n, 4)
+// typed reinterprets the first n elements of b as a []T without copying. Size
+// and cast both derive from T, so a size/cast mismatch is unrepresentable —
+// which is the point: this is the only unsafe in the codebase.
+func typed[T any](b []byte, n int) ([]T, error) {
+	var zero T
+	size := int(unsafe.Sizeof(zero))
+	p, err := check(b, n, size)
 	if p == nil {
 		return nil, err
 	}
-	return unsafe.Slice((*uint32)(p), n), nil
+	return unsafe.Slice((*T)(p), n), nil
+}
+
+// Uint32s reinterprets the first n*4 bytes of b as a []uint32 without copying.
+func Uint32s(b []byte, n int) ([]uint32, error) {
+	return typed[uint32](b, n)
 }
 
 // Uint64s reinterprets the first n*8 bytes of b as a []uint64 without copying.
 func Uint64s(b []byte, n int) ([]uint64, error) {
-	p, err := check(b, n, 8)
-	if p == nil {
-		return nil, err
-	}
-	return unsafe.Slice((*uint64)(p), n), nil
+	return typed[uint64](b, n)
 }
 
 // Float32s reinterprets the first n*4 bytes of b as a []float32 without copying.
 func Float32s(b []byte, n int) ([]float32, error) {
-	p, err := check(b, n, 4)
-	if p == nil {
-		return nil, err
-	}
-	return unsafe.Slice((*float32)(p), n), nil
+	return typed[float32](b, n)
 }
 
 // Int8s reinterprets the first n bytes of b as a []int8 without copying. Single
 // bytes have no alignment constraint.
 func Int8s(b []byte, n int) ([]int8, error) {
-	p, err := check(b, n, 1)
-	if p == nil {
-		return nil, err
-	}
-	return unsafe.Slice((*int8)(p), n), nil
+	return typed[int8](b, n)
 }
