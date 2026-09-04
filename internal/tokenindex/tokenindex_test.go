@@ -1,6 +1,8 @@
 package tokenindex
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -309,5 +311,63 @@ func TestLoadBadMagic(t *testing.T) {
 	}
 	if _, err := Load(path); err == nil {
 		t.Fatal("expected error loading file with bad magic, got nil")
+	}
+}
+
+func TestBuildIsDeterministic(t *testing.T) {
+	a := Build(threeBlobIndex(t))
+	b := Build(threeBlobIndex(t))
+	if string(a.termText) != string(b.termText) {
+		t.Fatal("termText differs between two builds of the same corpus")
+	}
+	if len(a.postBlob) != len(b.postBlob) {
+		t.Fatalf("posting counts differ: %d vs %d", len(a.postBlob), len(b.postBlob))
+	}
+	for i := range a.postBlob {
+		if a.postBlob[i] != b.postBlob[i] || a.postTF[i] != b.postTF[i] {
+			t.Fatalf("posting %d differs between builds", i)
+		}
+	}
+}
+
+func TestBuildEmitsAscendingBlobsWithinATerm(t *testing.T) {
+	ix := index.New()
+	// Same term in several blobs, added so that map iteration order cannot
+	// accidentally produce the right answer.
+	for i := 0; i < 32; i++ {
+		ix.AddFile("r", fmt.Sprintf("f%d.go", i), fmt.Sprintf("/r/f%d.go", i), fmt.Sprintf("sha%d", i), []byte("shared unique"+fmt.Sprint(i)))
+	}
+	ti := Build(ix)
+	p := ti.Postings("shared")
+	if p.Len() != 32 {
+		t.Fatalf("df = %d, want 32", p.Len())
+	}
+	for i := 1; i < p.Len(); i++ {
+		if p.Blob(i-1) >= p.Blob(i) {
+			t.Fatalf("blob ids not ascending at %d: %d then %d", i, p.Blob(i-1), p.Blob(i))
+		}
+	}
+}
+
+func TestSaveIsDeterministic(t *testing.T) {
+	dir := t.TempDir()
+	a := filepath.Join(dir, "a.tki")
+	b := filepath.Join(dir, "b.tki")
+	if err := Save(Build(threeBlobIndex(t)), a); err != nil {
+		t.Fatal(err)
+	}
+	if err := Save(Build(threeBlobIndex(t)), b); err != nil {
+		t.Fatal(err)
+	}
+	ba, err := os.ReadFile(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bb, err := os.ReadFile(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(ba, bb) {
+		t.Fatal("two builds of the same corpus produced different TKI2 bytes; map iteration order is leaking into the output")
 	}
 }
