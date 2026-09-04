@@ -37,14 +37,19 @@ func FuzzLoadFromNeverPanics(f *testing.F) {
 		for blob := uint64(0); blob < 8; blob++ {
 			_ = got.DocLen(blob)
 		}
+		// Slice postings directly by term index rather than resolving through
+		// Postings(term), which binary-searches the term dictionary: routing
+		// through the search would gate this loop's coverage on Postings ever
+		// resolving a term correctly, so a term the search mis-resolves (the
+		// class of bug validateCSR's sortedness check now guards against)
+		// would never be exercised here.
 		for i := 0; i < len(got.termOff)-1; i++ {
-			term := string(got.termBytes(i))
-			p := got.Postings(term)
-			for j := 0; j < p.Len(); j++ {
-				_ = p.Blob(j)
-				_ = p.TF(j)
+			blobs := got.postBlob[got.postOff[i]:got.postOff[i+1]]
+			tfs := got.postTF[got.postOff[i]:got.postOff[i+1]]
+			for j := range blobs {
+				_ = blobs[j]
+				_ = tfs[j]
 			}
-			_ = p.TFOf(0)
 		}
 	})
 }

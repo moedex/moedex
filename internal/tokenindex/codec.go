@@ -1,6 +1,7 @@
 package tokenindex
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -322,6 +323,25 @@ func validateCSR(ti *TokenIndex) error {
 	}
 	if len(ti.postTF) != len(ti.postBlob) {
 		return errors.New("tokenindex: postTF and postBlob lengths differ")
+	}
+	// The monotonic-offset checks above only prove the CSR shape is
+	// well-formed; they say nothing about term or posting ORDER. termIndex's
+	// binary search (postings.go) and lexicalArm's merge walk (ranker.go) both
+	// assume terms ascend lexicographically and each term's blob IDs ascend
+	// within its posting range — a well-formed but unsorted file makes both
+	// silently return wrong results rather than fail.
+	for i := 0; i < n-1; i++ {
+		if bytes.Compare(ti.termBytes(i), ti.termBytes(i+1)) >= 0 {
+			return fmt.Errorf("tokenindex: term dictionary not strictly ascending at term %d", i)
+		}
+	}
+	for i := 0; i < n; i++ {
+		blobs := ti.postBlob[ti.postOff[i]:ti.postOff[i+1]]
+		for j := 0; j+1 < len(blobs); j++ {
+			if blobs[j] >= blobs[j+1] {
+				return fmt.Errorf("tokenindex: postings not strictly ascending for term %d at posting %d", i, j)
+			}
+		}
 	}
 	return nil
 }
