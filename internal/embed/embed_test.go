@@ -452,10 +452,16 @@ func TestDotClampsCosineRoundingOvershoot(t *testing.T) {
 // TestSearch_MixedDimStore_ReturnsError previously guarded against a
 // corrupt/mixed-dim store (e.g. an incremental rebuild that reused a vector
 // from a store built with a different embedder) silently scoring every chunk
-// 0 via dot's length-mismatch guard. It is removed: a flat vec block of
-// len(chunks)*dim float32s cannot represent a per-chunk dimension at all, so
-// the mixed-dim store it constructed is no longer expressible, not merely
-// undetected. See Store's doc comment and Search's deleted validation sweep.
+// 0 via dot's length-mismatch guard. It is removed because it built the bad
+// store via a per-chunk []Vector literal of a length the flat block can no
+// longer represent that way. The underlying failure mode it guarded against
+// is still very possible — a malformed flat block, or a reused vector of the
+// wrong length, doesn't panic (vecAt bounds-checks against capacity, not
+// len(vec)) — and is now guarded at construction time by checkVecLen and the
+// scatter-loop length check in BuildStoreIncrementalWithProgress, covered by
+// TestCheckVecLen_RejectsMismatchedBlock and
+// TestBuildStoreIncremental_RejectsWrongLenReuseVector in
+// incremental_test.go.
 
 func TestSaveLoad_RoundTrip(t *testing.T) {
 	ctx := context.Background()

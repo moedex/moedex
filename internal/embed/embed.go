@@ -348,8 +348,16 @@ func wholeBlobChunk(b *index.Blob, numLines int) Chunk {
 // Vectors live in ONE contiguous float32 block rather than a slice of slices.
 // The old shape cost 953,451 separate 3,072-byte allocations plus 23 MB of
 // slice headers on the reference corpus, and made a mapped backing impossible.
-// A flat block also makes a mixed-dimension store structurally impossible,
-// which is what lets Search drop its per-query validation sweep.
+// A flat block also makes a mixed-dimension store structurally impossible to
+// express AS LONG AS the invariant len(vec) == len(chunks)*dim holds — which
+// is what lets Search drop its per-query validation sweep. That invariant is
+// NOT self-enforcing: every path that builds or loads a Store must establish
+// it and check it with checkVecLen before the store is used, because a
+// violation does not fail safely. vecAt's slice expression bounds-checks
+// against the backing array's capacity, not len(vec), so a too-short block
+// built via append (spare capacity) silently returns a zero-padded garbage
+// vector instead of panicking — the exact "scores 0 instead of erroring"
+// failure this design is supposed to prevent, just reached a different way.
 type Store struct {
 	dim    int
 	chunks []Chunk
@@ -358,9 +366,27 @@ type Store struct {
 }
 
 // vecAt returns chunk i's vector as a sub-slice of the flat block. The result
-// aliases the block and must not be modified.
+// aliases the block and must not be modified. It trusts the len(vec) ==
+// len(chunks)*dim invariant rather than checking it — vecAt is the innermost
+// loop of the dense scan (on the order of a million calls per query), so the
+// invariant is validated once at construction (checkVecLen), not here.
 func (s *Store) vecAt(i int) []float32 {
 	return s.vec[i*s.dim : (i+1)*s.dim]
+}
+
+// checkVecLen reports whether the flat block's length matches the store's
+// shape (len(vec) == len(chunks)*dim). This is the invariant vecAt's slice
+// expression relies on for safety; every construction path (LoadStore, a
+// full or incremental build) must call this before returning a Store, since
+// a violation is silent rather than a crash: vecAt's bounds check is against
+// the backing array's spare capacity, not len(vec), so a too-short block can
+// return zero-padded garbage instead of failing.
+func (s *Store) checkVecLen() error {
+	want := len(s.chunks) * s.dim
+	if len(s.vec) != want {
+		return fmt.Errorf("embed: vector block length %d != chunks(%d)*dim(%d)=%d", len(s.vec), len(s.chunks), s.dim, want)
+	}
+	return nil
 }
 
 // Dim returns the stored embedding dimension.
@@ -498,6 +524,9 @@ func BuildStoreIncrementalWithProgress(ctx context.Context, ix *index.Index, e E
 	stats.Total = len(chunks)
 	if len(chunks) == 0 {
 		s.dim = e.Dim()
+		if err := s.checkVecLen(); err != nil {
+			return nil, stats, err
+		}
 		return s, stats, nil
 	}
 
@@ -540,8 +569,15 @@ func BuildStoreIncrementalWithProgress(ctx context.Context, ix *index.Index, e E
 	}
 
 	// Scatter: each chunk's vector is either reused or its distinct embedded text.
+	// A reused vector's length is checked here, at the one place a caller-supplied
+	// vector enters the store: an undetected wrong-length reuse would misalign
+	// every subsequent chunk's slice of the flat block, not just its own (the old
+	// per-chunk []Vector shape corrupted only the one offending index).
 	for i, k := range keys {
 		if v, ok := reuse[k]; ok {
+			if len(v) != s.dim {
+				return nil, stats, fmt.Errorf("embed: reuse vector for key %x has dim %d, want %d", k, len(v), s.dim)
+			}
 			vectors[i] = v
 			stats.Reused++
 			continue
@@ -556,6 +592,9 @@ func BuildStoreIncrementalWithProgress(ctx context.Context, ix *index.Index, e E
 		s.vec = append(s.vec, v...)
 	}
 	s.keys = keys
+	if err := s.checkVecLen(); err != nil {
+		return nil, stats, err
+	}
 	return s, stats, nil
 }
 

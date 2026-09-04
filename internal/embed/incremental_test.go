@@ -193,6 +193,50 @@ func TestIncremental_DedupsRepeatedNewText(t *testing.T) {
 	}
 }
 
+// TestBuildStoreIncremental_RejectsWrongLenReuseVector guards the one place a
+// caller-supplied vector enters the flat block: a reuse entry whose length
+// doesn't match the store's dim must be rejected with a precise error rather
+// than silently misaligning every subsequent chunk's slice of s.vec. See
+// checkVecLen and the length check in BuildStoreIncrementalWithProgress's
+// scatter loop.
+func TestBuildStoreIncremental_RejectsWrongLenReuseVector(t *testing.T) {
+	e := newFakeEmbedder(16)
+	ix := buildFileIndex(t, map[string]string{
+		"a.go": "package a\nfunc A() {}\n",
+		"b.go": "package b\nfunc B() {}\n",
+	})
+	// Seed reuse for a.go's chunk with a vector of the wrong dimension, as if it
+	// were carried over from a store built with a different embedder.
+	k := chunkKey([]byte("package a\nfunc A() {}\n"))
+	reuse := map[ChunkKey]Vector{k: make(Vector, 3)}
+
+	_, _, err := BuildStoreIncremental(context.Background(), ix, e, tcLines, tcOverlap, reuse)
+	if err == nil {
+		t.Fatal("BuildStoreIncremental: want error for wrong-length reuse vector, got nil")
+	}
+}
+
+// TestStoreUsesAFlatVectorBlock (embed_test.go) covers the happy path;
+// TestCheckVecLen_RejectsMismatchedBlock covers the invariant checkVecLen
+// exists to enforce: a flat block whose length isn't len(chunks)*dim, in
+// both directions (too short and too long).
+func TestCheckVecLen_RejectsMismatchedBlock(t *testing.T) {
+	tooShort := &Store{dim: 4, chunks: make([]Chunk, 3), vec: make([]float32, 8)}
+	if err := tooShort.checkVecLen(); err == nil {
+		t.Fatal("checkVecLen: want error for a block shorter than chunks*dim, got nil")
+	}
+
+	tooLong := &Store{dim: 4, chunks: make([]Chunk, 3), vec: make([]float32, 16)}
+	if err := tooLong.checkVecLen(); err == nil {
+		t.Fatal("checkVecLen: want error for a block longer than chunks*dim, got nil")
+	}
+
+	exact := &Store{dim: 4, chunks: make([]Chunk, 3), vec: make([]float32, 12)}
+	if err := exact.checkVecLen(); err != nil {
+		t.Fatalf("checkVecLen: want nil for an exact-length block, got %v", err)
+	}
+}
+
 // TestStoreCodec_V2RoundTrip checks a v2 store (with keys) round-trips on disk.
 func TestStoreCodec_V2RoundTrip(t *testing.T) {
 	e := newFakeEmbedder(16)

@@ -270,5 +270,8 @@ func LoadStore(path string) (*Store, error) {
 		}
 		s.vec[i] = math.Float32frombits(le.Uint32(u32[:]))
 	}
+	if err := s.checkVecLen(); err != nil {
+		return nil, err
+	}
 	return s, nil
 }
