@@ -1,0 +1,44 @@
+{
+  "task": "locate-validation-service",
+  "reviewer": "root",
+  "reviewed_utc": "2026-10-02T02:00:25.041099+00:00",
+  "answer_sha256": "212b207c97947e3fd55047a80416d08fd3c265f84cca04397a57a60bdc81c34b",
+  "atoms": [
+    {
+      "id": "locate-validation-service.1",
+      "correctness": 1,
+      "evidence": 0.5,
+      "reason": "Correct scoped mapping and exact expression, retrieved in response 002. Final cites Worker Program.cs:61, but actual registration is line 62; line 61 is blank."
+    },
+    {
+      "id": "locate-validation-service.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Implementation and method explicitly identified and supported by cited service lines 7-20 in response 002."
+    },
+    {
+      "id": "locate-validation-service.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Constructor interface injection and field storage correctly described with supporting 9-19 citation."
+    },
+    {
+      "id": "locate-validation-service.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Consume call and all three arguments in correct order, supported by cited 21-24."
+    },
+    {
+      "id": "locate-validation-service.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly separates configured mapping from concrete runtime instance selection; relevant wiring and interface source retrieved."
+    }
+  ],
+  "correctness": 5,
+  "evidence": 4.5,
+  "possible": 5,
+  "unsupported_claims": [],
+  "strict_success": false,
+  "isolation_audit": "Solver attestation and logged RPCs available; full model/tool activity not exposed to root, so host isolation is not independently verified."
+}

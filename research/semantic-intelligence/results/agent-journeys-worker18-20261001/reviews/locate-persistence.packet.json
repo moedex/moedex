@@ -1,0 +1,109 @@
+{
+  "task": {
+    "id": "locate-persistence",
+    "journey": "locate_behavior",
+    "prompt": "Locate creation, entity insertion, publication, and persistence of a new registration. Describe their source order without claiming a runtime transaction guarantee.",
+    "requirements": [
+      {
+        "claim": "SubmitRegistration constructs Registration with a new GUID, UTC date, member, event and payment.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "start_line": 21,
+            "end_line": 30,
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+          }
+        ],
+        "id": "locate-persistence.1",
+        "weight": 1
+      },
+      {
+        "claim": "It awaits Set<Registration>().AddAsync(registration).",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "start_line": 32,
+            "end_line": 32,
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+          }
+        ],
+        "id": "locate-persistence.2",
+        "weight": 1
+      },
+      {
+        "claim": "It then awaits Publish(new RegistrationSubmitted) copying the registration fields/payment.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "start_line": 34,
+            "end_line": 41,
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+          }
+        ],
+        "id": "locate-persistence.3",
+        "weight": 1
+      },
+      {
+        "claim": "SaveChangesAsync follows publication in source order, inside the duplicate exception handling block.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "start_line": 43,
+            "end_line": 50,
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+          }
+        ],
+        "id": "locate-persistence.4",
+        "weight": 1
+      },
+      {
+        "claim": "Registration is returned only after that save block completes.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "start_line": 45,
+            "end_line": 52,
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+          }
+        ],
+        "id": "locate-persistence.5",
+        "weight": 1
+      },
+      {
+        "claim": "Source order alone does not establish runtime atomicity or delivered publication; API configures EF bus outbox.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Api/Program.cs",
+            "start_line": 73,
+            "end_line": 81,
+            "raw_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53"
+          },
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "start_line": 32,
+            "end_line": 45,
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+          }
+        ],
+        "id": "locate-persistence.6",
+        "weight": 1
+      }
+    ],
+    "permissible_unknowns": [
+      "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+      "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+    ]
+  },
+  "scoring": {
+    "atomic_correctness": "Each atom scores 1 if correct and explicit, 0.5 if correct but materially incomplete, 0 if absent/incorrect. Report raw numerator/denominator and per-atom verdicts.",
+    "evidence": "Independently score each atom 1 for precise retrievable citation supporting the whole claim, 0.5 for a relevant but incomplete/broad citation, 0 for absent or contradictory evidence. Line-number equivalents and exact tool source spans are acceptable.",
+    "unsupported_claims": "Inventory false or unsupported claims separately with severity. Unsupported runtime certainty or invented source facts prevents a fully-correct task label even if positive atoms are present.",
+    "abstention": "Explicit unknowns avoid false-claim penalties but do not earn missing source-fact credit. Missing tool capability is incomplete evidence, not itself a false claim.",
+    "task_success": "All atoms receive correctness=1 and evidence=1, no material unsupported claims, and applicable configuration/runtime distinction is stated. Report graded scores as well as this strict success label.",
+    "review": "Two independent source reviewers adjudicate using source, rubric and retained solver transcript; disagreements retained and resolved explicitly. No tool output creates new gold after execution.",
+    "runtime_unknown_atoms": "Citations support the visible source limits, not proof that no unseen runtime evidence could exist."
+  },
+  "source_root": "/Users/zakkeown/Code/moedex/.local/application-impact/Sample-Outbox",
+  "run_directory": "/Users/zakkeown/Code/moedex/.local/journey-readiness/solvers/locate-persistence",
+  "rubric_source": "research/semantic-intelligence/results/agent-journeys-20261001/source-rubric.json"
+}

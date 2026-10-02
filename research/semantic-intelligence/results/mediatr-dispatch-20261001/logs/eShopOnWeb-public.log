@@ -1,0 +1,10 @@
+mediator-orders resolved 1
+mediator-details resolved 1
+orders-handler resolved 0
+details-handler resolved 1
+assembly-scan resolved 0
+order-registration resolved 1
+open-repository resolved 0
+checkout-call resolved 0
+order-implementation resolved 1
+repository-call resolved 0

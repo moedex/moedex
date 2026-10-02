@@ -1,0 +1,6 @@
+EVAL net10.0 /Users/zakkeown/Code/moedex/.local/holdout-quartz/build-source/artifacts/bin/Quartz/debug/Quartz.dll
+EVAL netstandard2.0 /Users/zakkeown/Code/moedex/.local/holdout-quartz/build-source/artifacts/bin/Quartz.Analyzers/debug/Quartz.Analyzers.dll
+{"Name":"Quartz","FilePath":"/Users/zakkeown/Code/moedex/.local/holdout-quartz/build-source/src/Quartz/Quartz.csproj","OutputFilePath":"/Users/zakkeown/Code/moedex/.local/holdout-quartz/build-source/artifacts/bin/Quartz/debug/Quartz.dll","Refs":[],"Metadata":181}
+{"Name":"Quartz.Analyzers","FilePath":"/Users/zakkeown/Code/moedex/.local/holdout-quartz/build-source/src/Quartz.Analyzers/Quartz.Analyzers.csproj","OutputFilePath":"/Users/zakkeown/Code/moedex/.local/holdout-quartz/build-source/artifacts/bin/Quartz.Analyzers/debug/Quartz.Analyzers.dll","Refs":[],"Metadata":123}
+[Warning] Duplicate source file '/Users/zakkeown/Code/moedex/.local/holdout-quartz/build-source/src/Quartz.Analyzers/AnalyzerReleases.Shipped.md' in project '/Users/zakkeown/Code/moedex/.local/holdout-quartz/build-source/src/Quartz.Analyzers/Quartz.Analyzers.csproj'
+[Warning] Duplicate source file '/Users/zakkeown/Code/moedex/.local/holdout-quartz/build-source/src/Quartz.Analyzers/AnalyzerReleases.Unshipped.md' in project '/Users/zakkeown/Code/moedex/.local/holdout-quartz/build-source/src/Quartz.Analyzers/Quartz.Analyzers.csproj'

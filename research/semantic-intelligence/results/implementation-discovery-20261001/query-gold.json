@@ -1,0 +1,317 @@
+{
+  "version": 1,
+  "frozen_at_utc": "2026-10-01T17:51:54.917314+00:00",
+  "classification": "development_reverse_query_regression_not_new_holdout",
+  "corpora": {
+    "eShop": {
+      "commit": "f2369529433374a01b864b6fa1499ad894756f53",
+      "configuration": "Debug",
+      "framework": "net8.0",
+      "source_gold": "../eshop-webhooks-holdout-20261001/source-gold-v2.json",
+      "source_gold_sha256": "8d703f654a091d8c803b173612d3af4401b7e1034a1eb2ba20d34d3f00ac4f62"
+    },
+    "Sample-Outbox": {
+      "commit": "1ab8e66ebf96e5733e68c2f4d2201276f38ed9c5",
+      "configuration": "Debug",
+      "framework": "net8.0",
+      "source_gold": "../application-outbox-20261001/wrapper-path-gold-v1.json",
+      "source_gold_sha256": "386cd0f02408434a08c65f54bc38d8e17d6c082395761441471efabcc70c6506"
+    }
+  },
+  "positive_cases": [
+    {
+      "id": "webhooks-implementation-WebhooksSender",
+      "corpus": "eShop",
+      "interface_member": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "M:Webhooks.API.Services.IWebhooksSender.SendAll(System.Collections.Generic.IEnumerable{Webhooks.API.Model.WebhookSubscription},Webhooks.API.Model.WebhookData)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "expected_implementations": [
+        {
+          "implementation_method": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+            "descriptor": "M:Webhooks.API.Services.WebhooksSender.SendAll(System.Collections.Generic.IEnumerable{Webhooks.API.Model.WebhookSubscription},Webhooks.API.Model.WebhookData)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "implementing_type": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+            "descriptor": "T:Webhooks.API.Services.WebhooksSender",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "source": {
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "path": "src/Webhooks.API/Services/WebhooksSender.cs",
+            "byte_offset": 177,
+            "byte_length": 7,
+            "source_sha256": "bab05a210020d2ac9b9f83d4d81671d74e0132f05983d15c86b81f26bd06e17b"
+          }
+        }
+      ],
+      "expected_discovery_projects": [
+        "src/Webhooks.API/Webhooks.API.csproj"
+      ],
+      "expected_context_alternatives": 1
+    },
+    {
+      "id": "webhooks-implementation-WebhooksRetriever",
+      "corpus": "eShop",
+      "interface_member": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "M:Webhooks.API.Services.IWebhooksRetriever.GetSubscriptionsOfType(Webhooks.API.Model.WebhookType)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "expected_implementations": [
+        {
+          "implementation_method": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+            "descriptor": "M:Webhooks.API.Services.WebhooksRetriever.GetSubscriptionsOfType(Webhooks.API.Model.WebhookType)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "implementing_type": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+            "descriptor": "T:Webhooks.API.Services.WebhooksRetriever",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "source": {
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "path": "src/Webhooks.API/Services/WebhooksRetriever.cs",
+            "byte_offset": 167,
+            "byte_length": 22,
+            "source_sha256": "4009336a5da589eb1065d832043f545857e3f0655cf24bb73ff7d815436515fb"
+          }
+        }
+      ],
+      "expected_discovery_projects": [
+        "src/Webhooks.API/Webhooks.API.csproj"
+      ],
+      "expected_context_alternatives": 1
+    },
+    {
+      "id": "webhooks-implementation-GrantUrlTesterService",
+      "corpus": "eShop",
+      "interface_member": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "M:Webhooks.API.Services.IGrantUrlTesterService.TestGrantUrl(System.String,System.String,System.String)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "expected_implementations": [
+        {
+          "implementation_method": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+            "descriptor": "M:Webhooks.API.Services.GrantUrlTesterService.TestGrantUrl(System.String,System.String,System.String)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "implementing_type": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+            "descriptor": "T:Webhooks.API.Services.GrantUrlTesterService",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "source": {
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "path": "src/Webhooks.API/Services/GrantUrlTesterService.cs",
+            "byte_offset": 188,
+            "byte_length": 12,
+            "source_sha256": "615dc34c619eea7119010b072b04378571328e83c4a9eb0619509ef359520c55"
+          }
+        }
+      ],
+      "expected_discovery_projects": [
+        "src/Webhooks.API/Webhooks.API.csproj"
+      ],
+      "expected_context_alternatives": 1
+    },
+    {
+      "id": "outbox-controller-wrapper",
+      "corpus": "Sample-Outbox",
+      "interface_member": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.IRegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "expected_implementations": [
+        {
+          "implementation_method": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "implementing_type": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.RegistrationService",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "source": {
+            "project": "src/Sample.Components/Sample.Components.csproj",
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "byte_offset": 500,
+            "byte_length": 18,
+            "source_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+          }
+        }
+      ],
+      "expected_discovery_projects": [
+        "src/Sample.Components/Sample.Components.csproj"
+      ],
+      "expected_context_alternatives": 2
+    },
+    {
+      "id": "outbox-validation-wrapper",
+      "corpus": "Sample-Outbox",
+      "interface_member": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "expected_implementations": [
+        {
+          "implementation_method": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.Services.RegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "implementing_type": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Services.RegistrationValidationService",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "source": {
+            "project": "src/Sample.Components/Sample.Components.csproj",
+            "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+            "byte_offset": 362,
+            "byte_length": 20,
+            "source_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20"
+          }
+        }
+      ],
+      "expected_discovery_projects": [
+        "src/Sample.Components/Sample.Components.csproj"
+      ],
+      "expected_context_alternatives": 2
+    },
+    {
+      "id": "webhooks-metadata-hosted-start",
+      "corpus": "eShop",
+      "interface_member": {
+        "language": "csharp",
+        "namespace_kind": "assembly",
+        "namespace": "Microsoft.Extensions.Hosting.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+        "descriptor": "M:Microsoft.Extensions.Hosting.IHostedService.StartAsync(System.Threading.CancellationToken)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "expected_implementations": [
+        {
+          "implementation_method": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+            "descriptor": "M:eShop.EventBusRabbitMQ.RabbitMQEventBus.StartAsync(System.Threading.CancellationToken)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "implementing_type": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+            "descriptor": "T:eShop.EventBusRabbitMQ.RabbitMQEventBus",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "source": {
+            "project": "src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+            "path": "src/EventBusRabbitMQ/RabbitMQEventBus.cs",
+            "byte_offset": 9283,
+            "byte_length": 10,
+            "source_sha256": "2b8148e25522d8f33569c1c82ab53116473e90b778554db2d8ce1283e5951a09"
+          }
+        }
+      ],
+      "expected_discovery_projects": [
+        "src/EventBusRabbitMQ/EventBusRabbitMQ.csproj"
+      ],
+      "expected_context_alternatives": 1,
+      "provenance_note": "Source explicitly implements IHostedService and declares StartAsync; framework assembly identity verified in retained native baseline before reverse-query implementation/output."
+    }
+  ],
+  "no_recorded_control": {
+    "id": "generic-default-handler-bridge-not-recorded",
+    "corpus": "eShop",
+    "interface_member": {
+      "language": "csharp",
+      "namespace_kind": "project",
+      "namespace": "eShop/src/EventBus/EventBus.csproj",
+      "descriptor": "M:eShop.EventBus.Abstractions.IIntegrationEventHandler.Handle(eShop.EventBus.Events.IntegrationEvent)",
+      "descriptor_kind": "documentation_comment_id"
+    },
+    "interface_source": {
+      "project": "src/EventBus/EventBus.csproj",
+      "path": "src/EventBus/Abstractions/IIntegrationEventHandler.cs",
+      "byte_offset": 368,
+      "byte_length": 6,
+      "source_sha256": "0f44de6ed21466c4a9c4c4df2891b88c7b763a8a3be77f5869666d1e873c699e"
+    },
+    "expected_recorded_implementations": 0,
+    "explicit_query_projects": [
+      "src/EventBus/EventBus.csproj",
+      "src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+      "src/IntegrationEventLogEF/IntegrationEventLogEF.csproj",
+      "src/Webhooks.API/Webhooks.API.csproj",
+      "src/eShop.ServiceDefaults/eShop.ServiceDefaults.csproj"
+    ],
+    "classification": "unsupported_generic_default_interface_bridge_no_recorded_evidence",
+    "explanation": "Concrete handlers implement IIntegrationEventHandler<T>; its explicit default-interface bridge delegates to Handle(T). Existing worker excludes generic/default/explicit bridge implementation facts. Zero reverse records is a current evidence gap, not proof no concrete implementation exists."
+  },
+  "query_protocol": [
+    "Use exact source-authored qualified interface member identities to derive symbol IDs; this is an API regression, not an end-to-end natural-language discovery benchmark.",
+    "Call native MCP implementation discovery without context IDs; verify exact returned project set and every retained context alternative. Record every discovery response and byte/call count.",
+    "Query each discovered positive context separately; require exact one expected implementation method/type/source occurrence and compiler relationship in that context. Retain context/snapshot identity per result.",
+    "Never merge same repo/project context alternatives; selecting the two Outbox alternatives together must reject.",
+    "No-recorded control uses all five distinct eShop project contexts and preserves unsupported-bridge limitation.",
+    "Six interface identities yield eight selected positive queries plus six discovery calls. Count negative/rejection/control calls separately and in total; errors are not free."
+  ],
+  "limits": {
+    "max_results": 100,
+    "max_contexts": 32,
+    "max_work_rows": 10000,
+    "max_materialized_bytes": 2097152
+  },
+  "additional_required_unit_gates": [
+    "Same display/name in different project/assembly identities must not cross-join; no such collision is claimed in these two real corpora.",
+    "Legacy index1-4 is readable but implementation reverse capability unsupported, not empty supported result.",
+    "Huge same-target posting populations respect bounded work and honest truncation for discovery and selected queries.",
+    "Cancellation, out-of-scope context and project-alternative rejection, cumulative result byte limits, forged directory exact coverage/target mismatch."
+  ],
+  "limitations": [
+    "Existing source/native baselines informed development; originalfirstholdout result unchanged and this is not a fresh generalization score.",
+    "Exact compiler method implementation records are candidates, not runtime dispatch, service selection, activation or deployment proof.",
+    "Metadata interface identities retain assembly version/publickey identity; no method-name heuristics or generic fallback."
+  ]
+}

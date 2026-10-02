@@ -1,0 +1,43 @@
+{
+  "task": "locate-duplicate",
+  "reviewer": "review18_01",
+  "answer_sha256": "156697f3fd2b7a67d32c1927cfbb9d54d281bc448fff5bda395360bef667c73e",
+  "atoms": [
+    {
+      "id": "locate-duplicate.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer item 1 explicitly identifies the unique composite MemberId/EventId index and pinpoints RegistrationDbContext.cs:47-51 within 34-51. The complete mapping appears in 002.response.raw (block 10-53) and matches the hash-pinned source."
+    },
+    {
+      "id": "locate-duplicate.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer item 2 explicitly identifies SaveChangesAsync and the DbUpdateException filter requiring inner PostgresException with UniqueViolation SQL state. Its RegistrationService.cs:21-50 citation covers the described method actions and catch at 43-49; all are returned in 002.response.raw (9-54) and match pinned source."
+    },
+    {
+      "id": "locate-duplicate.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer item 2 explicitly quotes throwing DuplicateRegistrationException with the original exception. Cited RegistrationService.cs:21-50 contains the exact throw at 49, returned in 002.response.raw (9-54) and verified against pinned source."
+    },
+    {
+      "id": "locate-duplicate.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer item 3 states Submit awaits the service, catches DuplicateRegistrationException, and returns Conflict with model.MemberId and model.EventId. Citation explicitly highlights RegistrationController.cs:27 and 37-43; 002.response.raw (9-46) and complete 003.response.raw (1-46) support it, matching pinned source."
+    }
+  ],
+  "correctness_total": 4,
+  "evidence_total": 4,
+  "possible": 4,
+  "unsupported_claims": [],
+  "strict_success": true,
+  "limitations": [
+    "All three request/response pairs and transcript were inspected. Responses are complete; search summary and blocks report no clipping/truncation, and read_source reports truncated=false. The answer reports setup catalog display truncation, which did not remove task evidence from the retained responses.",
+    "The three relevant original source SHA-256 hashes match the frozen packet. Returned source spans agree with those files.",
+    "Answer explicitly limits findings to source/configuration and disclaims observing live constraints, duplicate requests, HTTP responses or message delivery. No runtime validation was required or performed.",
+    "The filter-category observation and create/add/Publish/save ordering are supported by RegistrationService.cs:21-50. The HTTP 409 interpretation is consistent with the cited controller Conflict result.",
+    "Isolation self-report beyond the retained tool transcript cannot be independently audited from these files; no contrary evidence appears in the assigned run."
+  ]
+}

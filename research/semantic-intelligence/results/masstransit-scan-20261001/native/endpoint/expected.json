@@ -1,0 +1,49 @@
+{
+  "positive": {
+    "literal": [
+      "/order",
+      "M:Routes.Submit"
+    ],
+    "constant": [
+      "/constant",
+      "M:Routes.Submit"
+    ],
+    "static-call": [
+      "/static",
+      "M:Routes.Submit"
+    ],
+    "named": [
+      "/named",
+      "M:Routes.Submit"
+    ],
+    "overload": [
+      "/overload/{value}",
+      "M:Routes.Overload(System.Int32)"
+    ],
+    "group": [
+      "/child",
+      "M:Routes.Submit"
+    ],
+    "conditional": [
+      "/conditional",
+      "M:Routes.Submit"
+    ]
+  },
+  "negative": [
+    "dynamic",
+    "lambda",
+    "variable",
+    "factory",
+    "instance",
+    "generic-method",
+    "generic-owner",
+    "metadata",
+    "other-verb",
+    "request-delegate",
+    "empty",
+    "null",
+    "oversized",
+    "lookalike",
+    "local-function"
+  ]
+}

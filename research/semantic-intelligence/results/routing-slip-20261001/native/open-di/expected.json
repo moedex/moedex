@@ -1,0 +1,69 @@
+{
+  "positive": {
+    "singleton": {
+      "service": "IRepo`1",
+      "implementation": "Repo`1",
+      "lifetime": "singleton"
+    },
+    "scoped": {
+      "service": "IRepo`1",
+      "implementation": "Repo`1",
+      "lifetime": "scoped"
+    },
+    "transient": {
+      "service": "IRepo`1",
+      "implementation": "Repo`1",
+      "lifetime": "transient"
+    },
+    "named": {
+      "service": "IRepo`1",
+      "implementation": "Repo`1",
+      "lifetime": "scoped"
+    },
+    "static": {
+      "service": "IRepo`1",
+      "implementation": "Repo`1",
+      "lifetime": "scoped"
+    },
+    "branch": {
+      "service": "IRepo`1",
+      "implementation": "Repo`1",
+      "lifetime": "scoped"
+    },
+    "pair": {
+      "service": "IPair`2",
+      "implementation": "Pair`2",
+      "lifetime": "scoped"
+    },
+    "inherited": {
+      "service": "IRepo`1",
+      "implementation": "Child`1",
+      "lifetime": "scoped"
+    },
+    "private-ctor": {
+      "service": "IRepo`1",
+      "implementation": "Private`1",
+      "lifetime": "scoped"
+    }
+  },
+  "negative": [
+    "swapped",
+    "repeated",
+    "nested-argument",
+    "unrelated",
+    "abstract",
+    "implementation-interface",
+    "class-service",
+    "arity",
+    "wide",
+    "nested-owner",
+    "variable",
+    "conditional",
+    "closed",
+    "cast",
+    "if-absent",
+    "factory",
+    "fake",
+    "type-parameter"
+  ]
+}

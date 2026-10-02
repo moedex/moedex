@@ -1,0 +1,17 @@
+{
+  "ordinal": 17,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"repo\":\"CleanArchitecture\",\"path\":\"src/Application/TodoItems/Commands/UpdateTodoItem/UpdateTodoItem.cs\",\"start_line\":5,\"end_line\":35,\"format\":\"text\"}"
+  ],
+  "started_monotonic": 78763.808854916,
+  "finished_monotonic": 78763.874709166,
+  "returncode": 0,
+  "stdout_bytes": 3106,
+  "stdout_sha256": "b77e50e26422c49c97cd2865e08e9b356777681f70ae3c47e5095458f49f6ba4",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk"><ItemGroup>
+<ProjectReference Include="../Contracts/Contracts.csproj" />
+<ProjectReference Include="../Publisher/Publisher.csproj" />
+<ProjectReference Include="../Consumer/Consumer.csproj" />
+<ProjectReference Include="../Storage/Storage.csproj" />
+<ProjectReference Include="../Distractor/Distractor.csproj" />
+</ItemGroup></Project>

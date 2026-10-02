@@ -1,0 +1,1 @@
+MOEDEX_AUTH_TOKEN='' MOEDEX_HTTP_ADDR='' MOEDEX_SHARD_DIR='' .local/application-impact/agent-journeys/moedex serve --index-dir "$PWD/.local/application-impact/reverse-v1/outbox/index" --mcp-http 127.0.0.1:19381 --embed none --mcp-max-concurrency 1

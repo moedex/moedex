@@ -1,0 +1,50 @@
+{
+  "task": "flow-email",
+  "reviewer": "root",
+  "reviewed_utc": "2026-10-02T02:08:18.151352+00:00",
+  "answer_sha256": "0fc0627b0ae8091be02e62911dfd20c506b55977a6c22950b4429171a517db7d",
+  "atoms": [
+    {
+      "id": "flow-email.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "RegistrationSubmitted event correlation explicitly described and cited at state-machine 10-34; response 002."
+    },
+    {
+      "id": "flow-email.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Initial handler, all copied fields and Registered transition stated with supporting source."
+    },
+    {
+      "id": "flow-email.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Configured SendRegistrationEmail publication and all saga field mappings stated and cited."
+    },
+    {
+      "id": "flow-email.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Consumer declaration and worker registration identified with citations covering both; responses 002/003."
+    },
+    {
+      "id": "flow-email.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Logging and Task.CompletedTask explicitly distinguished from actual email send; consumer body retrieved."
+    },
+    {
+      "id": "flow-email.6",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Configuration versus delivery limits explicit, including outbox and failed-attempt caveat. The extra failure paragraph cites 35-42 instead of 33-34, but those exact failure lines were already included in the preceding 10-34 citation and response 002."
+    }
+  ],
+  "correctness": 6,
+  "evidence": 6,
+  "possible": 6,
+  "unsupported_claims": [],
+  "strict_success": true,
+  "isolation_audit": "Solver attestation and logged RPCs available; full model/tool activity not exposed to root, so host isolation is not independently verified."
+}

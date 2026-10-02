@@ -1,0 +1,54 @@
+{
+  "task": "impact-submitted",
+  "reviewer": "review18_09-independent",
+  "answer_sha256": "b6c41fa175b28bba9f516abc7836a78212fe5c5df7716bdfe1acff5bbf4ed439",
+  "atoms": [
+    {
+      "id": "impact-submitted.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly identifies Guid RegistrationId and cites Contracts/RegistrationSubmitted.cs:3\u20139, specifically line 5. 002.response.raw returns lines 1\u201310; pinned file hash matches packet."
+    },
+    {
+      "id": "impact-submitted.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly states RegistrationService publishes RegistrationId = registration.RegistrationId with precise line 36 within :21\u201341. 002 and 007.response.raw return the producer body; 009 confirms the initializer property binding at [987,1001). Pinned source :34\u201340 agrees."
+    },
+    {
+      "id": "impact-submitted.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Quotes the correlation expression and explicitly calls for reviewing type/meaning and identity compatibility. StateMachines/RegistrationStateMachine.cs:14 is precise; 002/008 return it and 010 resolves [339,353) to the changed property. Pinned source hash matches."
+    },
+    {
+      "id": "impact-submitted.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly distinguishes the contract consumer from a direct property read and lists member/event/date usage. Consumers/NotifyRegistrationConsumer.cs:8\u201324 covers declaration and complete Consume body; 002 returns :8\u201325 and 004 records the compile-time consumer. Pinned :8\u201321 agrees."
+    },
+    {
+      "id": "impact-submitted.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly identifies initial handling, Event<RegistrationSubmitted>, and downstream SendRegistrationEmail/AddEventAttendee IDs from saga CorrelationId, distinguishing separate properties. Citations to StateMachines/RegistrationStateMachine.cs:16\u201341,47 and :26\u201339 precisely support all parts; returned in 002/008 and verified against pinned source."
+    },
+    {
+      "id": "impact-submitted.6",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly distinguishes source/compiler/configuration observations from delivery, broker binding, persistence, saga execution, and deployed compatibility. Worker/Program.cs:72\u201388 is returned in 006 (:26\u201389) and matches pinned source; 004/005 state compiler-only limits, 009/010 historical binding limits. API and saga configuration citations also agree with 002/006/011 and source."
+    }
+  ],
+  "correctness_total": 6,
+  "evidence_total": 6,
+  "possible": 6,
+  "unsupported_claims": [],
+  "strict_success": true,
+  "limitations": [
+    "Reviewed all 11 logged requests/responses and transcript; transcript SHA-256 values match retained files. All relevant pinned rubric source hashes match, and returned cited source spans agree with original source.",
+    "All returned truncation/clipping flags are false; searches are bounded and compiler contexts are selected separately. Answer appropriately declines exhaustiveness, does not infer reference absence from property-level empty framework groups, and does not claim runtime proof.",
+    "Captured evidence does not expose the Git commit pin or establish runtime/deployed compatibility; the answer states these limitations.",
+    "Retained public-call transcript does not independently audit every local setup read or the claimed initial catalog display truncation; this does not affect substantive source-impact scoring."
+  ]
+}

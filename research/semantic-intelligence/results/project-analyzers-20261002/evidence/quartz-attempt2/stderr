@@ -1,0 +1,43 @@
+          
+   ERROR  
+          
+  Semantic capture: worker: semanticrun: process output limit exceeded: u missing an assembly                         
+  reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"} {"code":"CS0246","message":"The type or      
+  namespace name 'AttributeArgumentSyntax' could not be found (are you missing a using directive or an assembly       
+  reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"} {"code":"CS0246","message":"The type or      
+  namespace name 'AttributeSyntax' could not be found (are you missing a using directive or an assembly               
+  reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"} {"code":"CS0246","message":"The type or      
+  namespace name 'AttributeArgumentSyntax' could not be found (are you missing a using directive or an assembly       
+  reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"} {"code":"CS0246","message":"The type or      
+  namespace name 'AttributeArgumentSyntax' could not be found (are you missing a using directive or an assembly       
+  reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"} {"code":"CS0246","message":"The type or      
+  namespace name 'AttributeSyntax' could not be found (are you missing a using directive or an assembly               
+  reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"} {"code":"CS0246","message":"The type or      
+  namespace name 'AttributeArgumentSyntax' could not be found (are you missing a using directive or an assembly       
+  reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"} {"code":"CS0234","message":"The type or      
+  namespace name 'CodeAnalysis' does not exist in the namespace 'Microsoft' (are you missing an assembly              
+  reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"} {"code":"CS0234","message":"The type or      
+  namespace name 'CodeAnalysis' does not exist in the namespace 'Microsoft' (are you missing an assembly              
+  reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"} {"code":"CS0234","message":"The type or      
+  namespace name 'CodeAnalysis' does not exist in the namespace 'Microsoft' (are you missing an assembly              
+  reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"} {"code":"CS0234","message":"The type or      
+  namespace name 'CodeAnalysis' does not exist in the namespace 'Microsoft' (are you missing an assembly              
+  reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"} {"code":"CS0246","message":"The type or      
+  namespace name 'DiagnosticAnalyzerAttribute' could not be found (are you missing a using directive or an assembly   
+  reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"} {"code":"CS0246","message":"The type or      
+  namespace name 'DiagnosticAnalyzer' could not be found (are you missing a using directive or an assembly            
+  reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"} {"code":"CS0103","message":"The name         
+  'LanguageNames' does not exist in the current context","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"}    
+  {"code":"CS0246","message":"The type or namespace name 'DiagnosticAnalyzer' could not be found (are you missing a   
+  using directive or an assembly reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"}               
+  {"code":"CS0246","message":"The type or namespace name 'DiagnosticDescriptor' could not be found (are you missing a 
+  using directive or an assembly reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"}               
+  {"code":"CS0246","message":"The type or namespace name 'AnalysisContext' could not be found (are you missing a using
+  directive or an assembly reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"}                     
+  {"code":"CS0103","message":"The name 'GeneratedCodeAnalysisFlags' does not exist in the current                     
+  context","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"} {"code":"CS0246","message":"The type or namespace
+  name 'SyntaxNodeAnalysisContext' could not be found (are you missing a using directive or an assembly               
+  reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"} {"code":"CS0246","message":"The type or      
+  namespace name 'INamedTypeSymbol' could not be found (are you missing a using directive or an assembly              
+  reference?)","project":"src/Quartz.Analyzers/Quartz.Analyzers.csproj"}.                                             
+

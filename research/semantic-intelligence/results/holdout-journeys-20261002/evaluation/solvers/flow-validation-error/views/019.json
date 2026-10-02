@@ -1,0 +1,17 @@
+{
+  "ordinal": 19,
+  "argv": [
+    "call",
+    "--name",
+    "search_context",
+    "--arguments",
+    "{\"repo\":\"CleanArchitecture\",\"query\":\"CreateTodoItemCommandValidator\",\"top_k\":1,\"token_budget\":1000}"
+  ],
+  "started_monotonic": 78455.814375041,
+  "finished_monotonic": 78455.86919675,
+  "returncode": 0,
+  "stdout_bytes": 2430,
+  "stdout_sha256": "ebcbbb515e358f23fca78ba9b23f24ee794b789890a49f4539b5b7ea7980eeee",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

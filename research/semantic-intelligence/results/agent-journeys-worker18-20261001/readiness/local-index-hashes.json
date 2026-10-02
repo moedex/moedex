@@ -1,0 +1,65 @@
+{
+  "root": "/Users/zakkeown/Code/moedex/.local/journey-readiness/capture-sdk10/index",
+  "files": [
+    {
+      "path": ".snapshot-build.lock",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "CURRENT",
+      "sha256": "a4f113fded05be2012cc4a398eea51c0325db76da508193e1f18dcbe47dfc6ff",
+      "bytes": 17
+    },
+    {
+      "path": "snapshots/application-real/semantic/artifact.json",
+      "sha256": "acc29d4e10e577dc2947327c682120a3a554bbfe98f1bcafebef46bac0398431",
+      "bytes": 2940017
+    },
+    {
+      "path": "snapshots/application-real/semantic/index.msi",
+      "sha256": "3927073983a8f323d50aadf0588b22a61f2623f5dd5828cf7f7d9c305254a7fd",
+      "bytes": 785793
+    },
+    {
+      "path": "snapshots/application-real/serve/corpus-symbols.sym",
+      "sha256": "1a36bda3c9c747388eb1577875a56098c840b291f11961075e0bea633c6dfdd2",
+      "bytes": 2965
+    },
+    {
+      "path": "snapshots/application-real/serve/corpus-symbols.sym.meta",
+      "sha256": "915ea65728f0fde281b0fc0e2b3dbd76715733742d20f0a2bbe40f7a876ddfeb",
+      "bytes": 112
+    },
+    {
+      "path": "snapshots/application-real/serve/corpus-tokens.tki",
+      "sha256": "df6aaeeff3912367bf5489753b2155acbbcedb71cbc0d9cd14b6185436c078b2",
+      "bytes": 41356
+    },
+    {
+      "path": "snapshots/application-real/serve/corpus-tokens.tki.meta",
+      "sha256": "f6b41fd985da864a74b3cb59a6d3e6087c381e105d0deda400dfc2852932de30",
+      "bytes": 97
+    },
+    {
+      "path": "snapshots/application-real/serve/manifest.json",
+      "sha256": "3ca9350b80bfce226ba300abb29442aae083604369cdb72da416b6b7ed8ac3e3",
+      "bytes": 940
+    },
+    {
+      "path": "snapshots/application-real/serve/shard-0000.idx",
+      "sha256": "928b3730e26b8b4e9075f5206748d19f56494fc9a27931f3276c1ffee3add044",
+      "bytes": 164755
+    },
+    {
+      "path": "snapshots/application-real/serve/shard-0000.idx.graph-symbols",
+      "sha256": "0b013cb1300578a1ae5e71bc0807e15d36ee0043ca14baf65783fa28486d0155",
+      "bytes": 3045
+    },
+    {
+      "path": "snapshots/application-real/snapshot.json",
+      "sha256": "ce1d06f3ebfddf0ad597fbe5f7e1d3c1defdcac43dc199782865a2d66f86a3fb",
+      "bytes": 2778
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+[
+  {
+    "label": "capture",
+    "argv": [
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/moedex-v2",
+      "semantic",
+      "capture",
+      "--checkout",
+      "/Users/zakkeown/Code/moedex/.local/fresh-paths/corpus/eShopOnWeb",
+      "--commit",
+      "4da8212117e87d808d4bbc7da6286fd2147ce606",
+      "--origin",
+      "https://github.com/dotnet-architecture/eShopOnWeb.git",
+      "--repo",
+      "eShopOnWeb",
+      "--project",
+      "src/Web/Web.csproj",
+      "--framework",
+      "net8.0",
+      "--configuration",
+      "Debug",
+      "--dotnet",
+      "/Users/zakkeown/Code/moedex/.local/fresh-paths/dotnet8-only/dotnet",
+      "--sdk-path",
+      "/Users/zakkeown/Code/moedex/.local/fresh-paths/dotnet8-only/sdk/8.0.400",
+      "--worker",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+      "--workspace",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/eShopOnWeb-v4/workspace",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/eShopOnWeb-v4/project.semantic",
+      "--dependency-bundle",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/eShopOnWeb-bundle",
+      "--restore-offline",
+      "--timeout",
+      "8m",
+      "--restore-standard-evaluation",
+      "--max-dependency-bytes",
+      "2147483648"
+    ],
+    "returncode": 0,
+    "elapsed_seconds": 27.90928292274475
+  },
+  {
+    "label": "clone-publication",
+    "argv": [
+      "git",
+      "clone",
+      "--no-hardlinks",
+      "/Users/zakkeown/Code/moedex/.local/fresh-paths/corpus/eShopOnWeb",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/eShopOnWeb-v4/corpus/eShopOnWeb"
+    ],
+    "returncode": 0,
+    "elapsed_seconds": 0.1517949104309082
+  },
+  {
+    "label": "publish",
+    "argv": [
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/moedex-v2",
+      "index",
+      "snapshot",
+      "build",
+      "--corpus",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/eShopOnWeb-v4/corpus",
+      "--index-dir",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/eShopOnWeb-v4/index",
+      "--id",
+      "independent-project",
+      "--graph=false",
+      "--semantic-artifact",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/eShopOnWeb-v4/project.semantic",
+      "--semantic-workspaces",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/eShopOnWeb-v4/roots.json"
+    ],
+    "returncode": 0,
+    "elapsed_seconds": 1.4500200748443604
+  }
+]

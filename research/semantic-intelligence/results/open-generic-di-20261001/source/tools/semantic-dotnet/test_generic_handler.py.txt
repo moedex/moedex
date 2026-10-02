@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""Bounded generic handler correspondence, preserving full closed argument identities."""
+import argparse
+import json
+import os
+from pathlib import Path
+import subprocess
+
+p = argparse.ArgumentParser(description=__doc__)
+for key in ('dotnet', 'sdk', 'worker', 'packages', 'output'):
+    p.add_argument('--' + key, required=True, type=Path)
+p.add_argument('--expected-worker-version', choices=['14','15'], default='15')
+a = p.parse_args()
+a.output.mkdir(parents=True, exist_ok=False)
+source = '''using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using MediatR;
+namespace One { class Reply {} }
+namespace Two { class Reply {} }
+class Orders : IRequest<IEnumerable<One.Reply>> {}
+class OtherOrders : IRequest<IEnumerable<Two.Reply>> {}
+class Handler : IRequestHandler<Orders,IEnumerable<One.Reply>> {
+ public Task<IEnumerable<One.Reply>> /*orders*/Handle(Orders request,CancellationToken token) => Task.FromResult<IEnumerable<One.Reply>>(null);
+ public void /*overload*/Handle(Orders request) {}
+}
+class SecondHandler : IRequestHandler<Orders,IEnumerable<One.Reply>> {
+ public Task<IEnumerable<One.Reply>> /*second*/Handle(Orders request,CancellationToken token) => Task.FromResult<IEnumerable<One.Reply>>(null);
+}
+class OtherHandler : IRequestHandler<OtherOrders,IEnumerable<Two.Reply>> {
+ public Task<IEnumerable<Two.Reply>> /*other*/Handle(OtherOrders request,CancellationToken token) => Task.FromResult<IEnumerable<Two.Reply>>(null);
+}
+interface IWork<T> { void Run(); }
+class Simple : IWork<One.Reply> {public void /*simple*/Run() {}}
+class Nested : IWork<List<List<One.Reply>>> {public void /*nested*/Run() {}}
+class Array : IWork<One.Reply[]> {public void /*array*/Run() {}}
+class Tuple : IWork<(int,string)> {public void /*tuple*/Run() {}}
+class Open<T> : IWork<List<T>> {public void /*open*/Run() {}}
+class Generic<T> : IWork<List<One.Reply>> {public void /*generic*/Run() {}}
+class Lookalike {public void /*lookalike*/Run() {}}
+class Derived : Handler {}
+class Explicit : IWork<List<One.Reply>> {void IWork<List<One.Reply>>./*explicit*/Run() {}}
+class Nine<A,B,C,D,E,F,G,H,I> {}
+class Wide : IWork<Nine<int,int,int,int,int,int,int,int,int>> {public void /*wide*/Run() {}}
+class Calls {
+ async Task Run(IRequestHandler<Orders,IEnumerable<One.Reply>> handler, ISender sender) {
+  await handler./*call*/Handle(new Orders(),default);
+  await sender./*send*/Send(new Orders());
+ }
+}
+'''
+(a.output/'Fixture.cs').write_text(source)
+(a.output/'global.json').write_text(json.dumps({'sdk': {'version': a.sdk.name, 'rollForward': 'disable'}}))
+(a.output/'Fixture.csproj').write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup><ItemGroup><FrameworkReference Include="Microsoft.AspNetCore.App"/><PackageReference Include="MediatR" Version="12.0.1"/></ItemGroup></Project>')
+(a.output/'NuGet.Config').write_text('<configuration><packageSources><clear /></packageSources></configuration>')
+env = dict(os.environ, NUGET_PACKAGES=str(a.packages.resolve()), DOTNET_NOLOGO='1', DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_PROCESSOR_COUNT='2')
+subprocess.run([str(a.dotnet),str(a.sdk/'MSBuild.dll'),'-target:Restore',str(a.output/'Fixture.csproj'),'-p:NuGetAudit=false'], env=env, cwd=a.output, check=True, timeout=120)
+command = [str(a.dotnet),str(a.worker),'--repo','fixture','--root',str(a.output),'--project','Fixture.csproj','--framework','net8.0','--sdk-path',str(a.sdk)]
+result = subprocess.run(command,env=env,capture_output=True,timeout=120)
+(a.output/'capture.jsonl').write_bytes(result.stdout)
+(a.output/'capture.stderr').write_bytes(result.stderr)
+assert result.returncode == 0, (result.returncode,result.stderr)
+rows = list(map(json.loads,result.stdout.splitlines()))
+assert all(r['extractor_version']==a.expected_worker_version and r['compilation_status']=='complete' for r in rows if r['record_type']=='project')
+def at(label):
+    offset=source.index('/*'+label+'*/')+len(label)+4
+    hits=[r for r in rows if r.get('source_path')=='Fixture.cs' and r.get('span',{}).get('byte_offset')==offset and r['record_type'] in ('declaration','reference')]
+    assert len(hits)==1,(label,hits)
+    return hits[0]
+def key(symbol):
+    return {k:v for k,v in symbol.items() if k not in ('display_name','kind')}
+for label,request,reply in [('orders','Orders','One.Reply'),('second','Orders','One.Reply'),('other','OtherOrders','Two.Reply')]:
+    facts=at(label).get('implementation_facts',[]);assert len(facts)==1,(label,facts)
+    f=facts[0];assert f['rule']=='csharp-interface-closed-v2' and f['evidence_scope']=='compile_time'
+    k=f['interface_symbol'];assert k['descriptor_kind']=='constructed_interface_method_v2'
+    value=json.loads(k['descriptor']);assert value['definition']=='M:MediatR.IRequestHandler`2.Handle(`0,System.Threading.CancellationToken)'
+    assert value['arguments'][0]['descriptor']=='T:'+request
+    response=value['arguments'][1];assert response['descriptor_kind']=='constructed_named_type_v1'
+    assert json.loads(response['descriptor'])['arguments'][0]['descriptor']=='T:'+reply
+    assert value['arguments'][0]['namespace']=='fixture/Fixture.csproj'
+orders=at('orders')['implementation_facts'][0]['interface_symbol']
+assert key(orders)==key(at('call')['symbol'])
+assert key(orders)==key(at('second')['implementation_facts'][0]['interface_symbol'])
+assert key(orders)!=key(at('other')['implementation_facts'][0]['interface_symbol'])
+assert json.loads(orders['descriptor'])['arguments'][1]==key(at('send')['domain_facts'][0]['targets'][1]['symbol'])
+assert at('simple')['implementation_facts'][0]['rule']=='csharp-interface-closed-v1'
+negatives=['overload','nested','array','tuple','open','generic','lookalike','wide','explicit']
+for label in negatives:assert not at(label).get('implementation_facts'),(label,at(label))
+assert len([f for r in rows for f in r.get('implementation_facts',[])])==4
+(a.output/'expected.json').write_text(json.dumps({'positive':['orders','second','other','simple'],'negative':negatives},indent=2)+'\n')
+(a.output/'Fixture.cs').write_text(source+'\nclass Broken { MissingType value; }')
+broken=subprocess.run(command,env=env,capture_output=True,timeout=120)
+(a.output/'incomplete.jsonl').write_bytes(broken.stdout)
+assert broken.returncode==2
+assert not any(r.get('domain_facts') or r.get('implementation_facts') for r in map(json.loads,broken.stdout.splitlines()))
+(a.output/'Fixture.cs').write_text(source)
+print('PASS: three constructed handler mappings, stable simple mapping, nine exclusions, call/dispatch identity equality, incomplete suppression')

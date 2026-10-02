@@ -1,0 +1,77 @@
+{
+  "task": {
+    "id": "locate-duplicate",
+    "journey": "locate_behavior",
+    "prompt": "Where does the application enforce uniqueness of an event/member registration, and how does a duplicate reach the HTTP response? Cite the relevant code.",
+    "requirements": [
+      {
+        "claim": "EF mapping makes the composite MemberId/EventId index unique.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/RegistrationDbContext.cs",
+            "start_line": 47,
+            "end_line": 51,
+            "raw_sha256": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef"
+          }
+        ],
+        "id": "locate-duplicate.1",
+        "weight": 1
+      },
+      {
+        "claim": "SaveChangesAsync catches DbUpdateException only when its inner PostgresException has UniqueViolation SQL state.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "start_line": 43,
+            "end_line": 49,
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+          }
+        ],
+        "id": "locate-duplicate.2",
+        "weight": 1
+      },
+      {
+        "claim": "The service translates that failure into DuplicateRegistrationException.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "start_line": 47,
+            "end_line": 49,
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+          }
+        ],
+        "id": "locate-duplicate.3",
+        "weight": 1
+      },
+      {
+        "claim": "Submit catches DuplicateRegistrationException and returns Conflict containing MemberId and EventId.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+            "start_line": 37,
+            "end_line": 43,
+            "raw_sha256": "57da78434440b2da392bf6cb0a5eb954a1b3bc93f27e786c9c55bf9100fdd4df"
+          }
+        ],
+        "id": "locate-duplicate.4",
+        "weight": 1
+      }
+    ],
+    "permissible_unknowns": [
+      "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+      "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+    ]
+  },
+  "scoring": {
+    "atomic_correctness": "Each atom scores 1 if correct and explicit, 0.5 if correct but materially incomplete, 0 if absent/incorrect. Report raw numerator/denominator and per-atom verdicts.",
+    "evidence": "Independently score each atom 1 for precise retrievable citation supporting the whole claim, 0.5 for a relevant but incomplete/broad citation, 0 for absent or contradictory evidence. Line-number equivalents and exact tool source spans are acceptable.",
+    "unsupported_claims": "Inventory false or unsupported claims separately with severity. Unsupported runtime certainty or invented source facts prevents a fully-correct task label even if positive atoms are present.",
+    "abstention": "Explicit unknowns avoid false-claim penalties but do not earn missing source-fact credit. Missing tool capability is incomplete evidence, not itself a false claim.",
+    "task_success": "All atoms receive correctness=1 and evidence=1, no material unsupported claims, and applicable configuration/runtime distinction is stated. Report graded scores as well as this strict success label.",
+    "review": "Two independent source reviewers adjudicate using source, rubric and retained solver transcript; disagreements retained and resolved explicitly. No tool output creates new gold after execution.",
+    "runtime_unknown_atoms": "Citations support the visible source limits, not proof that no unseen runtime evidence could exist."
+  },
+  "source_root": "/Users/zakkeown/Code/moedex/.local/application-impact/Sample-Outbox",
+  "run_directory": "/Users/zakkeown/Code/moedex/.local/journey-readiness/solvers/locate-duplicate",
+  "rubric_source": "research/semantic-intelligence/results/agent-journeys-20261001/source-rubric.json"
+}

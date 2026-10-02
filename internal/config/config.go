@@ -132,6 +132,7 @@ func DefaultRegistry() *Registry {
 		{Env: "MOEDEX_GRAPH_LSP_CONCURRENCY", Kind: Integer, Default: "32", Description: "Concurrent graph LSP requests", Commands: []string{"graph", "index"}},
 		{Env: "MOEDEX_GRAPH_LSP_REQUESTS_PER_SECOND", Kind: Float, Default: "100", Description: "Graph LSP request start rate", Commands: []string{"graph", "index"}},
 		{Env: "MOEDEX_GRAPH_CLUSTER_MAX_NODES", Kind: Integer, Default: "250000", Description: "Maximum nodes considered for clustering", Commands: []string{"graph", "doctor"}},
+		{Env: "MOEDEX_GRAPH_CLUSTER_MAX_EDGES", Kind: Integer, Default: "1000000", Description: "Maximum eligible logical edges expanded for clustering", Commands: []string{"graph", "doctor"}},
 		{Env: "MOEDEX_VERIFY_CONTENT", Kind: Boolean, Default: "true", Description: "Verify content hashes while loading", Commands: []string{"serve", "index"}},
 		{Env: "MOEDEX_LSP_DEBUG", Kind: Boolean, Default: "false", Description: "Enable LSP protocol debugging", Commands: []string{"nav", "serve", "graph"}},
 		{Env: "MOEDEX_LSP_WORKSPACE_DIR", Kind: String, Description: "Writable isolated workspace cache for managed-corpus language servers", Commands: []string{"nav", "serve", "graph", "index"}},

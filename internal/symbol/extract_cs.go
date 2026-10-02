@@ -20,6 +20,66 @@ import "regexp"
 // declaration line's byte range so BodyStart<=NameStart<BodyEnd still holds.
 type CSharpExtractor struct{}
 
+// csLiteralMask treats interpolated strings as literals, like the shared
+// scanner, but recognizes C# verbatim and raw delimiters. In particular, quotes
+// embedded in raw test-source strings must not expose declarations as code.
+func csLiteralMask(content []byte) []bool {
+	return literalMaskWithStringSkipper(content, csSkipString)
+}
+
+func csSkipString(content []byte, i int, quote byte) int {
+	if quote != '"' {
+		return skipString(content, i, quote)
+	}
+	n := len(content)
+	verbatim := i > 0 && content[i-1] == '@' || i > 1 && content[i-1] == '$' && content[i-2] == '@'
+	if verbatim {
+		for j := i + 1; j < n; j++ {
+			if content[j] == '"' {
+				if j+1 < n && content[j+1] == '"' {
+					j++ // doubled quotes are content; backslashes are ordinary bytes
+					continue
+				}
+				return j + 1
+			}
+		}
+		return n
+	}
+	end := i
+	for end < n && content[end] == '"' {
+		end++
+	}
+	quotes := end - i
+	if quotes >= 3 {
+		// Only whitespace followed by a newline makes this a multiline raw
+		// literal. Recover an unterminated single-line literal at its newline,
+		// rather than hiding all subsequent declarations through EOF.
+		first := end
+		for first < n && (content[first] == ' ' || content[first] == '\t' || content[first] == '\v' || content[first] == '\f') {
+			first++
+		}
+		multiline := first < n && (content[first] == '\r' || content[first] == '\n')
+		for j := end; j < n; {
+			if !multiline && (content[j] == '\r' || content[j] == '\n') {
+				return j
+			}
+			if content[j] != '"' {
+				j++
+				continue
+			}
+			start := j
+			for j < n && content[j] == '"' {
+				j++
+			}
+			if j-start >= quotes {
+				return j
+			}
+		}
+		return n
+	}
+	return skipString(content, i, quote)
+}
+
 // csTypeRe matches a C# type declaration and captures the type name. It is
 // anchored at line start (after optional whitespace) and consumes leading
 // modifiers (public, abstract, sealed, partial, etc.) loosely, like
@@ -138,6 +198,10 @@ func csIdentByte(b byte) bool {
 // Extract scans C# content for type and method definitions. Always returns nil
 // error.
 func (CSharpExtractor) Extract(content []byte) ([]Symbol, error) {
+	return csDefinitions(content, csLiteralMask(content)), nil
+}
+
+func csDefinitions(content []byte, mask []bool) []Symbol {
 	var syms []Symbol
 
 	// typeNameStart records the NameStart byte of every emitted type, so the
@@ -145,10 +209,8 @@ func (CSharpExtractor) Extract(content []byte) ([]Symbol, error) {
 	// (e.g. `public record CertId(...)` reads like a method to csMethodRe).
 	typeNameStart := map[int]bool{}
 
-	mask := literalMask(content)
-
 	// Types: class/interface/struct/enum/record -> Type.
-	for _, m := range csTypeRe.FindAllSubmatchIndex(content, -1) {
+	for _, m := range csDeclarationMatches(content, false) {
 		// m: [full0 full1 kw0 kw1 name0 name1]
 		ns, ne := m[4], m[5]
 		if ns < 0 || ne < 0 {
@@ -172,10 +234,13 @@ func (CSharpExtractor) Extract(content []byte) ([]Symbol, error) {
 	// Methods: any Name( declaration at line start. Method (we don't distinguish
 	// receiver-bearing methods from free functions in C#; all members live in a
 	// type, so Method is the right Kind).
-	for _, m := range csMethodRe.FindAllSubmatchIndex(content, -1) {
+	for _, m := range csDeclarationMatches(content, true) {
 		ns, ne := m[2], m[3]
 		if ns < 0 || ne < 0 {
 			continue
+		}
+		if mask[ns] {
+			continue // inside a string/char literal or a comment
 		}
 		name := string(content[ns:ne])
 		if csControlKeywords[name] || typeNameStart[ns] {
@@ -198,7 +263,7 @@ func (CSharpExtractor) Extract(content []byte) ([]Symbol, error) {
 		})
 	}
 
-	return syms, nil
+	return syms
 }
 
 // csCallRe matches a call/construction site: an optional `new` keyword, then an
@@ -221,18 +286,19 @@ var csCallRe = regexp.MustCompile(`\b(?:(new)\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*(?:
 //
 // Always returns a nil error.
 func (e CSharpExtractor) ExtractRefs(content []byte) ([]Occurrence, error) {
-	defs, _ := e.Extract(content)
-	return csReferencesFromDefs(content, defs), nil
+	mask := csLiteralMask(content)
+	defs := csDefinitions(content, mask)
+	return csReferencesWithMask(content, defs, mask), nil
 }
 
 // ExtractDefsRefs implements DefsRefsExtractor: it scans content for
-// definitions ONCE (via Extract) and derives references from that same defs
-// slice, instead of the two independent csTypeRe/csMethodRe scans that calling
-// Extract then ExtractRefs separately would perform (ExtractRefs re-running
-// Extract internally to get defSites).
+// definitions once and derives references from that same defs slice. The two
+// passes also share one literal mask. Separate Extract and ExtractRefs calls
+// retain their independent behavior.
 func (e CSharpExtractor) ExtractDefsRefs(content []byte) ([]Symbol, []Occurrence, error) {
-	defs, _ := e.Extract(content)
-	return defs, csReferencesFromDefs(content, defs), nil
+	mask := csLiteralMask(content)
+	defs := csDefinitions(content, mask)
+	return defs, csReferencesWithMask(content, defs, mask), nil
 }
 
 // csReferencesFromDefs scans content for reference occurrences, excluding any
@@ -240,14 +306,17 @@ func (e CSharpExtractor) ExtractDefsRefs(content []byte) ([]Symbol, []Occurrence
 // Shared by ExtractRefs and ExtractDefsRefs so both derive references from a
 // single set of already-computed definitions rather than recomputing them.
 func csReferencesFromDefs(content []byte, defs []Symbol) []Occurrence {
+	return csReferencesWithMask(content, defs, csLiteralMask(content))
+}
+
+func csReferencesWithMask(content []byte, defs []Symbol, mask []bool) []Occurrence {
 	defSites := map[int]bool{}
 	for _, s := range defs {
 		defSites[s.NameStart] = true
 	}
 
-	mask := literalMask(content)
 	var occs []Occurrence
-	for _, m := range csCallRe.FindAllSubmatchIndex(content, -1) {
+	for m := range csCallMatches(content) {
 		// m: [full0 full1 new0 new1 name0 name1]
 		ns, ne := m[4], m[5]
 		if ns < 0 || ne < 0 {

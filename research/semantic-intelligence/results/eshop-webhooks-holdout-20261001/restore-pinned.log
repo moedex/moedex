@@ -1,0 +1,6 @@
+  Determining projects to restore...
+  Restored /Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/eShop.ServiceDefaults/eShop.ServiceDefaults.csproj (in 99 ms).
+  Restored /Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/EventBusRabbitMQ/EventBusRabbitMQ.csproj (in 97 ms).
+  Restored /Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/EventBus/EventBus.csproj (in 97 ms).
+  Restored /Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/IntegrationEventLogEF/IntegrationEventLogEF.csproj (in 97 ms).
+  Restored /Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/Webhooks.API/Webhooks.API.csproj (in 106 ms).

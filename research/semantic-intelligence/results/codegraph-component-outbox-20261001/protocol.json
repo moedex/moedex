@@ -1,0 +1,868 @@
+{
+  "version": 1,
+  "frozen_at_utc": "2026-10-01T17:09:27.986222+00:00",
+  "status": "frozen_before_CodeGraph_output_inspection",
+  "classification": "development_component_comparison_not_heldout_or_agent_journey",
+  "repo": "https://github.com/MassTransit/Sample-Outbox",
+  "commit": "1ab8e66ebf96e5733e68c2f4d2201276f38ed9c5",
+  "source_gold_sha256": "35744683f93f9ae7fb83ef17455b11da7d38a067951feb26acf0ad415e1d8586",
+  "path_gold_sha256": "386cd0f02408434a08c65f54bc38d8e17d6c082395761441471efabcc70c6506",
+  "project_configuration": [
+    {
+      "project": "src/Sample.Api/Sample.Api.csproj",
+      "configuration": "Debug",
+      "framework": "net8.0"
+    },
+    {
+      "project": "src/Sample.Worker/Sample.Worker.csproj",
+      "configuration": "Debug",
+      "framework": "net8.0"
+    },
+    {
+      "project": "src/Sample.Components/Sample.Components.csproj",
+      "configuration": "Debug",
+      "framework": "net8.0"
+    }
+  ],
+  "reviewed_source_closure": {
+    "projects": [
+      "src/Sample.Api/Sample.Api.csproj",
+      "src/Sample.Worker/Sample.Worker.csproj",
+      "src/Sample.Components/Sample.Components.csproj"
+    ],
+    "paths": [
+      "src/Sample.Api/Controllers/RegistrationController.cs",
+      "src/Sample.Api/Program.cs",
+      "src/Sample.Api/RecreateDatabaseHostedService.cs",
+      "src/Sample.Api/RegistrationModel.cs",
+      "src/Sample.Api/RegistrationResult.cs",
+      "src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+      "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+      "src/Sample.Components/Consumers/RegistrationValidated.cs",
+      "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+      "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+      "src/Sample.Components/Consumers/ValidateRegistrationConsumerDefinition.cs",
+      "src/Sample.Components/Contracts/AddEventAttendee.cs",
+      "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+      "src/Sample.Components/Contracts/SendRegistrationEmail.cs",
+      "src/Sample.Components/DuplicateRegistrationException.cs",
+      "src/Sample.Components/IRegistrationService.cs",
+      "src/Sample.Components/Registration.cs",
+      "src/Sample.Components/RegistrationDbContext.cs",
+      "src/Sample.Components/RegistrationService.cs",
+      "src/Sample.Components/Services/IRegistrationValidationService.cs",
+      "src/Sample.Components/Services/RegistrationValidationService.cs",
+      "src/Sample.Components/StateMachines/RegistrationState.cs",
+      "src/Sample.Components/StateMachines/RegistrationStateDefinition.cs",
+      "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+      "src/Sample.Components/StateMachines/RegistrationStateMap.cs",
+      "src/Sample.Worker/Program.cs"
+    ],
+    "source_sha256": {
+      "src/Sample.Api/Controllers/RegistrationController.cs": "57da78434440b2da392bf6cb0a5eb954a1b3bc93f27e786c9c55bf9100fdd4df",
+      "src/Sample.Api/Program.cs": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53",
+      "src/Sample.Api/RecreateDatabaseHostedService.cs": "ab268907370a2f35298fe8b0340020b1df909fc80ff0abc1140f73c69e567bca",
+      "src/Sample.Api/RegistrationModel.cs": "5af7d622867aa3a9c10aa39256419aaa797e625d84c324455f01cfb8120bf542",
+      "src/Sample.Api/RegistrationResult.cs": "bfda4c0c2d819760ca443a8c381f0437478ab9d8c64d844d84032ae21ab030f6",
+      "src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs": "f7ae50324fc1b3c8fa3fec399e233b6e6e977b9458d348b834e5ced0f5fc6184",
+      "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs": "5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81",
+      "src/Sample.Components/Consumers/RegistrationValidated.cs": "5c1029d87ada8134ca31e7863c0a8185467f6b7ce02ef34865ae0290724b5953",
+      "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs": "0e5c8f13aa04dd9b46c488b677fcfef3c9583998a74a98cb4283087326de7592",
+      "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca",
+      "src/Sample.Components/Consumers/ValidateRegistrationConsumerDefinition.cs": "3e039a4aadaceff5e3e6e233e0fa5923d66ff16fa942413ec37b4e59584fd9f1",
+      "src/Sample.Components/Contracts/AddEventAttendee.cs": "bd97b1816fc8732ebba2f7cbb5b97cb29e8d878b13330ddf7fa94e55dea987cb",
+      "src/Sample.Components/Contracts/RegistrationSubmitted.cs": "0f659a342b91338f1aca4f547bebebe11e65d42c5606a3b7164f74ce46d63bf0",
+      "src/Sample.Components/Contracts/SendRegistrationEmail.cs": "6aa68e8627a691f56e0c653dbd65f4e9289ef309a4aaa5bbe063eb1f6cec9c09",
+      "src/Sample.Components/DuplicateRegistrationException.cs": "f01d4205ff12574af2bf12f0633c44e3af2cfef22ef37733e4a2bb84c25f5163",
+      "src/Sample.Components/IRegistrationService.cs": "c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71",
+      "src/Sample.Components/Registration.cs": "84db43f9d9292799c5685e2ccb54a2eba4400681f5e87edd5e8b3d5f360ad8b4",
+      "src/Sample.Components/RegistrationDbContext.cs": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef",
+      "src/Sample.Components/RegistrationService.cs": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+      "src/Sample.Components/Services/IRegistrationValidationService.cs": "094614ab8d70256ca3accc40e20d4d358d1170031938fa03a68fbcd2be99a97a",
+      "src/Sample.Components/Services/RegistrationValidationService.cs": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20",
+      "src/Sample.Components/StateMachines/RegistrationState.cs": "5ced8f8102ccbe2e0a3c8c9095e5e0d6635b032cc93977187daf15301a73025f",
+      "src/Sample.Components/StateMachines/RegistrationStateDefinition.cs": "c315310b0f33c525ba4a3a14066594953491507c9254df37685573dec7c30f56",
+      "src/Sample.Components/StateMachines/RegistrationStateMachine.cs": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570",
+      "src/Sample.Components/StateMachines/RegistrationStateMap.cs": "325580737a2ec1fb3f77d6cc958a71b6921b4049ceaa1f78de75f5d66ede0572",
+      "src/Sample.Worker/Program.cs": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+    }
+  },
+  "positive_cases": [
+    {
+      "id": "api-service",
+      "family": "domain_observation",
+      "source_gold_case_id": "api-service",
+      "expected_kind": "di_registration",
+      "expected_rule": "csharp-framework-v1",
+      "expected_targets": [
+        {
+          "role": "service",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.IRegistrationService",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        },
+        {
+          "role": "implementation",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.RegistrationService",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "expected_lifetime": "scoped",
+      "source": {
+        "project": "src/Sample.Api/Sample.Api.csproj",
+        "path": "src/Sample.Api/Program.cs",
+        "byte_offset": 922,
+        "byte_length": 9,
+        "source_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53"
+      },
+      "owner": null
+    },
+    {
+      "id": "worker-service",
+      "family": "domain_observation",
+      "source_gold_case_id": "worker-service",
+      "expected_kind": "di_registration",
+      "expected_rule": "csharp-framework-v1",
+      "expected_targets": [
+        {
+          "role": "service",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Services.IRegistrationValidationService",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        },
+        {
+          "role": "implementation",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Services.RegistrationValidationService",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "expected_lifetime": "scoped",
+      "source": {
+        "project": "src/Sample.Worker/Sample.Worker.csproj",
+        "path": "src/Sample.Worker/Program.cs",
+        "byte_offset": 2244,
+        "byte_length": 9,
+        "source_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+      },
+      "owner": null
+    },
+    {
+      "id": "AddEventAttendee-consumer",
+      "family": "domain_observation",
+      "source_gold_case_id": "AddEventAttendee-consumer",
+      "expected_kind": "message_consumer",
+      "expected_rule": "csharp-framework-v1",
+      "expected_targets": [
+        {
+          "role": "message",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "expected_lifetime": null,
+      "source": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+        "byte_offset": 158,
+        "byte_length": 9,
+        "source_sha256": "f7ae50324fc1b3c8fa3fec399e233b6e6e977b9458d348b834e5ced0f5fc6184"
+      },
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.Consumers.AddEventAttendeeConsumer",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "NotifyRegistration-consumer",
+      "family": "domain_observation",
+      "source_gold_case_id": "NotifyRegistration-consumer",
+      "expected_kind": "message_consumer",
+      "expected_rule": "csharp-framework-v1",
+      "expected_targets": [
+        {
+          "role": "message",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "expected_lifetime": null,
+      "source": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+        "byte_offset": 160,
+        "byte_length": 9,
+        "source_sha256": "5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81"
+      },
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.Consumers.NotifyRegistrationConsumer",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "SendRegistrationEmail-consumer",
+      "family": "domain_observation",
+      "source_gold_case_id": "SendRegistrationEmail-consumer",
+      "expected_kind": "message_consumer",
+      "expected_rule": "csharp-framework-v1",
+      "expected_targets": [
+        {
+          "role": "message",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.SendRegistrationEmail",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "expected_lifetime": null,
+      "source": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+        "byte_offset": 163,
+        "byte_length": 9,
+        "source_sha256": "0e5c8f13aa04dd9b46c488b677fcfef3c9583998a74a98cb4283087326de7592"
+      },
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.Consumers.SendRegistrationEmailConsumer",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "ValidateRegistration-consumer",
+      "family": "domain_observation",
+      "source_gold_case_id": "ValidateRegistration-consumer",
+      "expected_kind": "message_consumer",
+      "expected_rule": "csharp-framework-v1",
+      "expected_targets": [
+        {
+          "role": "message",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "expected_lifetime": null,
+      "source": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+        "byte_offset": 178,
+        "byte_length": 9,
+        "source_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+      },
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.Consumers.ValidateRegistrationConsumer",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "submitted-publish",
+      "family": "domain_observation",
+      "source_gold_case_id": "submitted-publish",
+      "expected_kind": "message_publish",
+      "expected_rule": "csharp-framework-v1",
+      "expected_targets": [
+        {
+          "role": "message",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "expected_lifetime": null,
+      "source": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/RegistrationService.cs",
+        "byte_offset": 931,
+        "byte_length": 7,
+        "source_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+      },
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "validated-publish",
+      "family": "domain_observation",
+      "source_gold_case_id": "validated-publish",
+      "expected_kind": "message_publish",
+      "expected_rule": "csharp-framework-v1",
+      "expected_targets": [
+        {
+          "role": "message",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "expected_lifetime": null,
+      "source": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+        "byte_offset": 474,
+        "byte_length": 7,
+        "source_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20"
+      },
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.Services.RegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "fluent-publish-SendRegistrationEmail",
+      "family": "domain_observation",
+      "source_gold_case_id": "fluent-publish-SendRegistrationEmail",
+      "expected_kind": "message_publish_configuration",
+      "expected_rule": "csharp-framework-v4",
+      "expected_targets": [
+        {
+          "role": "message",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.SendRegistrationEmail",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "expected_lifetime": null,
+      "source": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+        "byte_offset": 838,
+        "byte_length": 7,
+        "source_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+      },
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.StateMachines.RegistrationStateMachine.#ctor",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "fluent-publish-AddEventAttendee",
+      "family": "domain_observation",
+      "source_gold_case_id": "fluent-publish-AddEventAttendee",
+      "expected_kind": "message_publish_configuration",
+      "expected_rule": "csharp-framework-v4",
+      "expected_targets": [
+        {
+          "role": "message",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "expected_lifetime": null,
+      "source": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+        "byte_offset": 1411,
+        "byte_length": 7,
+        "source_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+      },
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.StateMachines.RegistrationStateMachine.#ctor",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "saga-event",
+      "family": "domain_observation",
+      "source_gold_case_id": "saga-event",
+      "expected_kind": "message_event_configuration",
+      "expected_rule": "csharp-framework-v4",
+      "expected_targets": [
+        {
+          "role": "message",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "expected_lifetime": null,
+      "source": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+        "byte_offset": 268,
+        "byte_length": 5,
+        "source_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+      },
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.StateMachines.RegistrationStateMachine.#ctor",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "entity-set",
+      "family": "domain_observation",
+      "source_gold_case_id": "entity-set",
+      "expected_kind": "storage_entity_use",
+      "expected_rule": "csharp-framework-v2",
+      "expected_targets": [
+        {
+          "role": "entity",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Registration",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "expected_lifetime": null,
+      "source": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/RegistrationService.cs",
+        "byte_offset": 855,
+        "byte_length": 3,
+        "source_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+      },
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "entity-model",
+      "family": "domain_observation",
+      "source_gold_case_id": "entity-model",
+      "expected_kind": "storage_entity_mapping",
+      "expected_rule": "csharp-framework-v2",
+      "expected_targets": [
+        {
+          "role": "entity",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Registration",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "expected_lifetime": null,
+      "source": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/RegistrationDbContext.cs",
+        "byte_offset": 966,
+        "byte_length": 6,
+        "source_sha256": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef"
+      },
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.RegistrationDbContext.MapRegistration(Microsoft.EntityFrameworkCore.ModelBuilder)",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "api-dbcontext",
+      "family": "domain_observation",
+      "source_gold_case_id": "api-dbcontext",
+      "expected_kind": "storage_context_registration",
+      "expected_rule": "csharp-framework-v3",
+      "expected_targets": [
+        {
+          "role": "service",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.RegistrationDbContext",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        },
+        {
+          "role": "implementation",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.RegistrationDbContext",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "expected_lifetime": "scoped",
+      "source": {
+        "project": "src/Sample.Api/Sample.Api.csproj",
+        "path": "src/Sample.Api/Program.cs",
+        "byte_offset": 1032,
+        "byte_length": 12,
+        "source_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53"
+      },
+      "owner": null
+    },
+    {
+      "id": "worker-dbcontext",
+      "family": "domain_observation",
+      "source_gold_case_id": "worker-dbcontext",
+      "expected_kind": "storage_context_registration",
+      "expected_rule": "csharp-framework-v3",
+      "expected_targets": [
+        {
+          "role": "service",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.RegistrationDbContext",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        },
+        {
+          "role": "implementation",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.RegistrationDbContext",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "expected_lifetime": "scoped",
+      "source": {
+        "project": "src/Sample.Worker/Sample.Worker.csproj",
+        "path": "src/Sample.Worker/Program.cs",
+        "byte_offset": 931,
+        "byte_length": 12,
+        "source_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+      },
+      "owner": null
+    },
+    {
+      "id": "controller-wrapper-interface-call",
+      "family": "resolved_call",
+      "source": {
+        "project": "src/Sample.Api/Sample.Api.csproj",
+        "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+        "byte_offset": 642,
+        "byte_length": 18,
+        "source_sha256": "57da78434440b2da392bf6cb0a5eb954a1b3bc93f27e786c9c55bf9100fdd4df"
+      },
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Api/Sample.Api.csproj",
+        "descriptor": "M:Sample.Api.Controllers.RegistrationController.Submit(Sample.Api.RegistrationModel)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "target": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.IRegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "controller-wrapper-method-implementation",
+      "family": "method_implementation",
+      "source": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/RegistrationService.cs",
+        "byte_offset": 500,
+        "byte_length": 18,
+        "source_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+      },
+      "implementation_method": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "interface_member": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.IRegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "implementing_type": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.RegistrationService",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "validation-wrapper-interface-call",
+      "family": "resolved_call",
+      "source": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+        "byte_offset": 667,
+        "byte_length": 20,
+        "source_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+      },
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.Consumers.ValidateRegistrationConsumer.Consume(MassTransit.ConsumeContext{Sample.Components.Contracts.AddEventAttendee})",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "target": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "validation-wrapper-method-implementation",
+      "family": "method_implementation",
+      "source": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+        "byte_offset": 362,
+        "byte_length": 20,
+        "source_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20"
+      },
+      "implementation_method": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.Services.RegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "interface_member": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "implementing_type": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.Services.RegistrationValidationService",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    }
+  ],
+  "negative_cases": [
+    {
+      "id": "logging-negative",
+      "source_gold_case_id": "logging-negative",
+      "source": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+        "byte_offset": 468,
+        "byte_length": 14,
+        "source_sha256": "5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81"
+      },
+      "forbidden": "Any messaging/DI/storage domain assertion at this negative call; ordinary resolved call allowed."
+    },
+    {
+      "id": "configuration-negative",
+      "source_gold_case_id": "configuration-negative",
+      "source": {
+        "project": "src/Sample.Api/Sample.Api.csproj",
+        "path": "src/Sample.Api/Program.cs",
+        "byte_offset": 1124,
+        "byte_length": 19,
+        "source_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53"
+      },
+      "forbidden": "Any messaging/DI/storage domain assertion at this negative call; ordinary resolved call allowed."
+    },
+    {
+      "id": "controller-wrapper-not-direct-publish",
+      "source": {
+        "project": "src/Sample.Api/Sample.Api.csproj",
+        "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+        "byte_offset": 642,
+        "byte_length": 18,
+        "source_sha256": "57da78434440b2da392bf6cb0a5eb954a1b3bc93f27e786c9c55bf9100fdd4df"
+      },
+      "caller_owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Api/Sample.Api.csproj",
+        "descriptor": "M:Sample.Api.Controllers.RegistrationController.Submit(Sample.Api.RegistrationModel)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "forbidden": "message_publish/PUBLISHES assigned directly to wrapper owner for the seed message; wrapper candidate paths remain separate",
+      "message": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "validation-wrapper-not-direct-publish",
+      "source": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+        "byte_offset": 667,
+        "byte_length": 20,
+        "source_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+      },
+      "caller_owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.Consumers.ValidateRegistrationConsumer.Consume(MassTransit.ConsumeContext{Sample.Components.Contracts.AddEventAttendee})",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "forbidden": "message_publish/PUBLISHES assigned directly to wrapper owner for the seed message; wrapper candidate paths remain separate",
+      "message": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    }
+  ],
+  "arms": {
+    "moedex": "Existing native worker6 artifact and persisted compiler index allowed as known development baseline. Preserve full per-context provenance; no new detector changes.",
+    "codegraph": "Byte-identical SolutionAnalyzer.AnalyzeSolutionAsync, CodeGraphSyntaxWalker, and GraphBuffer.ResolveEdges from local reference; raw ExtractionResult[] and resolved graph separately. Isolated build may link minimal original model sources and logging dependencies; record every source hash/package/version. No production IndexingPipeline private ResolveCalls, store/query/MCP emulation, or reimplementation."
+  },
+  "scoring": {
+    "primary_unit": "Unique source observation in a project; deduplicate identical source observations across retained context alternatives only in this primary metric. Preserve per-context evidence and differing targets separately.",
+    "outcomes": [
+      "supported_exact_occurrence",
+      "supported_owner_level",
+      "partial_native_evidence",
+      "not_represented",
+      "ambiguous_identity",
+      "wrong_assertion",
+      "capture_incomplete",
+      "mapping_unavailable"
+    ],
+    "semantic_coverage": "Both supported_exact_occurrence and supported_owner_level can support the exact required semantic assertion; report them separately. Partial or mapping-unavailable evidence does not become a semantic success.",
+    "provenance": "Exact occurrence requires native file plus token span or uniquely exact line/column span proving this callsite. Source-node declaration line range is owner-level only; never synthesize an edge callsite from gold.",
+    "identity": "Require qualified owner and target identities and matching source project where represented. Native display strings lacking project/assembly scope retain that limitation; collisions or multiple plausible targets are ambiguous, never first-match.",
+    "native_mapping": {
+      "message_publish": "PUBLISHES exact native caller qualified method to message qualified type; do not infer from generic CALLS.",
+      "message_consumer": "CONSUMES exact native consumer qualified type to message qualified type.",
+      "di_registration": "Service node with interface, implementation, lifetime properties and native source file/line; scoped/Scoped case normalization allowed. Missing lifetime remains partial.",
+      "storage_entity_use": "Require explicit native entity-use semantic relation/property. Generic CALLS alone is partial bound-API evidence.",
+      "storage_entity_mapping": "Require explicit native entity-mapping semantic relation/property; generic CALLS alone partial.",
+      "storage_context_registration": "Require native context service+implementation+lifetime semantics, not arbitrary DI registration or API name alone.",
+      "message_publish_configuration": "Require native configured publisher semantics separate from actual PUBLISHES; a direct PUBLISHES label does not preserve configuration distinction.",
+      "message_event_configuration": "Require native event configuration semantics separate from CONSUMES.",
+      "resolved_call": "CALLS exact qualified source method to exact qualified interface method, with native confidence/resolution marker retained. UnresolvedCall remains unresolved.",
+      "method_implementation": "Exact implementation method\u2192interface method relationship plus implementing type; type-level IMPLEMENTS alone partial, never full method binding."
+    },
+    "permitted_display_normalization": [
+      "Remove a leading global:: qualifier.",
+      "Canonicalize C# built-in aliases string/System.String, decimal/System.Decimal, void/System.Void, bool/System.Boolean, int/System.Int32 only inside known structured type/method identity components.",
+      "Represent generic display delimiters consistently only when the full qualified generic definition and every argument are preserved.",
+      "Native source paths may be made repository-relative after verifying retained file bytes.",
+      "Compare native source line conventions against frozen source bytes, preserving original native positions."
+    ],
+    "forbidden_normalization": [
+      "No basename/simple-name identity joins.",
+      "No dropping overload parameters, generic arguments, project ambiguity, confidence or context differences.",
+      "No source-driven reconstruction of missing relations or native callsite positions.",
+      "No treating native missing facts as evidence of runtime absence."
+    ],
+    "extras": "Inventory all native in-scope relation/node candidates in reviewed source closure; independently inspect unmatched candidates before calling them false assertions. Out-of-scope capabilities and unreviewed candidates remain explicit unscored extras. Do not compute broad precision from selected positives.",
+    "negative_controls": "Score a violation only with native evidence assigning a forbidden semantic assertion to the specific source/caller. If no native callsite provenance, report negative attribution unavailable when owner-level evidence cannot disambiguate.",
+    "summary": "Report numerator/denominator by family, provenance level, capture completeness and mapping outcome; no pooled quality winner without a separately agreed task gate."
+  },
+  "resources": {
+    "setup": "Record restore/build/index/extraction separately with exact versions/argv, source hashes, logs, environment and failures.",
+    "gpu": "Disabled; no embeddings/model-backed enrichments in either arm.",
+    "timing": "One observed run is descriptive only; compiler versions/build closures differ and must be reported. No end-to-end or production latency claim.",
+    "output": "Retain raw native evidence without filtering before scoring; all scorer derivations reproducible."
+  },
+  "limitations": [
+    "Outbox labels guided Moedex development; this is not held-out generalization.",
+    "19positive observations and4negative controls are a selected capability diagnostic, not the PROGRAM30 varied paired tasks.",
+    "CodeGraph component bypasses full private-dependent production indexing/store/query pipeline; no product or agent task comparison.",
+    "Method-level implementation and configuration semantics may differ in expressiveness; preserve partial evidence rather than forcing equivalence."
+  ]
+}

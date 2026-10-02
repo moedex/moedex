@@ -1,0 +1,1 @@
+Where does MicrosoftDependencyInjectionJobFactory resolve a job for a named scheduler? Explain the lookup order and exactly when it may construct a job without a dependency-injection scope. Cite precise checked-in source ranges. Describe static behavior and its conditions; do not claim that a scheduler or job actually ran.

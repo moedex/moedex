@@ -1,0 +1,42 @@
+{
+  "src/Sample.Components/obj/Debug/net8.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs": {
+    "errorCount": 0,
+    "warningCount": 3
+  },
+  "src/Sample.Worker/obj/Debug/net8.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs": {
+    "errorCount": 0,
+    "warningCount": 3
+  },
+  "src/Sample.Worker/obj/Debug/net8.0/Sample.Worker.AssemblyInfo.cs": {
+    "errorCount": 0,
+    "warningCount": 3
+  },
+  "src/Sample.Worker/obj/Debug/net8.0/Sample.Worker.GlobalUsings.g.cs": {
+    "errorCount": 0,
+    "warningCount": 6
+  },
+  "src/Sample.Components/obj/Debug/net8.0/Sample.Components.GlobalUsings.g.cs": {
+    "errorCount": 0,
+    "warningCount": 4
+  },
+  "src/Sample.Api/obj/Debug/net8.0/Sample.Api.AssemblyInfo.cs": {
+    "errorCount": 0,
+    "warningCount": 3
+  },
+  "src/Sample.Api/obj/Debug/net8.0/Sample.Api.GlobalUsings.g.cs": {
+    "errorCount": 0,
+    "warningCount": 6
+  },
+  "src/Sample.Api/Program.cs": {
+    "errorCount": 0,
+    "warningCount": 2
+  },
+  "src/Sample.Api/obj/Debug/net8.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs": {
+    "errorCount": 0,
+    "warningCount": 3
+  },
+  "src/Sample.Components/obj/Debug/net8.0/Sample.Components.AssemblyInfo.cs": {
+    "errorCount": 0,
+    "warningCount": 3
+  }
+}

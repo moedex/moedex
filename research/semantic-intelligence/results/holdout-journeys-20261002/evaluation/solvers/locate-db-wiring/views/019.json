@@ -1,0 +1,17 @@
+{
+  "ordinal": 19,
+  "argv": [
+    "call",
+    "--name",
+    "search_context",
+    "--arguments",
+    "{\"query\":\"AddInfrastructureServices\",\"repo\":\"CleanArchitecture\",\"path_prefix\":\"src/Web\",\"top_k\":1,\"token_budget\":800,\"graph_depth\":0}"
+  ],
+  "started_monotonic": 77559.087109583,
+  "finished_monotonic": 77559.137362,
+  "returncode": 0,
+  "stdout_bytes": 2422,
+  "stdout_sha256": "59cec4efe7390db2484986da4a6a3032be6965c755b47a91b6c7c56bf0761349",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

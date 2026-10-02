@@ -1,0 +1,50 @@
+{
+  "task": "flow-validation",
+  "reviewer": "root",
+  "reviewed_utc": "2026-10-02T02:11:05.102486+00:00",
+  "answer_sha256": "72c7eceb1dfc18c301c08e038beed98f1b123f2c10e7bb2f6901683115a6dfa8",
+  "atoms": [
+    {
+      "id": "flow-validation.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Exact IConsumer<AddEventAttendee> declaration stated and cited at consumer 9-24; response 002."
+    },
+    {
+      "id": "flow-validation.2",
+      "correctness": 1,
+      "evidence": 0.5,
+      "reason": "Consumer-with-definition registration correct, but citation spans whole Worker ConfigureServices block 26-89 rather than registration at 77."
+    },
+    {
+      "id": "flow-validation.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Constructor injection and call with all three arguments stated and source cited, augmented by exact compiler call span in response 006."
+    },
+    {
+      "id": "flow-validation.4",
+      "correctness": 1,
+      "evidence": 0.5,
+      "reason": "Implementation correspondence is precisely supported by compiler path and service source; scoped registration is correct but cited only with broad Worker 26-89 range."
+    },
+    {
+      "id": "flow-validation.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Exact RegistrationValidated publication and registrationId propagation stated with source lines and compiler span."
+    },
+    {
+      "id": "flow-validation.6",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicit no runtime DI/activation/delivery proof and no substantive validation checks; supported by retrieved service body and static-path limitations."
+    }
+  ],
+  "correctness": 6,
+  "evidence": 5.0,
+  "possible": 6,
+  "unsupported_claims": [],
+  "strict_success": false,
+  "isolation_audit": "Solver attestation and logged RPCs available; full model/tool activity not exposed to root, so host isolation is not independently verified."
+}

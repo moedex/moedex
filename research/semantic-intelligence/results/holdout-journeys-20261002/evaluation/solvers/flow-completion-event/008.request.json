@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"read_source","arguments":{"path":"src/Domain/Events/TodoItemCompletedEvent.cs","start_line":1,"end_line":11}}}

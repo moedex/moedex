@@ -1,0 +1,9 @@
+  Determining projects to restore...
+  Restored /Users/zakkeown/Code/moedex/.local/codegraph-native-provenance/Provenance.csproj (in 32 ms).
+  Provenance -> /Users/zakkeown/Code/moedex/.local/codegraph-native-provenance/bin/Debug/net10.0/Provenance.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.64

@@ -1,0 +1,54 @@
+{
+  "task": "impact-entity-uniqueness",
+  "reviewer": "/root/review18_11",
+  "answer_sha256": "878d504c90ada368e2edee2cd76bdfdf7c5bf156afa1b8141b0de2253a14e56e",
+  "atoms": [
+    {
+      "id": "impact-entity-uniqueness.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly distinguishes int Id, its primary key mapping, and Guid RegistrationId; cites Registration.cs:3\u201313 and RegistrationDbContext.cs:34\u201351. Responses 004 and 005 return those complete files; pinned source verifies lines 5\u20137 and 38\u201341."
+    },
+    {
+      "id": "impact-entity-uniqueness.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly recommends replacing MemberId/EventId composite uniqueness with RegistrationId uniqueness. Cited RegistrationDbContext.cs:34\u201351 includes HasIndex/IsUnique at 47\u201351, returned in 002 and 005."
+    },
+    {
+      "id": "impact-entity-uniqueness.3",
+      "correctness": 0.5,
+      "evidence": 1,
+      "reason": "States RegistrationId is mapped as a property and recommends a new unique index, but does not explicitly state that this mapping has no existing unique index on RegistrationId. The cited RegistrationDbContext.cs:34\u201351 and complete response 005 support the whole source fact; missing negative statement makes the answer materially incomplete under the explicitness rule."
+    },
+    {
+      "id": "impact-entity-uniqueness.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly covers NewId.NextGuid(), SaveChangesAsync, UniqueViolation translation, and lack of a particular constraint check. Citation RegistrationService.cs:21\u201354 is the exact relevant method and is fully returned within response 002 lines 9\u201354; pinned source confirms lines 25 and 43\u201349."
+    },
+    {
+      "id": "impact-entity-uniqueness.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly identifies Conflict with MemberId/EventId and recommends reviewing the response. Citation RegistrationController.cs:19\u201345 is the Submit method; response 002 returns it and pinned source confirms catch/Conflict at 37\u201343."
+    },
+    {
+      "id": "impact-entity-uniqueness.6",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly says the mapping has no physical table name and asserts none. RegistrationDbContext.cs:34\u201351 covers the mapping statements, returned completely in 005 (closing brace at 52). No migration-history name is misidentified. Pinned Program.cs:40\u201341 configures migration history only; it need not be cited because no claim about that setting is made."
+    }
+  ],
+  "correctness_total": 5.5,
+  "evidence_total": 6,
+  "possible": 6,
+  "unsupported_claims": [],
+  "strict_success": false,
+  "limitations": [
+    "All five logged requests/responses and transcript were inspected; transcript hashes match files. Responses contain no relevant clipping/truncation (002 summary false/false; 004 and 005 complete).",
+    "All five rubric-pinned source files match their raw SHA-256 values. Supplemental interface/exception facts are directly supported by response 002.",
+    "Answer expressly distinguishes source/configuration findings from runtime database/HTTP behavior and message delivery. No runtime test was conducted or required.",
+    "Setup-catalog display truncation and recovery are self-reported in answer; transcript records public calls only and cannot independently establish setup display history. This is not a material source claim."
+  ]
+}

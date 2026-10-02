@@ -1,0 +1,48 @@
+{
+  "classification": "upstream prerequisite build only; no Moedex capture/query",
+  "project": "src/Quartz/Quartz.csproj",
+  "configuration": "Debug",
+  "framework": "net10.0",
+  "commands": [
+    {
+      "name": "sdk",
+      "argv": [
+        "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/dotnet",
+        "--version"
+      ],
+      "returncode": 0,
+      "seconds": 0.24261270799615886
+    },
+    {
+      "name": "restore",
+      "argv": [
+        "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/dotnet",
+        "restore",
+        "src/Quartz/Quartz.csproj",
+        "--configfile",
+        "/Users/zakkeown/Code/moedex/.local/holdout-quartz/build-source/NuGet.Config",
+        "--packages",
+        "/Users/zakkeown/Code/moedex/.local/holdout-quartz/packages",
+        "--disable-parallel"
+      ],
+      "returncode": 0,
+      "seconds": 8.925576292007463
+    },
+    {
+      "name": "build",
+      "argv": [
+        "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/dotnet",
+        "build",
+        "src/Quartz/Quartz.csproj",
+        "--no-restore",
+        "-c",
+        "Debug",
+        "-m:1",
+        "-p:UseSharedCompilation=false",
+        "--nologo"
+      ],
+      "returncode": 0,
+      "seconds": 6.068389249994652
+    }
+  ]
+}

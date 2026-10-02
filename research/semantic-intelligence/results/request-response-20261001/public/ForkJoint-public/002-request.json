@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "compiler_binding_at",
+    "arguments": {
+      "repo": "Sample-ForkJoint",
+      "path": "src/ForkJoint.Api/Components/Consumers/CookFryConsumer.cs",
+      "byte_offset": 316,
+      "raw_sha256": "7c3fc91a8decd7d16ffa3653a3965b12a577b3a2fe7f4550d4249e730a5d84fb",
+      "context_id": "context:7e2cde7ad504707f470c6a133fb17a6e207236c01c58fb1fe76a6602b00175d8"
+    }
+  }
+}

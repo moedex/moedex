@@ -1,0 +1,270 @@
+{
+  "version": 1,
+  "classification": "development_reverse_query_regression_not_new_holdout_or_agent_comparison",
+  "completed": true,
+  "gold_sha256": "a3e991360154e516b6c151e44cfff3c1f1928b72fa22a134e5c3bbab7c9ca261",
+  "results": {
+    "positive_cases": 6,
+    "selected_positive_queries": 8,
+    "alternative_rejections": 2,
+    "legacy_checks": 2,
+    "query_count": 20,
+    "phase_counts": {
+      "discovery": 6,
+      "selected": 8,
+      "legacy": 2,
+      "reject-alternatives": 2,
+      "unsupported-discovery": 1,
+      "unsupported-selected": 1
+    },
+    "complete_response_bytes": 43125,
+    "charged_evidence_rows": 16,
+    "truncated_queries": 0
+  },
+  "normal_race_equal": {
+    "public-report.json": "public-race-report.json",
+    "webhooks-regression-normal.json": "webhooks-regression-race.json",
+    "outbox-regression-normal.json": "outbox-regression-race.json"
+  },
+  "indices": [
+    {
+      "repo": "eShop",
+      "index": {
+        "snapshot_id": "reverse-webhooks",
+        "bytes": 1616619,
+        "sha256": "f195411b02bd31edf01e15ec2ce8060f0a5d16af0be2718438ce6e5947f4506a"
+      },
+      "legacy_index": {
+        "snapshot_id": "independent-project",
+        "bytes": 1616363,
+        "sha256": "1231115b5d021d41e04cc31b06d7d724a8324e264601ff0ec90f77210a5cf156"
+      },
+      "additional_bytes": 256
+    },
+    {
+      "repo": "Sample-Outbox",
+      "index": {
+        "snapshot_id": "reverse-outbox",
+        "bytes": 781396,
+        "sha256": "ca988e984f056ab8af0ec2c12f5e1d3b41e0d0d856180266489942f8f183b7ae"
+      },
+      "legacy_index": {
+        "snapshot_id": "application-real",
+        "bytes": 781284,
+        "sha256": "704ed60096dd1e082304306b3386ab40ada3129290316a566c97202f3517fbe0"
+      },
+      "additional_bytes": 112
+    }
+  ],
+  "artifacts_unchanged_verified": true,
+  "rebuilds": [
+    {
+      "repo": "eShop",
+      "argv": [
+        "/Users/zakkeown/Code/moedex/.local/application-impact/moe-reverse-v1",
+        "index",
+        "snapshot",
+        "build",
+        "--corpus",
+        "/Users/zakkeown/Code/moedex/.local/application-impact/independent/webhooks-capture-v3/corpus",
+        "--index-dir",
+        "/Users/zakkeown/Code/moedex/.local/application-impact/reverse-v1/webhooks/index",
+        "--id",
+        "reverse-webhooks",
+        "--graph=false",
+        "--semantic-artifact",
+        "/Users/zakkeown/Code/moedex/.local/application-impact/independent/webhooks-capture-v3/project.semantic",
+        "--semantic-workspaces",
+        "/Users/zakkeown/Code/moedex/.local/application-impact/independent/webhooks-capture-v3/roots.json"
+      ],
+      "moe_sha256": "f7b31d93e7a5eb5ec9ce493eac777703551383f604aebade97fb1019b274b95f",
+      "artifact_sha256": "0690938d31c51740216d456cdaa6ce079f2133c08323988bef78ff52b0cf76bf",
+      "workspaces_sha256": "355e6103e20457117c87118fc910aec29637da22741deb49211b461b99c66673",
+      "returncode": 0,
+      "elapsed_seconds": 0.9226372920002177
+    },
+    {
+      "repo": "Sample-Outbox",
+      "argv": [
+        "/Users/zakkeown/Code/moedex/.local/application-impact/moe-reverse-v1",
+        "index",
+        "snapshot",
+        "build",
+        "--corpus",
+        "/Users/zakkeown/Code/moedex/.local/application-impact/run-wrapper-v1/corpus",
+        "--index-dir",
+        "/Users/zakkeown/Code/moedex/.local/application-impact/reverse-v1/outbox/index",
+        "--id",
+        "reverse-outbox",
+        "--graph=false",
+        "--semantic-artifact",
+        "/Users/zakkeown/Code/moedex/.local/application-impact/run-wrapper-v1/composed.semantic",
+        "--semantic-workspaces",
+        "/Users/zakkeown/Code/moedex/.local/application-impact/run-wrapper-v1/roots.json"
+      ],
+      "moe_sha256": "f7b31d93e7a5eb5ec9ce493eac777703551383f604aebade97fb1019b274b95f",
+      "artifact_sha256": "24a95f5ad7307d6f3fdaf151e230b26e5cf72d2fec41971476fc4f7135cdac70",
+      "workspaces_sha256": "292e3383f24bf1bdc273620bcc5eeb2de8479ef3f9bfbcdc90886e40a561d1a9",
+      "returncode": 0,
+      "elapsed_seconds": 0.2335144999997283
+    }
+  ],
+  "review": [
+    "Frozen source-authored exact symbol identities preceded reverse query outputs. Context alternatives are discovered through the public tool; initial symbol IDs are derived from gold, so this is not a natural-language discovery benchmark.",
+    "Six positive identities include one metadata interface and two Outbox identities queried independently in two compilation variants.",
+    "The generic/default handler bridge is a known extractor coverage gap. No recorded evidence does not establish absence of implementations.",
+    "No same-qualified-name collision is claimed in real corpora. Synthetic tests cover exact project/assembly identity, target ordinal, corruption, legacy versions, bounded discovery and cumulative materialization.",
+    "Independent read review checked reverse posting bijection, context separation, budget accounting, and fail-closed public source/context/snapshot and interface identity checks.",
+    "Rows visited measures charged evidence rows, excluding binary-search comparisons. The 2 MiB limit is index materialization, not total serialized MCP bytes.",
+    "Preserved worker6 artifacts were republished as index v5 without a new extraction or detector change; prior first-holdout baseline remains unchanged."
+  ],
+  "validation": {
+    "full_go_test": "full-test.log",
+    "go_vet": "vet.log",
+    "go_build": "build.log",
+    "semantic_index_open_fuzz": "fuzz-open.log",
+    "mcp_normal": "reverse-mcp-all.log",
+    "mcp_race": "reverse-mcp-race.log",
+    "real_public_normal": "public-test.log",
+    "real_public_race": "public-race-test.log",
+    "previous_application_gates_normal": "regression-normal.log",
+    "previous_application_gates_race": "regression-race.log",
+    "semanticindex_race": {
+      "status": "pass_reported_by_implementing_agent",
+      "stdout_archive": null,
+      "commands": [
+        {
+          "command": "go test ./internal/semanticindex -count=1",
+          "exit_code": 0,
+          "elapsed_seconds": 0.905
+        },
+        {
+          "command": "go test -race ./internal/semanticindex -count=1",
+          "exit_code": 0,
+          "elapsed_seconds": 7.858
+        },
+        {
+          "command": "go test ./internal/semanticindex -run TestImplementationsDiscoveryExactCapAndDistinctProjects -count=1",
+          "exit_code": 0,
+          "elapsed_seconds": 0.264
+        }
+      ],
+      "note": "Tool results reported by index agent; no durable scoped stdout. Last targeted test followed test-only namespace cleanup, no production edits after full/race."
+    }
+  },
+  "reproduction": {
+    "environment": {
+      "MOEDEX_IMPLEMENTATION_QUERY_INPUTS": ".local/application-impact/reverse-v1/query-inputs.json",
+      "MOEDEX_IMPLEMENTATION_QUERY_REPORT": "/private/tmp/implementation-discovery-report.json"
+    },
+    "command": "go test ./internal/app/servecmd -run ^TestPublicImplementationDiscovery$ -count=1",
+    "race_command": "go test -race ./internal/app/servecmd -run ^TestPublicImplementationDiscovery$ -count=1",
+    "index_republication": "Exact original commands and artifact fingerprints are retained in rebuild.json. Local corpora, indexes and binaries are intentionally not archived."
+  },
+  "files": {
+    "build.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "full-test.log": {
+      "sha256": "25b91fb130be75d3a114952adbfb18ce3d59ebf0a8de6ece70720e4de74651d1",
+      "bytes": 2658
+    },
+    "fuzz-open.log": {
+      "sha256": "6319617bafadf8383839515376a374864d1ee0c00f7cbc70b47ea4e930161ec3",
+      "bytes": 404
+    },
+    "implementation_discovery_public_test.go.txt": {
+      "sha256": "38d9912e4666a55fb96888a92fc0129398f4ae95f8e57127cf99b2c38b1e9d52",
+      "bytes": 13375
+    },
+    "outbox-publish.stderr": {
+      "sha256": "e6e2ca017a9e4ba96a0e8a666e26cb1ea42e89bce36e7c30aec3db1e0d3ffa96",
+      "bytes": 211
+    },
+    "outbox-publish.stdout": {
+      "sha256": "6726bf26242f5310aba15f1518acd6bbdb5a139506ee9082bdce303e5c02ded0",
+      "bytes": 98
+    },
+    "outbox-regression-normal.json": {
+      "sha256": "9e1017d4c01cc8e59a13ad08851f8e4a95de582e1fc33bf5154a9bd90220dcca",
+      "bytes": 113905
+    },
+    "outbox-regression-race.json": {
+      "sha256": "9e1017d4c01cc8e59a13ad08851f8e4a95de582e1fc33bf5154a9bd90220dcca",
+      "bytes": 113905
+    },
+    "public-race-report.json": {
+      "sha256": "acad38d7bceaf81b5061c0bb2618e06ca7e17d22a210f18ee0196e65a2578c5e",
+      "bytes": 61448
+    },
+    "public-race-test.log": {
+      "sha256": "958598efd5dfc8074487e645bc6634ff1c67a1964a6d7cf93b852bd888228aaa",
+      "bytes": 798
+    },
+    "public-report.json": {
+      "sha256": "acad38d7bceaf81b5061c0bb2618e06ca7e17d22a210f18ee0196e65a2578c5e",
+      "bytes": 61448
+    },
+    "public-test.log": {
+      "sha256": "afbfbedd7c1891d5f2e2fb7ee6cd6142018ce3af317ffd4e85eab856afa2db84",
+      "bytes": 798
+    },
+    "query-gold.json": {
+      "sha256": "a3e991360154e516b6c151e44cfff3c1f1928b72fa22a134e5c3bbab7c9ca261",
+      "bytes": 15168
+    },
+    "query-inputs.json": {
+      "sha256": "f8fd6cfe1a44bcde57d80d904ab8e482f5cca8806dc60264519718333df5003d",
+      "bytes": 622
+    },
+    "rebuild.json": {
+      "sha256": "8b07f12965193b526b264d4f1c7000aaadd0476a93d8bafb4a8d219c30e9e35a",
+      "bytes": 2117
+    },
+    "regression-normal.log": {
+      "sha256": "83a7265d4795f96ee54c35f691e55f0a6f6c5fd42328c0245c5ace5f04870b42",
+      "bytes": 639
+    },
+    "regression-race.log": {
+      "sha256": "2809b40eac426db381a100afea3a608424e91275a1a22c1f046e86b8df5162ae",
+      "bytes": 639
+    },
+    "reverse-mcp-all.log": {
+      "sha256": "eead7ec38bc9e3b12cf857bd847810e203ff405467c05a904e8c5ea2d333fb3d",
+      "bytes": 32
+    },
+    "reverse-mcp-race.log": {
+      "sha256": "0684d753fd49f392e53d1ed8b8d43da5098054ae437764088e6d953222ec831a",
+      "bytes": 32
+    },
+    "reverse-mcp-tests.log": {
+      "sha256": "453bf0f48953bd145bb147df0c029f648e3cb5370f73faae784d9fe3605f8ada",
+      "bytes": 32
+    },
+    "source-fingerprints.json": {
+      "sha256": "49fee6c7aaa9c5ec270eb5a2ce01c5687fb2ba3dabe3df97e57f23dc77e69421",
+      "bytes": 1658
+    },
+    "vet.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "webhooks-publish.stderr": {
+      "sha256": "e6e2ca017a9e4ba96a0e8a666e26cb1ea42e89bce36e7c30aec3db1e0d3ffa96",
+      "bytes": 211
+    },
+    "webhooks-publish.stdout": {
+      "sha256": "e63766bf0a60e2688c372485a38735b47d565bc051e6da1f8d650d209eb5e931",
+      "bytes": 101
+    },
+    "webhooks-regression-normal.json": {
+      "sha256": "bb6ba606de37d4c630d65625ea8204b233c21ffcf65bb6a53eca84837ed1eec9",
+      "bytes": 72908
+    },
+    "webhooks-regression-race.json": {
+      "sha256": "bb6ba606de37d4c630d65625ea8204b233c21ffcf65bb6a53eca84837ed1eec9",
+      "bytes": 72908
+    }
+  }
+}

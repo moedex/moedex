@@ -1,0 +1,40 @@
+{
+  "task": "impact-done-semantics",
+  "answer_sha256": "e77b3155e15dfebb3aa6ba4ee145355f36d482e9eff551c6290864235428c8cc",
+  "classification": "coordinator provisional scoring independent of subsequent reviewer",
+  "atoms": [
+    {
+      "id": "impact-done-semantics.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Required endpoint/request/entity-event/configuration scope is explicit with precise inspected citations; full route is separately supported."
+    },
+    {
+      "id": "impact-done-semantics.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Required endpoint/request/entity-event/configuration scope is explicit with precise inspected citations; full route is separately supported."
+    },
+    {
+      "id": "impact-done-semantics.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Required endpoint/request/entity-event/configuration scope is explicit with precise inspected citations; full route is separately supported."
+    },
+    {
+      "id": "impact-done-semantics.4",
+      "correctness": 1,
+      "evidence": 0.5,
+      "reason": "Answer identifies clearing/publication and handler correctly, but cites the ClearDomainEvents call without the BaseEntity.ClearDomainEvents body (gold evidence completion). Provisional incomplete evidence for actual clearing; reviewer may distinguish review-site evidence from behavior proof."
+    },
+    {
+      "id": "impact-done-semantics.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Required endpoint/request/entity-event/configuration scope is explicit with precise inspected citations; full route is separately supported."
+    }
+  ],
+  "material_unsupported_claims": [],
+  "runtime_distinction_preserved": true,
+  "strict_success": false
+}

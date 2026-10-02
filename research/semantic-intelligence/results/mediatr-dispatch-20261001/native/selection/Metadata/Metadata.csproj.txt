@@ -1,0 +1,1 @@
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup><ItemGroup><Compile Include="../App/Source.cs"/><Reference Include="Contracts"><HintPath>../Contracts/bin/Debug/net8.0/Contracts.dll</HintPath></Reference></ItemGroup></Project>

@@ -1,0 +1,12 @@
+{
+  "eShop": {
+    "index": "/Users/zakkeown/Code/moedex/.local/application-impact/reverse-v1/webhooks/index",
+    "legacy_index": "/Users/zakkeown/Code/moedex/.local/application-impact/independent/webhooks-capture-v3/index",
+    "source": "/Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop"
+  },
+  "Sample-Outbox": {
+    "index": "/Users/zakkeown/Code/moedex/.local/application-impact/reverse-v1/outbox/index",
+    "legacy_index": "/Users/zakkeown/Code/moedex/.local/application-impact/run-wrapper-v1/index",
+    "source": "/Users/zakkeown/Code/moedex/.local/application-impact/Sample-Outbox"
+  }
+}

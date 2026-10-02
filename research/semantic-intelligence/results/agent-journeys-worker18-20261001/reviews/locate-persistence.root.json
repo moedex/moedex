@@ -1,0 +1,50 @@
+{
+  "task": "locate-persistence",
+  "reviewer": "root",
+  "reviewed_utc": "2026-10-02T02:02:17.765728+00:00",
+  "answer_sha256": "cf5d3273b88aa0dfa2bdab8b10160edfcd18fe8e82166a11d1e6647ffa1a9226",
+  "atoms": [
+    {
+      "id": "locate-persistence.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Creation fields, new GUID and UTC date fully stated with exact lines; responses 002/003."
+    },
+    {
+      "id": "locate-persistence.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Awaited AddAsync explicitly cited at line 32."
+    },
+    {
+      "id": "locate-persistence.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Publish order and copied fields explicitly cited at 34-41."
+    },
+    {
+      "id": "locate-persistence.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Save after publish plus duplicate translation correctly cited at 45-50."
+    },
+    {
+      "id": "locate-persistence.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Return after save stated with exact line 52."
+    },
+    {
+      "id": "locate-persistence.6",
+      "correctness": 0.5,
+      "evidence": 0.5,
+      "reason": "Correctly denies source order establishes runtime atomicity or delivery, but does not identify or retrieve API EF bus-outbox configuration, which is part of this frozen atom."
+    }
+  ],
+  "correctness": 5.5,
+  "evidence": 5.5,
+  "possible": 6,
+  "unsupported_claims": [],
+  "strict_success": false,
+  "isolation_audit": "Solver attestation and logged RPCs available; full model/tool activity not exposed to root, so host isolation is not independently verified."
+}

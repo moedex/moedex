@@ -24,8 +24,11 @@ package graphserve
 
 import (
 	"fmt"
+	"log"
 	"path/filepath"
+	"runtime"
 	"sort"
+	"sync"
 
 	"moedex/internal/diskstore"
 	"moedex/internal/index"
@@ -57,9 +60,11 @@ type SymbolSite struct {
 // shards. It is read-only after Open and safe for concurrent lookups; Close
 // releases the shared content mapping and must not race with in-flight lookups.
 type SymbolCorpus struct {
-	corpus  *symbol.Corpus
-	idxs    []*index.Index          // per-shard content indices, by shard ID
-	content *diskstore.ContentStore // non-nil only for a deduped (MOEDEX05) dir
+	corpus            *symbol.Corpus
+	idxs              []*index.Index          // per-shard content indices, by shard ID
+	content           *diskstore.ContentStore // non-nil only for a deduped (MOEDEX05) dir
+	cacheFingerprints [][32]byte              // loaded content and ordered metadata, by shard ID
+	cacheHits         int
 }
 
 // globShards globs the "*.idx" shards under dir in sorted filename order — the
@@ -80,7 +85,8 @@ func globShards(dir string) ([]string, error) {
 
 // OpenSymbols builds the cross-shard symbol lookup for the shard dir: it loads
 // each shard's blob CONTENT (no postings — symbol extraction never queries
-// trigrams), extracts that shard's symbols with symbol.BuildMulti, and merges
+// trigrams), reuses a validated per-shard symbol cache or extracts with
+// symbol.BuildMulti, and merges
 // every per-shard index into one corpus-wide byName lookup. Shard IDs are the
 // positions of the sorted "*.idx" set, so they match the order Open and OpenRank
 // use.
@@ -121,17 +127,79 @@ func OpenSymbols(dir string) (*SymbolCorpus, error) {
 			return nil, fmt.Errorf("server: load blobs %s: %w", p, err)
 		}
 		ix := index.Restore(bs, nil)
-		id := sc.corpus.AddShard(filepath.Base(p), symbol.BuildMulti(ix))
-		// AddShard hands out dense IDs in call order, so appending keeps idxs
-		// indexable by shard ID.
-		if id != len(sc.idxs) {
-			return nil, fmt.Errorf("server: shard %s got ID %d, expected %d", p, id, len(sc.idxs))
-		}
 		sc.idxs = append(sc.idxs, ix)
+	}
+
+	// Load all content before starting extraction. Each worker owns its symbol
+	// index and only reads blob content; the shared mapping remains live until
+	// all workers finish. Publish in sorted shard order regardless of completion
+	// order, preserving shard IDs and cross-shard reference ordering.
+	sc.cacheFingerprints = make([][32]byte, len(paths))
+	hits := make([]bool, len(paths))
+	writeErrors := make([]error, len(paths))
+	syms := buildShardSymbolsWith(sc.idxs, min(runtime.GOMAXPROCS(0), len(paths), 4), func(i int, ix *index.Index) *symbol.Index {
+		fingerprint := graphSymbolShardFingerprint(ix)
+		sc.cacheFingerprints[i] = fingerprint
+		path := graphSymbolCachePath(paths[i])
+		if cached, err := readGraphSymbolCache(path, fingerprint, ix); err == nil {
+			hits[i] = true
+			return cached
+		}
+		fresh := symbol.BuildMulti(ix)
+		writeErrors[i] = writeGraphSymbolCache(path, fingerprint, fresh)
+		return fresh
+	})
+	failedWrites := 0
+	for i := range paths {
+		if hits[i] {
+			sc.cacheHits++
+		}
+		if writeErrors[i] != nil {
+			failedWrites++
+		}
+	}
+	log.Printf("server: graph symbol cache hits=%d misses=%d write_errors=%d", sc.cacheHits, len(paths)-sc.cacheHits, failedWrites)
+	for i, p := range paths {
+		id := sc.corpus.AddShard(filepath.Base(p), syms[i])
+		if id != i {
+			return nil, fmt.Errorf("server: shard %s got ID %d, expected %d", p, id, i)
+		}
 	}
 
 	ok = true // hand cs ownership to the SymbolCorpus
 	return sc, nil
+}
+
+// buildShardSymbols bounds concurrent extractor scratch space without changing
+// BuildMulti's first-file language selection or shard-local blob identities.
+func buildShardSymbols(idxs []*index.Index, workers int) []*symbol.Index {
+	return buildShardSymbolsWith(idxs, workers, func(_ int, ix *index.Index) *symbol.Index { return symbol.BuildMulti(ix) })
+}
+
+func buildShardSymbolsWith(idxs []*index.Index, workers int, build func(int, *index.Index) *symbol.Index) []*symbol.Index {
+	out := make([]*symbol.Index, len(idxs))
+	workers = min(max(workers, 1), len(idxs))
+	if workers <= 1 {
+		for i, ix := range idxs {
+			out[i] = build(i, ix)
+		}
+		return out
+	}
+	jobs := make(chan int)
+	var wg sync.WaitGroup
+	for range workers {
+		wg.Go(func() {
+			for i := range jobs {
+				out[i] = build(i, idxs[i])
+			}
+		})
+	}
+	for i := range idxs {
+		jobs <- i
+	}
+	close(jobs)
+	wg.Wait()
+	return out
 }
 
 // Close releases the shared content-store mmap backing the shards' blob content

@@ -1,0 +1,81 @@
+[
+  {
+    "label": "full-test",
+    "argv": [
+      "go",
+      "test",
+      "./..."
+    ],
+    "native_environment": {
+      "MOEDEX_FORWARD_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/forwarding/capture.jsonl",
+      "MOEDEX_FORWARD_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/forwarding",
+      "MOEDEX_DEFAULT_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/selection/capture.jsonl",
+      "MOEDEX_DEFAULT_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/selection",
+      "MOEDEX_BRIDGE_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/bridge/capture.jsonl",
+      "MOEDEX_BRIDGE_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/bridge",
+      "MOEDEX_RESPONSE_DI_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/response-di/capture.jsonl",
+      "MOEDEX_RESPONSE_DI_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/response-di",
+      "MOEDEX_REQUEST_RESPONSE_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/request-response/capture.jsonl",
+      "MOEDEX_REQUEST_RESPONSE_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/request-response",
+      "MOEDEX_ENDPOINT_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/endpoint/capture.jsonl",
+      "MOEDEX_ENDPOINT_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/endpoint",
+      "MOEDEX_MEDIATR_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/native/capture.jsonl",
+      "MOEDEX_MEDIATR_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/native"
+    },
+    "returncode": 0
+  },
+  {
+    "label": "vet",
+    "argv": [
+      "go",
+      "vet",
+      "./..."
+    ],
+    "native_environment": {
+      "MOEDEX_FORWARD_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/forwarding/capture.jsonl",
+      "MOEDEX_FORWARD_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/forwarding",
+      "MOEDEX_DEFAULT_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/selection/capture.jsonl",
+      "MOEDEX_DEFAULT_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/selection",
+      "MOEDEX_BRIDGE_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/bridge/capture.jsonl",
+      "MOEDEX_BRIDGE_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/bridge",
+      "MOEDEX_RESPONSE_DI_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/response-di/capture.jsonl",
+      "MOEDEX_RESPONSE_DI_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/response-di",
+      "MOEDEX_REQUEST_RESPONSE_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/request-response/capture.jsonl",
+      "MOEDEX_REQUEST_RESPONSE_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/request-response",
+      "MOEDEX_ENDPOINT_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/endpoint/capture.jsonl",
+      "MOEDEX_ENDPOINT_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/endpoint",
+      "MOEDEX_MEDIATR_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/native/capture.jsonl",
+      "MOEDEX_MEDIATR_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/native"
+    },
+    "returncode": 0
+  },
+  {
+    "label": "race",
+    "argv": [
+      "go",
+      "test",
+      "-race",
+      "./internal/semantic",
+      "./internal/semanticindex",
+      "./internal/semanticimport",
+      "./internal/mcp"
+    ],
+    "native_environment": {
+      "MOEDEX_FORWARD_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/forwarding/capture.jsonl",
+      "MOEDEX_FORWARD_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/forwarding",
+      "MOEDEX_DEFAULT_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/selection/capture.jsonl",
+      "MOEDEX_DEFAULT_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/selection",
+      "MOEDEX_BRIDGE_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/bridge/capture.jsonl",
+      "MOEDEX_BRIDGE_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/bridge",
+      "MOEDEX_RESPONSE_DI_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/response-di/capture.jsonl",
+      "MOEDEX_RESPONSE_DI_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/response-di",
+      "MOEDEX_REQUEST_RESPONSE_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/request-response/capture.jsonl",
+      "MOEDEX_REQUEST_RESPONSE_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/request-response",
+      "MOEDEX_ENDPOINT_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/endpoint/capture.jsonl",
+      "MOEDEX_ENDPOINT_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/endpoint",
+      "MOEDEX_MEDIATR_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/native/capture.jsonl",
+      "MOEDEX_MEDIATR_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-dispatch/native"
+    },
+    "returncode": 0
+  }
+]

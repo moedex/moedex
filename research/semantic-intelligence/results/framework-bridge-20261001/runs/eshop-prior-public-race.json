@@ -1,0 +1,1541 @@
+{
+  "gold_sha256": "8d703f654a091d8c803b173612d3af4401b7e1034a1eb2ba20d34d3f00ac4f62",
+  "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+  "projection": "implementation_evidence_v1_successor",
+  "completed": true,
+  "public_semantic_cases": 9,
+  "implementation_declaration_only": 0,
+  "negative_cases": 2,
+  "coverage_gaps": 5,
+  "case_outcomes": {
+    "aspire-dbcontext-registration": "coverage_gap",
+    "call-OrderStatusChangedToPaid-sender": "supported_exact_occurrence",
+    "call-OrderStatusChangedToShipped-sender": "supported_exact_occurrence",
+    "callback-entity-mapping": "coverage_gap",
+    "custom-handler-OrderStatusChangedToPaid": "coverage_gap",
+    "custom-handler-OrderStatusChangedToShipped": "coverage_gap",
+    "custom-handler-ProductPriceChanged": "coverage_gap",
+    "di-IGrantUrlTesterService": "supported_exact_occurrence",
+    "di-IWebhooksRetriever": "supported_exact_occurrence",
+    "di-IWebhooksSender": "supported_exact_occurrence",
+    "http-not-message-GrantUrlTesterService": "no_forbidden_assertion_observed",
+    "http-not-message-WebhooksSender": "no_forbidden_assertion_observed",
+    "implementation-GrantUrlTesterService": "supported_exact_occurrence",
+    "implementation-WebhooksRetriever": "supported_exact_occurrence",
+    "implementation-WebhooksSender": "supported_exact_occurrence",
+    "subscriptions-entity": "supported_exact_occurrence"
+  },
+  "queries": [
+    {
+      "case": "di-IGrantUrlTesterService",
+      "phase": "discovery",
+      "complete_bytes": 777,
+      "complete_sha256": "5126819cf72045b83f6accf96d8f7ed1b313bbee4f42460f566c6804c9946fd9",
+      "result": {
+        "status": "context_required",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [],
+        "contexts": [
+          {
+            "generated": false,
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Extensions/Extensions.cs",
+            "raw_sha256": "978b4e1bbd0146ed43f9db92dda29c599a8685e0f4efcec4102e713c0ac7faeb"
+          }
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "case": "di-IGrantUrlTesterService",
+      "phase": "selected",
+      "complete_bytes": 2629,
+      "complete_sha256": "f929e7d5bcf204405b34a0113676bac8e2e592c6df1d61ea4639c1ee775cfcf6",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:30721f60f6b95bcc84bdc65066566c786daf9ad454cf26fe1fbb585f610f2f94",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Extensions/Extensions.cs",
+            "raw_sha256": "978b4e1bbd0146ed43f9db92dda29c599a8685e0f4efcec4102e713c0ac7faeb",
+            "source_id": "source:20594fb9e52da35f2dabd2b8a738f8f6a55f0a15405c185dd70e761193700d1b",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 418,
+            "byte_length": 12,
+            "symbol": {
+              "id": "symbol:c5dbcc5f2248b66f620b24a3b8f4f5c67864eb8109d8c83278af15caf0a79688",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+              "descriptor": "M:Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddTransient``2(Microsoft.Extensions.DependencyInjection.IServiceCollection)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:100f0f431eb5e26181438c7254dc718859099241f6bcd85e2aabab431950f539",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7",
+            "domain_facts": [
+              {
+                "kind": "di_registration",
+                "rule": "csharp-framework-v1",
+                "evidence_scope": "compile_time",
+                "targets": [
+                  {
+                    "role": "service",
+                    "symbol": {
+                      "id": "symbol:b3a802ecaa93965fa9c8d43442998d6fd7877d71a93ec130b6a276fb428ac8a0",
+                      "language": "csharp",
+                      "namespace_kind": "project",
+                      "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                      "descriptor": "T:Webhooks.API.Services.IGrantUrlTesterService",
+                      "descriptor_kind": "documentation_comment_id"
+                    }
+                  },
+                  {
+                    "role": "implementation",
+                    "symbol": {
+                      "id": "symbol:80625352d011c22f312f573c7ee670a3d71ddd40608f52a177887d0a088950af",
+                      "language": "csharp",
+                      "namespace_kind": "project",
+                      "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                      "descriptor": "T:Webhooks.API.Services.GrantUrlTesterService",
+                      "descriptor_kind": "documentation_comment_id"
+                    }
+                  }
+                ],
+                "lifetime": "transient"
+              }
+            ]
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "di-IWebhooksRetriever",
+      "phase": "discovery",
+      "complete_bytes": 777,
+      "complete_sha256": "5126819cf72045b83f6accf96d8f7ed1b313bbee4f42460f566c6804c9946fd9",
+      "result": {
+        "status": "context_required",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [],
+        "contexts": [
+          {
+            "generated": false,
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Extensions/Extensions.cs",
+            "raw_sha256": "978b4e1bbd0146ed43f9db92dda29c599a8685e0f4efcec4102e713c0ac7faeb"
+          }
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "case": "di-IWebhooksRetriever",
+      "phase": "selected",
+      "complete_bytes": 2621,
+      "complete_sha256": "7ba9ca968c0f4bb42850bfd722f267972b19762e949a636f8cff77cdc5146cf6",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:25e18e7a140045a11363643132fbf0e86b818ce3dacde6934b17923f21b0adcd",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Extensions/Extensions.cs",
+            "raw_sha256": "978b4e1bbd0146ed43f9db92dda29c599a8685e0f4efcec4102e713c0ac7faeb",
+            "source_id": "source:20594fb9e52da35f2dabd2b8a738f8f6a55f0a15405c185dd70e761193700d1b",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 506,
+            "byte_length": 12,
+            "symbol": {
+              "id": "symbol:c5dbcc5f2248b66f620b24a3b8f4f5c67864eb8109d8c83278af15caf0a79688",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+              "descriptor": "M:Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddTransient``2(Microsoft.Extensions.DependencyInjection.IServiceCollection)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:100f0f431eb5e26181438c7254dc718859099241f6bcd85e2aabab431950f539",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7",
+            "domain_facts": [
+              {
+                "kind": "di_registration",
+                "rule": "csharp-framework-v1",
+                "evidence_scope": "compile_time",
+                "targets": [
+                  {
+                    "role": "service",
+                    "symbol": {
+                      "id": "symbol:0780bece8030e446f49ff2a0d3ba3dd402bfa68b51f4dc7955c138b178f2a4ad",
+                      "language": "csharp",
+                      "namespace_kind": "project",
+                      "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                      "descriptor": "T:Webhooks.API.Services.IWebhooksRetriever",
+                      "descriptor_kind": "documentation_comment_id"
+                    }
+                  },
+                  {
+                    "role": "implementation",
+                    "symbol": {
+                      "id": "symbol:f74201710a4504351c945b1a53ca94f4c402985340e5c0756b3b5b3aa205080e",
+                      "language": "csharp",
+                      "namespace_kind": "project",
+                      "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                      "descriptor": "T:Webhooks.API.Services.WebhooksRetriever",
+                      "descriptor_kind": "documentation_comment_id"
+                    }
+                  }
+                ],
+                "lifetime": "transient"
+              }
+            ]
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "di-IWebhooksSender",
+      "phase": "discovery",
+      "complete_bytes": 777,
+      "complete_sha256": "5126819cf72045b83f6accf96d8f7ed1b313bbee4f42460f566c6804c9946fd9",
+      "result": {
+        "status": "context_required",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [],
+        "contexts": [
+          {
+            "generated": false,
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Extensions/Extensions.cs",
+            "raw_sha256": "978b4e1bbd0146ed43f9db92dda29c599a8685e0f4efcec4102e713c0ac7faeb"
+          }
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "case": "di-IWebhooksSender",
+      "phase": "selected",
+      "complete_bytes": 2615,
+      "complete_sha256": "5cdd1e27ec00e362b2be333255bc278590fea50d3c6d49270c5e9eb1dae2355d",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:6415103ee701ca27694730deba5f22307eadd14384483e48171cc0073e868d21",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Extensions/Extensions.cs",
+            "raw_sha256": "978b4e1bbd0146ed43f9db92dda29c599a8685e0f4efcec4102e713c0ac7faeb",
+            "source_id": "source:20594fb9e52da35f2dabd2b8a738f8f6a55f0a15405c185dd70e761193700d1b",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 586,
+            "byte_length": 12,
+            "symbol": {
+              "id": "symbol:c5dbcc5f2248b66f620b24a3b8f4f5c67864eb8109d8c83278af15caf0a79688",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+              "descriptor": "M:Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddTransient``2(Microsoft.Extensions.DependencyInjection.IServiceCollection)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:100f0f431eb5e26181438c7254dc718859099241f6bcd85e2aabab431950f539",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7",
+            "domain_facts": [
+              {
+                "kind": "di_registration",
+                "rule": "csharp-framework-v1",
+                "evidence_scope": "compile_time",
+                "targets": [
+                  {
+                    "role": "service",
+                    "symbol": {
+                      "id": "symbol:38d06396cee441b1e385bb492c16bd231b39aa76bed6e894764650881421cc99",
+                      "language": "csharp",
+                      "namespace_kind": "project",
+                      "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                      "descriptor": "T:Webhooks.API.Services.IWebhooksSender",
+                      "descriptor_kind": "documentation_comment_id"
+                    }
+                  },
+                  {
+                    "role": "implementation",
+                    "symbol": {
+                      "id": "symbol:299f817227f57a681c9b6cf4f638ca28696fb49ecc093840811c0bb70cf2d8b0",
+                      "language": "csharp",
+                      "namespace_kind": "project",
+                      "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                      "descriptor": "T:Webhooks.API.Services.WebhooksSender",
+                      "descriptor_kind": "documentation_comment_id"
+                    }
+                  }
+                ],
+                "lifetime": "transient"
+              }
+            ]
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "subscriptions-entity",
+      "phase": "discovery",
+      "complete_bytes": 786,
+      "complete_sha256": "dca42c62a2e2099df331de72df1e878c63932245cc82a13a23468d05c97c3f4f",
+      "result": {
+        "status": "context_required",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [],
+        "contexts": [
+          {
+            "generated": false,
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Infrastructure/WebhooksContext.cs",
+            "raw_sha256": "f4da59e48395371bc20d9b47f9061c3c6e8aa3167782c0bfbf1141e089159cce"
+          }
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "case": "subscriptions-entity",
+      "phase": "selected",
+      "complete_bytes": 2135,
+      "complete_sha256": "f660f50480b3e00f385b6b43cfbe151ac766732d5e7dfeeb571af5ada82c2660",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:e5c66dff5fe1a0effbb84fd044ac120c5a387707a1dc878dcc77386e315bef59",
+            "binding_status": "resolved",
+            "reference_kind": "name",
+            "role": "reference",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Infrastructure/WebhooksContext.cs",
+            "raw_sha256": "f4da59e48395371bc20d9b47f9061c3c6e8aa3167782c0bfbf1141e089159cce",
+            "source_id": "source:7bd6ce19fa9c46ea4d329dee4faeb0befad605c2f7a3ea318fddd50192e5ff9f",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 320,
+            "byte_length": 5,
+            "symbol": {
+              "id": "symbol:238cd1bf10e2c829fec05033fff6c1ce700a11043427fdec13cd278f64686dfb",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "Microsoft.EntityFrameworkCore, Version=8.0.8.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+              "descriptor": "T:Microsoft.EntityFrameworkCore.DbSet`1",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:98130fc3ec7653b1fed6ed30d5426ec4f767ff78acb1d7f328a85c3e1f9e1198",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7",
+            "domain_facts": [
+              {
+                "kind": "storage_entity",
+                "rule": "csharp-framework-v1",
+                "evidence_scope": "compile_time",
+                "targets": [
+                  {
+                    "role": "entity",
+                    "symbol": {
+                      "id": "symbol:0e8769f19be36e304bc0341028548005c7429a2cab7112ad30f47c621d0f8970",
+                      "language": "csharp",
+                      "namespace_kind": "project",
+                      "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                      "descriptor": "T:Webhooks.API.Model.WebhookSubscription",
+                      "descriptor_kind": "documentation_comment_id"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "implementation-WebhooksSender",
+      "phase": "discovery",
+      "complete_bytes": 779,
+      "complete_sha256": "293b5e516cf9c99a96c8103502248640e101957c5b1eae4f0c4ab0c2ac10d6d8",
+      "result": {
+        "status": "context_required",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [],
+        "contexts": [
+          {
+            "generated": false,
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Services/WebhooksSender.cs",
+            "raw_sha256": "bab05a210020d2ac9b9f83d4d81671d74e0132f05983d15c86b81f26bd06e17b"
+          }
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "case": "implementation-WebhooksSender",
+      "phase": "selected",
+      "complete_bytes": 2719,
+      "complete_sha256": "ec34e4055ae4ec5463ba05fce409860fa1c38609fe84a799b1d2e2996a830d47",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:c5c890a49d71e9402050f6c2e36b9eae8bb4ca58badd2939e06cfa439eb60682",
+            "binding_status": "resolved",
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Services/WebhooksSender.cs",
+            "raw_sha256": "bab05a210020d2ac9b9f83d4d81671d74e0132f05983d15c86b81f26bd06e17b",
+            "source_id": "source:c0b3eb68d8ec6bd68249f73810741fd9babe3ec5b797faf86f6312900577b98f",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 177,
+            "byte_length": 7,
+            "symbol": {
+              "id": "symbol:1e77ba709cd8714cb7e1cba8d5ef4023b1dd4814a653d91f03510f7b4c6b1f23",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+              "descriptor": "M:Webhooks.API.Services.WebhooksSender.SendAll(System.Collections.Generic.IEnumerable{Webhooks.API.Model.WebhookSubscription},Webhooks.API.Model.WebhookData)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7",
+            "implementation_facts": [
+              {
+                "kind": "interface_method_implementation",
+                "rule": "csharp-interface-v1",
+                "evidence_scope": "compile_time",
+                "interface_symbol_id": "symbol:665bc7f3ea20f6e73af3fb9a0f2f065dfedb94984a197d01293c4a30c747603f",
+                "implementing_type_symbol_id": "symbol:299f817227f57a681c9b6cf4f638ca28696fb49ecc093840811c0bb70cf2d8b0"
+              }
+            ],
+            "implementation_symbols": [
+              {
+                "id": "symbol:299f817227f57a681c9b6cf4f638ca28696fb49ecc093840811c0bb70cf2d8b0",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                "descriptor": "T:Webhooks.API.Services.WebhooksSender",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              {
+                "id": "symbol:665bc7f3ea20f6e73af3fb9a0f2f065dfedb94984a197d01293c4a30c747603f",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                "descriptor": "M:Webhooks.API.Services.IWebhooksSender.SendAll(System.Collections.Generic.IEnumerable{Webhooks.API.Model.WebhookSubscription},Webhooks.API.Model.WebhookData)",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            ]
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "implementation-WebhooksSender",
+      "phase": "definition",
+      "complete_bytes": 2719,
+      "complete_sha256": "ec34e4055ae4ec5463ba05fce409860fa1c38609fe84a799b1d2e2996a830d47",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:c5c890a49d71e9402050f6c2e36b9eae8bb4ca58badd2939e06cfa439eb60682",
+            "binding_status": "resolved",
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Services/WebhooksSender.cs",
+            "raw_sha256": "bab05a210020d2ac9b9f83d4d81671d74e0132f05983d15c86b81f26bd06e17b",
+            "source_id": "source:c0b3eb68d8ec6bd68249f73810741fd9babe3ec5b797faf86f6312900577b98f",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 177,
+            "byte_length": 7,
+            "symbol": {
+              "id": "symbol:1e77ba709cd8714cb7e1cba8d5ef4023b1dd4814a653d91f03510f7b4c6b1f23",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+              "descriptor": "M:Webhooks.API.Services.WebhooksSender.SendAll(System.Collections.Generic.IEnumerable{Webhooks.API.Model.WebhookSubscription},Webhooks.API.Model.WebhookData)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7",
+            "implementation_facts": [
+              {
+                "kind": "interface_method_implementation",
+                "rule": "csharp-interface-v1",
+                "evidence_scope": "compile_time",
+                "interface_symbol_id": "symbol:665bc7f3ea20f6e73af3fb9a0f2f065dfedb94984a197d01293c4a30c747603f",
+                "implementing_type_symbol_id": "symbol:299f817227f57a681c9b6cf4f638ca28696fb49ecc093840811c0bb70cf2d8b0"
+              }
+            ],
+            "implementation_symbols": [
+              {
+                "id": "symbol:299f817227f57a681c9b6cf4f638ca28696fb49ecc093840811c0bb70cf2d8b0",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                "descriptor": "T:Webhooks.API.Services.WebhooksSender",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              {
+                "id": "symbol:665bc7f3ea20f6e73af3fb9a0f2f065dfedb94984a197d01293c4a30c747603f",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                "descriptor": "M:Webhooks.API.Services.IWebhooksSender.SendAll(System.Collections.Generic.IEnumerable{Webhooks.API.Model.WebhookSubscription},Webhooks.API.Model.WebhookData)",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            ]
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "implementation-WebhooksRetriever",
+      "phase": "discovery",
+      "complete_bytes": 782,
+      "complete_sha256": "5065d6ab06bfa6679c31c7a39235f418053d99e62b0083ff52d11d5e5af3f208",
+      "result": {
+        "status": "context_required",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [],
+        "contexts": [
+          {
+            "generated": false,
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Services/WebhooksRetriever.cs",
+            "raw_sha256": "4009336a5da589eb1065d832043f545857e3f0655cf24bb73ff7d815436515fb"
+          }
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "case": "implementation-WebhooksRetriever",
+      "phase": "selected",
+      "complete_bytes": 2604,
+      "complete_sha256": "086bb0708e5c3a97283708413815f92f3f61a3eb3f42e7359a151ef0d4fb084b",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:30aff9b9c9c741fc12696535f9d2768b262481afdb1954635113f6def2bd2d34",
+            "binding_status": "resolved",
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Services/WebhooksRetriever.cs",
+            "raw_sha256": "4009336a5da589eb1065d832043f545857e3f0655cf24bb73ff7d815436515fb",
+            "source_id": "source:7a1184eba374542cc83999dabad4645d412744fbbcd3de44489aea46a1967054",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 167,
+            "byte_length": 22,
+            "symbol": {
+              "id": "symbol:c6a0c968e27e2e7eb3e23fe6188594aee65c2f96b9f5bf8e1e64aa523999a95c",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+              "descriptor": "M:Webhooks.API.Services.WebhooksRetriever.GetSubscriptionsOfType(Webhooks.API.Model.WebhookType)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7",
+            "implementation_facts": [
+              {
+                "kind": "interface_method_implementation",
+                "rule": "csharp-interface-v1",
+                "evidence_scope": "compile_time",
+                "interface_symbol_id": "symbol:f546ceb45dce75af481ebec1716ecd776ea663683ba3bf4bdecbd62e40e11f18",
+                "implementing_type_symbol_id": "symbol:f74201710a4504351c945b1a53ca94f4c402985340e5c0756b3b5b3aa205080e"
+              }
+            ],
+            "implementation_symbols": [
+              {
+                "id": "symbol:f546ceb45dce75af481ebec1716ecd776ea663683ba3bf4bdecbd62e40e11f18",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                "descriptor": "M:Webhooks.API.Services.IWebhooksRetriever.GetSubscriptionsOfType(Webhooks.API.Model.WebhookType)",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              {
+                "id": "symbol:f74201710a4504351c945b1a53ca94f4c402985340e5c0756b3b5b3aa205080e",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                "descriptor": "T:Webhooks.API.Services.WebhooksRetriever",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            ]
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "implementation-WebhooksRetriever",
+      "phase": "definition",
+      "complete_bytes": 2604,
+      "complete_sha256": "086bb0708e5c3a97283708413815f92f3f61a3eb3f42e7359a151ef0d4fb084b",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:30aff9b9c9c741fc12696535f9d2768b262481afdb1954635113f6def2bd2d34",
+            "binding_status": "resolved",
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Services/WebhooksRetriever.cs",
+            "raw_sha256": "4009336a5da589eb1065d832043f545857e3f0655cf24bb73ff7d815436515fb",
+            "source_id": "source:7a1184eba374542cc83999dabad4645d412744fbbcd3de44489aea46a1967054",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 167,
+            "byte_length": 22,
+            "symbol": {
+              "id": "symbol:c6a0c968e27e2e7eb3e23fe6188594aee65c2f96b9f5bf8e1e64aa523999a95c",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+              "descriptor": "M:Webhooks.API.Services.WebhooksRetriever.GetSubscriptionsOfType(Webhooks.API.Model.WebhookType)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7",
+            "implementation_facts": [
+              {
+                "kind": "interface_method_implementation",
+                "rule": "csharp-interface-v1",
+                "evidence_scope": "compile_time",
+                "interface_symbol_id": "symbol:f546ceb45dce75af481ebec1716ecd776ea663683ba3bf4bdecbd62e40e11f18",
+                "implementing_type_symbol_id": "symbol:f74201710a4504351c945b1a53ca94f4c402985340e5c0756b3b5b3aa205080e"
+              }
+            ],
+            "implementation_symbols": [
+              {
+                "id": "symbol:f546ceb45dce75af481ebec1716ecd776ea663683ba3bf4bdecbd62e40e11f18",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                "descriptor": "M:Webhooks.API.Services.IWebhooksRetriever.GetSubscriptionsOfType(Webhooks.API.Model.WebhookType)",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              {
+                "id": "symbol:f74201710a4504351c945b1a53ca94f4c402985340e5c0756b3b5b3aa205080e",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                "descriptor": "T:Webhooks.API.Services.WebhooksRetriever",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            ]
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "implementation-GrantUrlTesterService",
+      "phase": "discovery",
+      "complete_bytes": 786,
+      "complete_sha256": "74d94683cecd7520cf825ff2b4c407d747dd6aa4591678bc54e8db21204971fc",
+      "result": {
+        "status": "context_required",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [],
+        "contexts": [
+          {
+            "generated": false,
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Services/GrantUrlTesterService.cs",
+            "raw_sha256": "615dc34c619eea7119010b072b04378571328e83c4a9eb0619509ef359520c55"
+          }
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "case": "implementation-GrantUrlTesterService",
+      "phase": "selected",
+      "complete_bytes": 2622,
+      "complete_sha256": "ad2b2a4baca8309446702120e511ae50887a66ce16e282c4b90ace990bfa920c",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:ebbcde5904f4aa43b7af6d86a904b1cb2545f1f89cfcee1e8ca79f94c8e0b26a",
+            "binding_status": "resolved",
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Services/GrantUrlTesterService.cs",
+            "raw_sha256": "615dc34c619eea7119010b072b04378571328e83c4a9eb0619509ef359520c55",
+            "source_id": "source:70c182db7839894ee98e4c8d16c0be56ba956960ec64e4c0ffdbe6386c5a9c73",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 188,
+            "byte_length": 12,
+            "symbol": {
+              "id": "symbol:4ce7138d52a96089dcd8ea75de1715645d36207ec2ff21ef0a2c82a63fe7f335",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+              "descriptor": "M:Webhooks.API.Services.GrantUrlTesterService.TestGrantUrl(System.String,System.String,System.String)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7",
+            "implementation_facts": [
+              {
+                "kind": "interface_method_implementation",
+                "rule": "csharp-interface-v1",
+                "evidence_scope": "compile_time",
+                "interface_symbol_id": "symbol:3ad4693c8267a87a757843cd3337b01c8726589e1a5ba13d725e76311043dcca",
+                "implementing_type_symbol_id": "symbol:80625352d011c22f312f573c7ee670a3d71ddd40608f52a177887d0a088950af"
+              }
+            ],
+            "implementation_symbols": [
+              {
+                "id": "symbol:3ad4693c8267a87a757843cd3337b01c8726589e1a5ba13d725e76311043dcca",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                "descriptor": "M:Webhooks.API.Services.IGrantUrlTesterService.TestGrantUrl(System.String,System.String,System.String)",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              {
+                "id": "symbol:80625352d011c22f312f573c7ee670a3d71ddd40608f52a177887d0a088950af",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                "descriptor": "T:Webhooks.API.Services.GrantUrlTesterService",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            ]
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "implementation-GrantUrlTesterService",
+      "phase": "definition",
+      "complete_bytes": 2622,
+      "complete_sha256": "ad2b2a4baca8309446702120e511ae50887a66ce16e282c4b90ace990bfa920c",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:ebbcde5904f4aa43b7af6d86a904b1cb2545f1f89cfcee1e8ca79f94c8e0b26a",
+            "binding_status": "resolved",
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Services/GrantUrlTesterService.cs",
+            "raw_sha256": "615dc34c619eea7119010b072b04378571328e83c4a9eb0619509ef359520c55",
+            "source_id": "source:70c182db7839894ee98e4c8d16c0be56ba956960ec64e4c0ffdbe6386c5a9c73",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 188,
+            "byte_length": 12,
+            "symbol": {
+              "id": "symbol:4ce7138d52a96089dcd8ea75de1715645d36207ec2ff21ef0a2c82a63fe7f335",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+              "descriptor": "M:Webhooks.API.Services.GrantUrlTesterService.TestGrantUrl(System.String,System.String,System.String)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7",
+            "implementation_facts": [
+              {
+                "kind": "interface_method_implementation",
+                "rule": "csharp-interface-v1",
+                "evidence_scope": "compile_time",
+                "interface_symbol_id": "symbol:3ad4693c8267a87a757843cd3337b01c8726589e1a5ba13d725e76311043dcca",
+                "implementing_type_symbol_id": "symbol:80625352d011c22f312f573c7ee670a3d71ddd40608f52a177887d0a088950af"
+              }
+            ],
+            "implementation_symbols": [
+              {
+                "id": "symbol:3ad4693c8267a87a757843cd3337b01c8726589e1a5ba13d725e76311043dcca",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                "descriptor": "M:Webhooks.API.Services.IGrantUrlTesterService.TestGrantUrl(System.String,System.String,System.String)",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              {
+                "id": "symbol:80625352d011c22f312f573c7ee670a3d71ddd40608f52a177887d0a088950af",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+                "descriptor": "T:Webhooks.API.Services.GrantUrlTesterService",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            ]
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "call-OrderStatusChangedToPaid-sender",
+      "phase": "discovery",
+      "complete_bytes": 821,
+      "complete_sha256": "2f4efd1c28303369ed1d903c774aaaf2b172513b0e7d714a638e5dfadeafcb7e",
+      "result": {
+        "status": "context_required",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [],
+        "contexts": [
+          {
+            "generated": false,
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToPaidIntegrationEventHandler.cs",
+            "raw_sha256": "38d724d35f0a05e29d995dea3137b7a0c8f4a9cabe2ce23f87dd2dbaa4370abd"
+          }
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "case": "call-OrderStatusChangedToPaid-sender",
+      "phase": "selected",
+      "complete_bytes": 1811,
+      "complete_sha256": "f505652b234fecf675e61d5cea127ac664be99611f5c7577a5246f5c9da9c0fd",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:a65467f52153b0ae9ac0f2cfe5f91fef900d9d98d09ca61dbc1bf6d73a37c4d3",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToPaidIntegrationEventHandler.cs",
+            "raw_sha256": "38d724d35f0a05e29d995dea3137b7a0c8f4a9cabe2ce23f87dd2dbaa4370abd",
+            "source_id": "source:c8bfbc4d08c1ed64f72c2a8e62de8682b448e639853001b74df07d7c8c25e310",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 746,
+            "byte_length": 7,
+            "symbol": {
+              "id": "symbol:665bc7f3ea20f6e73af3fb9a0f2f065dfedb94984a197d01293c4a30c747603f",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+              "descriptor": "M:Webhooks.API.Services.IWebhooksSender.SendAll(System.Collections.Generic.IEnumerable{Webhooks.API.Model.WebhookSubscription},Webhooks.API.Model.WebhookData)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:35dbe9947d2e01bfa1bf0f173d3618dd0814fca3edbc528fb92d81b0c46cea11",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7"
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "call-OrderStatusChangedToShipped-sender",
+      "phase": "discovery",
+      "complete_bytes": 824,
+      "complete_sha256": "13a3f089574a13e746ff43846f8fd47bf5d299f7ee96b5906d7028b058ef7377",
+      "result": {
+        "status": "context_required",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [],
+        "contexts": [
+          {
+            "generated": false,
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToShippedIntegrationEventHandler.cs",
+            "raw_sha256": "4681e880deb3cdb5c8639c6fa630d808bf602c765feed42c5c1a10b11da0db98"
+          }
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "case": "call-OrderStatusChangedToShipped-sender",
+      "phase": "selected",
+      "complete_bytes": 1814,
+      "complete_sha256": "82f16485a6c134daa7011ddd1d8bb69360116afa53ddae33de43ddcdf1703e7e",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:01342d3aac2dc875464b037999b9456ff34e1e35e2c74418a69c4bbc2ce2b285",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToShippedIntegrationEventHandler.cs",
+            "raw_sha256": "4681e880deb3cdb5c8639c6fa630d808bf602c765feed42c5c1a10b11da0db98",
+            "source_id": "source:f3a5ddfc73c151156a6de06ce35b08fab9e5ce21fcb872e8a8d6676f31fddca1",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 758,
+            "byte_length": 7,
+            "symbol": {
+              "id": "symbol:665bc7f3ea20f6e73af3fb9a0f2f065dfedb94984a197d01293c4a30c747603f",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+              "descriptor": "M:Webhooks.API.Services.IWebhooksSender.SendAll(System.Collections.Generic.IEnumerable{Webhooks.API.Model.WebhookSubscription},Webhooks.API.Model.WebhookData)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:9781a3c1fb7936e3a99497ffe205626f70ef75ce3e802b7c885d6742f2141c42",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7"
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "custom-handler-OrderStatusChangedToPaid",
+      "phase": "discovery",
+      "complete_bytes": 821,
+      "complete_sha256": "2f4efd1c28303369ed1d903c774aaaf2b172513b0e7d714a638e5dfadeafcb7e",
+      "result": {
+        "status": "context_required",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [],
+        "contexts": [
+          {
+            "generated": false,
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToPaidIntegrationEventHandler.cs",
+            "raw_sha256": "38d724d35f0a05e29d995dea3137b7a0c8f4a9cabe2ce23f87dd2dbaa4370abd"
+          }
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "case": "custom-handler-OrderStatusChangedToPaid",
+      "phase": "selected",
+      "complete_bytes": 1696,
+      "complete_sha256": "47107b87d610315f01809c94d3c548071216da045e7b981ba0cb7a1c4cce0a61",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:6e74ab19dbc305dc213cf1c7f4f95964ad9156e8012766af3f79609e3fdf9b99",
+            "binding_status": "resolved",
+            "reference_kind": "name",
+            "role": "reference",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToPaidIntegrationEventHandler.cs",
+            "raw_sha256": "38d724d35f0a05e29d995dea3137b7a0c8f4a9cabe2ce23f87dd2dbaa4370abd",
+            "source_id": "source:c8bfbc4d08c1ed64f72c2a8e62de8682b448e639853001b74df07d7c8c25e310",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 246,
+            "byte_length": 24,
+            "symbol": {
+              "id": "symbol:54e655921c8aa599fee4871733caaffa7af25179bb983a4f76722193e2edfc2a",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/EventBus/EventBus.csproj",
+              "descriptor": "T:eShop.EventBus.Abstractions.IIntegrationEventHandler`1",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:4e44ef26011acca443105ce8ad0d5ac8f9689dbbcfd110f551a393a6e38dd7be",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7"
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "custom-handler-OrderStatusChangedToShipped",
+      "phase": "discovery",
+      "complete_bytes": 824,
+      "complete_sha256": "13a3f089574a13e746ff43846f8fd47bf5d299f7ee96b5906d7028b058ef7377",
+      "result": {
+        "status": "context_required",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [],
+        "contexts": [
+          {
+            "generated": false,
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToShippedIntegrationEventHandler.cs",
+            "raw_sha256": "4681e880deb3cdb5c8639c6fa630d808bf602c765feed42c5c1a10b11da0db98"
+          }
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "case": "custom-handler-OrderStatusChangedToShipped",
+      "phase": "selected",
+      "complete_bytes": 1699,
+      "complete_sha256": "fc5023c609e68454a8185777c87e4dfd19e1afbad50078c1a9f278e1077b1f0d",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:43f1af67ddc53d855f85862d8bc346f66d865f1002e43479fd013720f19a7885",
+            "binding_status": "resolved",
+            "reference_kind": "name",
+            "role": "reference",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToShippedIntegrationEventHandler.cs",
+            "raw_sha256": "4681e880deb3cdb5c8639c6fa630d808bf602c765feed42c5c1a10b11da0db98",
+            "source_id": "source:f3a5ddfc73c151156a6de06ce35b08fab9e5ce21fcb872e8a8d6676f31fddca1",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 247,
+            "byte_length": 24,
+            "symbol": {
+              "id": "symbol:54e655921c8aa599fee4871733caaffa7af25179bb983a4f76722193e2edfc2a",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/EventBus/EventBus.csproj",
+              "descriptor": "T:eShop.EventBus.Abstractions.IIntegrationEventHandler`1",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:4e44ef26011acca443105ce8ad0d5ac8f9689dbbcfd110f551a393a6e38dd7be",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7"
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "custom-handler-ProductPriceChanged",
+      "phase": "discovery",
+      "complete_bytes": 816,
+      "complete_sha256": "7f4ec470fb295fb5118a5432a93b8e922f0ce2a96be4fc31fed68866cd134f07",
+      "result": {
+        "status": "context_required",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [],
+        "contexts": [
+          {
+            "generated": false,
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/IntegrationEvents/ProductPriceChangedIntegrationEventHandler.cs",
+            "raw_sha256": "036a9666fc43c56e9a6c353bb83598225883243a13235992430362d7ba136c4b"
+          }
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "case": "custom-handler-ProductPriceChanged",
+      "phase": "selected",
+      "complete_bytes": 1691,
+      "complete_sha256": "35d3e6bec5456e8f77412a99e7dc07dd3ff81ca8958b619930ab69c8ec280022",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:50871055cb691b0117db32e91d394a3cab5cffa841761c2fb3ca8586315eb6aa",
+            "binding_status": "resolved",
+            "reference_kind": "name",
+            "role": "reference",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/IntegrationEvents/ProductPriceChangedIntegrationEventHandler.cs",
+            "raw_sha256": "036a9666fc43c56e9a6c353bb83598225883243a13235992430362d7ba136c4b",
+            "source_id": "source:da307e94f8277e2171693cc2cee2202eef4fac89d03d8e794e013f5cfc9fc597",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 104,
+            "byte_length": 24,
+            "symbol": {
+              "id": "symbol:54e655921c8aa599fee4871733caaffa7af25179bb983a4f76722193e2edfc2a",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/EventBus/EventBus.csproj",
+              "descriptor": "T:eShop.EventBus.Abstractions.IIntegrationEventHandler`1",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:4e44ef26011acca443105ce8ad0d5ac8f9689dbbcfd110f551a393a6e38dd7be",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7"
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "callback-entity-mapping",
+      "phase": "discovery",
+      "complete_bytes": 786,
+      "complete_sha256": "dca42c62a2e2099df331de72df1e878c63932245cc82a13a23468d05c97c3f4f",
+      "result": {
+        "status": "context_required",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [],
+        "contexts": [
+          {
+            "generated": false,
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Infrastructure/WebhooksContext.cs",
+            "raw_sha256": "f4da59e48395371bc20d9b47f9061c3c6e8aa3167782c0bfbf1141e089159cce"
+          }
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "case": "callback-entity-mapping",
+      "phase": "selected",
+      "complete_bytes": 1814,
+      "complete_sha256": "d3988cbd59ed929c7c114e37da9b2cfbe6c949c80c21377a10a9e6c41d6817a0",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:27619666334c0c1dfb1d8876d168f0bca9ad4dbc1303f7086c17745b4859288d",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Infrastructure/WebhooksContext.cs",
+            "raw_sha256": "f4da59e48395371bc20d9b47f9061c3c6e8aa3167782c0bfbf1141e089159cce",
+            "source_id": "source:7bd6ce19fa9c46ea4d329dee4faeb0befad605c2f7a3ea318fddd50192e5ff9f",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 474,
+            "byte_length": 6,
+            "symbol": {
+              "id": "symbol:0934aed41aad18f8db56b47130d2ff75263c6e68795d7c8c62225809b615a035",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "Microsoft.EntityFrameworkCore, Version=8.0.8.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+              "descriptor": "M:Microsoft.EntityFrameworkCore.ModelBuilder.Entity``1(System.Action{Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder{``0}})",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:311efbab03145e833f45581cb7f10a6d3c3821e2ff1b0446110cfe68078f17b1",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7"
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "aspire-dbcontext-registration",
+      "phase": "discovery",
+      "complete_bytes": 777,
+      "complete_sha256": "5126819cf72045b83f6accf96d8f7ed1b313bbee4f42460f566c6804c9946fd9",
+      "result": {
+        "status": "context_required",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [],
+        "contexts": [
+          {
+            "generated": false,
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Extensions/Extensions.cs",
+            "raw_sha256": "978b4e1bbd0146ed43f9db92dda29c599a8685e0f4efcec4102e713c0ac7faeb"
+          }
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "case": "aspire-dbcontext-registration",
+      "phase": "selected",
+      "complete_bytes": 2002,
+      "complete_sha256": "8a8be4da7f90c0bc3edf250b6d0eb29e8f4df8eec4ab00ee36125a6ba11b5b85",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:69c9ba15aa0ee35e9cb74f25195e89e6b03c2e4b0e55431b7b53e301e0c790f3",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Extensions/Extensions.cs",
+            "raw_sha256": "978b4e1bbd0146ed43f9db92dda29c599a8685e0f4efcec4102e713c0ac7faeb",
+            "source_id": "source:20594fb9e52da35f2dabd2b8a738f8f6a55f0a15405c185dd70e761193700d1b",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 282,
+            "byte_length": 18,
+            "symbol": {
+              "id": "symbol:664b48943769d7e07a2f4018fcb1b235225efd8b5b5fd5e99cbe035c1055cb1a",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "Aspire.Npgsql.EntityFrameworkCore.PostgreSQL, Version=8.2.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51",
+              "descriptor": "M:Microsoft.Extensions.Hosting.AspireEFPostgreSqlExtensions.AddNpgsqlDbContext``1(Microsoft.Extensions.Hosting.IHostApplicationBuilder,System.String,System.Action{Aspire.Npgsql.EntityFrameworkCore.PostgreSQL.NpgsqlEntityFrameworkCorePostgreSQLSettings},System.Action{Microsoft.EntityFrameworkCore.DbContextOptionsBuilder})",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:100f0f431eb5e26181438c7254dc718859099241f6bcd85e2aabab431950f539",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7"
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "http-not-message-WebhooksSender",
+      "phase": "discovery",
+      "complete_bytes": 779,
+      "complete_sha256": "293b5e516cf9c99a96c8103502248640e101957c5b1eae4f0c4ab0c2ac10d6d8",
+      "result": {
+        "status": "context_required",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [],
+        "contexts": [
+          {
+            "generated": false,
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Services/WebhooksSender.cs",
+            "raw_sha256": "bab05a210020d2ac9b9f83d4d81671d74e0132f05983d15c86b81f26bd06e17b"
+          }
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "case": "http-not-message-WebhooksSender",
+      "phase": "selected",
+      "complete_bytes": 1727,
+      "complete_sha256": "1596eee1af857a25ff76f28a70e3c44ad31a7ec98da604420126d716bfd06587",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:03c0775e3a3816822d6276b0579d4db9b3f84f80fe3644686bdbaa291bec18b4",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Services/WebhooksSender.cs",
+            "raw_sha256": "bab05a210020d2ac9b9f83d4d81671d74e0132f05983d15c86b81f26bd06e17b",
+            "source_id": "source:c0b3eb68d8ec6bd68249f73810741fd9babe3ec5b797faf86f6312900577b98f",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 1151,
+            "byte_length": 9,
+            "symbol": {
+              "id": "symbol:affb8247d8441c993c6a9330a44329199aa309c53a90ac054970de3ca05382a9",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "System.Net.Http, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a",
+              "descriptor": "M:System.Net.Http.HttpClient.SendAsync(System.Net.Http.HttpRequestMessage)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:bec104388a2a5155834c0682711d203d76de71d31bf6fe62a8622a54ff30f3f0",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7"
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    },
+    {
+      "case": "http-not-message-GrantUrlTesterService",
+      "phase": "discovery",
+      "complete_bytes": 786,
+      "complete_sha256": "74d94683cecd7520cf825ff2b4c407d747dd6aa4591678bc54e8db21204971fc",
+      "result": {
+        "status": "context_required",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [],
+        "contexts": [
+          {
+            "generated": false,
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Services/GrantUrlTesterService.cs",
+            "raw_sha256": "615dc34c619eea7119010b072b04378571328e83c4a9eb0619509ef359520c55"
+          }
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "case": "http-not-message-GrantUrlTesterService",
+      "phase": "selected",
+      "complete_bytes": 1733,
+      "complete_sha256": "6c9d79c72d16de97e1f99c905bfe5691f578053ee0185059319d2db31c88dc75",
+      "result": {
+        "status": "ok",
+        "evidence": "recorded-compiler-context",
+        "snapshot_id": "independent-project",
+        "artifact_sha256": "1071bdf3b5e8e4162b449cb1ea0ce46fc718ed18f15762701aecfda3f6449682",
+        "results": [
+          {
+            "generated": false,
+            "occurrence_id": "occurrence:b0b9404816a9c88291559480bec450b17a113a9b417a93ca10e5d9a4ccb22c35",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "eShop",
+            "path": "src/Webhooks.API/Services/GrantUrlTesterService.cs",
+            "raw_sha256": "615dc34c619eea7119010b072b04378571328e83c4a9eb0619509ef359520c55",
+            "source_id": "source:70c182db7839894ee98e4c8d16c0be56ba956960ec64e4c0ffdbe6386c5a9c73",
+            "source_snapshot_id": "snapshot:3085b3b0caef78bfa9ba184bcce119ce1f27da9799430bfce8aa7a50a4c05864",
+            "context_id": "context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223",
+            "project": "src/Webhooks.API/Webhooks.API.csproj",
+            "byte_offset": 819,
+            "byte_length": 9,
+            "symbol": {
+              "id": "symbol:affb8247d8441c993c6a9330a44329199aa309c53a90ac054970de3ca05382a9",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "System.Net.Http, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a",
+              "descriptor": "M:System.Net.Http.HttpClient.SendAsync(System.Net.Http.HttpRequestMessage)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:4ce7138d52a96089dcd8ea75de1715645d36207ec2ff21ef0a2c82a63fe7f335",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "7"
+          }
+        ],
+        "contexts": [],
+        "truncated": false
+      }
+    }
+  ]
+}

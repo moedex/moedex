@@ -1,0 +1,1 @@
+Where is hosted scheduler registration implemented? Explain shared versus named options, the built-in startup/shutdown option defaults, and how a derived hosted service is retained when registrations overlap. Cite precise checked-in source ranges. Describe static behavior and its conditions; do not claim that a scheduler or job actually ran.

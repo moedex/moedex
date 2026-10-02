@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "calls": 1,
+  "response_bytes": 13265,
+  "views": 4,
+  "full_response_reconstructed": true,
+  "selected_field_correct": true,
+  "local_views_do_not_charge_or_mutate_state": true
+}

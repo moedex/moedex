@@ -1,0 +1,786 @@
+[
+  {
+    "task": "locate-persistence",
+    "classification": "source_authored_public_tool_walkthrough",
+    "calls": 2,
+    "response_bytes": 15710,
+    "stopped": null,
+    "evidence": [
+      {
+        "subject": "RegistrationService",
+        "snippet": "new Registration",
+        "citations": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "line": 23,
+            "text": "var registration = new Registration"
+          },
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "line": 34,
+            "text": "await _publishEndpoint.Publish(new RegistrationSubmitted"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationService",
+        "snippet": "AddAsync(registration)",
+        "citations": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "line": 32,
+            "text": "await _dbContext.Set<Registration>().AddAsync(registration);"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationService",
+        "snippet": "Publish(new RegistrationSubmitted",
+        "citations": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "line": 34,
+            "text": "await _publishEndpoint.Publish(new RegistrationSubmitted"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationService",
+        "snippet": "SaveChangesAsync()",
+        "citations": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "line": 45,
+            "text": "await _dbContext.SaveChangesAsync();"
+          }
+        ]
+      }
+    ],
+    "missing_evidence": [],
+    "limitations": [
+      "Basenames and snippet assertions are source-authored hints.",
+      "No independent agent quality or completeness score.",
+      "Source configuration does not prove runtime activation, dispatch, delivery or transactions."
+    ]
+  },
+  {
+    "task": "flow-notification",
+    "classification": "source_authored_public_tool_walkthrough",
+    "calls": 11,
+    "response_bytes": 81301,
+    "stopped": null,
+    "evidence": [
+      {
+        "subject": "RegistrationController",
+        "snippet": "SubmitRegistration(",
+        "citations": [
+          {
+            "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+            "line": 27,
+            "text": "var registration = await _registrationService.SubmitRegistration(model.EventId, model.MemberId, model.Payment);"
+          }
+        ]
+      },
+      {
+        "subject": "IRegistrationService",
+        "snippet": "SubmitRegistration(",
+        "citations": [
+          {
+            "path": "src/Sample.Components/IRegistrationService.cs",
+            "line": 5,
+            "text": "Task<Registration> SubmitRegistration(string eventId, string memberId, decimal payment);"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationService",
+        "snippet": "IRegistrationService",
+        "citations": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "line": 10,
+            "text": "IRegistrationService"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationService",
+        "snippet": "Publish(new RegistrationSubmitted",
+        "citations": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "line": 34,
+            "text": "await _publishEndpoint.Publish(new RegistrationSubmitted"
+          }
+        ]
+      },
+      {
+        "subject": "NotifyRegistrationConsumer",
+        "snippet": "IConsumer<RegistrationSubmitted>",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+            "line": 9,
+            "text": "IConsumer<RegistrationSubmitted>"
+          }
+        ]
+      },
+      {
+        "subject": "Program",
+        "snippet": "AddScoped<IRegistrationService, RegistrationService>",
+        "citations": [
+          {
+            "path": "src/Sample.Api/Program.cs",
+            "line": 30,
+            "text": "builder.Services.AddScoped<IRegistrationService, RegistrationService>();"
+          }
+        ]
+      },
+      {
+        "subject": "Program",
+        "snippet": "AddConsumer<NotifyRegistrationConsumer>",
+        "citations": [
+          {
+            "path": "src/Sample.Worker/Program.cs",
+            "line": 74,
+            "text": "x.AddConsumer<NotifyRegistrationConsumer>();"
+          }
+        ]
+      }
+    ],
+    "missing_evidence": [],
+    "limitations": [
+      "Basenames and snippet assertions are source-authored hints.",
+      "No independent agent quality or completeness score.",
+      "Source configuration does not prove runtime activation, dispatch, delivery or transactions."
+    ]
+  },
+  {
+    "task": "flow-email",
+    "classification": "source_authored_public_tool_walkthrough",
+    "calls": 7,
+    "response_bytes": 59160,
+    "stopped": null,
+    "evidence": [
+      {
+        "subject": "RegistrationStateMachine",
+        "snippet": "RegistrationSubmitted",
+        "citations": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "line": 14,
+            "text": "Event(() => RegistrationSubmitted, x => x.CorrelateById(m => m.Message.RegistrationId));"
+          },
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "line": 17,
+            "text": "When(RegistrationSubmitted)"
+          },
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "line": 47,
+            "text": "public Event<RegistrationSubmitted> RegistrationSubmitted { get; } = null!;"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationStateMachine",
+        "snippet": "Publish(context => new SendRegistrationEmail",
+        "citations": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "line": 26,
+            "text": ".Publish(context => new SendRegistrationEmail"
+          }
+        ]
+      },
+      {
+        "subject": "SendRegistrationEmailConsumer",
+        "snippet": "IConsumer<SendRegistrationEmail>",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+            "line": 9,
+            "text": "IConsumer<SendRegistrationEmail>"
+          }
+        ]
+      },
+      {
+        "subject": "SendRegistrationEmailConsumer",
+        "snippet": "LogInformation",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+            "line": 20,
+            "text": "_logger.LogInformation(\"Notifying Member {MemberId} that they registered for event {EventId} on {RegistrationDate}\", context.Message.MemberId,"
+          }
+        ]
+      },
+      {
+        "subject": "SendRegistrationEmailConsumer",
+        "snippet": "Task.CompletedTask",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+            "line": 23,
+            "text": "return Task.CompletedTask;"
+          }
+        ]
+      },
+      {
+        "subject": "Program",
+        "snippet": "AddConsumer<SendRegistrationEmailConsumer>",
+        "citations": [
+          {
+            "path": "src/Sample.Worker/Program.cs",
+            "line": 75,
+            "text": "x.AddConsumer<SendRegistrationEmailConsumer>();"
+          }
+        ]
+      }
+    ],
+    "missing_evidence": [],
+    "limitations": [
+      "Basenames and snippet assertions are source-authored hints.",
+      "No independent agent quality or completeness score.",
+      "Source configuration does not prove runtime activation, dispatch, delivery or transactions."
+    ]
+  },
+  {
+    "task": "flow-validation",
+    "classification": "source_authored_public_tool_walkthrough",
+    "calls": 9,
+    "response_bytes": 69111,
+    "stopped": null,
+    "evidence": [
+      {
+        "subject": "ValidateRegistrationConsumer",
+        "snippet": "IConsumer<AddEventAttendee>",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+            "line": 10,
+            "text": "IConsumer<AddEventAttendee>"
+          }
+        ]
+      },
+      {
+        "subject": "ValidateRegistrationConsumer",
+        "snippet": "ValidateRegistration(",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+            "line": 23,
+            "text": "await _validationService.ValidateRegistration(context.Message.EventId, context.Message.MemberId, context.Message.RegistrationId);"
+          }
+        ]
+      },
+      {
+        "subject": "IRegistrationValidationService",
+        "snippet": "ValidateRegistration(",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+            "line": 5,
+            "text": "Task ValidateRegistration(string eventId, string memberId, Guid registrationId);"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationValidationService",
+        "snippet": "IRegistrationValidationService",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+            "line": 8,
+            "text": "IRegistrationValidationService"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationValidationService",
+        "snippet": "Publish(new RegistrationValidated",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+            "line": 19,
+            "text": "await _publishEndpoint.Publish(new RegistrationValidated { RegistrationId = registrationId });"
+          }
+        ]
+      },
+      {
+        "subject": "Program",
+        "snippet": "AddScoped<IRegistrationValidationService, RegistrationValidationService>",
+        "citations": [
+          {
+            "path": "src/Sample.Worker/Program.cs",
+            "line": 62,
+            "text": "services.AddScoped<IRegistrationValidationService, RegistrationValidationService>();"
+          }
+        ]
+      }
+    ],
+    "missing_evidence": [],
+    "limitations": [
+      "Basenames and snippet assertions are source-authored hints.",
+      "No independent agent quality or completeness score.",
+      "Source configuration does not prove runtime activation, dispatch, delivery or transactions."
+    ]
+  },
+  {
+    "task": "flow-runtime-proof",
+    "classification": "source_authored_public_tool_walkthrough",
+    "calls": 12,
+    "response_bytes": 109904,
+    "stopped": null,
+    "evidence": [
+      {
+        "subject": "RegistrationController",
+        "snippet": "Ok(",
+        "citations": [
+          {
+            "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+            "line": 29,
+            "text": "return Ok(new"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationController",
+        "snippet": "SubmitRegistration(",
+        "citations": [
+          {
+            "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+            "line": 27,
+            "text": "var registration = await _registrationService.SubmitRegistration(model.EventId, model.MemberId, model.Payment);"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationService",
+        "snippet": "Publish(new RegistrationSubmitted",
+        "citations": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "line": 34,
+            "text": "await _publishEndpoint.Publish(new RegistrationSubmitted"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationService",
+        "snippet": "SaveChangesAsync()",
+        "citations": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "line": 45,
+            "text": "await _dbContext.SaveChangesAsync();"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationStateMachine",
+        "snippet": "SendRegistrationEmail",
+        "citations": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "line": 26,
+            "text": ".Publish(context => new SendRegistrationEmail"
+          }
+        ]
+      },
+      {
+        "subject": "SendRegistrationEmailConsumer",
+        "snippet": "LogInformation",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+            "line": 20,
+            "text": "_logger.LogInformation(\"Notifying Member {MemberId} that they registered for event {EventId} on {RegistrationDate}\", context.Message.MemberId,"
+          }
+        ]
+      },
+      {
+        "subject": "SendRegistrationEmailConsumer",
+        "snippet": "Task.CompletedTask",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+            "line": 23,
+            "text": "return Task.CompletedTask;"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationStateMachineDefinition",
+        "snippet": "UseMessageRetry",
+        "citations": []
+      },
+      {
+        "subject": "RegistrationStateMachineDefinition",
+        "snippet": "UseEntityFrameworkOutbox",
+        "citations": []
+      },
+      {
+        "subject": "Program",
+        "snippet": "UseBusOutbox",
+        "citations": [
+          {
+            "path": "src/Sample.Api/Program.cs",
+            "line": 80,
+            "text": "o.UseBusOutbox();"
+          }
+        ]
+      },
+      {
+        "subject": "Program",
+        "snippet": "ConfigureEndpoints",
+        "citations": [
+          {
+            "path": "src/Sample.Worker/Program.cs",
+            "line": 87,
+            "text": "cfg.ConfigureEndpoints(context);"
+          }
+        ]
+      }
+    ],
+    "missing_evidence": [
+      {
+        "subject": "RegistrationStateMachineDefinition",
+        "snippet": "UseMessageRetry"
+      },
+      {
+        "subject": "RegistrationStateMachineDefinition",
+        "snippet": "UseEntityFrameworkOutbox"
+      }
+    ],
+    "limitations": [
+      "Basenames and snippet assertions are source-authored hints.",
+      "No independent agent quality or completeness score.",
+      "Source configuration does not prove runtime activation, dispatch, delivery or transactions."
+    ]
+  },
+  {
+    "task": "impact-submitted",
+    "classification": "source_authored_public_tool_walkthrough",
+    "calls": 8,
+    "response_bytes": 73632,
+    "stopped": null,
+    "evidence": [
+      {
+        "subject": "RegistrationSubmitted",
+        "snippet": "RegistrationId",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+            "line": 5,
+            "text": "public Guid RegistrationId { get; init; }"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationService",
+        "snippet": "RegistrationId = registration.RegistrationId",
+        "citations": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "line": 36,
+            "text": "RegistrationId = registration.RegistrationId,"
+          }
+        ]
+      },
+      {
+        "subject": "NotifyRegistrationConsumer",
+        "snippet": "IConsumer<RegistrationSubmitted>",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+            "line": 9,
+            "text": "IConsumer<RegistrationSubmitted>"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationStateMachine",
+        "snippet": "CorrelateById",
+        "citations": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "line": 14,
+            "text": "Event(() => RegistrationSubmitted, x => x.CorrelateById(m => m.Message.RegistrationId));"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationStateMachine",
+        "snippet": "Message.RegistrationId",
+        "citations": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "line": 14,
+            "text": "Event(() => RegistrationSubmitted, x => x.CorrelateById(m => m.Message.RegistrationId));"
+          }
+        ]
+      }
+    ],
+    "missing_evidence": [],
+    "limitations": [
+      "Basenames and snippet assertions are source-authored hints.",
+      "No independent agent quality or completeness score.",
+      "Source configuration does not prove runtime activation, dispatch, delivery or transactions."
+    ]
+  },
+  {
+    "task": "impact-validation-signature",
+    "classification": "source_authored_public_tool_walkthrough",
+    "calls": 9,
+    "response_bytes": 69111,
+    "stopped": null,
+    "evidence": [
+      {
+        "subject": "IRegistrationValidationService",
+        "snippet": "ValidateRegistration(",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+            "line": 5,
+            "text": "Task ValidateRegistration(string eventId, string memberId, Guid registrationId);"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationValidationService",
+        "snippet": "ValidateRegistration(",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+            "line": 17,
+            "text": "public async Task ValidateRegistration(string eventId, string memberId, Guid registrationId)"
+          }
+        ]
+      },
+      {
+        "subject": "ValidateRegistrationConsumer",
+        "snippet": "ValidateRegistration(",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+            "line": 23,
+            "text": "await _validationService.ValidateRegistration(context.Message.EventId, context.Message.MemberId, context.Message.RegistrationId);"
+          }
+        ]
+      },
+      {
+        "subject": "Program",
+        "snippet": "AddScoped<IRegistrationValidationService, RegistrationValidationService>",
+        "citations": [
+          {
+            "path": "src/Sample.Worker/Program.cs",
+            "line": 62,
+            "text": "services.AddScoped<IRegistrationValidationService, RegistrationValidationService>();"
+          }
+        ]
+      }
+    ],
+    "missing_evidence": [],
+    "limitations": [
+      "Basenames and snippet assertions are source-authored hints.",
+      "No independent agent quality or completeness score.",
+      "Source configuration does not prove runtime activation, dispatch, delivery or transactions."
+    ]
+  },
+  {
+    "task": "impact-entity-uniqueness",
+    "classification": "source_authored_public_tool_walkthrough",
+    "calls": 6,
+    "response_bytes": 52413,
+    "stopped": null,
+    "evidence": [
+      {
+        "subject": "RegistrationDbContext",
+        "snippet": "MemberId",
+        "citations": [
+          {
+            "path": "src/Sample.Components/RegistrationDbContext.cs",
+            "line": 43,
+            "text": "registration.Property(x => x.MemberId).HasMaxLength(64);"
+          },
+          {
+            "path": "src/Sample.Components/RegistrationDbContext.cs",
+            "line": 49,
+            "text": "x.MemberId,"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationDbContext",
+        "snippet": "EventId",
+        "citations": [
+          {
+            "path": "src/Sample.Components/RegistrationDbContext.cs",
+            "line": 44,
+            "text": "registration.Property(x => x.EventId).HasMaxLength(64);"
+          },
+          {
+            "path": "src/Sample.Components/RegistrationDbContext.cs",
+            "line": 50,
+            "text": "x.EventId"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationDbContext",
+        "snippet": "IsUnique",
+        "citations": [
+          {
+            "path": "src/Sample.Components/RegistrationDbContext.cs",
+            "line": 51,
+            "text": "}).IsUnique();"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationDbContext",
+        "snippet": "RegistrationId",
+        "citations": [
+          {
+            "path": "src/Sample.Components/RegistrationDbContext.cs",
+            "line": 41,
+            "text": "registration.Property(x => x.RegistrationId);"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationService",
+        "snippet": "PostgresErrorCodes.UniqueViolation",
+        "citations": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "line": 47,
+            "text": "catch (DbUpdateException exception) when (exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationService",
+        "snippet": "DuplicateRegistrationException",
+        "citations": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "line": 49,
+            "text": "throw new DuplicateRegistrationException(\"Duplicate registration\", exception);"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationController",
+        "snippet": "DuplicateRegistrationException",
+        "citations": [
+          {
+            "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+            "line": 37,
+            "text": "catch (DuplicateRegistrationException)"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationController",
+        "snippet": "Conflict(",
+        "citations": [
+          {
+            "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+            "line": 39,
+            "text": "return Conflict(new"
+          }
+        ]
+      }
+    ],
+    "missing_evidence": [],
+    "limitations": [
+      "Basenames and snippet assertions are source-authored hints.",
+      "No independent agent quality or completeness score.",
+      "Source configuration does not prove runtime activation, dispatch, delivery or transactions."
+    ]
+  },
+  {
+    "task": "impact-attendee",
+    "classification": "source_authored_public_tool_walkthrough",
+    "calls": 11,
+    "response_bytes": 97404,
+    "stopped": null,
+    "evidence": [
+      {
+        "subject": "AddEventAttendee",
+        "snippet": "RegistrationId",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Contracts/AddEventAttendee.cs",
+            "line": 5,
+            "text": "public Guid RegistrationId { get; init; }"
+          }
+        ]
+      },
+      {
+        "subject": "AddEventAttendeeConsumer",
+        "snippet": "IConsumer<AddEventAttendee>",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+            "line": 9,
+            "text": "IConsumer<AddEventAttendee>"
+          }
+        ]
+      },
+      {
+        "subject": "ValidateRegistrationConsumer",
+        "snippet": "IConsumer<AddEventAttendee>",
+        "citations": [
+          {
+            "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+            "line": 10,
+            "text": "IConsumer<AddEventAttendee>"
+          }
+        ]
+      },
+      {
+        "subject": "RegistrationStateMachine",
+        "snippet": "Publish(context => new AddEventAttendee",
+        "citations": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "line": 35,
+            "text": ".Publish(context => new AddEventAttendee"
+          }
+        ]
+      },
+      {
+        "subject": "Program",
+        "snippet": "AddConsumer<AddEventAttendeeConsumer>",
+        "citations": [
+          {
+            "path": "src/Sample.Worker/Program.cs",
+            "line": 76,
+            "text": "x.AddConsumer<AddEventAttendeeConsumer>();"
+          }
+        ]
+      },
+      {
+        "subject": "Program",
+        "snippet": "AddConsumer<ValidateRegistrationConsumer",
+        "citations": [
+          {
+            "path": "src/Sample.Worker/Program.cs",
+            "line": 77,
+            "text": "x.AddConsumer<ValidateRegistrationConsumer, ValidateRegistrationConsumerDefinition>();"
+          }
+        ]
+      }
+    ],
+    "missing_evidence": [],
+    "limitations": [
+      "Basenames and snippet assertions are source-authored hints.",
+      "No independent agent quality or completeness score.",
+      "Source configuration does not prove runtime activation, dispatch, delivery or transactions."
+    ]
+  }
+]

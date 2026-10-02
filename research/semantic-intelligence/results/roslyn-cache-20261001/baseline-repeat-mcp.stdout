@@ -1,0 +1,11 @@
+=== RUN   TestPinnedRoslynFactoredGraphMCP
+    public_roslyn_test.go:69: warm open=41.473341958s logical_edges=182844081 stored_records=6619555 target_sets=69394 build_id=fcc77570f2f18640264f216d29a54c68cd5253490d34270d5e0fb436efa8d002
+    public_roslyn_test.go:105: MCP structured sha256=414e4a9c8abeb39f0c57562a687f695e569140b73c27ead338088b8d6c22902d request={"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graph_schema","arguments":{}}}
+    public_roslyn_test.go:119: MCP structured sha256=07e99d874f399cb93de80175754b2b5a0574aa3cb1b1ce264a84393e1ca149c7 request={"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"trace_calls","arguments":{"symbol":"Main","hops":1}}}
+    public_roslyn_test.go:133: MCP trace_calls Main=46.754209ms nodes=1614 edges=1654 truncated=true total_is_exact=false
+    public_roslyn_test.go:119: MCP structured sha256=5948ad68803e040dacd9ad4bd135dbf846c145c32b05c0cb487aa2d7a848900b request={"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"trace_calls","arguments":{"symbol":"Create","hops":1}}}
+    public_roslyn_test.go:133: MCP trace_calls Create=121.025625ms nodes=1972 edges=8408 truncated=true total_is_exact=false
+    public_roslyn_test.go:137: MCP structured sha256=3763136ed63cd669458078170458af75454e79a2b0fc59dbdb3ce6f8836091ec request={"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"impact_analysis","arguments":{"symbol":"Create","depth":1}}}
+    public_roslyn_test.go:143: MCP impact_analysis Create=112.068166ms nodes=863 edges=9148 truncated=true total_is_exact=false
+--- PASS: TestPinnedRoslynFactoredGraphMCP (42.53s)
+PASS

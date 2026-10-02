@@ -1,0 +1,17 @@
+{
+  "ordinal": 9,
+  "argv": [
+    "call",
+    "--name",
+    "search_context",
+    "--arguments",
+    "{\"query\":\"UpdateTodoItemCommandHandler\",\"repo\":\"CleanArchitecture\",\"top_k\":1,\"token_budget\":1400,\"graph_depth\":0}"
+  ],
+  "started_monotonic": 77915.386604333,
+  "finished_monotonic": 77915.463179791,
+  "returncode": 0,
+  "stdout_bytes": 3875,
+  "stdout_sha256": "c5ad0dd66a1f0af4787a14adad76c2b30a85566221c06119e7a5502ad26a790c",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

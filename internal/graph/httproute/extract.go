@@ -40,6 +40,10 @@ type Endpoint struct {
 	Repo  string
 	Path  string
 
+	// AmbiguousContext marks bytes indexed at multiple repository/path
+	// locations, which cannot represent one confidently bound service.
+	AmbiguousContext bool
+
 	Start, End int
 	Raw        string
 	Method     Method

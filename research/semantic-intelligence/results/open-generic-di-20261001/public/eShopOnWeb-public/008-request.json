@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": 8,
+  "method": "tools/call",
+  "params": {
+    "name": "compiler_binding_at",
+    "arguments": {
+      "repo": "eShopOnWeb",
+      "path": "src/Web/Features/OrderDetails/GetOrderDetailsHandler.cs",
+      "byte_offset": 628,
+      "raw_sha256": "f3626cfbb26460fdd5ae6c7d71d1f422642543f51d5fe3fc78d200201b7f595b",
+      "context_id": "context:e1dc6079c96edd898a25320a9a6b478843823f010e58477c800bc96c3038e683"
+    }
+  }
+}

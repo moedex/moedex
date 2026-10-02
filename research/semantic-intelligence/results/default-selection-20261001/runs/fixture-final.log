@@ -1,0 +1,13 @@
+  Determining projects to restore...
+  Restored /Users/zakkeown/Code/moedex/.local/default-selection/fixture-final/Contracts/Contracts.csproj (in 30 ms).
+  Restored /Users/zakkeown/Code/moedex/.local/default-selection/fixture-final/App/App.csproj (in 31 ms).
+  Contracts -> /Users/zakkeown/Code/moedex/.local/default-selection/fixture-final/Contracts/bin/Debug/net8.0/Contracts.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.04
+  Determining projects to restore...
+  Restored /Users/zakkeown/Code/moedex/.local/default-selection/fixture-final/Metadata/Metadata.csproj (in 24 ms).
+PASS: six class selections, distinct closed arguments, most-specific override, diamond, inherited default, arbitrary body; eight excluded classes/structs; 33-fact overflow; metadata-only defaults excluded; ambiguous compilation suppressed

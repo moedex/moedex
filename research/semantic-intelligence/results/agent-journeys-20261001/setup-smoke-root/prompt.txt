@@ -1,0 +1,1 @@
+Where does the application enforce uniqueness of an event/member registration, and how does a duplicate reach the HTTP response? Cite the relevant code.

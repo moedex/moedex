@@ -1,0 +1,64 @@
+package semantic
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestRequestResponseConfiguration(t *testing.T) {
+	for _, arg := range []string{"`0", "System.Object"} {
+		t.Run(arg, func(t *testing.T) {
+			a := domainFixture()
+			api := a.Symbols[1]
+			api.Key.Namespace = "MassTransit.Abstractions, Version=8.2.1.0"
+			api.Key.Descriptor = "M:MassTransit.IRequestClient`1.GetResponse``2(" + arg + ",System.Threading.CancellationToken,MassTransit.RequestTimeout)"
+			api.ID = api.ComputeID()
+			f := DomainFact{Kind: "message_request_configuration", Rule: "csharp-framework-v6", EvidenceScope: "compile_time", Targets: []DomainTarget{{Role: "request", SymbolID: a.Symbols[0].ID}, {Role: "response_1", SymbolID: a.Symbols[0].ID}, {Role: "response_2", SymbolID: a.Symbols[0].ID}}}
+			if err := ValidateDomainFacts([]DomainFact{f}); err != nil {
+				t.Fatal(err)
+			}
+			if err := ValidateDomainAPI(f, api); err != nil {
+				t.Fatal(err)
+			}
+			for _, mutate := range []func(*DomainFact){
+				func(f *DomainFact) { f.Rule = "csharp-framework-v5" }, func(f *DomainFact) { f.Kind = "message_response" }, func(f *DomainFact) { f.EvidenceScope = "runtime" }, func(f *DomainFact) { f.Lifetime = "singleton" }, func(f *DomainFact) { f.Table = "x" }, func(f *DomainFact) { f.Schema = "x" }, func(f *DomainFact) { f.Targets = f.Targets[:2] }, func(f *DomainFact) { f.Targets[0].Role = "message" }, func(f *DomainFact) { f.Targets[1], f.Targets[2] = f.Targets[2], f.Targets[1] },
+			} {
+				bad := f
+				bad.Targets = append([]DomainTarget(nil), f.Targets...)
+				mutate(&bad)
+				if ValidateDomainFacts([]DomainFact{bad}) == nil {
+					t.Fatalf("invalid fact accepted: %+v", bad)
+				}
+			}
+			for _, mutate := range []func(*Symbol){
+				func(s *Symbol) { s.Key.NamespaceKind = "project" }, func(s *Symbol) { s.Key.Namespace = "MassTransit" }, func(s *Symbol) { s.Key.Descriptor = strings.ReplaceAll(s.Key.Descriptor, "``2", "``1") }, func(s *Symbol) { s.Key.Descriptor = strings.ReplaceAll(s.Key.Descriptor, "``2", "``3") }, func(s *Symbol) {
+					s.Key.Descriptor = strings.ReplaceAll(s.Key.Descriptor, ",System.Threading", ",MassTransit.RequestPipeConfiguratorCallback{`0},System.Threading")
+				},
+			} {
+				bad := api
+				mutate(&bad)
+				if ValidateDomainAPI(f, bad) == nil {
+					t.Fatalf("wrong API accepted: %+v", bad)
+				}
+			}
+			for _, version := range []string{"10", "11", "12", "13", "14", "15", "16"} {
+				c := &a.Contexts[0]
+				c.ExtractorVersion = version
+				c.ID = c.ComputeID()
+				o := &a.Occurrences[0]
+				o.ContextID = c.ID
+				o.ID = o.ComputeID()
+				a.Symbols[1] = api
+				b := &a.Bindings[0]
+				b.ExtractorVersion = version
+				b.OccurrenceID = o.ID
+				b.SymbolID = api.ID
+				b.DomainFacts = []DomainFact{f}
+				b.ID = b.ComputeID()
+				if err := a.Validate(); (err == nil) != (version == "11" || (version == "12" || (version == "13" || (version == "14" || version == "15")))) {
+					t.Fatalf("version %s: %v", version, err)
+				}
+			}
+		})
+	}
+}

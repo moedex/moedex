@@ -1,0 +1,488 @@
+{
+  "count": 13,
+  "domain_facts": 6,
+  "implementation_facts": 7,
+  "status": "source_reviewed_consistent_selected_extras",
+  "items": [
+    {
+      "source": {
+        "project": "src/eShop.ServiceDefaults/eShop.ServiceDefaults.csproj",
+        "path": "src/eShop.ServiceDefaults/OpenApiDefaultValues.cs",
+        "byte_offset": 304,
+        "byte_length": 5,
+        "source_sha256": "187811f46a05d46bb36a493659af6064c018191e51bcb16072acb8568615104a"
+      },
+      "symbol": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/eShop.ServiceDefaults/eShop.ServiceDefaults.csproj",
+        "descriptor": "M:eShop.ServiceDefaults.OpenApiDefaultValues.Apply(Microsoft.OpenApi.Models.OpenApiOperation,Swashbuckle.AspNetCore.SwaggerGen.OperationFilterContext)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "fact": {
+        "kind": "interface_method_implementation",
+        "rule": "csharp-interface-v1",
+        "evidence_scope": "compile_time",
+        "interface_member": {
+          "language": "csharp",
+          "namespace_kind": "assembly",
+          "namespace": "Swashbuckle.AspNetCore.SwaggerGen, Version=6.7.1.0, Culture=neutral, PublicKeyToken=d84d99fb0135530a",
+          "descriptor": "M:Swashbuckle.AspNetCore.SwaggerGen.IOperationFilter.Apply(Microsoft.OpenApi.Models.OpenApiOperation,Swashbuckle.AspNetCore.SwaggerGen.OperationFilterContext)",
+          "descriptor_kind": "documentation_comment_id"
+        },
+        "implementing_type": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/eShop.ServiceDefaults/eShop.ServiceDefaults.csproj",
+          "descriptor": "T:eShop.ServiceDefaults.OpenApiDefaultValues",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "review": "Source declaration or exact generic API/token reviewed after scoring; consistent extra capability evidence, excluded from frozen nine-positive denominator."
+    },
+    {
+      "source": {
+        "project": "src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+        "path": "src/EventBusRabbitMQ/RabbitMQEventBus.cs",
+        "byte_offset": 1233,
+        "byte_length": 12,
+        "source_sha256": "2b8148e25522d8f33569c1c82ab53116473e90b778554db2d8ce1283e5951a09"
+      },
+      "symbol": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+        "descriptor": "M:eShop.EventBusRabbitMQ.RabbitMQEventBus.PublishAsync(eShop.EventBus.Events.IntegrationEvent)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "fact": {
+        "kind": "interface_method_implementation",
+        "rule": "csharp-interface-v1",
+        "evidence_scope": "compile_time",
+        "interface_member": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/EventBus/EventBus.csproj",
+          "descriptor": "M:eShop.EventBus.Abstractions.IEventBus.PublishAsync(eShop.EventBus.Events.IntegrationEvent)",
+          "descriptor_kind": "documentation_comment_id"
+        },
+        "implementing_type": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+          "descriptor": "T:eShop.EventBusRabbitMQ.RabbitMQEventBus",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "review": "Source declaration or exact generic API/token reviewed after scoring; consistent extra capability evidence, excluded from frozen nine-positive denominator."
+    },
+    {
+      "source": {
+        "project": "src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+        "path": "src/EventBusRabbitMQ/RabbitMqDependencyInjectionExtensions.cs",
+        "byte_offset": 1213,
+        "byte_length": 12,
+        "source_sha256": "174ba85fe969ca91d308977b5224086f8d22b22b06574c487b6c20ffffc6742a"
+      },
+      "symbol": {
+        "language": "csharp",
+        "namespace_kind": "assembly",
+        "namespace": "Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+        "descriptor": "M:Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton``1(Microsoft.Extensions.DependencyInjection.IServiceCollection)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "fact": {
+        "kind": "di_registration",
+        "rule": "csharp-framework-v1",
+        "evidence_scope": "compile_time",
+        "targets": [
+          {
+            "role": "service",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+              "descriptor": "T:eShop.EventBusRabbitMQ.RabbitMQTelemetry",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          },
+          {
+            "role": "implementation",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+              "descriptor": "T:eShop.EventBusRabbitMQ.RabbitMQTelemetry",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "lifetime": "singleton"
+      },
+      "review": "Source declaration or exact generic API/token reviewed after scoring; consistent extra capability evidence, excluded from frozen nine-positive denominator."
+    },
+    {
+      "source": {
+        "project": "src/Webhooks.API/Webhooks.API.csproj",
+        "path": "src/Webhooks.API/Model/WebhookSubscriptionRequest.cs",
+        "byte_offset": 292,
+        "byte_length": 8,
+        "source_sha256": "6525776208ad5aec77ba6a2622d9d5c098b9af1df9d7d79d95fff5e65f621f09"
+      },
+      "symbol": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "M:Webhooks.API.Model.WebhookSubscriptionRequest.Validate(System.ComponentModel.DataAnnotations.ValidationContext)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "fact": {
+        "kind": "interface_method_implementation",
+        "rule": "csharp-interface-v1",
+        "evidence_scope": "compile_time",
+        "interface_member": {
+          "language": "csharp",
+          "namespace_kind": "assembly",
+          "namespace": "System.ComponentModel.Annotations, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a",
+          "descriptor": "M:System.ComponentModel.DataAnnotations.IValidatableObject.Validate(System.ComponentModel.DataAnnotations.ValidationContext)",
+          "descriptor_kind": "documentation_comment_id"
+        },
+        "implementing_type": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+          "descriptor": "T:Webhooks.API.Model.WebhookSubscriptionRequest",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "review": "Source declaration or exact generic API/token reviewed after scoring; consistent extra capability evidence, excluded from frozen nine-positive denominator."
+    },
+    {
+      "source": {
+        "project": "src/IntegrationEventLogEF/IntegrationEventLogEF.csproj",
+        "path": "src/IntegrationEventLogEF/Services/IntegrationEventLogService.cs",
+        "byte_offset": 2173,
+        "byte_length": 3,
+        "source_sha256": "c1c77ea267325988009a43449715ccdbd3e7ef5b056ff09f8eb64687a67f6f25"
+      },
+      "symbol": {
+        "language": "csharp",
+        "namespace_kind": "assembly",
+        "namespace": "Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+        "descriptor": "M:Microsoft.EntityFrameworkCore.DbContext.Set``1",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "fact": {
+        "kind": "storage_entity_use",
+        "rule": "csharp-framework-v2",
+        "evidence_scope": "compile_time",
+        "targets": [
+          {
+            "role": "entity",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/IntegrationEventLogEF/IntegrationEventLogEF.csproj",
+              "descriptor": "T:eShop.IntegrationEventLogEF.IntegrationEventLogEntry",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ]
+      },
+      "review": "Source declaration or exact generic API/token reviewed after scoring; consistent extra capability evidence, excluded from frozen nine-positive denominator."
+    },
+    {
+      "source": {
+        "project": "src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+        "path": "src/EventBusRabbitMQ/RabbitMqDependencyInjectionExtensions.cs",
+        "byte_offset": 1273,
+        "byte_length": 12,
+        "source_sha256": "174ba85fe969ca91d308977b5224086f8d22b22b06574c487b6c20ffffc6742a"
+      },
+      "symbol": {
+        "language": "csharp",
+        "namespace_kind": "assembly",
+        "namespace": "Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+        "descriptor": "M:Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton``2(Microsoft.Extensions.DependencyInjection.IServiceCollection)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "fact": {
+        "kind": "di_registration",
+        "rule": "csharp-framework-v1",
+        "evidence_scope": "compile_time",
+        "targets": [
+          {
+            "role": "service",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/EventBus/EventBus.csproj",
+              "descriptor": "T:eShop.EventBus.Abstractions.IEventBus",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          },
+          {
+            "role": "implementation",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+              "descriptor": "T:eShop.EventBusRabbitMQ.RabbitMQEventBus",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "lifetime": "singleton"
+      },
+      "review": "Source declaration or exact generic API/token reviewed after scoring; consistent extra capability evidence, excluded from frozen nine-positive denominator."
+    },
+    {
+      "source": {
+        "project": "src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+        "path": "src/EventBusRabbitMQ/RabbitMQEventBus.cs",
+        "byte_offset": 4925,
+        "byte_length": 7,
+        "source_sha256": "2b8148e25522d8f33569c1c82ab53116473e90b778554db2d8ce1283e5951a09"
+      },
+      "symbol": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+        "descriptor": "M:eShop.EventBusRabbitMQ.RabbitMQEventBus.Dispose",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "fact": {
+        "kind": "interface_method_implementation",
+        "rule": "csharp-interface-v1",
+        "evidence_scope": "compile_time",
+        "interface_member": {
+          "language": "csharp",
+          "namespace_kind": "assembly",
+          "namespace": "System.Runtime, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a",
+          "descriptor": "M:System.IDisposable.Dispose",
+          "descriptor_kind": "documentation_comment_id"
+        },
+        "implementing_type": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+          "descriptor": "T:eShop.EventBusRabbitMQ.RabbitMQEventBus",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "review": "Source declaration or exact generic API/token reviewed after scoring; consistent extra capability evidence, excluded from frozen nine-positive denominator."
+    },
+    {
+      "source": {
+        "project": "src/eShop.ServiceDefaults/eShop.ServiceDefaults.csproj",
+        "path": "src/eShop.ServiceDefaults/ConfigureSwaggerOptions.cs",
+        "byte_offset": 5145,
+        "byte_length": 5,
+        "source_sha256": "42edd99baa4f860601cca04f480f4dae0e4339f4d6029dca61e0872fbc9f0d71"
+      },
+      "symbol": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/eShop.ServiceDefaults/eShop.ServiceDefaults.csproj",
+        "descriptor": "M:eShop.ServiceDefaults.ConfigureSwaggerOptions.AuthorizeCheckOperationFilter.Apply(Microsoft.OpenApi.Models.OpenApiOperation,Swashbuckle.AspNetCore.SwaggerGen.OperationFilterContext)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "fact": {
+        "kind": "interface_method_implementation",
+        "rule": "csharp-interface-v1",
+        "evidence_scope": "compile_time",
+        "interface_member": {
+          "language": "csharp",
+          "namespace_kind": "assembly",
+          "namespace": "Swashbuckle.AspNetCore.SwaggerGen, Version=6.7.1.0, Culture=neutral, PublicKeyToken=d84d99fb0135530a",
+          "descriptor": "M:Swashbuckle.AspNetCore.SwaggerGen.IOperationFilter.Apply(Microsoft.OpenApi.Models.OpenApiOperation,Swashbuckle.AspNetCore.SwaggerGen.OperationFilterContext)",
+          "descriptor_kind": "documentation_comment_id"
+        },
+        "implementing_type": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/eShop.ServiceDefaults/eShop.ServiceDefaults.csproj",
+          "descriptor": "T:eShop.ServiceDefaults.ConfigureSwaggerOptions.AuthorizeCheckOperationFilter",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "review": "Source declaration or exact generic API/token reviewed after scoring; consistent extra capability evidence, excluded from frozen nine-positive denominator."
+    },
+    {
+      "source": {
+        "project": "src/IntegrationEventLogEF/IntegrationEventLogEF.csproj",
+        "path": "src/IntegrationEventLogEF/IntegrationLogExtensions.cs",
+        "byte_offset": 260,
+        "byte_length": 7,
+        "source_sha256": "51fbc66b4b26d2b9e77cfaa85f00c8c5ccc438ac2b2b38a188105e933f502194"
+      },
+      "symbol": {
+        "language": "csharp",
+        "namespace_kind": "assembly",
+        "namespace": "Microsoft.EntityFrameworkCore.Relational, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+        "descriptor": "M:Microsoft.EntityFrameworkCore.RelationalEntityTypeBuilderExtensions.ToTable``1(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder{``0},System.String)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "fact": {
+        "kind": "storage_table",
+        "rule": "csharp-framework-v1",
+        "evidence_scope": "compile_time",
+        "targets": [
+          {
+            "role": "entity",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/IntegrationEventLogEF/IntegrationEventLogEF.csproj",
+              "descriptor": "T:eShop.IntegrationEventLogEF.IntegrationEventLogEntry",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "table": "IntegrationEventLog"
+      },
+      "review": "Source declaration or exact generic API/token reviewed after scoring; consistent extra capability evidence, excluded from frozen nine-positive denominator."
+    },
+    {
+      "source": {
+        "project": "src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+        "path": "src/EventBusRabbitMQ/RabbitMQEventBus.cs",
+        "byte_offset": 11767,
+        "byte_length": 9,
+        "source_sha256": "2b8148e25522d8f33569c1c82ab53116473e90b778554db2d8ce1283e5951a09"
+      },
+      "symbol": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+        "descriptor": "M:eShop.EventBusRabbitMQ.RabbitMQEventBus.StopAsync(System.Threading.CancellationToken)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "fact": {
+        "kind": "interface_method_implementation",
+        "rule": "csharp-interface-v1",
+        "evidence_scope": "compile_time",
+        "interface_member": {
+          "language": "csharp",
+          "namespace_kind": "assembly",
+          "namespace": "Microsoft.Extensions.Hosting.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+          "descriptor": "M:Microsoft.Extensions.Hosting.IHostedService.StopAsync(System.Threading.CancellationToken)",
+          "descriptor_kind": "documentation_comment_id"
+        },
+        "implementing_type": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+          "descriptor": "T:eShop.EventBusRabbitMQ.RabbitMQEventBus",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "review": "Source declaration or exact generic API/token reviewed after scoring; consistent extra capability evidence, excluded from frozen nine-positive denominator."
+    },
+    {
+      "source": {
+        "project": "src/IntegrationEventLogEF/IntegrationEventLogEF.csproj",
+        "path": "src/IntegrationEventLogEF/Services/IntegrationEventLogService.cs",
+        "byte_offset": 1535,
+        "byte_length": 3,
+        "source_sha256": "c1c77ea267325988009a43449715ccdbd3e7ef5b056ff09f8eb64687a67f6f25"
+      },
+      "symbol": {
+        "language": "csharp",
+        "namespace_kind": "assembly",
+        "namespace": "Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+        "descriptor": "M:Microsoft.EntityFrameworkCore.DbContext.Set``1",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "fact": {
+        "kind": "storage_entity_use",
+        "rule": "csharp-framework-v2",
+        "evidence_scope": "compile_time",
+        "targets": [
+          {
+            "role": "entity",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/IntegrationEventLogEF/IntegrationEventLogEF.csproj",
+              "descriptor": "T:eShop.IntegrationEventLogEF.IntegrationEventLogEntry",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ]
+      },
+      "review": "Source declaration or exact generic API/token reviewed after scoring; consistent extra capability evidence, excluded from frozen nine-positive denominator."
+    },
+    {
+      "source": {
+        "project": "src/IntegrationEventLogEF/IntegrationEventLogEF.csproj",
+        "path": "src/IntegrationEventLogEF/Services/IntegrationEventLogService.cs",
+        "byte_offset": 750,
+        "byte_length": 3,
+        "source_sha256": "c1c77ea267325988009a43449715ccdbd3e7ef5b056ff09f8eb64687a67f6f25"
+      },
+      "symbol": {
+        "language": "csharp",
+        "namespace_kind": "assembly",
+        "namespace": "Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+        "descriptor": "M:Microsoft.EntityFrameworkCore.DbContext.Set``1",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "fact": {
+        "kind": "storage_entity_use",
+        "rule": "csharp-framework-v2",
+        "evidence_scope": "compile_time",
+        "targets": [
+          {
+            "role": "entity",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShop/src/IntegrationEventLogEF/IntegrationEventLogEF.csproj",
+              "descriptor": "T:eShop.IntegrationEventLogEF.IntegrationEventLogEntry",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ]
+      },
+      "review": "Source declaration or exact generic API/token reviewed after scoring; consistent extra capability evidence, excluded from frozen nine-positive denominator."
+    },
+    {
+      "source": {
+        "project": "src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+        "path": "src/EventBusRabbitMQ/RabbitMQEventBus.cs",
+        "byte_offset": 9283,
+        "byte_length": 10,
+        "source_sha256": "2b8148e25522d8f33569c1c82ab53116473e90b778554db2d8ce1283e5951a09"
+      },
+      "symbol": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+        "descriptor": "M:eShop.EventBusRabbitMQ.RabbitMQEventBus.StartAsync(System.Threading.CancellationToken)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "fact": {
+        "kind": "interface_method_implementation",
+        "rule": "csharp-interface-v1",
+        "evidence_scope": "compile_time",
+        "interface_member": {
+          "language": "csharp",
+          "namespace_kind": "assembly",
+          "namespace": "Microsoft.Extensions.Hosting.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+          "descriptor": "M:Microsoft.Extensions.Hosting.IHostedService.StartAsync(System.Threading.CancellationToken)",
+          "descriptor_kind": "documentation_comment_id"
+        },
+        "implementing_type": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+          "descriptor": "T:eShop.EventBusRabbitMQ.RabbitMQEventBus",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "review": "Source declaration or exact generic API/token reviewed after scoring; consistent extra capability evidence, excluded from frozen nine-positive denominator."
+    }
+  ],
+  "limitation": "Post-score source review does not expand frozen holdout recall denominator or establish broad precision."
+}

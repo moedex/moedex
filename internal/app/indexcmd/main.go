@@ -124,7 +124,7 @@ func MainContext(ctx context.Context) {
 	case "snapshot-migrate":
 		err = runSnapshotMigrate(os.Args[2:])
 	case "snapshot-build":
-		err = runSnapshotBuild(os.Args[2:])
+		err = runSnapshotBuildContext(ctx, os.Args[2:])
 	case "version", "-version", "--version":
 		fmt.Println(version.Line("moedex-index", false))
 		return
@@ -166,7 +166,7 @@ Atomic index snapshots (immutable generations selected by index-dir/CURRENT):
   moedex-index snapshot-inspect  [-index-dir DIR] [-id SNAPSHOT]
   moedex-index snapshot-rollback [-index-dir DIR] -id SNAPSHOT
   moedex-index snapshot-migrate  [-index-dir DIR] -shard-dir LEGACY [-id SNAPSHOT]
-  moedex-index snapshot-build    [-index-dir DIR] -corpus ROOT [-id SNAPSHOT] [-dense]
+  moedex-index snapshot-build    [-index-dir DIR] -corpus ROOT [-id SNAPSHOT] [-dense] [-semantic-artifact FILE]
 
 Content-addressable store (global cross-shard dedup + per-blob delta):
   moedex-index cas-build   -corpus ROOT -cas-dir DIR
@@ -305,12 +305,12 @@ func printGraphStats(stats graphbuild.GraphRefreshStats) {
 		fmt.Fprintf(os.Stderr, "moedex-index: warning: graph refresh dropped %d stale or suppressed prior edge(s)\n", stats.EdgesDropped)
 	}
 	if stats.Schedule.Names > 0 {
-		fmt.Printf("  graph schedule: %d name(s) -> %d bounded batch(es) on %d worker(s), largest <=%d candidate(s); heaviest=%q <=%d across %d batch(es); prepare=%s compute=%s\n",
-			stats.Schedule.Names, stats.Schedule.Batches, stats.Schedule.Workers,
-			stats.Schedule.LargestBatchUpperBound, stats.Schedule.HeaviestName,
-			stats.Schedule.HeaviestNameUpperBound, stats.Schedule.HeaviestNameBatches,
-			stats.Schedule.PreparationElapsed.Round(time.Millisecond),
-			stats.Schedule.CandidateComputeElapsed.Round(time.Millisecond))
+		fmt.Printf("  graph candidate census: %d source record(s), %d shared target set(s), %d target key(s), %d logical edge(s); %d name(s) on %d worker(s), prepare=%s\n",
+			stats.Schedule.PhysicalSources, stats.Schedule.SharedTargetSets, stats.Schedule.SharedTargets,
+			stats.Schedule.LogicalEdges, stats.Schedule.Names, stats.Schedule.Workers,
+			stats.Schedule.PreparationElapsed.Round(time.Millisecond))
+		fmt.Printf("  graph source verification: %d source(s), %d candidate pair(s), %d retained pair(s) before content deduplication\n",
+			stats.Schedule.SourcesVerified, stats.Schedule.CandidatePairs, stats.Schedule.RetainedPairs)
 	}
 	if stats.Counts.SuppressedRawCandidates > 0 {
 		fmt.Printf("  graph quality: suppressed %d raw Candidate occurrence edge(s)\n", stats.Counts.SuppressedRawCandidates)
@@ -319,10 +319,10 @@ func printGraphStats(stats graphbuild.GraphRefreshStats) {
 		fmt.Printf("  graph quality: suppressed %d cross-repository Pattern binding(s)\n", stats.Counts.SuppressedCrossRepoPattern)
 	}
 	if stats.Cluster.Status != "" {
-		fmt.Printf("  clusters: status=%s eligible=%d/%d node(s), %d/%d edge(s), cap=%d, communities=%d, build=%dms\n",
+		fmt.Printf("  clusters: status=%s eligible=%d/%d node(s), %d/%d edge(s), node_cap=%d, edge_cap=%d, communities=%d, build=%dms\n",
 			stats.Cluster.Status, stats.Cluster.EligibleNodes, stats.Cluster.ObservedNodes,
 			stats.Cluster.EligibleEdges, stats.Cluster.ObservedEdges,
-			stats.Cluster.Cap, stats.Cluster.Clusters, stats.Cluster.BuildMillis)
+			stats.Cluster.Cap, stats.Cluster.EdgeCap, stats.Cluster.Clusters, stats.Cluster.BuildMillis)
 	}
 	if stats.Counts.EdgeType != nil {
 		fmt.Printf("  graph counts: source={%s} confidence={%s} edge={%s} enclosing={%s}\n",
@@ -463,9 +463,9 @@ func startPeakMemoryMonitor() func() uint64 {
 
 // buildShards indexes every repo under root into byte-sized shards written to
 // shardDir, and returns the freshness Manifest describing them. Packing matches
-// parity.Build: a shard is flushed once its accumulated content reaches
-// shardBytes (checked at repo boundaries, so a repo is never split across
-// shards). Repos that fail to ingest are skipped, not fatal.
+// parity.Build: flush before the next file would exceed shardBytes, allowing
+// one oversized file alone. A repository may span shards. Repos that fail to
+// ingest are skipped, not fatal.
 // sel is nil for the default all-trigram build; when non-nil the shards are
 // built selectively (see index.Builder), which is parity-safe via the
 // IndexedGram membership gate — a dropped gram only ever widens the candidate
@@ -558,26 +558,24 @@ func buildShards(ctx context.Context, root, shardDir string, shardBytes int64, s
 			ProjectID:          source.ProjectID, Managed: source.Managed,
 		})
 
-		contributed := false
 		seen := map[string]bool{}
 		for _, f := range files {
 			if seen[f.AbsPath] {
 				continue // same abspath already in this repo's batch
 			}
 			seen[f.AbsPath] = true
+			if sb.NumBlobs() > 0 && int64(len(f.Content)) > shardBytes-curBytes {
+				if err := flush(); err != nil {
+					return nil, 0, 0, err
+				}
+			}
+			if !curSeen[repo] {
+				curSeen[repo] = true
+				curRepos = append(curRepos, repo)
+			}
 			sb.AddFile(f.Repo, f.RelPath, f.AbsPath, f.SHA, f.Content)
 			curBytes += int64(len(f.Content))
 			nFiles++
-			contributed = true
-		}
-		if contributed && !curSeen[repo] {
-			curSeen[repo] = true
-			curRepos = append(curRepos, repo)
-		}
-		if curBytes >= shardBytes {
-			if err := flush(); err != nil {
-				return nil, 0, 0, err
-			}
 		}
 		_ = eventpkg.Emit(ctx, eventpkg.Event{
 			Command: "moe index build", Phase: "ingest", State: "progress",
@@ -590,12 +588,13 @@ func buildShards(ctx context.Context, root, shardDir string, shardBytes int64, s
 	}
 
 	m := &parity.Manifest{
-		Version:  parity.ManifestVersion,
-		Root:     root,
-		BuiltAt:  time.Now(),
-		ShardDir: shardDir,
-		Heads:    heads,
-		Shards:   shards,
+		ShardBytes: shardBytes,
+		Version:    parity.ManifestVersion,
+		Root:       root,
+		BuiltAt:    time.Now(),
+		ShardDir:   shardDir,
+		Heads:      heads,
+		Shards:     shards,
 	}
 	_ = eventpkg.Emit(ctx, eventpkg.Event{
 		Command: "moe index build", Phase: "ingest", State: "completed",

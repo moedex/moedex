@@ -1,0 +1,127 @@
+{
+  "date": "2026-10-01",
+  "status": "passed",
+  "scope": "local compiler contract-impact acceptance; not deployed; variant union is test-only",
+  "projects": 6,
+  "configurations": [
+    "Debug",
+    "Release"
+  ],
+  "facts_per_capture": 5,
+  "mcp_queries": 11,
+  "worker_sha256": "373308a0630f2510fd3840bdd8e5a79ac92ba09ea2956f703004e268efd70b56",
+  "legacy_v2_fixture": {
+    "path": "internal/semanticindex/testdata/domain-v2.msi",
+    "sha256": "046c44132964bbc91dd4689643dc4b40716cb628a82e235cc2b12dc7681ac906"
+  },
+  "checks": [
+    {
+      "command": "go test ./...",
+      "status": "passed",
+      "log": "full-test.log"
+    },
+    {
+      "command": "go vet ./...",
+      "status": "passed",
+      "evidence": "exit status 0 observed; transcribed"
+    },
+    {
+      "command": "go build ./...",
+      "status": "passed",
+      "evidence": "exit status 0 observed; transcribed"
+    },
+    {
+      "command": "go test -race ./internal/semantic ./internal/semanticimport ./internal/semanticindex ./internal/mcp ./internal/snapshot ./internal/app/servecmd ./internal/app/indexcmd",
+      "status": "passed",
+      "log": "race.log"
+    },
+    {
+      "command": "go test -tags lsp ./internal/mcp ./internal/app/servecmd -run Compiler -count=1",
+      "status": "passed",
+      "log": "lsp.log"
+    },
+    {
+      "command": "go test ./internal/semanticindex -run '^$' -fuzz '^FuzzOpen$' -fuzztime=5s -parallel=2",
+      "status": "passed",
+      "log": "fuzz.log"
+    }
+  ],
+  "files": {
+    "Debug.jsonl": {
+      "bytes": 1014153,
+      "sha256": "1f47f6f0fe22690cdb2961ab10f29ca4622dc5db7499f1cc83093688283767bd"
+    },
+    "Debug.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "Release.jsonl": {
+      "bytes": 1016201,
+      "sha256": "f2a9ffa9ce4118dbcaa3e9fdba7ad7df47a26ed3ab592bec591cb90c66bf9753"
+    },
+    "Release.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "capture-gold.json": {
+      "bytes": 1713,
+      "sha256": "8c663c9ee99ad5b75f20c3fc6a0f201c186b7f532b7268e2aabecab5067cefe6"
+    },
+    "domain-regression.log": {
+      "bytes": 8383,
+      "sha256": "1deadb3321385bad26e1dec6b84d26d50c0cf0911b5de5789b6e32d9f8ea3028"
+    },
+    "final-source-to-mcp-race.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "final-source-to-mcp-race.stdout": {
+      "bytes": 43,
+      "sha256": "448dee429151162eff7e654514089319f61dd01230800fc411894732ec640ff5"
+    },
+    "final-source-to-mcp.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "final-source-to-mcp.stdout": {
+      "bytes": 10682,
+      "sha256": "be8cbeb74ef724a43a41b5ea46914da8f8b6eb178173e82c85e35aea930da959"
+    },
+    "fixture-inputs.json": {
+      "bytes": 1300,
+      "sha256": "f23986b89bd064a64e13db19a6537e88054ceecb18b309ebaa77ce03d7cab1ea"
+    },
+    "full-test.log": {
+      "bytes": 2661,
+      "sha256": "934d96754f197d7dcc70192390beeed075bd791b5d1cde1af00fb3e8a03a3b69"
+    },
+    "fuzz.log": {
+      "bytes": 335,
+      "sha256": "716d12622e319a27981102485b8c3d9f9f447bd2ce0e1ba3a38809c9c11203a1"
+    },
+    "lsp.log": {
+      "bytes": 73,
+      "sha256": "db131b53c3255af2c2c1295af240f92958bb15934eab9ae2175647a82ccedb6a"
+    },
+    "packages.json": {
+      "bytes": 1090,
+      "sha256": "659227b9efcb8154b649eb50756a020bfd7690ac91fe867c6d4c0f3918493b20"
+    },
+    "race.log": {
+      "bytes": 277,
+      "sha256": "49ee05e9c01eaa91177d549272045539a70ec072fdeedcf4b71b40234e23d106"
+    },
+    "restore.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "restore.stdout": {
+      "bytes": 648,
+      "sha256": "58a37ba1a56730d1818b8c91ceb1d026a9960dd321ff3c2481d70244c861e4e2"
+    },
+    "sources.json": {
+      "bytes": 17268,
+      "sha256": "ee8afc2b7095ffa6fcdbf379382dbd705bd0270c60c1d95ca4854dd1ff611a73"
+    }
+  }
+}

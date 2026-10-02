@@ -38,10 +38,13 @@ func classifyRegions(content []byte, lang language) []region {
 			case hasPrefix(content, i, "@\""):
 				i = markVerbatimString(content, out, i, 2)
 				continue
+			case hasPrefix(content, i, "\"\"\""):
+				i = markCSharpRawString(content, out, i)
+				continue
 			}
 		}
 
-		// Triple-quoted literals cover Python and modern C# raw strings. Treat
+		// Triple-quoted literals cover Python and other general files. Treat
 		// the whole body as a string; interpolation holes intentionally remain
 		// Candidate at this cheap tier.
 		if hasPrefix(content, i, "\"\"\"") || hasPrefix(content, i, "'''") {
@@ -56,6 +59,42 @@ func classifyRegions(content []byte, lang language) []region {
 		i++
 	}
 	return out
+}
+
+// markCSharpRawString recognizes the complete opening quote run. A shorter
+// quote run inside a raw string is content, so it must not expose test-program
+// calls to Pattern verification. Interpolation holes stay masked at this tier.
+func markCSharpRawString(content []byte, out []region, start int) int {
+	end := start
+	for end < len(content) && content[end] == '"' {
+		end++
+	}
+	quotes := end - start
+	first := end
+	for first < len(content) && (content[first] == ' ' || content[first] == '\t' || content[first] == '\v' || content[first] == '\f') {
+		first++
+	}
+	multiline := first < len(content) && (content[first] == '\r' || content[first] == '\n')
+	for end < len(content) {
+		if !multiline && (content[end] == '\r' || content[end] == '\n') {
+			break // recover malformed single-line literals at their newline
+		}
+		if content[end] != '"' {
+			end++
+			continue
+		}
+		quoteStart := end
+		for end < len(content) && content[end] == '"' {
+			end++
+		}
+		if end-quoteStart >= quotes {
+			break
+		}
+	}
+	for i := start; i < end; i++ {
+		out[i] = regionString
+	}
+	return end
 }
 
 func markLine(content []byte, out []region, start int, value region) int {

@@ -1,0 +1,66 @@
+[
+  {
+    "path": "internal/graph/serve/graphtools.go",
+    "sha256": "5351ec40377e823298afc5bddf92a7474ff9672380390a09584887c56205e3ad",
+    "bytes": 47599
+  },
+  {
+    "path": "internal/graph/serve/graphdiscovery.go",
+    "sha256": "a0fc154e16c41e5b858634aee1e126c201df69d86faae1881e57e78efb3b4954",
+    "bytes": 18622
+  },
+  {
+    "path": "internal/graph/serve/graphneighbors.go",
+    "sha256": "16f58f98f70e7ce33f8ef5610f513cfdd5b1e9efa68219d29d0b2501179d3755",
+    "bytes": 17950
+  },
+  {
+    "path": "internal/graph/serve/clustertool.go",
+    "sha256": "d5279c5e37d58dbf767ea5c76f98ec8b8356f79eac58ee710d7c030f90be0293",
+    "bytes": 9562
+  },
+  {
+    "path": "internal/graph/serve/source_tools_test.go",
+    "sha256": "b7589300b17eca40161c475745565862945ea9949bf795f51e4d960f55f8e950",
+    "bytes": 3241
+  },
+  {
+    "path": "internal/graph/serve/graphtools_test.go",
+    "sha256": "c459fad8aaddcbdba1b558cca1426f5135e775b8d8e949fee59c751e34e985b5",
+    "bytes": 23978
+  },
+  {
+    "path": "internal/app/servecmd/serving_snapshot.go",
+    "sha256": "efc7a1199c1702fd726f392796c61939eb9b2abdd654f6a2c62871417e307e44",
+    "bytes": 9308
+  },
+  {
+    "path": "internal/app/servecmd/serving_snapshot_test.go",
+    "sha256": "d5545887b7273982165fabe9c68522df2cce641c7cf1177d54482876019fb921",
+    "bytes": 13427
+  },
+  {
+    "path": "ARCHITECTURE.md",
+    "sha256": "f494bd5508930e1c6730558bb30b73e7398fd4d11b9ddf5f3d08932d06d50cf7",
+    "bytes": 85082,
+    "role": "documentation snapshot"
+  },
+  {
+    "path": "docs/plans/semantic-intelligence/DELIVERY.md",
+    "sha256": "b4ceeae129075425ad737c0db87f4a12c538f9279b495355dde1dd7296eb3b64",
+    "bytes": 60015,
+    "role": "documentation snapshot"
+  },
+  {
+    "path": "docs/plans/semantic-intelligence/PROGRAM.md",
+    "sha256": "f906a988626ecc7d4ade4f9520ccb06e3ee28e0bbb1df36c6ea3dae722d749da",
+    "bytes": 24493,
+    "role": "documentation snapshot"
+  },
+  {
+    "path": "research/semantic-intelligence/AGENT-JOURNEY-ACCEPTANCE.md",
+    "sha256": "a55872d00656036682b96b66cfc0e54ab590847469526f7c698edfa001fa50e2",
+    "bytes": 5586,
+    "role": "documentation snapshot"
+  }
+]

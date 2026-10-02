@@ -1,0 +1,229 @@
+{
+  "reviewer": "root",
+  "reviewed_utc": "2026-10-01T18:22:41.630605+00:00",
+  "method": "Source-authored rubric plus actual retrieved source blocks and final citations; no new gold.",
+  "tasks": [
+    {
+      "id": "locate-duplicate",
+      "atoms": [
+        {
+          "id": "locate-duplicate.1",
+          "correctness": 1,
+          "evidence": 1,
+          "rationale": "Correct and supported by returned source with adequate final citation.",
+          "returned_support": [
+            {
+              "path": "src/Sample.Components/RegistrationDbContext.cs",
+              "returned_start_line": 10,
+              "returned_end_line": 53
+            }
+          ]
+        },
+        {
+          "id": "locate-duplicate.2",
+          "correctness": 1,
+          "evidence": 1,
+          "rationale": "Correct and supported by returned source with adequate final citation.",
+          "returned_support": [
+            {
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "returned_start_line": 9,
+              "returned_end_line": 54
+            }
+          ]
+        },
+        {
+          "id": "locate-duplicate.3",
+          "correctness": 1,
+          "evidence": 1,
+          "rationale": "Correct and supported by returned source with adequate final citation.",
+          "returned_support": [
+            {
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "returned_start_line": 9,
+              "returned_end_line": 54
+            }
+          ]
+        },
+        {
+          "id": "locate-duplicate.4",
+          "correctness": 1,
+          "evidence": 1,
+          "rationale": "Correct and supported by returned source with adequate final citation.",
+          "returned_support": [
+            {
+              "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+              "returned_start_line": 9,
+              "returned_end_line": 46
+            }
+          ]
+        }
+      ],
+      "correctness": 4,
+      "evidence": 4,
+      "denominator": 4,
+      "unsupported_claims": [],
+      "strict_success": true
+    },
+    {
+      "id": "locate-retry",
+      "atoms": [
+        {
+          "id": "locate-retry.1",
+          "correctness": 1,
+          "evidence": 1,
+          "rationale": "Correct and supported by returned source with adequate final citation.",
+          "returned_support": [
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "returned_start_line": 7,
+              "returned_end_line": 48
+            }
+          ]
+        },
+        {
+          "id": "locate-retry.2",
+          "correctness": 1,
+          "evidence": 1,
+          "rationale": "Correct and supported by returned source with adequate final citation.",
+          "returned_support": [
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "returned_start_line": 7,
+              "returned_end_line": 48
+            }
+          ]
+        },
+        {
+          "id": "locate-retry.3",
+          "correctness": 1,
+          "evidence": 1,
+          "rationale": "Correct and supported by returned source with adequate final citation.",
+          "returned_support": [
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "returned_start_line": 7,
+              "returned_end_line": 48
+            }
+          ]
+        },
+        {
+          "id": "locate-retry.4",
+          "correctness": 1,
+          "evidence": 1,
+          "rationale": "Correct and supported by returned source with adequate final citation.",
+          "returned_support": [
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "returned_start_line": 7,
+              "returned_end_line": 48
+            }
+          ]
+        },
+        {
+          "id": "locate-retry.5",
+          "correctness": 1,
+          "evidence": 1,
+          "rationale": "Correct and supported by returned source with adequate final citation.",
+          "returned_support": [
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateDefinition.cs",
+              "returned_start_line": 6,
+              "returned_end_line": 16
+            }
+          ]
+        }
+      ],
+      "correctness": 5,
+      "evidence": 5,
+      "denominator": 5,
+      "unsupported_claims": [],
+      "strict_success": true
+    },
+    {
+      "id": "locate-validation-service",
+      "atoms": [
+        {
+          "id": "locate-validation-service.1",
+          "correctness": 1,
+          "evidence": 0.5,
+          "rationale": "Correct scoped registration and returned evidence; final citation Program.cs:26\u201389 is unnecessarily broad for the single registration statement at line62. Frozen rubric gives partial evidence credit for broad citations.",
+          "returned_support": [
+            {
+              "path": "src/Sample.Worker/Program.cs",
+              "returned_start_line": 26,
+              "returned_end_line": 89
+            }
+          ]
+        },
+        {
+          "id": "locate-validation-service.2",
+          "correctness": 1,
+          "evidence": 1,
+          "rationale": "Correct and supported by returned source with adequate final citation.",
+          "returned_support": [
+            {
+              "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+              "returned_start_line": 7,
+              "returned_end_line": 21
+            },
+            {
+              "path": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+              "returned_start_line": 1,
+              "returned_end_line": 6
+            }
+          ]
+        },
+        {
+          "id": "locate-validation-service.3",
+          "correctness": 1,
+          "evidence": 1,
+          "rationale": "Correct and supported by returned source with adequate final citation.",
+          "returned_support": [
+            {
+              "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+              "returned_start_line": 9,
+              "returned_end_line": 25
+            }
+          ]
+        },
+        {
+          "id": "locate-validation-service.4",
+          "correctness": 1,
+          "evidence": 1,
+          "rationale": "Correct and supported by returned source with adequate final citation.",
+          "returned_support": [
+            {
+              "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+              "returned_start_line": 9,
+              "returned_end_line": 25
+            }
+          ]
+        },
+        {
+          "id": "locate-validation-service.5",
+          "correctness": 1,
+          "evidence": 1,
+          "rationale": "Correct and supported by returned source with adequate final citation.",
+          "returned_support": [
+            {
+              "path": "src/Sample.Worker/Program.cs",
+              "returned_start_line": 26,
+              "returned_end_line": 89
+            },
+            {
+              "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+              "returned_start_line": 9,
+              "returned_end_line": 25
+            }
+          ]
+        }
+      ],
+      "correctness": 5,
+      "evidence": 4.5,
+      "denominator": 5,
+      "unsupported_claims": [],
+      "strict_success": false
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "task": "flow-runtime-proof",
+  "classification": "source_authored_public_tool_walkthrough",
+  "calls": 12,
+  "response_bytes": 109904,
+  "stopped": null,
+  "evidence": [
+    {
+      "subject": "RegistrationController",
+      "snippet": "Ok(",
+      "citations": [
+        {
+          "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+          "line": 29,
+          "text": "return Ok(new"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationController",
+      "snippet": "SubmitRegistration(",
+      "citations": [
+        {
+          "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+          "line": 27,
+          "text": "var registration = await _registrationService.SubmitRegistration(model.EventId, model.MemberId, model.Payment);"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationService",
+      "snippet": "Publish(new RegistrationSubmitted",
+      "citations": [
+        {
+          "path": "src/Sample.Components/RegistrationService.cs",
+          "line": 34,
+          "text": "await _publishEndpoint.Publish(new RegistrationSubmitted"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationService",
+      "snippet": "SaveChangesAsync()",
+      "citations": [
+        {
+          "path": "src/Sample.Components/RegistrationService.cs",
+          "line": 45,
+          "text": "await _dbContext.SaveChangesAsync();"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationStateMachine",
+      "snippet": "SendRegistrationEmail",
+      "citations": [
+        {
+          "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+          "line": 26,
+          "text": ".Publish(context => new SendRegistrationEmail"
+        }
+      ]
+    },
+    {
+      "subject": "SendRegistrationEmailConsumer",
+      "snippet": "LogInformation",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+          "line": 20,
+          "text": "_logger.LogInformation(\"Notifying Member {MemberId} that they registered for event {EventId} on {RegistrationDate}\", context.Message.MemberId,"
+        }
+      ]
+    },
+    {
+      "subject": "SendRegistrationEmailConsumer",
+      "snippet": "Task.CompletedTask",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+          "line": 23,
+          "text": "return Task.CompletedTask;"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationStateMachineDefinition",
+      "snippet": "UseMessageRetry",
+      "citations": []
+    },
+    {
+      "subject": "RegistrationStateMachineDefinition",
+      "snippet": "UseEntityFrameworkOutbox",
+      "citations": []
+    },
+    {
+      "subject": "Program",
+      "snippet": "UseBusOutbox",
+      "citations": [
+        {
+          "path": "src/Sample.Api/Program.cs",
+          "line": 80,
+          "text": "o.UseBusOutbox();"
+        }
+      ]
+    },
+    {
+      "subject": "Program",
+      "snippet": "ConfigureEndpoints",
+      "citations": [
+        {
+          "path": "src/Sample.Worker/Program.cs",
+          "line": 87,
+          "text": "cfg.ConfigureEndpoints(context);"
+        }
+      ]
+    }
+  ],
+  "missing_evidence": [
+    {
+      "subject": "RegistrationStateMachineDefinition",
+      "snippet": "UseMessageRetry"
+    },
+    {
+      "subject": "RegistrationStateMachineDefinition",
+      "snippet": "UseEntityFrameworkOutbox"
+    }
+  ],
+  "limitations": [
+    "Basenames and snippet assertions are source-authored hints.",
+    "No independent agent quality or completeness score.",
+    "Source configuration does not prove runtime activation, dispatch, delivery or transactions."
+  ]
+}

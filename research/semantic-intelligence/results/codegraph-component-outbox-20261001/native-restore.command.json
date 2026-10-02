@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "/Users/zakkeown/Code/moedex/.local/application-impact/dotnet/dotnet",
+    "restore",
+    "/Users/zakkeown/Code/moedex/.local/application-impact/comparison/codegraph-build-v4/CodeGraphComponent.csproj",
+    "--configfile",
+    "/Users/zakkeown/Code/moedex/.local/application-impact/comparison/codegraph-build-v4/NuGet.Config"
+  ],
+  "cwd": null,
+  "returncode": 0,
+  "elapsed_seconds": 3.627980947494507
+}

@@ -1,0 +1,17 @@
+{
+  "ordinal": 19,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"repo\":\"CleanArchitecture\",\"path\":\"src/Application/TodoItems/EventHandlers/LogTodoItemCompleted.cs\",\"start_line\":6,\"end_line\":21,\"format\":\"text\"}"
+  ],
+  "started_monotonic": 78789.364775833,
+  "finished_monotonic": 78789.431624875,
+  "returncode": 0,
+  "stdout_bytes": 2363,
+  "stdout_sha256": "4b341a764e1253981214ae825e97e8a578eb4020b623aa75e5475dccbf07f185",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

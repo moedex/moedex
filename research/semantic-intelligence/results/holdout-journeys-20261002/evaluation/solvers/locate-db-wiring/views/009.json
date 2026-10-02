@@ -1,0 +1,17 @@
+{
+  "ordinal": 9,
+  "argv": [
+    "call",
+    "--name",
+    "search_context",
+    "--arguments",
+    "{\"query\":\"UsePostgreSQL UseSqlServer ConnectionStrings\",\"repo\":\"CleanArchitecture\",\"top_k\":5,\"token_budget\":1600,\"graph_depth\":0}"
+  ],
+  "started_monotonic": 77440.715159833,
+  "finished_monotonic": 77440.811200708,
+  "returncode": 0,
+  "stdout_bytes": 8192,
+  "stdout_sha256": "1f69a12fe193655515ddcaeb06e9af45709461080f979cb4124f573a04fee4dd",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

@@ -167,8 +167,8 @@ func TestParseTemplateSurvivesMalformedInput(t *testing.T) {
 // TestQualityMapsOntoTheSharedConfidenceLadder pins the numbers phase 10 emits
 // against the tiers the rest of the graph layer scores on.
 func TestQualityMapsOntoTheSharedConfidenceLadder(t *testing.T) {
-	if got := httproute.Exact.Tier(); got != graphverify.Verified {
-		t.Errorf("Exact.Tier() = %s, want Verified", got)
+	if got := httproute.Exact.Tier(); got != graphverify.Pattern {
+		t.Errorf("Exact.Tier() = %s, want Pattern", got)
 	}
 	if got := httproute.Parameterized.Tier(); got != graphverify.Pattern {
 		t.Errorf("Parameterized.Tier() = %s, want Pattern", got)

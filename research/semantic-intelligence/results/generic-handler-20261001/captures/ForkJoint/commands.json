@@ -1,0 +1,76 @@
+[
+  {
+    "label": "capture",
+    "argv": [
+      "/Users/zakkeown/Code/moedex/.local/generic-handler/moedex",
+      "semantic",
+      "capture",
+      "--checkout",
+      "/Users/zakkeown/Code/moedex/.local/fresh-paths/corpus/Sample-ForkJoint",
+      "--commit",
+      "a0aa87647ea9124cb6d4051760e5f3908fb1ce91",
+      "--origin",
+      "https://github.com/MassTransit/Sample-ForkJoint.git",
+      "--repo",
+      "Sample-ForkJoint",
+      "--project",
+      "src/ForkJoint.Api/ForkJoint.Api.csproj",
+      "--framework",
+      "net8.0",
+      "--configuration",
+      "Debug",
+      "--dotnet",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/dotnet",
+      "--sdk-path",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/sdk/8.0.400",
+      "--worker",
+      "/Users/zakkeown/Code/moedex/.local/generic-handler/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+      "--workspace",
+      "/Users/zakkeown/Code/moedex/.local/generic-handler/ForkJoint/workspace",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/generic-handler/ForkJoint/project.semantic",
+      "--dependency-bundle",
+      "/Users/zakkeown/Code/moedex/.local/fresh-paths/ForkJoint-complete-bundle",
+      "--restore-offline",
+      "--timeout",
+      "8m",
+      "--restore-standard-evaluation"
+    ],
+    "returncode": 0,
+    "elapsed_seconds": 14.2322838306427
+  },
+  {
+    "label": "clone-publication",
+    "argv": [
+      "git",
+      "clone",
+      "--no-hardlinks",
+      "/Users/zakkeown/Code/moedex/.local/fresh-paths/corpus/Sample-ForkJoint",
+      "/Users/zakkeown/Code/moedex/.local/generic-handler/ForkJoint/corpus/Sample-ForkJoint"
+    ],
+    "returncode": 0,
+    "elapsed_seconds": 0.04833102226257324
+  },
+  {
+    "label": "publish",
+    "argv": [
+      "/Users/zakkeown/Code/moedex/.local/generic-handler/moedex",
+      "index",
+      "snapshot",
+      "build",
+      "--corpus",
+      "/Users/zakkeown/Code/moedex/.local/generic-handler/ForkJoint/corpus",
+      "--index-dir",
+      "/Users/zakkeown/Code/moedex/.local/generic-handler/ForkJoint/index",
+      "--id",
+      "independent-project",
+      "--graph=false",
+      "--semantic-artifact",
+      "/Users/zakkeown/Code/moedex/.local/generic-handler/ForkJoint/project.semantic",
+      "--semantic-workspaces",
+      "/Users/zakkeown/Code/moedex/.local/generic-handler/ForkJoint/roots.json"
+    ],
+    "returncode": 0,
+    "elapsed_seconds": 0.255634069442749
+  }
+]

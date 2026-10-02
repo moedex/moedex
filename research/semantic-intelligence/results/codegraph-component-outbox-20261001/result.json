@@ -1,0 +1,303 @@
+{
+  "status": "completed_development_component_comparison",
+  "repo": "https://github.com/MassTransit/Sample-Outbox",
+  "commit": "1ab8e66ebf96e5733e68c2f4d2201276f38ed9c5",
+  "protocol_sha256": "c249d3d5f8eb4101c9c0f68cd1739847afd2251be72ece43e1b89a4c96bfb644",
+  "case_count": 19,
+  "negative_control_count": 4,
+  "moedex_outcomes": {
+    "supported_exact_occurrence": 19
+  },
+  "codegraph_outcomes": {
+    "not_represented": 7,
+    "supported_owner_level": 8,
+    "partial_native_evidence": 4
+  },
+  "case_pairs": [
+    {
+      "case_id": "api-service",
+      "family": "domain_observation",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "not_represented"
+    },
+    {
+      "case_id": "worker-service",
+      "family": "domain_observation",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "not_represented"
+    },
+    {
+      "case_id": "AddEventAttendee-consumer",
+      "family": "domain_observation",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "supported_owner_level"
+    },
+    {
+      "case_id": "NotifyRegistration-consumer",
+      "family": "domain_observation",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "supported_owner_level"
+    },
+    {
+      "case_id": "SendRegistrationEmail-consumer",
+      "family": "domain_observation",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "supported_owner_level"
+    },
+    {
+      "case_id": "ValidateRegistration-consumer",
+      "family": "domain_observation",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "supported_owner_level"
+    },
+    {
+      "case_id": "submitted-publish",
+      "family": "domain_observation",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "supported_owner_level"
+    },
+    {
+      "case_id": "validated-publish",
+      "family": "domain_observation",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "supported_owner_level"
+    },
+    {
+      "case_id": "fluent-publish-SendRegistrationEmail",
+      "family": "domain_observation",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "not_represented"
+    },
+    {
+      "case_id": "fluent-publish-AddEventAttendee",
+      "family": "domain_observation",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "not_represented"
+    },
+    {
+      "case_id": "saga-event",
+      "family": "domain_observation",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "not_represented"
+    },
+    {
+      "case_id": "entity-set",
+      "family": "domain_observation",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "partial_native_evidence"
+    },
+    {
+      "case_id": "entity-model",
+      "family": "domain_observation",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "partial_native_evidence"
+    },
+    {
+      "case_id": "api-dbcontext",
+      "family": "domain_observation",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "not_represented"
+    },
+    {
+      "case_id": "worker-dbcontext",
+      "family": "domain_observation",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "not_represented"
+    },
+    {
+      "case_id": "controller-wrapper-interface-call",
+      "family": "resolved_call",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "supported_owner_level"
+    },
+    {
+      "case_id": "controller-wrapper-method-implementation",
+      "family": "method_implementation",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "partial_native_evidence"
+    },
+    {
+      "case_id": "validation-wrapper-interface-call",
+      "family": "resolved_call",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "supported_owner_level"
+    },
+    {
+      "case_id": "validation-wrapper-method-implementation",
+      "family": "method_implementation",
+      "moedex": "supported_exact_occurrence",
+      "codegraph": "partial_native_evidence"
+    }
+  ],
+  "negative_outcomes": {
+    "moedex": {
+      "no_forbidden_assertion_observed": 4
+    },
+    "codegraph": {
+      "attribution_unavailable": 2,
+      "no_forbidden_assertion_observed": 2
+    }
+  },
+  "provenance_levels": "Moedex supports19exactsourceoccurrences; CodeGraph supports8owner-level semantic assertions. TwoEF boundAPI calls and2typeimplementation relationships arepartial;7selected semantic observations unrepresented. Threeadditional class-level configuredAPIcalls preserved separately.",
+  "extras": {
+    "moedex_unscored_native_facts": 0,
+    "moedex_other_reviewed_binding_rows": 184,
+    "codegraph_unscored_type_implementation_edges": 36,
+    "review": "codegraph-extras-review.json"
+  },
+  "capture": "CodeGraph samepinned40trackedfiles/26authoredC# verified; supplementalworkspace3projects35docs zero compilererrors. Existing Moedexworker6snapshot retains4completecontexts fromtwo roots; source-observationdedup only in primarycounts.",
+  "correction": "InitialCodeGraphscore preserved. Version2 fixes protocolimplementation omission:2attributableEFgenericCALLS arepartialnativeevidence, not not_represented. Root independentlyreviewed; regressiontests include wrongowner/wrongAPI. Fullsemantic numerator unchanged8.",
+  "resources": {
+    "codegraph_native_extraction_ms": 4202.3394,
+    "codegraph_native_runner_total_ms": 4249.7116,
+    "codegraph_peak_working_set_bytes": null,
+    "peak_rss_note": "Runtime returned0; measurement unavailable, not zero memory.",
+    "interpretation": "Single component observation, differingcompiler/executionclosures; no speed/resourceefficiency comparison."
+  },
+  "limitations": [
+    "Outbox guided development; selected observations are not heldout generalization or broad precision.",
+    "CodeGraph native analyzer/walker/buffer only; private production pipeline/store/query/MCP unavailable and not reconstructed.",
+    "No end-to-end agent comparison, latent model/token/call efficiency win, runtime dispatch or delivery claim.",
+    "Proposed12task agentpilot remains plannedblocked and PROGRAM30tasks/heldoutjourneys remainopen."
+  ],
+  "reproduction": {
+    "codegraph_scorer": "python3 research/semantic-intelligence/score-codegraph-component-v2.py --protocol <protocol.json> --extraction <native-extraction.json> --source-root <pinnedSample-Outbox> --output <report.json> --capture-status complete-reviewed",
+    "native_capture_command": "native-capture.command.json",
+    "moedex_provenance": "moedex-report.json provenance"
+  },
+  "files": {
+    "native-capture.command.json": {
+      "sha256": "7511b256049f1428986184473adf22ae6bcc7d2d7b7bc0a11ceb71ae34e48e21",
+      "bytes": 727
+    },
+    "codegraph-extras-review.json": {
+      "sha256": "48f25c0ee3807ccf94e326008600659d97d145a0221a13b2430cbeb3b1447df5",
+      "bytes": 20179
+    },
+    "native-inputs.json": {
+      "sha256": "c0f61c241c1fe965bb5a9b990e6a9eb51e7797c66a20a5c02ae7db755a12374b",
+      "bytes": 5592
+    },
+    "native-capture.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "class-level-supplement.json": {
+      "sha256": "64d30758cb07dda24ba5e74b1f3ff8ccb839839a64335e0643d677db205be0c6",
+      "bytes": 3975
+    },
+    "native-extraction.json": {
+      "sha256": "13ea63efb70d961299e2d366f3c71c09cb13610d60a0ba40580b50323c8f7b96",
+      "bytes": 137235
+    },
+    "moedex-report.json": {
+      "sha256": "bfd195c3da64128605e7a3234513affb10f73d108dd87107d2d474265999ecb5",
+      "bytes": 522983
+    },
+    "native-execution.json": {
+      "sha256": "963d49a3fdf8a46bb64da381ef1d82b6270b3119041944f713ea3d4d2cb4689b",
+      "bytes": 919
+    },
+    "scorer-freeze.json": {
+      "sha256": "ef427acd6a7bc524d38b38ad1fbf1a5b4a08deeaef5c42f827dd6144d44b84e3",
+      "bytes": 424
+    },
+    "scorer-tests.log": {
+      "sha256": "319f071f71de1d2ac163c197078ab55cddae6fa81d7e307c368b147bbaaa49ec",
+      "bytes": 2494
+    },
+    "native-capture.stdout": {
+      "sha256": "6aa2103c717d85a5d3a265a74160406f88df800fb51415c459f2aaceabbf7d46",
+      "bytes": 1052
+    },
+    "native-source-verification.json": {
+      "sha256": "9c7eb174b3c9312c08b3958f0a0f9a6fffcde85bb9a2fab512a091ad24fc2d31",
+      "bytes": 201
+    },
+    "native-lint.json": {
+      "sha256": "5699bd7aeb5131eb466c792bd1c5e9a7d03a0c810ef8e3ed66e4553fcafadff7",
+      "bytes": 1225
+    },
+    "codegraph-score.json": {
+      "sha256": "30f56efe098960ffbb8cf9d82a2f8d66b03c1ddc09aa5d9ba2013182bcdf5db9",
+      "bytes": 22404
+    },
+    "codegraph-score-v2.json": {
+      "sha256": "ba2facc1d564da7d5d3525081498bdae7b47deb0d122a2882e821bf19b3643ee",
+      "bytes": 23755
+    },
+    "protocol.json": {
+      "sha256": "c249d3d5f8eb4101c9c0f68cd1739847afd2251be72ece43e1b89a4c96bfb644",
+      "bytes": 41480
+    },
+    "native-buffer.json": {
+      "sha256": "0cd4383db2bd86da17fdb4feb40780fde46dc3f856e438e74c66131bfc93ea24",
+      "bytes": 75118
+    },
+    "scoring-sources.json": {
+      "sha256": "fa754548e16805bb069191826c108cfe6fc8d376b9e5dbb370c928c170489950",
+      "bytes": 816
+    },
+    "native-coverage.json": {
+      "sha256": "68ab9f4385b614a85e7c4000d750c59cb0f4c88b9e12afa8464755ca71d0daa9",
+      "bytes": 7329
+    },
+    "agent-journey-proposal.json": {
+      "sha256": "68dd4f8a76acfad79e8ff2ef4488c703ec50090c9c1669ba09f1d82a87d07009",
+      "bytes": 6948
+    },
+    "scorer-tests-v2.log": {
+      "sha256": "4f61cfb6585f39e580669a4abbee0954aa60bac0b98000ae854244e8915a3dad",
+      "bytes": 2635
+    },
+    "native-preparation.json": {
+      "sha256": "f447581c956750a7de2d312e23ad300fa858358dc2b7898c23c337da1f5555fe",
+      "bytes": 3297
+    },
+    "native-build-provenance.json": {
+      "sha256": "54624bdc7103837399920b484ac10682596409005bdd5ad3ed741aaced5a664a",
+      "bytes": 22133
+    },
+    "native-packages.lock.json": {
+      "sha256": "5e20c34bfdc36b382e5f5f2b67b8a9da1eb037c8245e256e7f3dea8d965ea5c5",
+      "bytes": 10976
+    },
+    "native-build.command.json": {
+      "sha256": "a07dfd987988ac89a81dc41473487de08b315cfeec5750d61ff70d98fb9cee0c",
+      "bytes": 359
+    },
+    "native-build.stdout": {
+      "sha256": "a7c3fc39202ba77a599b58372d3b7e2bbd0cf6409296020774412f816e2e7496",
+      "bytes": 4064
+    },
+    "native-build.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "native-restore.command.json": {
+      "sha256": "7c6d328adf197c0f124dd29f502ea022c1d9734cdc906234e65b3b78df1572a8",
+      "bytes": 424
+    },
+    "native-restore.stdout": {
+      "sha256": "a9a5a8e1b4aa7fb158a35f50167cbb8b0fef90beeef22af589f498a48ff80369",
+      "bytes": 2091
+    },
+    "native-restore.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  },
+  "checks": [
+    {
+      "command": "python3 -m unittest discover -s research/semantic-intelligence -p 'test_score_*component*.py' -v",
+      "tests": 19,
+      "passed": true,
+      "log": "scorer-tests-v2.log"
+    },
+    {
+      "check": "reference-source-roster",
+      "files": 17,
+      "byte_identical": true
+    }
+  ]
+}

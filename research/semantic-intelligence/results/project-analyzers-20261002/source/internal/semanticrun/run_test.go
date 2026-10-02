@@ -1,0 +1,196 @@
+package semanticrun
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"moedex/internal/corpus/catalog"
+)
+
+func refreshCaptureLock(t *testing.T, root, commit string) {
+	t.Helper()
+	l, err := catalog.LoadLock(root, catalog.DefaultHost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.Projects[0].DefaultCommit = commit
+	if err = catalog.WriteLock(root, catalog.DefaultHost, l); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func captureFixture(t *testing.T, script string) (Options, string) {
+	t.Helper()
+	managed, repo := projectionFixture(t)
+	if err := os.WriteFile(filepath.Join(repo, "App.csproj"), []byte("<Project />"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	gitTest(t, repo, "add", "App.csproj")
+	gitTest(t, repo, "commit", "-qm", "project")
+	// Refresh the lock using its validated representation.
+	refreshCaptureLock(t, managed, gitTest(t, repo, "rev-parse", "HEAD"))
+	parent := t.TempDir()
+	dotnet := filepath.Join(parent, "dotnet")
+	if err := os.WriteFile(dotnet, []byte("#!/bin/sh\n"+script), 0700); err != nil {
+		t.Fatal(err)
+	}
+	worker := filepath.Join(parent, "worker.dll")
+	if err := os.WriteFile(worker, []byte("fixture"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	sdk := filepath.Join(parent, "sdk", "10.0.100")
+	for _, dir := range []string{sdk, filepath.Join(parent, "host"), filepath.Join(parent, "shared")} {
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(sdk, "MSBuild.dll"), []byte("fixture"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	return Options{ManagedRoot: managed, Repo: "group/project", Project: "App.csproj", Framework: "net10.0", Dotnet: dotnet, Worker: worker, SDKPath: sdk, Workspace: filepath.Join(parent, "workspace"), Output: filepath.Join(parent, "artifact"), RestoreOffline: true, Timeout: 5 * time.Second}, repo
+}
+
+func TestCaptureFailureCleanupAndCommittedInputs(t *testing.T) {
+	for _, tc := range []struct{ name, script, want string }{
+		{"restore-failure", "printf 'missing SDK pack' >&2\nexit 9\n", "missing SDK pack"},
+		{"restore-mutation", "printf changed > A.cs\nexit 0\n", "projected input changed"},
+		{"worker-mutation", "if [ \"$2\" = -target:Restore ] || [ \"$2\" = -target:ResolveReferences ]; then exit 0; fi\nprintf changed > A.cs\n", "projected input changed"},
+		{"missing-terminal", "if [ \"$2\" = -target:Restore ] || [ \"$2\" = -target:ResolveReferences ]; then exit 0; fi\nprintf '{}\\n'\n", ""},
+		{"worker-nonzero", "if [ \"$2\" = -target:Restore ] || [ \"$2\" = -target:ResolveReferences ]; then exit 0; fi\nexit 2\n", "worker"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			o, repo := captureFixture(t, tc.script)
+			if _, err := Capture(context.Background(), o); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("capture error: %v", err)
+			}
+			for _, p := range []string{o.Output, o.Workspace} {
+				if _, err := os.Lstat(p); !os.IsNotExist(err) {
+					t.Fatalf("failed capture retained %s: %v", p, err)
+				}
+			}
+			b, err := os.ReadFile(filepath.Join(repo, "A.cs"))
+			if err != nil || string(b) != "class A {}" {
+				t.Fatalf("canonical source changed: %q %v", b, err)
+			}
+		})
+	}
+}
+
+func TestCapturePreservesExistingOutputAndRequiresConsent(t *testing.T) {
+	o, _ := captureFixture(t, "exit 99\n")
+	if err := os.WriteFile(o.Output, []byte("existing"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Capture(context.Background(), o); err == nil {
+		t.Fatal("existing output accepted")
+	}
+	b, _ := os.ReadFile(o.Output)
+	if string(b) != "existing" {
+		t.Fatal("existing output modified")
+	}
+	if _, err := os.Lstat(o.Workspace); !os.IsNotExist(err) {
+		t.Fatal("workspace created before validation")
+	}
+	o.Output += "-new"
+	o.RestoreOffline = false
+	if _, err := Capture(context.Background(), o); err == nil {
+		t.Fatal("restore executed without explicit opt-in")
+	}
+}
+
+func TestCaptureRejectsDestinationsInAcquisition(t *testing.T) {
+	for _, field := range []string{"workspace", "output", "symlink-parent"} {
+		t.Run(field, func(t *testing.T) {
+			o, repo := captureFixture(t, "exit 99\n")
+			switch field {
+			case "workspace":
+				o.Workspace = filepath.Join(repo, "new-workspace")
+			case "output":
+				o.Output = filepath.Join(repo, "artifact")
+			case "symlink-parent":
+				link := filepath.Join(t.TempDir(), "linked")
+				if err := os.Symlink(repo, link); err != nil {
+					t.Fatal(err)
+				}
+				o.Workspace = filepath.Join(link, "new-workspace")
+			}
+			if _, err := Capture(context.Background(), o); err == nil || !strings.Contains(err.Error(), "outside managed corpus") {
+				t.Fatalf("error: %v", err)
+			}
+			if _, err := os.Lstat(o.Workspace); !os.IsNotExist(err) {
+				t.Fatal("rejected destination created")
+			}
+		})
+	}
+}
+
+func TestCaptureGitSourceSelection(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		change func(*Options)
+	}{
+		{"neither", func(o *Options) { o.ManagedRoot = "" }},
+		{"both", func(o *Options) { o.Checkout = o.ManagedRoot }},
+		{"managed-origin", func(o *Options) { o.Origin = "https://example.com/repo.git" }},
+		{"managed-commit", func(o *Options) { o.Commit = strings.Repeat("a", 40) }},
+		{"negative-limit", func(o *Options) { o.MaxProjectionBytes = -1 }},
+		{"excess-limit", func(o *Options) { o.MaxProjectionBytes = (1 << 30) + 1 }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			o, _ := captureFixture(t, "exit 99\n")
+			tc.change(&o)
+			if _, err := Capture(context.Background(), o); err == nil {
+				t.Fatal("invalid source selection accepted")
+			}
+			if _, err := os.Lstat(o.Workspace); !os.IsNotExist(err) {
+				t.Fatal("workspace created before source validation")
+			}
+		})
+	}
+}
+
+func TestCaptureGitProjectionFailureCleanup(t *testing.T) {
+	for _, tc := range []struct{ name, script, want string }{
+		{"restore", "printf 'offline packages unavailable' >&2\nexit 7\n", "offline packages unavailable"},
+		{"mutation", "printf changed > A.cs\nexit 0\n", "projected input changed"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			o, repo := captureFixture(t, tc.script)
+			o.ManagedRoot, o.Checkout = "", repo
+			o.Repo = filepath.Base(repo)
+			o.Origin = "https://example.com/group/project.git"
+			o.Commit = gitTest(t, repo, "rev-parse", "HEAD")
+			gitTest(t, repo, "remote", "add", "origin", o.Origin)
+			if _, err := Capture(context.Background(), o); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("capture error: %v", err)
+			}
+			for _, p := range []string{o.Workspace, o.Output} {
+				if _, err := os.Lstat(p); !os.IsNotExist(err) {
+					t.Fatalf("failed capture retained %s", p)
+				}
+			}
+			b, err := os.ReadFile(filepath.Join(repo, "A.cs"))
+			if err != nil || string(b) != "class A {}" {
+				t.Fatalf("canonical source changed: %q %v", b, err)
+			}
+		})
+	}
+}
+
+func TestCaptureGitRejectsUnattachableNamespace(t *testing.T) {
+	o, repo := captureFixture(t, "exit 99\n")
+	o.ManagedRoot, o.Checkout = "", repo
+	o.Repo = "invented/namespace"
+	o.Commit = gitTest(t, repo, "rev-parse", "HEAD")
+	o.Origin = "https://example.com/repo.git"
+	if _, err := Capture(context.Background(), o); err == nil || !strings.Contains(err.Error(), "basename") {
+		t.Fatalf("namespace error: %v", err)
+	}
+	if _, err := os.Lstat(o.Workspace); !os.IsNotExist(err) {
+		t.Fatal("unattachable capture created workspace")
+	}
+}

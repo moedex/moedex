@@ -1,0 +1,43 @@
+using System;
+using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using MassTransit;
+interface IService {}
+class Service : IService {}
+class Generic<T> : IService {}
+interface Reply { string Value { get; } }
+class ConcreteReply { public string Value { get; set; } }
+class GenericReply<T> {}
+class Fake {
+ public Task RespondAsync<T>(object value) => Task.CompletedTask;
+ public void TryAddSingleton<T,U>() {}
+}
+class Calls {
+ async Task Run(ConsumeContext context, IServiceCollection services, bool enabled) {
+  await context./*response-init*/RespondAsync<Reply>(new {Value="ready"});
+  await context./*response-value*/RespondAsync(new ConcreteReply());
+  await context./*response-pipe*/RespondAsync<Reply>(new {Value="ready"}, (IPipe<SendContext<Reply>>)null);
+  await context./*response-untyped*/RespondAsync((object)new ConcreteReply());
+  await context./*response-generic*/RespondAsync<GenericReply<int>>(new GenericReply<int>());
+  await new Fake()./*response-fake*/RespondAsync<Reply>(new {});
+  services./*singleton-two*/TryAddSingleton<IService,Service>();
+  services./*scoped-two*/TryAddScoped<IService,Service>();
+  services./*transient-two*/TryAddTransient<IService,Service>();
+  services./*singleton-one*/TryAddSingleton<Service>();
+  services./*scoped-one*/TryAddScoped<Service>();
+  services./*transient-one*/TryAddTransient<Service>();
+  ServiceCollectionDescriptorExtensions./*static*/TryAddSingleton<IService,Service>(services);
+  if(enabled) services./*branch*/TryAddSingleton<IService,Service>();
+  services./*unconditional*/AddSingleton<IService,Service>();
+  services./*factory*/TryAddSingleton<IService>(sp => new Service());
+  services./*instance*/TryAddSingleton<IService>(new Service());
+  services./*runtime-type*/TryAddSingleton(typeof(IService), typeof(Service));
+  services./*generic*/TryAddSingleton<IService,Generic<int>>();
+  new Fake()./*di-fake*/TryAddSingleton<IService,Service>();
+ }
+ async Task Open<T>(ConsumeContext context, IServiceCollection services) where T:class,IService {
+  await context./*response-open*/RespondAsync<T>(new {});
+  services./*di-open*/TryAddSingleton<IService,T>();
+ }
+}

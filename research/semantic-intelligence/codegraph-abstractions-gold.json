@@ -1,0 +1,214 @@
+{
+  "schema": "moedex.real-project-acceptance.v1",
+  "project": "src/TC.CodeGraphApi.McpHub.Abstractions/TC.CodeGraphApi.McpHub.Abstractions.csproj",
+  "authored_from": "original source before worker execution",
+  "scope": "Ten selected source-authored binding cases; not a precision or recall estimate, whole CodeGraph build, or runtime behavior test.",
+  "source_files": [
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/IMcpProviderCredentialValidator.cs",
+      "sha256": "117ec66205ed2eab87cc29f377904cab699b63b2997ffef7c73c44d5dab0bf57"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpCredentialHealth.cs",
+      "sha256": "e026dfa64093d499cc0b7de34a6ba5c0a6181d4882a41264d867d18d674ccda4"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpHubAccessClass.cs",
+      "sha256": "b3ca9e3d78e1067c05fa8d82060299d758f99a7ac0d56c97ccb5c0a8401e69f4"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpHubClaimTypes.cs",
+      "sha256": "287bdef52fb5093a581bcf1be1e4317b6e2f413cf702a336bc4a905f21d74eff"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpHubContext.cs",
+      "sha256": "d45ca4709df1c3aedf07e5c0fcfafbb62824a87a78df3aa2c12704bfcc259246"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpHubCredentialModes.cs",
+      "sha256": "678de28382d80ab2843aa0f294122440acc941f65f7f32b71d53bc9955de4763"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpHubProviderIds.cs",
+      "sha256": "fad6087242d65ae0a48baeadca314d4f3853b1f79092165fc78c78d9dec9251f"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpHubProviderType.cs",
+      "sha256": "632987822d6eaae215449f8769fcf2a506ba257f87e2ee566dd123567fb993ab"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpHubResolvedResource.cs",
+      "sha256": "e6def2c6b5fbf242403806b6ae235c257e4a676778e52d987a96857803f8761d"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpHubResourceIdentity.cs",
+      "sha256": "3b8b5828978269c068b054f311d39d62fae8013a9dc4d016964cec07b09f7b46"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpNativeToolHostRegistration.cs",
+      "sha256": "393ce174d37b7c57943adc7b999cbcd54841613a86d7376990c0d30e0a0a7ec1"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpProviderCredentialStates.cs",
+      "sha256": "adecc6e76d92d46c4d10cc023e2a15c72a218d74de8d771e00800ed1c9926422"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpProviderDenialScope.cs",
+      "sha256": "73545fd6df3e6daae727e6f8c2f66f1da9c45c640b12c8a1410b6b95c4005b38"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpProviderErrorCodes.cs",
+      "sha256": "22630462636712e1d01437bf0732967782d0061b771b0615ab6a6161b4a9b976"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpProviderIdentity.cs",
+      "sha256": "7d67c5a5f9250bdff332d6352129b664871f467f33f080839002dadd26c4abfa"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpProviderRegistration.cs",
+      "sha256": "8d09cf2817e118c6d7f19ef6d157610eec2deadca9889e4726eb672449292ab2"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpProviderToolException.cs",
+      "sha256": "1f1c2260a7863c997e2a8704b651315f6a83862708a9568e9826565779f64f97"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpShimDiscoveryRegistration.cs",
+      "sha256": "7df9ef230b2bd1eb9710042eb2ae45045e76d4cdab830307646a6f3e35dd56a8"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpShimProviderRegistration.cs",
+      "sha256": "6b760a860d54e61e9e339319b8cf13c059814cfce171c5739e39e15f64643f00"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpToolCatalogRegistration.cs",
+      "sha256": "0bf024bbe818f66e06e47f9755b3054b99529a5c78edf495010f5818a0fd140c"
+    },
+    {
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/TC.CodeGraphApi.McpHub.Abstractions.csproj",
+      "sha256": "2c82dae7a6492e5dc0d99b6b5a5d1c89a4702b892f71757981e46302949d6115"
+    }
+  ],
+  "labels": [
+    {
+      "id": "private-helper",
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpHubResourceIdentity.cs",
+      "source_sha256": "3b8b5828978269c068b054f311d39d62fae8013a9dc4d016964cec07b09f7b46",
+      "anchor": "var hashSuffix = ShortHash(identity);",
+      "token": "ShortHash",
+      "byte_offset": 950,
+      "byte_length": 9,
+      "reference_kind": "invocation",
+      "expected_descriptor": "M:TC.CodeGraphApi.McpHub.Abstractions.McpHubResourceIdentity.ShortHash(System.String)",
+      "definition_expected": true
+    },
+    {
+      "id": "local-bound-field",
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpHubResourceIdentity.cs",
+      "source_sha256": "3b8b5828978269c068b054f311d39d62fae8013a9dc4d016964cec07b09f7b46",
+      "anchor": "identity.Length <= MaxLength",
+      "token": "MaxLength",
+      "byte_offset": 884,
+      "byte_length": 9,
+      "reference_kind": "name",
+      "expected_descriptor": "F:TC.CodeGraphApi.McpHub.Abstractions.McpHubResourceIdentity.MaxLength",
+      "definition_expected": true
+    },
+    {
+      "id": "cross-file-type",
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/IMcpProviderCredentialValidator.cs",
+      "source_sha256": "117ec66205ed2eab87cc29f377904cab699b63b2997ffef7c73c44d5dab0bf57",
+      "anchor": "Ok(McpProviderIdentity identity)",
+      "token": "McpProviderIdentity",
+      "byte_offset": 1834,
+      "byte_length": 19,
+      "reference_kind": "name",
+      "expected_descriptor": "T:TC.CodeGraphApi.McpHub.Abstractions.McpProviderIdentity",
+      "definition_expected": true
+    },
+    {
+      "id": "nested-type",
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpProviderDenialScope.cs",
+      "source_sha256": "73545fd6df3e6daae727e6f8c2f66f1da9c45c640b12c8a1410b6b95c4005b38",
+      "anchor": "new Holder();",
+      "token": "Holder",
+      "byte_offset": 1450,
+      "byte_length": 6,
+      "reference_kind": "name",
+      "expected_descriptor": "T:TC.CodeGraphApi.McpHub.Abstractions.McpProviderDenialScope.Holder",
+      "definition_expected": true
+    },
+    {
+      "id": "nested-constructor",
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpProviderDenialScope.cs",
+      "source_sha256": "73545fd6df3e6daae727e6f8c2f66f1da9c45c640b12c8a1410b6b95c4005b38",
+      "anchor": "new ScopeLease(previous)",
+      "token": "ScopeLease",
+      "byte_offset": 1479,
+      "byte_length": 10,
+      "reference_kind": "constructor",
+      "expected_descriptor": "M:TC.CodeGraphApi.McpHub.Abstractions.McpProviderDenialScope.ScopeLease.#ctor(TC.CodeGraphApi.McpHub.Abstractions.McpProviderDenialScope.Holder)",
+      "definition_expected": true
+    },
+    {
+      "id": "cross-type-field",
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpCredentialHealth.cs",
+      "source_sha256": "e026dfa64093d499cc0b7de34a6ba5c0a6181d4882a41264d867d18d674ccda4",
+      "anchor": "p.Status == McpCredentialHealthStatuses.Red",
+      "token": "Red",
+      "byte_offset": 1630,
+      "byte_length": 3,
+      "reference_kind": "name",
+      "expected_descriptor": "F:TC.CodeGraphApi.McpHub.Abstractions.McpCredentialHealthStatuses.Red",
+      "definition_expected": true
+    },
+    {
+      "id": "record-type",
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpCredentialHealth.cs",
+      "source_sha256": "e026dfa64093d499cc0b7de34a6ba5c0a6181d4882a41264d867d18d674ccda4",
+      "anchor": "new McpCredentialHealthSummary(status, providers)",
+      "token": "McpCredentialHealthSummary",
+      "byte_offset": 1888,
+      "byte_length": 26,
+      "reference_kind": "name",
+      "expected_descriptor": "T:TC.CodeGraphApi.McpHub.Abstractions.McpCredentialHealthSummary",
+      "definition_expected": true
+    },
+    {
+      "id": "sdk-overload",
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpHubResourceIdentity.cs",
+      "source_sha256": "3b8b5828978269c068b054f311d39d62fae8013a9dc4d016964cec07b09f7b46",
+      "anchor": "SHA256.HashData(Encoding.UTF8.GetBytes(value), hash)",
+      "token": "HashData",
+      "byte_offset": 1279,
+      "byte_length": 8,
+      "reference_kind": "invocation",
+      "expected_descriptor": "M:System.Security.Cryptography.SHA256.HashData(System.ReadOnlySpan{System.Byte},System.Span{System.Byte})",
+      "definition_expected": false
+    },
+    {
+      "id": "sdk-constructor",
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpHubResourceIdentity.cs",
+      "source_sha256": "3b8b5828978269c068b054f311d39d62fae8013a9dc4d016964cec07b09f7b46",
+      "anchor": "new StringBuilder(SuffixLength)",
+      "token": "StringBuilder",
+      "byte_offset": 1347,
+      "byte_length": 13,
+      "reference_kind": "constructor",
+      "expected_descriptor": "M:System.Text.StringBuilder.#ctor(System.Int32)",
+      "definition_expected": false
+    },
+    {
+      "id": "reduced-generic-extension",
+      "path": "src/TC.CodeGraphApi.McpHub.Abstractions/McpCredentialHealth.cs",
+      "source_sha256": "e026dfa64093d499cc0b7de34a6ba5c0a6181d4882a41264d867d18d674ccda4",
+      "anchor": "providers.Any(p => p.Status == McpCredentialHealthStatuses.Red)",
+      "token": "Any",
+      "byte_offset": 1581,
+      "byte_length": 3,
+      "reference_kind": "invocation",
+      "expected_descriptor": "M:System.Linq.Enumerable.Any``1(System.Collections.Generic.IEnumerable{``0},System.Func{``0,System.Boolean})",
+      "definition_expected": false
+    }
+  ]
+}

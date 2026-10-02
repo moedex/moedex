@@ -1,0 +1,157 @@
+[
+  {
+    "task": "flow-email",
+    "correctness": 6,
+    "evidence": 6,
+    "strict_success": true,
+    "differences": [],
+    "unsupported_claims": []
+  },
+  {
+    "task": "flow-notification",
+    "correctness": 6,
+    "evidence": 6,
+    "strict_success": true,
+    "differences": [],
+    "unsupported_claims": []
+  },
+  {
+    "task": "flow-runtime-proof",
+    "correctness": 5,
+    "evidence": 5,
+    "strict_success": true,
+    "differences": [],
+    "unsupported_claims": []
+  },
+  {
+    "task": "flow-validation",
+    "correctness": 6,
+    "evidence": 6,
+    "strict_success": true,
+    "differences": [
+      {
+        "id": "flow-validation.2",
+        "root": {
+          "id": "flow-validation.2",
+          "correctness": 1,
+          "evidence": 0.5,
+          "reason": "Consumer-with-definition registration correct, but citation spans whole Worker ConfigureServices block 26-89 rather than registration at 77."
+        },
+        "independent": {
+          "id": "flow-validation.2",
+          "correctness": 1,
+          "evidence": 1,
+          "reason": "Worker configuration explicitly registers the validation consumer with its definition; following sentence identifies ValidateRegistrationConsumerDefinition. Citation Worker/Program.cs:26-89 is the exact source span returned in 002.response.raw and contains AddConsumer<ValidateRegistrationConsumer, ValidateRegistrationConsumerDefinition>() at pinned line 77. Exact tool source spans are acceptable under the frozen rubric."
+        }
+      },
+      {
+        "id": "flow-validation.4",
+        "root": {
+          "id": "flow-validation.4",
+          "correctness": 1,
+          "evidence": 0.5,
+          "reason": "Implementation correspondence is precisely supported by compiler path and service source; scoped registration is correct but cited only with broad Worker 26-89 range."
+        },
+        "independent": {
+          "id": "flow-validation.4",
+          "correctness": 1,
+          "evidence": 1,
+          "reason": "Answer names the interface method, implementation correspondence, and AddScoped registration. Services/IRegistrationValidationService.cs:3-6 and RegistrationValidationService.cs:7-21 are precisely cited; Worker/Program.cs:26-89 is the exact returned 002 source span containing scoped interface/implementation registration at line 62. 004/006.response.raw independently record the interface implementation at implementation byte span [362,382)."
+        }
+      }
+    ],
+    "unsupported_claims": []
+  },
+  {
+    "task": "impact-attendee",
+    "correctness": 7,
+    "evidence": 7,
+    "strict_success": true,
+    "differences": [],
+    "unsupported_claims": []
+  },
+  {
+    "task": "impact-entity-uniqueness",
+    "correctness": 5.5,
+    "evidence": 6,
+    "strict_success": false,
+    "differences": [
+      {
+        "id": "impact-entity-uniqueness.3",
+        "root": {
+          "id": "impact-entity-uniqueness.3",
+          "correctness": 0.5,
+          "evidence": 0.5,
+          "reason": "Says RegistrationId is mapped as a property and recommends a unique index, but does not explicitly state that no unique index on RegistrationId exists in this mapping. Supporting mapping was retrieved."
+        },
+        "independent": {
+          "id": "impact-entity-uniqueness.3",
+          "correctness": 0.5,
+          "evidence": 1,
+          "reason": "States RegistrationId is mapped as a property and recommends a new unique index, but does not explicitly state that this mapping has no existing unique index on RegistrationId. The cited RegistrationDbContext.cs:34\u201351 and complete response 005 support the whole source fact; missing negative statement makes the answer materially incomplete under the explicitness rule."
+        }
+      }
+    ],
+    "unsupported_claims": []
+  },
+  {
+    "task": "impact-submitted",
+    "correctness": 6,
+    "evidence": 6,
+    "strict_success": true,
+    "differences": [],
+    "unsupported_claims": []
+  },
+  {
+    "task": "impact-validation-signature",
+    "correctness": 5,
+    "evidence": 4.5,
+    "strict_success": false,
+    "differences": [],
+    "unsupported_claims": [
+      {
+        "claim": "Program.cs line 78 registers AddConsumer<ValidateRegistrationConsumer, ValidateRegistrationConsumerDefinition>().",
+        "severity": "minor",
+        "reason": "Off-by-one citation; pinned Program.cs:77 and 005.response.raw contain this expression, while :78 is AddSagaStateMachine. Underlying configuration fact is supported; this is citation precision, not invented wiring."
+      }
+    ]
+  },
+  {
+    "task": "locate-duplicate",
+    "correctness": 4,
+    "evidence": 4,
+    "strict_success": true,
+    "differences": [],
+    "unsupported_claims": []
+  },
+  {
+    "task": "locate-persistence",
+    "correctness": 5.5,
+    "evidence": 5.5,
+    "strict_success": false,
+    "differences": [],
+    "unsupported_claims": []
+  },
+  {
+    "task": "locate-retry",
+    "correctness": 5,
+    "evidence": 5,
+    "strict_success": true,
+    "differences": [],
+    "unsupported_claims": []
+  },
+  {
+    "task": "locate-validation-service",
+    "correctness": 5,
+    "evidence": 4.5,
+    "strict_success": false,
+    "differences": [],
+    "unsupported_claims": [
+      {
+        "claim": "The worker registers ValidateRegistrationConsumer with ValidateRegistrationConsumerDefinition at Program.cs:76.",
+        "severity": "minor",
+        "reason": "The registration fact is supported by 002.response.raw Program.cs:26-89 and pinned source line 77, but line 76 registers AddEventAttendeeConsumer. This is a citation location error, not an invented registration or runtime assertion."
+      }
+    ]
+  }
+]

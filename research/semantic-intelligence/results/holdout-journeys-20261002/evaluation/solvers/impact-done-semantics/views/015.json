@@ -1,0 +1,17 @@
+{
+  "ordinal": 15,
+  "argv": [
+    "call",
+    "--name",
+    "search_context",
+    "--arguments",
+    "{\"query\":\"INotificationHandler<TodoItemCompletedEvent>\",\"repo\":\"CleanArchitecture\",\"top_k\":3,\"token_budget\":1000,\"graph_depth\":0,\"format\":\"structured\"}"
+  ],
+  "started_monotonic": 78739.943442375,
+  "finished_monotonic": 78739.999409791,
+  "returncode": 0,
+  "stdout_bytes": 4207,
+  "stdout_sha256": "39406332e06ead2ea44c88fcb3432d6a37b73874562a20222b1e22cb304e12b6",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

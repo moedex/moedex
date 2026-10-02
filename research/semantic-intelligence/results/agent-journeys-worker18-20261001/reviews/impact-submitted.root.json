@@ -1,0 +1,50 @@
+{
+  "task": "impact-submitted",
+  "reviewer": "root",
+  "reviewed_utc": "2026-10-02T02:19:28.033608+00:00",
+  "answer_sha256": "b6c41fa175b28bba9f516abc7836a78212fe5c5df7716bdfe1acff5bbf4ed439",
+  "atoms": [
+    {
+      "id": "impact-submitted.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Guid property declaration with exact line 5 citation; response 002."
+    },
+    {
+      "id": "impact-submitted.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Producer entity-to-message assignment precisely identified with line 36 and compiler binding span; responses 007/009."
+    },
+    {
+      "id": "impact-submitted.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Correlation access and change implications stated with exact line 14 plus compiler binding; responses 008/010."
+    },
+    {
+      "id": "impact-submitted.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Contract consumer distinguished from direct property access, with logging body citation covering full relevant consumer."
+    },
+    {
+      "id": "impact-submitted.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Initial event handling, declared event, and downstream Saga.CorrelationId assignments explicitly separated from direct references; precise source ranges."
+    },
+    {
+      "id": "impact-submitted.6",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Configuration/runtime routing distinction and deployed compatibility limits explicit; Worker/API source retrieved and cited."
+    }
+  ],
+  "correctness": 6,
+  "evidence": 6,
+  "possible": 6,
+  "unsupported_claims": [],
+  "strict_success": true,
+  "isolation_audit": "Solver attestation and logged RPCs available; full model/tool activity not exposed to root, so host isolation is not independently verified."
+}

@@ -1,0 +1,266 @@
+{
+  "status": "passed_first_untuned_selected_closure_holdout",
+  "repo": "https://github.com/dotnet/eShop",
+  "commit": "f2369529433374a01b864b6fa1499ad894756f53",
+  "gold_sha256": "8d703f654a091d8c803b173612d3af4401b7e1034a1eb2ba20d34d3f00ac4f62",
+  "source_gold": "source-gold-v2.json",
+  "source_gold_original_preserved": "source-gold.json",
+  "source_files": 57,
+  "projects": 5,
+  "native_semantic_outcomes": {
+    "supported_exact_occurrence": 9
+  },
+  "native_positive_denominator": 9,
+  "public_semantic_assertions": 6,
+  "public_declaration_only_implementation_cases": 3,
+  "explicit_coverage_gaps": 5,
+  "negative_controls": 2,
+  "negative_violations": 0,
+  "public_normal_race_reports_equal": true,
+  "public_tool_queries": 32,
+  "public_complete_response_bytes": 43605,
+  "public_discovery": "Included in32actualtoolcalls; exactsource-based discoveryquery inputs are known gold probes, not natural-language end-to-end journey discovery.",
+  "native_unscored_extras": {
+    "total": 13,
+    "domain_facts": 6,
+    "implementation_facts": 7,
+    "review": "native-extras-review.json",
+    "denominator_expanded": false
+  },
+  "artifact": {
+    "sha256": "0690938d31c51740216d456cdaa6ce079f2133c08323988bef78ff52b0cf76bf",
+    "bytes": 5505365
+  },
+  "compiler_alignment": {
+    "worker": "unchangedworker6source rebuilt with SDK8 Roslyn4.11 for SDK8.0.400 project compilation",
+    "inputs": "worker-v6-sdk8-inputs.json",
+    "source_bytes": "worker-v6-sdk8-source-hashes.json",
+    "reason": "Initial SDK10/Roslyn5-linked worker encountered CS9137 on SDK8 generated interceptors. Rebuilding byte-identical source against matching compiler corrected compatibility without detector/projectflag changes.",
+    "failed_capture_preserved": "webhooks-capture-v2-* logs; initial sandbox-stalled attempt also retained where present",
+    "initial_diagnostics": {
+      "file": "initial-compiler-mismatch-diagnostics.jsonl",
+      "selected_CS9137_records": 1,
+      "original_local_stream_sha256": "72f0de43c28220da2fe1ff8daec6ad4660ab2a81529351f7c0d484c8d6407a68"
+    }
+  },
+  "pre_capture_gold_correction": "Originalv1propertyowner retained. V2changes only DbSet type-token enclosing owner to containing type, matching established binding convention; independently reviewed before any Webhooks capture. No sourcepositions,semanticclassesor detectorrules changed.",
+  "public_limitation": "CompilerBinding baseline omits implementation_facts. MCP verifies4domain+2resolvedcall assertions and3correctmethoddeclarations; the3compilerimplementationrelationships are native-only and not publicly exposed. Later projection changes must be recorded as a tuned successor, not this baseline.",
+  "checks": [
+    {
+      "check": "Frozen gold/native scorer tests",
+      "status": "passed3tests"
+    },
+    {
+      "check": "Native worker6 source-preserving capture",
+      "status": "passed5completecontexts/57authoredsources",
+      "evidence": "webhooks-capture-v3-inputs.json"
+    },
+    {
+      "check": "Actual leased MCP public gate",
+      "status": "passed6semantic+3declarationonly+5gaps+2negative",
+      "log": "webhooks-public.log"
+    },
+    {
+      "check": "Actual leased MCP race gate",
+      "status": "passedidenticalreports",
+      "log": "webhooks-public-race.log"
+    }
+  ],
+  "limitations": [
+    "Selected independent official-sample closure, not whole-eShop or production-app coverage.",
+    "Capability-stratified9assertions are not18agenttasks and do not satisfy PROGRAM30pairedjourneys.",
+    "Five customframework/API gaps remain uncovered and receive no successful-negative credit.",
+    "No CodeGraph heldout run, runtime dispatch/delivery/HTTP flow proof, token/latency or competitiveagentwin.",
+    "Any tuning motivated by these results retires this closure from freshholdout status; preserve this firstuntuned baseline."
+  ],
+  "files": {
+    "baseline-source-hashes.json": {
+      "sha256": "1c9764941a7060c1a82e29dbda703f593730e94af4121223310a528b318a41f2",
+      "bytes": 846
+    },
+    "build-pinned.log": {
+      "sha256": "3c6901bba83d0f5c978c1ecd8449c88416653f01d8a96b2883307c1635148d77",
+      "bytes": 835
+    },
+    "native-extras-review.json": {
+      "sha256": "d1507feed7d39600ee4298497948815cbbb877e8d6e504e3ce5b7a451c659d3a",
+      "bytes": 22412
+    },
+    "native-report.json": {
+      "sha256": "82423867343afeb75f9935d07aefe5d9869d33d89d9737ea368370444e90b107",
+      "bytes": 1432505
+    },
+    "pack.log": {
+      "sha256": "f551b34dbb507e5ce390b87d095ade38ada96da5d81a7a2689187c9504a86f0c",
+      "bytes": 200
+    },
+    "packages.json": {
+      "sha256": "1d2d3b292e46b276ea36928926872280e8a8ed47670ebc4b232429c5e9660973",
+      "bytes": 63913
+    },
+    "provisioning.json": {
+      "sha256": "582999bfe7ad82cd8306d2a37124d5aed3b12bde0e9987783894bdea73250dcc",
+      "bytes": 135076
+    },
+    "published-snapshot.json": {
+      "sha256": "60f3c468b558552bf8d3a993861137032106a7a3bf310aa9577aa541ff185c85",
+      "bytes": 2789
+    },
+    "restore-offline.log": {
+      "sha256": "9ff64d654a940f99b628cb3c084e4faf8f13233bea0501ef4cb35bbfefde44f9",
+      "bytes": 733
+    },
+    "restore-online.log": {
+      "sha256": "690de6072340f5808593ae749757f7b18cd2161540418d976be9a9cd589c18dc",
+      "bytes": 2171
+    },
+    "restore-pinned.log": {
+      "sha256": "760158ce622bf79ac89f438a5dd5e269e4d07aec0c18c6ffa7675624df2b0ff7",
+      "bytes": 734
+    },
+    "scorer-freeze.json": {
+      "sha256": "370272e1642a6bdee5823b402d4e15d3976d194a3cfc62a22447088274577401",
+      "bytes": 619
+    },
+    "sdk10-selection.json": {
+      "sha256": "0b42fc9241220c8a9617b8457867798101575c22007a6155b8c3a963eab61112",
+      "bytes": 466
+    },
+    "sdk8-format-layout.json": {
+      "sha256": "5bc5cff922e83a950bf48d0e659eef83bd25f9525977cee5ad88e74004db8279",
+      "bytes": 80929
+    },
+    "sdk8-selection.json": {
+      "sha256": "efa9a5d073913000116b4b262e4c52f61cf8ce04ca9c6c17ff4a436ecf692cfa",
+      "bytes": 518
+    },
+    "servecmd-tests.log": {
+      "sha256": "70aab6af42eea47b7d5a14634f8ed7eff615c56933186720c1dc479fae0dabea",
+      "bytes": 41
+    },
+    "source-gold-v2.json": {
+      "sha256": "8d703f654a091d8c803b173612d3af4401b7e1034a1eb2ba20d34d3f00ac4f62",
+      "bytes": 28824
+    },
+    "source-gold.json": {
+      "sha256": "4e3973be640d9a0d126f5156a8127d9253d5e980eca7bfc1a2bcfe8f6f28f455",
+      "bytes": 28373
+    },
+    "webhooks-capture-v1-capture.stderr": {
+      "sha256": "1161cb4bb25a375aad5d08f220b616beebedc1cca3f56bf3aa17cd6fe54376cd",
+      "bytes": 272
+    },
+    "webhooks-capture-v1-capture.stdout": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "webhooks-capture-v1-commands.json": {
+      "sha256": "e63696929a7a4b90bf4dc065b4ad89e3d626a303d9e8027e02630929f8c4f198",
+      "bytes": 1419
+    },
+    "webhooks-capture-v1-failure-notes.json": {
+      "sha256": "03edce77d16129ba98c91beb473d0c80965ec34cb39c4aac8d8dfc3c8e4ae2bf",
+      "bytes": 323
+    },
+    "webhooks-capture-v1-inputs.json": {
+      "sha256": "361034e9a130c940082a125e49d2d95ca9219f37affee34db2d8d698653e9d89",
+      "bytes": 132615
+    },
+    "webhooks-capture-v2-capture.stderr": {
+      "sha256": "d9894057b3bad61036e09243ec7e7f9d4b77cee60f9a0b07960aa78eea0813fa",
+      "bytes": 153
+    },
+    "webhooks-capture-v2-capture.stdout": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "webhooks-capture-v2-commands.json": {
+      "sha256": "48b02c2dda3710955095d03ac6ea7f872e87961f1b16402e0956c821a21cf378",
+      "bytes": 1418
+    },
+    "webhooks-capture-v2-failure-notes.json": {
+      "sha256": "37c8fb1f7d9140d14c81dca4dc4b0bc5d45d3bbf387dce90f68a6c8bc47ede01",
+      "bytes": 379
+    },
+    "webhooks-capture-v2-inputs.json": {
+      "sha256": "361034e9a130c940082a125e49d2d95ca9219f37affee34db2d8d698653e9d89",
+      "bytes": 132615
+    },
+    "webhooks-capture-v3-capture.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "webhooks-capture-v3-capture.stdout": {
+      "sha256": "60aad3654e195d60f22061086affd269ed2603c4e950bf0b6fba6a885ef0ce62",
+      "bytes": 654
+    },
+    "webhooks-capture-v3-clone-publication.stderr": {
+      "sha256": "b5bbd70aec37f83c9c5017a0ceba7c5221b1b027e091388a37b6e48e12628e72",
+      "bytes": 117
+    },
+    "webhooks-capture-v3-clone-publication.stdout": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "webhooks-capture-v3-commands.json": {
+      "sha256": "1ef51068af03fb1e5e5f945219309cd60a5c7b8e31eb4228d69b0245b98cdc25",
+      "bytes": 2623
+    },
+    "webhooks-capture-v3-compiler-alignment.json": {
+      "sha256": "a79ff6371de9ed9f9b78482c99939d8b4c1e0ee18348622e43fcf1925c260b7a",
+      "bytes": 582
+    },
+    "webhooks-capture-v3-inputs.json": {
+      "sha256": "753ac2527d1be14c9538b7821b83af3a4871ff34399cedb23ecd6ca4e5718c68",
+      "bytes": 132892
+    },
+    "webhooks-capture-v3-publish.stderr": {
+      "sha256": "e6e2ca017a9e4ba96a0e8a666e26cb1ea42e89bce36e7c30aec3db1e0d3ffa96",
+      "bytes": 211
+    },
+    "webhooks-capture-v3-publish.stdout": {
+      "sha256": "6153ec8499e3cd75a7d02c2fb6690448c9ee004fd1c71dbfca87ee7880317373",
+      "bytes": 104
+    },
+    "webhooks-capture-v3-roots.json": {
+      "sha256": "355e6103e20457117c87118fc910aec29637da22741deb49211b461b99c66673",
+      "bytes": 222
+    },
+    "webhooks-public-race.json": {
+      "sha256": "de3e126c0d2e93b777c297f5d64f90366511af6812159ce1879491a9cf833e86",
+      "bytes": 57972
+    },
+    "webhooks-public-race.log": {
+      "sha256": "51909a1bc6f8a746868c003d9983e18aa30ff91b34f871533e0976f24c0da1f6",
+      "bytes": 290
+    },
+    "webhooks-public.json": {
+      "sha256": "de3e126c0d2e93b777c297f5d64f90366511af6812159ce1879491a9cf833e86",
+      "bytes": 57972
+    },
+    "webhooks-public.log": {
+      "sha256": "069e2eaa6ee6d26456a561b1b04b7e3eb05c4dcbb93db0c8f2ffb0db3a5c6165",
+      "bytes": 290
+    },
+    "webhooks_holdout_public_test.go.txt": {
+      "sha256": "86b7c37d0bee7f1134fc857edc64e0bf8b7821ea04f5b6f73696c97c5a472082",
+      "bytes": 9932
+    },
+    "worker-diagnostic.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "worker-v6-sdk8-inputs.json": {
+      "sha256": "ad2878aa7af591e8d2a10dea3072d12930487a9d03d7fef159684c90bff266d9",
+      "bytes": 16191
+    },
+    "worker-v6-sdk8-source-hashes.json": {
+      "sha256": "4fb28b0003ae4ba7f69178e5d85d4b7ee83da77638b4aff09ef949e470ab1ba2",
+      "bytes": 631
+    },
+    "initial-compiler-mismatch-diagnostics.jsonl": {
+      "sha256": "a9888ac3be90116d3e15ab61fa538b2b31511ac6cdca759eaf585d9d98f41b24",
+      "bytes": 632
+    }
+  }
+}

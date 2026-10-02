@@ -1,0 +1,90 @@
+{
+  "task": {
+    "id": "locate-retry",
+    "journey": "locate_behavior",
+    "prompt": "Find the deliberately intermittent registration-processing failure. State its exact payment and retry conditions, with source evidence.",
+    "requirements": [
+      {
+        "claim": "The deliberately injected failure is configured in RegistrationStateMachine, on initial RegistrationSubmitted handling.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "start_line": 16,
+            "end_line": 34,
+            "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+          }
+        ],
+        "id": "locate-retry.1",
+        "weight": 1
+      },
+      {
+        "claim": "Failure condition is Payment < 50m AND GetRetryAttempt() == 0; payment exactly 50 does not satisfy it.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "start_line": 33,
+            "end_line": 34,
+            "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+          }
+        ],
+        "id": "locate-retry.2",
+        "weight": 1
+      },
+      {
+        "claim": "The configured action throws ApplicationException; the message says random but the predicate itself is deterministic.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "start_line": 33,
+            "end_line": 34,
+            "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+          }
+        ],
+        "id": "locate-retry.3",
+        "weight": 1
+      },
+      {
+        "claim": "The failure sits after configured SendRegistrationEmail publication and before configured AddEventAttendee publication.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "start_line": 26,
+            "end_line": 40,
+            "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+          }
+        ],
+        "id": "locate-retry.4",
+        "weight": 1
+      },
+      {
+        "claim": "RegistrationStateDefinition configures UseMessageRetry with literal interval sequence 10,50,100,1000,1000,1000,1000,1000.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateDefinition.cs",
+            "start_line": 9,
+            "end_line": 14,
+            "raw_sha256": "c315310b0f33c525ba4a3a14066594953491507c9254df37685573dec7c30f56"
+          }
+        ],
+        "id": "locate-retry.5",
+        "weight": 1
+      }
+    ],
+    "permissible_unknowns": [
+      "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+      "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+    ]
+  },
+  "scoring": {
+    "atomic_correctness": "Each atom scores 1 if correct and explicit, 0.5 if correct but materially incomplete, 0 if absent/incorrect. Report raw numerator/denominator and per-atom verdicts.",
+    "evidence": "Independently score each atom 1 for precise retrievable citation supporting the whole claim, 0.5 for a relevant but incomplete/broad citation, 0 for absent or contradictory evidence. Line-number equivalents and exact tool source spans are acceptable.",
+    "unsupported_claims": "Inventory false or unsupported claims separately with severity. Unsupported runtime certainty or invented source facts prevents a fully-correct task label even if positive atoms are present.",
+    "abstention": "Explicit unknowns avoid false-claim penalties but do not earn missing source-fact credit. Missing tool capability is incomplete evidence, not itself a false claim.",
+    "task_success": "All atoms receive correctness=1 and evidence=1, no material unsupported claims, and applicable configuration/runtime distinction is stated. Report graded scores as well as this strict success label.",
+    "review": "Two independent source reviewers adjudicate using source, rubric and retained solver transcript; disagreements retained and resolved explicitly. No tool output creates new gold after execution.",
+    "runtime_unknown_atoms": "Citations support the visible source limits, not proof that no unseen runtime evidence could exist."
+  },
+  "source_root": "/Users/zakkeown/Code/moedex/.local/application-impact/Sample-Outbox",
+  "run_directory": "/Users/zakkeown/Code/moedex/.local/journey-readiness/solvers/locate-retry",
+  "rubric_source": "research/semantic-intelligence/results/agent-journeys-20261001/source-rubric.json"
+}

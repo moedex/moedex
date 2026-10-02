@@ -27,11 +27,11 @@
 // which every placeholder spelling — "{id}", ":id", "<int:id>", "${id}", "%d" —
 // collapses to the same thing, because the whole point is to compare a C#
 // template against an Express one. Two templates then match if they align
-// segment for segment, and the GRADE of that alignment is the confidence:
+// segment for segment. Alignment quality is distinct from binding confidence:
 //
-//   - Exact -> Verified (0.85). The templates are structurally identical:
+//   - Exact -> at most Pattern. The templates are structurally identical:
 //     equal arity, literals matching literals and placeholders matching
-//     placeholders, position for position. Nothing had to be guessed.
+//     placeholders, position for position. Service identity remains unknown.
 //   - Parameterized -> Pattern (0.6). They align only because a placeholder
 //     absorbed something spelled differently — a concrete "42" binding to
 //     "{id}", a catch-all swallowing a tail, an unresolved base address dropped
@@ -49,8 +49,8 @@
 // matches every handler in the corpus that serves that shape, and if three
 // services expose it, all three are edges. Resolving WHICH one a configured base
 // address points at needs deployment config this package deliberately does not
-// read. That is the same over-generation phases 3 and 4 make, for the same
-// reason, and the confidence tier is what carries it.
+// read. Competing destinations and shared content contexts are diagnostic
+// Candidate edges; a unique route-only match is Pattern, never runtime proof.
 //
 // Known gaps, stated rather than hidden: router group prefixes (gin's
 // router.Group, chi's Route) are not folded into their children, so those
@@ -72,9 +72,7 @@ import (
 // Tier maps a match quality onto the graph layer's shared confidence ladder.
 func (q Quality) Tier() graphverify.Tier {
 	switch q {
-	case Exact:
-		return graphverify.Verified
-	case Parameterized:
+	case Exact, Parameterized:
 		return graphverify.Pattern
 	default:
 		return graphverify.Candidate
@@ -225,9 +223,56 @@ func Extract(c *Corpus) (Endpoints, Report) {
 	}
 	report.Handlers = len(out.Handlers)
 	report.Calls = len(out.Calls)
+	markSharedContexts(c, &out)
 	sortEndpoints(out.Handlers)
 	sortEndpoints(out.Calls)
 	return out, report
+}
+
+// Content-addressed graph nodes merge identical bytes. A route or call whose
+// blob occurs in several repository/path contexts cannot have one unambiguous
+// service binding, even when extraction chose only the first file location.
+func markSharedContexts(c *Corpus, endpoints *Endpoints) {
+	type location struct{ repo, path string }
+	contexts := map[string]map[location]bool{}
+	for _, side := range [][]Endpoint{endpoints.Calls, endpoints.Handlers} {
+		for _, endpoint := range side {
+			if blob := c.Blob(endpoint); blob != nil {
+				contexts[blob.SHA] = nil
+			}
+		}
+	}
+	if len(contexts) == 0 {
+		return
+	}
+	for _, shard := range c.shards {
+		if shard.Index == nil {
+			continue
+		}
+		for id := uint64(0); id < uint64(shard.Index.NumBlobs()); id++ {
+			blob := shard.Index.Blob(id)
+			if blob == nil {
+				continue
+			}
+			if _, relevant := contexts[blob.SHA]; !relevant {
+				continue
+			}
+			if contexts[blob.SHA] == nil {
+				contexts[blob.SHA] = map[location]bool{}
+			}
+			for _, file := range blob.Files {
+				contexts[blob.SHA][location{file.Repo, file.RelPath}] = true
+			}
+		}
+	}
+	for _, side := range [][]Endpoint{endpoints.Calls, endpoints.Handlers} {
+		for i := range side {
+			blob := c.Blob(side[i])
+			if blob == nil || blob.SHA == "" || len(contexts[blob.SHA]) != 1 || side[i].Repo == "" || side[i].Path == "" {
+				side[i].AmbiguousContext = true
+			}
+		}
+	}
 }
 
 // MatchEndpoints pairs every call with every handler it could reach, in
@@ -286,12 +331,14 @@ func matchEndpoints(e Endpoints) ([]Edge, int) {
 			if quality == NoMatch {
 				continue
 			}
-			key := edgeKey{call: siteOf(call), handler: siteOf(handler)}
+			key := edgeKey{call: siteOf(call), callMethod: call.Method, handler: siteOf(handler)}
 			// One declaration can be recognized more than once (a controller
 			// action carrying both [HttpGet] and [Route], a Flask route with
 			// several verbs). Keep the strongest grade for the pair.
-			if prev, ok := best[key]; ok && prev.Quality >= quality {
-				continue
+			if prev, ok := best[key]; ok {
+				if prev.Quality > quality || (prev.Quality == quality && !lessEndpoint(handler, prev.Handler)) {
+					continue
+				}
 			}
 			best[key] = Edge{
 				Call:       call,
@@ -302,8 +349,39 @@ func matchEndpoints(e Endpoints) ([]Edge, int) {
 		}
 	}
 
+	// Count distinct compatible destinations per call site and verb. Several
+	// route declarations for one handler are not competing services; different
+	// handlers (including those in one repository) are unresolved alternatives.
+	type requestKey struct {
+		site   siteKey
+		method Method
+	}
+	type destinationKey struct {
+		repo, path string
+		offset     int
+		fallback   siteKey
+	}
+	destinations := map[requestKey]map[destinationKey]bool{}
+	for _, edge := range best {
+		request := requestKey{siteOf(edge.Call), edge.Call.Method}
+		handler := edge.Handler
+		destination := destinationKey{repo: handler.Repo, path: handler.Path, offset: handler.SymbolStart}
+		if destination.offset < 0 {
+			destination.offset = handler.Start
+		}
+		if handler.Repo == "" || handler.Path == "" {
+			destination.fallback = siteOf(handler)
+		}
+		if destinations[request] == nil {
+			destinations[request] = map[destinationKey]bool{}
+		}
+		destinations[request][destination] = true
+	}
 	edges := make([]Edge, 0, len(best))
 	for _, edge := range best {
+		if len(destinations[requestKey{siteOf(edge.Call), edge.Call.Method}]) > 1 || edge.Call.AmbiguousContext || edge.Handler.AmbiguousContext {
+			edge.Confidence = graph.Candidate
+		}
 		edges = append(edges, edge)
 	}
 	sortEdges(edges)
@@ -331,23 +409,39 @@ type siteKey struct {
 	start int
 }
 
-type edgeKey struct{ call, handler siteKey }
+type edgeKey struct {
+	call, handler siteKey
+	callMethod    Method
+}
 
 func siteOf(e Endpoint) siteKey {
 	return siteKey{shard: e.Shard, blob: e.Blob, start: e.Start}
 }
 
 func sortEndpoints(eps []Endpoint) {
-	sort.SliceStable(eps, func(i, j int) bool { return lessSite(siteOf(eps[i]), siteOf(eps[j])) })
+	sort.SliceStable(eps, func(i, j int) bool { return lessEndpoint(eps[i], eps[j]) })
+}
+
+func lessEndpoint(a, b Endpoint) bool {
+	if as, bs := siteOf(a), siteOf(b); as != bs {
+		return lessSite(as, bs)
+	}
+	if a.Method != b.Method {
+		return a.Method < b.Method
+	}
+	if a.Raw != b.Raw {
+		return a.Raw < b.Raw
+	}
+	return a.Framework < b.Framework
 }
 
 func sortEdges(edges []Edge) {
 	sort.SliceStable(edges, func(i, j int) bool {
 		a, b := edges[i], edges[j]
-		if ac, bc := siteOf(a.Call), siteOf(b.Call); ac != bc {
-			return lessSite(ac, bc)
+		if lessEndpoint(a.Call, b.Call) || lessEndpoint(b.Call, a.Call) {
+			return lessEndpoint(a.Call, b.Call)
 		}
-		return lessSite(siteOf(a.Handler), siteOf(b.Handler))
+		return lessEndpoint(a.Handler, b.Handler)
 	})
 }
 

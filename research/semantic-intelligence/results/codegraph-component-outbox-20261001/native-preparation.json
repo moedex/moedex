@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "reference": "/Users/zakkeown/Code/moedex/.references/CodeGraph",
+  "original_sources": {
+    "src/TC.CodeGraphApi.Extractors.CSharp/CodeGraphSyntaxWalker.cs": "df58e9e82dae96658015d22320e02f0326c48058a19181bc5bb823826364cbd9",
+    "src/TC.CodeGraphApi.Extractors.CSharp/SolutionAnalyzer.cs": "f2e9b09438cdc02188140484ed9dee6368df1989a0cb55d698e17fb430f84fde",
+    "src/TC.CodeGraphApi.Extractors.CSharp/_GlobalUsings.cs": "218e84d6ce5b381a876c57c35bb2e043fbc07d7e9d49bc7b97fe1047f1b42048",
+    "src/TC.CodeGraphApi.Services/Extractors/ICodeExtractor.cs": "0d2e1d5aafdd851e360438cb6190d550b843ebc1c0f2b89ebdcba3329a6e3aed",
+    "src/TC.CodeGraphApi.Services/Extractors/ISolutionAnalyzer.cs": "589872583f51e37d9b6ef75245569d661492dc2f3b4b3f19458d5086df897b6d",
+    "src/TC.CodeGraphApi.Services/Analyzers/LintResultCache.cs": "374f9d00173310b0be83e6d7e3421e79d0d2fec867163bc459657049e84ce237",
+    "src/TC.CodeGraphApi.Services/Analyzers/ILintRunner.cs": "f570f3799ee00f579ab0ee458207b1d7e63eb4f2d0a479d550c5516789994404",
+    "src/TC.CodeGraphApi.Services/Metadata/DotnetSupportInspector.cs": "7bec12057d2afdfefbad8487c5c48fa07beef08aa92037ff996b84db1346e0c8",
+    "src/TC.CodeGraphApi.Services/Configuration/IndexingOptions.cs": "411f7fb7c1bf7f3c96b0d00d121cb3e2ed18df31b9d4890ff6e1d64ab0ff8a17",
+    "src/TC.CodeGraphApi.Services/Pipeline/GraphBuffer.cs": "f54b3e96a241da363f3823da111714493057da4456bdbc9c33c5457b70184796",
+    "src/TC.CodeGraphApi.Models/GraphNode.cs": "e87a943ea4789260c2ff3aa294cd761388e6f1eddca12e8ed88bec78c5a1fc8b",
+    "src/TC.CodeGraphApi.Models/GraphEdge.cs": "611a833d6e08883d71b9147a717279be956870a3f40449dcdaf4df9a01c7a35e",
+    "src/TC.CodeGraphApi.Models/NodeLabel.cs": "58283c107e6552c402ba4d0f78051d0015d1070322083e4236cf949f5313a1d7",
+    "src/TC.CodeGraphApi.Models/EdgeType.cs": "ab102eb2b34fdc3bb1ab149f29cf6ea1cbc3f6736bd25a664b199acea1b68985",
+    "src/TC.CodeGraphApi.Models/PipelineTypes.cs": "3f2f7d1ea9ac66ce46c9c890e389767a3aff6997eb7e50ef5d8233e971001db5",
+    "src/TC.CodeGraphApi.Models/DotnetSupportInfo.cs": "4cf3f39b0d5a68d240709781cfd4c94e619db6ba1afdef2a0b40b1dbe0b6aa92",
+    "src/TC.CodeGraphApi.Models/CodeGraphJsonDefaults.cs": "c0fd9cdea61a1dea4374fcaf665b0f27f6e67c84ed950be361ff850c25df3024"
+  },
+  "reference_source_roster_sha256": "c4860f331139e8aa3ecdd46579c2d22197169f66661b9a19c7cf1e50965eb3f2",
+  "original_project_sha256": "a2f067129e232a8977b106d8366f9f03a80568924ff698359b6d53122255288f",
+  "dependency_pins": {
+    "Microsoft.CodeAnalysis.CSharp.Workspaces": "4.12.0",
+    "Microsoft.CodeAnalysis.Workspaces.MSBuild": "4.12.0",
+    "Microsoft.Build.Locator": "1.7.8",
+    "Microsoft.Build.Tasks.Core": "17.14.28",
+    "System.Security.Cryptography.Xml": "10.0.7",
+    "Microsoft.Extensions.Logging.Abstractions": "10.0.7"
+  },
+  "adapter_sources": {
+    "Program.cs": "7b795f3f3760ba86293d95f0fd16bf6ba283b5265e451a9d590a92f268286135",
+    "runner.py": "131c182a3752110afc6dfc4ff39a4fdcec7ef6437793db68af76f1213c4a8d21"
+  },
+  "limitations": [
+    "Unmodified extraction components; isolated host project substitutes for full private-package project graph.",
+    "No native MCP/query/store or private IndexingPipeline.ResolveCalls.",
+    "Build only; no application extraction or scoring performed."
+  ]
+}

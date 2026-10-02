@@ -1,0 +1,1 @@
+Which checked-in classes and state-machine actions should be reviewed if AddEventAttendee changes? Distinguish consumer declarations, configured consumers, configured publication, and runtime activation.

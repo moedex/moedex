@@ -1,0 +1,7 @@
+{
+  "task": "flow-completion-event",
+  "assigned_utc": "2026-10-02T13:35:26.857894+00:00",
+  "assigned_monotonic": 77768.225142833,
+  "deadline_monotonic": 78368.225142833,
+  "agent": "/root/holdout_solver_03"
+}

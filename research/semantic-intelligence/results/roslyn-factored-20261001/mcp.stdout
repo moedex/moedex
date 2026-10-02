@@ -1,0 +1,5 @@
+=== RUN   TestPinnedRoslynFactoredGraphMCP
+    public_roslyn_test.go:51: warm open=2m16.694785584s logical_edges=182844081 stored_records=6619555 target_sets=69394 build_id=fcc77570f2f18640264f216d29a54c68cd5253490d34270d5e0fb436efa8d002
+    public_roslyn_test.go:101: json: cannot unmarshal string into Go struct field GraphQueryResult.nodes.0.confidence.tier of type graph.ConfidenceTier
+--- FAIL: TestPinnedRoslynFactoredGraphMCP (138.29s)
+FAIL

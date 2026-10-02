@@ -1,0 +1,20 @@
+
+Welcome to .NET 10.0!
+---------------------
+SDK Version: 10.0.401
+
+----------------
+Installed an ASP.NET Core HTTPS development certificate.
+To trust the certificate, run 'dotnet dev-certs https --trust'
+Learn about HTTPS: https://aka.ms/dotnet-https
+
+----------------
+Write your first app: https://aka.ms/dotnet-hello-world
+Find out what's new: https://aka.ms/dotnet-whats-new
+Explore documentation: https://aka.ms/dotnet-docs
+Report issues and find source on GitHub: https://github.com/dotnet/core
+Use 'dotnet --help' to see available commands or visit: https://aka.ms/dotnet-cli
+--------------------------------------------------------------------------------------
+  Determining projects to restore...
+  Restored /Users/zakkeown/Code/moedex/.local/holdout-quartz/offline-source/src/Quartz.Analyzers/Quartz.Analyzers.csproj (in 68 ms).
+  Restored /Users/zakkeown/Code/moedex/.local/holdout-quartz/offline-source/src/Quartz/Quartz.csproj (in 10 ms).

@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"search_context","arguments":{"query":"TodoListConfiguration","repo":"CleanArchitecture","top_k":2,"token_budget":1200,"graph_depth":0}}}

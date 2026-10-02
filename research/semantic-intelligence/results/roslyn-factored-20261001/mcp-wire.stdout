@@ -1,0 +1,7 @@
+=== RUN   TestPinnedRoslynFactoredGraphMCP
+    public_roslyn_test.go:68: warm open=2m36.518141958s logical_edges=182844081 stored_records=6619555 target_sets=69394 build_id=fcc77570f2f18640264f216d29a54c68cd5253490d34270d5e0fb436efa8d002
+    public_roslyn_test.go:131: MCP trace_calls Main=1.601514167s nodes=1614 edges=1654 truncated=true total_is_exact=false
+    public_roslyn_test.go:131: MCP trace_calls Create=36.965307541s nodes=1972 edges=8408 truncated=true total_is_exact=false
+    public_roslyn_test.go:141: MCP impact_analysis Create=17.234470792s nodes=863 edges=9148 truncated=true total_is_exact=false
+--- PASS: TestPinnedRoslynFactoredGraphMCP (213.48s)
+PASS

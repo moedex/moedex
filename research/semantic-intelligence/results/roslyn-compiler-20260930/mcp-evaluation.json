@@ -1,0 +1,72 @@
+{
+  "status": "passed",
+  "passed": 10,
+  "total": 10,
+  "command": [
+    "/private/tmp/moedex-roslyn-compiler/moedex-final",
+    "serve",
+    "-index-dir",
+    "/private/tmp/moedex-roslyn-compiler/index-compiler",
+    "-mcp",
+    "-embed",
+    "none"
+  ],
+  "context_id": "context:574d4dda070e2c58134ddf022aeb65b50e79a05512913a6115900da9b9785bde",
+  "artifact_sha256": "6561b94c7cb4bd4b443e7160a70052d463cdcefbdc8762da36d6673070d4858e",
+  "gold_sha256": "4de2d5ed0c4afe8afe00d29d26092321e3086e4e9e45b613669fcf906b2a2309",
+  "snapshot_id": "20260930T230839Z-1",
+  "server_exit_code": 0,
+  "outcomes": [
+    {
+      "id": "local-generate",
+      "passed": true,
+      "definition_status": "ok"
+    },
+    {
+      "id": "file-read-overload",
+      "passed": true,
+      "definition_status": null
+    },
+    {
+      "id": "generic-select",
+      "passed": true,
+      "definition_status": null
+    },
+    {
+      "id": "lambda-string-trim",
+      "passed": true,
+      "definition_status": null
+    },
+    {
+      "id": "string-comparison-overload",
+      "passed": true,
+      "definition_status": null
+    },
+    {
+      "id": "char-index-overload",
+      "passed": true,
+      "definition_status": null
+    },
+    {
+      "id": "substring-overload",
+      "passed": true,
+      "definition_status": null
+    },
+    {
+      "id": "generic-list-add",
+      "passed": true,
+      "definition_status": null
+    },
+    {
+      "id": "sdk-parameterless-constructor",
+      "passed": true,
+      "definition_status": null
+    },
+    {
+      "id": "encoding-property",
+      "passed": true,
+      "definition_status": null
+    }
+  ],
+  "elapsed_seconds": 6.8574063339983695
+}

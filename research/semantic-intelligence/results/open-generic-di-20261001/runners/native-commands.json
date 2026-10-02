@@ -1,0 +1,138 @@
+[
+  {
+    "argv": [
+      "python3",
+      "/Users/zakkeown/Code/moedex/tools/semantic-dotnet/test_default_forwarding.py",
+      "--dotnet",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/dotnet",
+      "--sdk",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/sdk/8.0.400",
+      "--worker",
+      "/Users/zakkeown/Code/moedex/.local/open-generic-di/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+      "--packages",
+      "/Users/zakkeown/Code/moedex/.local/fresh-paths/ForkJoint-complete-bundle/packages",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/open-generic-di/forwarding"
+    ],
+    "returncode": 0
+  },
+  {
+    "argv": [
+      "python3",
+      "/Users/zakkeown/Code/moedex/tools/semantic-dotnet/test_default_selection.py",
+      "--dotnet",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/dotnet",
+      "--sdk",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/sdk/8.0.400",
+      "--worker",
+      "/Users/zakkeown/Code/moedex/.local/open-generic-di/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+      "--packages",
+      "/Users/zakkeown/Code/moedex/.local/fresh-paths/ForkJoint-complete-bundle/packages",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/open-generic-di/selection"
+    ],
+    "returncode": 0
+  },
+  {
+    "argv": [
+      "python3",
+      "/Users/zakkeown/Code/moedex/tools/semantic-dotnet/test_framework_bridge.py",
+      "--dotnet",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/dotnet",
+      "--sdk",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/sdk/8.0.400",
+      "--worker",
+      "/Users/zakkeown/Code/moedex/.local/open-generic-di/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+      "--packages",
+      "/Users/zakkeown/Code/moedex/.local/fresh-paths/ForkJoint-complete-bundle/packages",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/open-generic-di/bridge"
+    ],
+    "returncode": 0
+  },
+  {
+    "argv": [
+      "python3",
+      "/Users/zakkeown/Code/moedex/tools/semantic-dotnet/test_response_di.py",
+      "--dotnet",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/dotnet",
+      "--sdk",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/sdk/8.0.400",
+      "--worker",
+      "/Users/zakkeown/Code/moedex/.local/open-generic-di/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+      "--packages",
+      "/Users/zakkeown/Code/moedex/.local/fresh-paths/ForkJoint-complete-bundle/packages",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/open-generic-di/response-di"
+    ],
+    "returncode": 0
+  },
+  {
+    "argv": [
+      "python3",
+      "/Users/zakkeown/Code/moedex/tools/semantic-dotnet/test_request_response.py",
+      "--dotnet",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/dotnet",
+      "--sdk",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/sdk/8.0.400",
+      "--worker",
+      "/Users/zakkeown/Code/moedex/.local/open-generic-di/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+      "--packages",
+      "/Users/zakkeown/Code/moedex/.local/fresh-paths/ForkJoint-complete-bundle/packages",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/open-generic-di/request-response"
+    ],
+    "returncode": 0
+  },
+  {
+    "argv": [
+      "python3",
+      "/Users/zakkeown/Code/moedex/tools/semantic-dotnet/test_endpoint_mapping.py",
+      "--dotnet",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/dotnet",
+      "--sdk",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/sdk/8.0.400",
+      "--worker",
+      "/Users/zakkeown/Code/moedex/.local/open-generic-di/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+      "--packages",
+      "/Users/zakkeown/Code/moedex/.local/fresh-paths/ForkJoint-complete-bundle/packages",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/open-generic-di/endpoint"
+    ],
+    "returncode": 0
+  },
+  {
+    "argv": [
+      "python3",
+      "/Users/zakkeown/Code/moedex/tools/semantic-dotnet/test_mediatr_dispatch.py",
+      "--dotnet",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/dotnet",
+      "--sdk",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/sdk/8.0.400",
+      "--worker",
+      "/Users/zakkeown/Code/moedex/.local/open-generic-di/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+      "--packages",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/eShopOnWeb-bundle/packages",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/open-generic-di/mediatr"
+    ],
+    "returncode": 0
+  },
+  {
+    "argv": [
+      "python3",
+      "/Users/zakkeown/Code/moedex/tools/semantic-dotnet/test_generic_handler.py",
+      "--dotnet",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/dotnet",
+      "--sdk",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/sdk/8.0.400",
+      "--worker",
+      "/Users/zakkeown/Code/moedex/.local/open-generic-di/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+      "--packages",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/eShopOnWeb-bundle/packages",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/open-generic-di/generic-handler"
+    ],
+    "returncode": 0
+  }
+]

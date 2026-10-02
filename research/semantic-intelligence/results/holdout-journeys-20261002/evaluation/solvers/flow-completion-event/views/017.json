@@ -1,0 +1,17 @@
+{
+  "ordinal": 17,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"path\":\"src/Application/DependencyInjection.cs\",\"start_line\":9,\"end_line\":24}"
+  ],
+  "started_monotonic": 78027.938406833,
+  "finished_monotonic": 78028.001512083,
+  "returncode": 0,
+  "stdout_bytes": 2821,
+  "stdout_sha256": "015984fab0b60e821499153b93d6dadb179d50e534c10f2ebfded552a4a0afe9",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

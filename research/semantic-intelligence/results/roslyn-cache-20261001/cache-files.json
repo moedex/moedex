@@ -1,0 +1,22 @@
+{
+  "graph-catalog.cache": {
+    "bytes": 90152560,
+    "sha256": "81ffc1e880b2a0eea92b1a70110393620337b8fc971ca5585e5087c8b51f0bac",
+    "mtime_ns": 1790862359897194131
+  },
+  "shard-0000.idx.graph-symbols": {
+    "bytes": 20880373,
+    "sha256": "95310a06ddf0e48ba6ad57620851e498eac08941ddba7f80e3db92e95e761d54",
+    "mtime_ns": 1790862332045191778
+  },
+  "shard-0001.idx.graph-symbols": {
+    "bytes": 8081931,
+    "sha256": "d35238f1a40c5d6d32423e24dc95d7a1d00ea30f632a2edd4812b03a97f963c7",
+    "mtime_ns": 1790862325833022462
+  },
+  "shard-0002.idx.graph-symbols": {
+    "bytes": 11414278,
+    "sha256": "1e8914f89b907fdaa95d0d5a6837002d927035c154410b4136b3f92800da2dd7",
+    "mtime_ns": 1790862327411023790
+  }
+}

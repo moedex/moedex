@@ -1,0 +1,10 @@
+#!/bin/sh
+host_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+if [ "$1" = restore ]; then exec "$host_dir/dotnet" "$@"; fi
+"$host_dir/dotnet" "$@" > "$host_dir/../capture-worker-diagnostic.jsonl"
+result=$?
+cat "$host_dir/../capture-worker-diagnostic.jsonl"
+if [ "$result" != 0 ]; then
+ /opt/homebrew/bin/python3 -c 'import json,sys; rows=[json.loads(s) for s in open(sys.argv[1])]; print(json.dumps([r for r in rows if r.get("record_type") in ["diagnostic","summary","stream_summary"]]),file=sys.stderr)' "$host_dir/../capture-worker-diagnostic.jsonl"
+fi
+exit "$result"

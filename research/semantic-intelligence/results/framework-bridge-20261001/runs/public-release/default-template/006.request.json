@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"compiler_binding_at","arguments":{"repo":"eShop","path":"src/EventBus/Abstractions/IIntegrationEventHandler.cs","context_id":"context:c5b05502676bd47671466561c494b244fdd9ca2308b6820ced92b6760ec39a03","raw_sha256":"0f44de6ed21466c4a9c4c4df2891b88c7b763a8a3be77f5869666d1e873c699e","byte_offset":296}}}

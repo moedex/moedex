@@ -1,0 +1,256 @@
+{
+  "version": 1,
+  "repo": "domain-gold",
+  "cases": [
+    {
+      "id": "di-singleton",
+      "path": "Domain.cs",
+      "expected": [
+        {
+          "kind": "di_registration",
+          "targets": [
+            {
+              "role": "service",
+              "descriptor": "T:DomainGold.IService"
+            },
+            {
+              "role": "implementation",
+              "descriptor": "T:DomainGold.Service"
+            }
+          ],
+          "lifetime": "singleton"
+        }
+      ]
+    },
+    {
+      "id": "di-scoped",
+      "path": "Domain.cs",
+      "expected": [
+        {
+          "kind": "di_registration",
+          "targets": [
+            {
+              "role": "service",
+              "descriptor": "T:DomainGold.IService"
+            },
+            {
+              "role": "implementation",
+              "descriptor": "T:DomainGold.Service"
+            }
+          ],
+          "lifetime": "scoped"
+        }
+      ]
+    },
+    {
+      "id": "di-self",
+      "path": "Domain.cs",
+      "expected": [
+        {
+          "kind": "di_registration",
+          "targets": [
+            {
+              "role": "service",
+              "descriptor": "T:DomainGold.Service"
+            },
+            {
+              "role": "implementation",
+              "descriptor": "T:DomainGold.Service"
+            }
+          ],
+          "lifetime": "transient"
+        }
+      ]
+    },
+    {
+      "id": "di-factory",
+      "path": "Domain.cs",
+      "expected": []
+    },
+    {
+      "id": "di-open",
+      "path": "Domain.cs",
+      "expected": []
+    },
+    {
+      "id": "di-instance",
+      "path": "Domain.cs",
+      "expected": []
+    },
+    {
+      "id": "di-lookalike",
+      "path": "Domain.cs",
+      "expected": []
+    },
+    {
+      "id": "publish-explicit",
+      "path": "Domain.cs",
+      "expected": [
+        {
+          "kind": "message_publish",
+          "targets": [
+            {
+              "role": "message",
+              "descriptor": "T:DomainGold.Notice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "publish-inferred",
+      "path": "Domain.cs",
+      "expected": [
+        {
+          "kind": "message_publish",
+          "targets": [
+            {
+              "role": "message",
+              "descriptor": "T:DomainGold.Notice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "publish-alias",
+      "path": "Domain.cs",
+      "expected": [
+        {
+          "kind": "message_publish",
+          "targets": [
+            {
+              "role": "message",
+              "descriptor": "T:DomainGold.Notice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "publish-open-target",
+      "path": "Domain.cs",
+      "expected": []
+    },
+    {
+      "id": "publish-lookalike",
+      "path": "Domain.cs",
+      "expected": []
+    },
+    {
+      "id": "publish-dynamic",
+      "path": "Domain.cs",
+      "expected": []
+    },
+    {
+      "id": "consumes",
+      "path": "Domain.cs",
+      "expected": [
+        {
+          "kind": "message_consumer",
+          "targets": [
+            {
+              "role": "message",
+              "descriptor": "T:DomainGold.Notice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "consumes-generic",
+      "path": "Domain.cs",
+      "expected": []
+    },
+    {
+      "id": "dbset",
+      "path": "Domain.cs",
+      "expected": [
+        {
+          "kind": "storage_entity",
+          "targets": [
+            {
+              "role": "entity",
+              "descriptor": "T:DomainGold.Notice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dbset-generic",
+      "path": "Domain.cs",
+      "expected": []
+    },
+    {
+      "id": "table-literal",
+      "path": "Domain.cs",
+      "expected": [
+        {
+          "kind": "storage_table",
+          "targets": [
+            {
+              "role": "entity",
+              "descriptor": "T:DomainGold.Notice"
+            }
+          ],
+          "table": "events"
+        }
+      ]
+    },
+    {
+      "id": "table-constant-schema",
+      "path": "Domain.cs",
+      "expected": [
+        {
+          "kind": "storage_table",
+          "targets": [
+            {
+              "role": "entity",
+              "descriptor": "T:DomainGold.Notice"
+            }
+          ],
+          "table": "audit_events",
+          "schema": "audit"
+        }
+      ]
+    },
+    {
+      "id": "table-dynamic",
+      "path": "Domain.cs",
+      "expected": []
+    },
+    {
+      "id": "table-lookalike",
+      "path": "Domain.cs",
+      "expected": []
+    },
+    {
+      "id": "incomplete-resolved-di",
+      "path": "Incomplete/Incomplete.cs",
+      "expected": [],
+      "incomplete": true
+    },
+    {
+      "id": "unresolved-publish",
+      "path": "Incomplete/Incomplete.cs",
+      "expected": [],
+      "incomplete": true
+    },
+    {
+      "id": "table-whitespace",
+      "path": "Domain.cs",
+      "expected": []
+    },
+    {
+      "id": "table-nul-schema",
+      "path": "Domain.cs",
+      "expected": []
+    },
+    {
+      "id": "table-long",
+      "path": "Domain.cs",
+      "expected": []
+    }
+  ]
+}

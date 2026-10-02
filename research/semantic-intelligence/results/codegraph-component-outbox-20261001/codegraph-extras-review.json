@@ -1,0 +1,446 @@
+{
+  "status": "scope_review_complete",
+  "native_extras": 36,
+  "all_type_level_implements": true,
+  "extra_messaging_or_service_assertions": 0,
+  "classifications": {
+    "compiler_synthesized_record_interface": 4,
+    "explicit_source_interface": 6,
+    "framework_or_inherited_type_interface": 26
+  },
+  "items": [
+    {
+      "result_index": 9,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Api.RecreateDatabaseHostedService<TDbContext>",
+        "targetQN": "Microsoft.Extensions.Hosting.IHostedService",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "explicit_source_interface",
+      "review": "Source explicitly names this interface in the type base list; this is useful type-level evidence, outside the selected exact method-implementation cases."
+    },
+    {
+      "result_index": 15,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateMap",
+        "targetQN": "MassTransit.EntityFrameworkCoreIntegration.ISagaClassMap<Sample.Components.StateMachines.RegistrationState>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 15,
+      "edge_index": 2,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateMap",
+        "targetQN": "MassTransit.EntityFrameworkCoreIntegration.ISagaClassMap",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 16,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateMachine",
+        "targetQN": "MassTransit.SagaStateMachine<Sample.Components.StateMachines.RegistrationState>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 16,
+      "edge_index": 2,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateMachine",
+        "targetQN": "MassTransit.StateMachine<Sample.Components.StateMachines.RegistrationState>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 16,
+      "edge_index": 3,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateMachine",
+        "targetQN": "MassTransit.StateMachine",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 16,
+      "edge_index": 4,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateMachine",
+        "targetQN": "MassTransit.IVisitable",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 16,
+      "edge_index": 5,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateMachine",
+        "targetQN": "MassTransit.IProbeSite",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 17,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateDefinition",
+        "targetQN": "MassTransit.ISagaDefinition<Sample.Components.StateMachines.RegistrationState>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 17,
+      "edge_index": 2,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateDefinition",
+        "targetQN": "MassTransit.ISagaDefinition",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 17,
+      "edge_index": 3,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateDefinition",
+        "targetQN": "MassTransit.IDefinition",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 18,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationState",
+        "targetQN": "MassTransit.SagaStateMachineInstance",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "explicit_source_interface",
+      "review": "Source explicitly names this interface in the type base list; this is useful type-level evidence, outside the selected exact method-implementation cases."
+    },
+    {
+      "result_index": 18,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationState",
+        "targetQN": "MassTransit.ISaga",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 22,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.RegistrationDbContext",
+        "targetQN": "Microsoft.EntityFrameworkCore.Infrastructure.IInfrastructure<System.IServiceProvider>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 22,
+      "edge_index": 2,
+      "native": {
+        "sourceQN": "Sample.Components.RegistrationDbContext",
+        "targetQN": "Microsoft.EntityFrameworkCore.Internal.IDbContextDependencies",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 22,
+      "edge_index": 3,
+      "native": {
+        "sourceQN": "Sample.Components.RegistrationDbContext",
+        "targetQN": "Microsoft.EntityFrameworkCore.Internal.IDbSetCache",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 22,
+      "edge_index": 4,
+      "native": {
+        "sourceQN": "Sample.Components.RegistrationDbContext",
+        "targetQN": "Microsoft.EntityFrameworkCore.Internal.IDbContextPoolable",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 22,
+      "edge_index": 5,
+      "native": {
+        "sourceQN": "Sample.Components.RegistrationDbContext",
+        "targetQN": "Microsoft.EntityFrameworkCore.Infrastructure.IResettableService",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 22,
+      "edge_index": 6,
+      "native": {
+        "sourceQN": "Sample.Components.RegistrationDbContext",
+        "targetQN": "System.IDisposable",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 22,
+      "edge_index": 7,
+      "native": {
+        "sourceQN": "Sample.Components.RegistrationDbContext",
+        "targetQN": "System.IAsyncDisposable",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 25,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.DuplicateRegistrationException",
+        "targetQN": "System.Runtime.Serialization.ISerializable",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 26,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.Contracts.SendRegistrationEmail",
+        "targetQN": "System.IEquatable<Sample.Components.Contracts.SendRegistrationEmail>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "compiler_synthesized_record_interface",
+      "review": "Source declares a record; native IEquatable type relationship is outside the selected method-implementation observations."
+    },
+    {
+      "result_index": 27,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.Contracts.RegistrationSubmitted",
+        "targetQN": "System.IEquatable<Sample.Components.Contracts.RegistrationSubmitted>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "compiler_synthesized_record_interface",
+      "review": "Source declares a record; native IEquatable type relationship is outside the selected method-implementation observations."
+    },
+    {
+      "result_index": 28,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.Contracts.AddEventAttendee",
+        "targetQN": "System.IEquatable<Sample.Components.Contracts.AddEventAttendee>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "compiler_synthesized_record_interface",
+      "review": "Source declares a record; native IEquatable type relationship is outside the selected method-implementation observations."
+    },
+    {
+      "result_index": 29,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.ValidateRegistrationConsumerDefinition",
+        "targetQN": "MassTransit.IConsumerDefinition<Sample.Components.Consumers.ValidateRegistrationConsumer>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 29,
+      "edge_index": 2,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.ValidateRegistrationConsumerDefinition",
+        "targetQN": "MassTransit.IConsumerDefinition",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 29,
+      "edge_index": 3,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.ValidateRegistrationConsumerDefinition",
+        "targetQN": "MassTransit.IDefinition",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 30,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.ValidateRegistrationConsumer",
+        "targetQN": "MassTransit.IConsumer<Sample.Components.Contracts.AddEventAttendee>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "explicit_source_interface",
+      "review": "Source explicitly names this interface in the type base list; this is useful type-level evidence, outside the selected exact method-implementation cases."
+    },
+    {
+      "result_index": 30,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.ValidateRegistrationConsumer",
+        "targetQN": "MassTransit.IConsumer",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 31,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.SendRegistrationEmailConsumer",
+        "targetQN": "MassTransit.IConsumer<Sample.Components.Contracts.SendRegistrationEmail>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "explicit_source_interface",
+      "review": "Source explicitly names this interface in the type base list; this is useful type-level evidence, outside the selected exact method-implementation cases."
+    },
+    {
+      "result_index": 31,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.SendRegistrationEmailConsumer",
+        "targetQN": "MassTransit.IConsumer",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 32,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.RegistrationValidated",
+        "targetQN": "System.IEquatable<Sample.Components.Consumers.RegistrationValidated>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "compiler_synthesized_record_interface",
+      "review": "Source declares a record; native IEquatable type relationship is outside the selected method-implementation observations."
+    },
+    {
+      "result_index": 33,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.NotifyRegistrationConsumer",
+        "targetQN": "MassTransit.IConsumer<Sample.Components.Contracts.RegistrationSubmitted>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "explicit_source_interface",
+      "review": "Source explicitly names this interface in the type base list; this is useful type-level evidence, outside the selected exact method-implementation cases."
+    },
+    {
+      "result_index": 33,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.NotifyRegistrationConsumer",
+        "targetQN": "MassTransit.IConsumer",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    },
+    {
+      "result_index": 34,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.AddEventAttendeeConsumer",
+        "targetQN": "MassTransit.IConsumer<Sample.Components.Contracts.AddEventAttendee>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "explicit_source_interface",
+      "review": "Source explicitly names this interface in the type base list; this is useful type-level evidence, outside the selected exact method-implementation cases."
+    },
+    {
+      "result_index": 34,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.AddEventAttendeeConsumer",
+        "targetQN": "MassTransit.IConsumer",
+        "type": "IMPLEMENTS",
+        "properties": null
+      },
+      "classification": "framework_or_inherited_type_interface",
+      "review": "Source base types provide a plausible framework/inheritance origin; exact transitive metadata relation is unscored, not independently certified or counted as a false assertion."
+    }
+  ],
+  "conclusion": "All36 extra candidates are native type-level capability evidence outside the selected exact method relationships. No extra PUBLISHES/CONSUMES/Service candidates remain unmatched. This is not a broad precision estimate;26 inherited/framework targets remain unscored metadata semantics."
+}

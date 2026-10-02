@@ -1,0 +1,197 @@
+package semanticimport_test
+
+import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"testing"
+
+	"github.com/google/jsonschema-go/jsonschema"
+
+	"moedex/internal/mcp"
+	"moedex/internal/semantic"
+	"moedex/internal/semanticimport"
+	"moedex/internal/semanticindex"
+)
+
+func TestPublicMediatrScan(t *testing.T) {
+	stream, root := os.Getenv("MOEDEX_MEDIATR_SCAN_STREAM"), os.Getenv("MOEDEX_MEDIATR_SCAN_ROOT")
+	if stream == "" || root == "" {
+		t.Skip("set MOEDEX_MEDIATR_SCAN_STREAM/ROOT for native fixture")
+	}
+	raw, err := os.ReadFile(stream)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, err := semanticimport.Import(context.Background(), bytes.NewReader(raw), semanticimport.Options{Repo: "fixture", Root: root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "artifact")
+	if err := semantic.Write(path, a); err != nil {
+		t.Fatal(err)
+	}
+	a, err = semantic.Read(path, semantic.Limits{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	artifact, _ := os.ReadFile(path)
+	sha := fmt.Sprintf("%x", sha256.Sum256(artifact))
+	provenance := semanticindex.Provenance{ArtifactSHA256: sha, CorpusFingerprint: strings.Repeat("b", 64)}
+	ip := filepath.Join(t.TempDir(), "index")
+	if err := semanticindex.Build(ip, a, provenance); err != nil {
+		t.Fatal(err)
+	}
+	x, err := semanticindex.Open(ip, provenance, semanticindex.Limits{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer x.Close()
+	p := &domainGoldProvider{index: x, artifact: sha}
+	tools := map[string]mcp.ToolHandler{}
+	for _, tool := range mcp.CompilerTools(p) {
+		tools[tool.Name()] = tool
+	}
+	call := func(name string, args any) map[string]any {
+		t.Helper()
+		raw, _ := json.Marshal(args)
+		out, err := tools[name].Call(context.Background(), raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out["isError"] == true {
+			t.Fatal(out)
+		}
+		schemaJSON, _ := json.Marshal(tools[name].Specification().OutputSchema)
+		var schema jsonschema.Schema
+		if err := json.Unmarshal(schemaJSON, &schema); err != nil {
+			t.Fatal(err)
+		}
+		resolved, err := schema.Resolve(nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wire, _ := json.Marshal(out["structuredContent"])
+		var schemaValue any
+		json.Unmarshal(wire, &schemaValue)
+		if err := resolved.Validate(schemaValue); err != nil {
+			t.Fatalf("%s schema: %v", name, err)
+		}
+		var result map[string]any
+		if json.Unmarshal(wire, &result) != nil {
+			t.Fatal("bad response")
+		}
+		return result
+	}
+
+	content, err := os.ReadFile(filepath.Join(root, "Fixture.cs"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sourceHash := fmt.Sprintf("%x", sha256.Sum256(content))
+
+	var expected struct {
+		Positive map[string]string `json:"positive"`
+		Negative []string          `json:"negative"`
+	}
+	rawExpected, err := os.ReadFile(filepath.Join(root, "expected.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(rawExpected, &expected); err != nil {
+		t.Fatal(err)
+	}
+	if len(expected.Positive) != 8 || len(expected.Negative) != 21 {
+		t.Fatal("fixture expectation drift")
+	}
+	cases := []struct{ label string }{}
+	for label := range expected.Positive {
+		cases = append(cases, struct{ label string }{label})
+	}
+	for _, label := range expected.Negative {
+		cases = append(cases, struct{ label string }{label})
+	}
+	sort.Slice(cases, func(i, j int) bool { return cases[i].label < cases[j].label })
+	for _, tc := range cases {
+		t.Run(tc.label, func(t *testing.T) {
+			marker := []byte("/*" + tc.label + "*/")
+			if bytes.Count(content, marker) != 1 {
+				t.Fatal("marker drift")
+			}
+			offset := bytes.Index(content, marker) + len(marker)
+			args := map[string]any{"repo": "fixture", "path": "Fixture.cs", "byte_offset": offset, "raw_sha256": sourceHash}
+			discovery := call("compiler_binding_at", args)
+			if discovery["status"] != "context_required" {
+				t.Fatal(discovery)
+			}
+			contexts := discovery["contexts"].([]any)
+			if len(contexts) != 1 {
+				t.Fatal(discovery)
+			}
+			id := contexts[0].(map[string]any)["context_id"]
+			args["context_id"] = id
+			selected := call("compiler_binding_at", args)
+			wire, _ := json.Marshal(selected)
+			var result mcp.CompilerResult
+			if err := json.Unmarshal(wire, &result); err != nil {
+				t.Fatal(err)
+			}
+			if result.Error != nil || result.Truncated || len(result.Results) != 1 {
+				t.Fatal(string(wire))
+			}
+			binding := result.Results[0]
+			if (binding.ExtractorVersion != "16" && (binding.ExtractorVersion != "17" && (binding.ExtractorVersion != "18" && (binding.ExtractorVersion != "19" && (binding.ExtractorVersion != "20" && binding.ExtractorVersion != "21"))))) || binding.ByteOffset != uint64(offset) || binding.RawSHA256 != sourceHash {
+				t.Fatal(binding)
+			}
+			values, positive := expected.Positive[tc.label]
+			if !positive {
+				if len(binding.DomainFacts) != 0 {
+					t.Fatal(binding.DomainFacts)
+				}
+				return
+			}
+			if len(binding.DomainFacts) != 1 {
+				t.Fatal(binding.DomainFacts)
+			}
+			f := binding.DomainFacts[0]
+
+			if f.Kind != "mediator_assembly_scan_configuration" || f.Rule != "csharp-mediatr-scan-v1" || f.EvidenceScope != "compile_time" || len(f.Targets) != 1 {
+				t.Fatal(f)
+			}
+			target := f.Targets[0]
+			if target.Role != "assembly_marker" || target.Symbol.Descriptor != "T:"+values || target.Symbol.DescriptorKind != "documentation_comment_id" {
+				t.Fatal(target)
+			}
+			if tc.label == "metadata" {
+				if target.Symbol.NamespaceKind != "assembly" || !strings.HasPrefix(target.Symbol.Namespace, "System.Runtime,") {
+					t.Fatal(target)
+				}
+			} else {
+				if target.Symbol.NamespaceKind != "project" || target.Symbol.Namespace != "fixture/Fixture.csproj" {
+					t.Fatal(target)
+				}
+				defs := call("compiler_definitions", map[string]any{"symbol_id": target.Symbol.ID, "repo": "fixture"})
+				if defs["status"] != "ok" || len(defs["results"].([]any)) != 1 {
+					t.Fatal(defs)
+				}
+			}
+			for _, tool := range []string{"compiler_contract_impact", "compiler_contract_context"} {
+				view := call(tool, map[string]any{"symbol_id": target.Symbol.ID, "context_ids": []any{id}})
+				wire, _ := json.Marshal(view)
+				if view["status"] != "ok" || !bytes.Contains(wire, []byte(`"kind":"mediator_assembly_scan_configuration"`)) {
+					t.Fatal(string(wire))
+				}
+			}
+
+		})
+	}
+	if p.acquired != p.released {
+		t.Fatal("lease leak")
+	}
+}

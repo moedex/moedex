@@ -65,8 +65,13 @@ type ContextBlock struct {
 	Clipped   bool    // true when Text was narrowed to honor the token budget
 }
 
+// WarningDenseUnavailable identifies query-time dense failure with lexical,
+// symbol and path retrieval preserved. It is safe to expose to agents.
+const WarningDenseUnavailable = "dense_unavailable"
+
 // ContextWindow is the assembled, token-budgeted answer.
 type ContextWindow struct {
+	Warnings      []string // stable machine-readable degradation codes; nil when healthy
 	Blocks        []ContextBlock
 	TokenEstimate int
 	Truncated     bool // true if the budget cut off lower-ranked blocks

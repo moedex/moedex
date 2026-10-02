@@ -1,0 +1,7 @@
+{
+  "task": "impact-title-uniqueness",
+  "assigned_utc": "2026-10-02T13:55:59.990214+00:00",
+  "assigned_monotonic": 79001.348416625,
+  "deadline_monotonic": 79601.348416625,
+  "agent": "/root/holdout_solver_06"
+}

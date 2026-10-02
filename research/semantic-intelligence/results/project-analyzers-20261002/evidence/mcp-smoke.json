@@ -1,0 +1,24 @@
+{
+  "classification": "unscored native compiler serving smoke",
+  "server_pid": 31415,
+  "calls": [
+    {
+      "tool": "compiler_symbols",
+      "bytes": 1905,
+      "snapshot_id": "debug",
+      "artifact_sha256": "44c44159ba4144fcf5df5351506337908859a5c5c9d22be27c8e3881d465bc2b"
+    },
+    {
+      "tool": "compiler_definitions",
+      "bytes": 1459,
+      "snapshot_id": "debug",
+      "artifact_sha256": "44c44159ba4144fcf5df5351506337908859a5c5c9d22be27c8e3881d465bc2b"
+    }
+  ],
+  "discovered_symbols": 1,
+  "definitions": 1,
+  "source_hash_verified": true,
+  "worker_version": "21",
+  "server_returncode": 0,
+  "server_stopped": true
+}

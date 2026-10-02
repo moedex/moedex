@@ -1,0 +1,1217 @@
+[
+  {
+    "id": "asp.versioning.abstractions",
+    "version": "8.1.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 186650,
+    "sha256": "cafdf3f5fc9e295088772982d6c20f28d401f8e973c7846701d5c75d26ac96dd",
+    "archive_sha512_base64": "mN3oVh2ScP+/7kECi1LuljPiO/XqSP9cQDzuvLixQQhmocR5wtA5ETqIpuGuGlC3UUvrHZwb8YzMewBS+eY1Rg==",
+    "nuget_content_hash": "mpeNZyMdvrHztJwR1sXIUQ+3iioEU97YMBnFA9WLbsPOYhGwDJnqJMmEd8ny7kcmS9OjTHoEuX/bSXXY3brIFA=="
+  },
+  {
+    "id": "asp.versioning.http",
+    "version": "8.1.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 114012,
+    "sha256": "437a1ea3f3b2ad34a17d5843b292a24defbd79fe423dd9e8f84ecb9d57c89f78",
+    "archive_sha512_base64": "2+nxxn7JMtU4LpLAVQugG/NvaVdZVvkGHW7I96uU08XlPAO+dUGRCmVCjnz+hZzXbAZoRFEZoL/AvbafmY/iOg==",
+    "nuget_content_hash": "Xu4xF62Cu9JqYi/CTa2TiK5kyHoa4EluPynj/bPFWDmlTIPzuJQbBI5RgFYVRFHjFVvWMoA77acRaFu7i7Wzqg=="
+  },
+  {
+    "id": "asp.versioning.mvc",
+    "version": "8.1.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 77451,
+    "sha256": "6f4c48f9fa39183f34a7759ef7ea022fc987809e9f588594a8367dc3a73a9972",
+    "archive_sha512_base64": "Cs1ZWetlG+wnOMYkhQMlxd+P/TxW733GgYYo9DwzB0WacyqbRRmBXvtCaOuvUAfu1+z5TyxmQYAbGDODOpQBDg==",
+    "nuget_content_hash": "BMAJM2sGsTUw5FQ9upKQt6GFoldWksePgGpYjl56WSRvIuE3UxKZh0gAL+wDTIfLshUZm97VCVxlOGyrcjWz9Q=="
+  },
+  {
+    "id": "asp.versioning.mvc.apiexplorer",
+    "version": "8.1.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 72075,
+    "sha256": "091fc60deb19f2259b49b8844d5c3b367ea28093a0b82207f862befac511b689",
+    "archive_sha512_base64": "PD6gmufbFmUOrtqeogoirMq5svGAlkyiHKErq6/zBWkRH/JZvgXdJGZx7xwCQ+jXkOde/rAsU3ux5w78Yo/jyg==",
+    "nuget_content_hash": "a90gW/4TF/14Bjiwg9LqNtdKGC4G3gu02+uynq3bCISfQm48km5chny4Yg5J4hixQPJUwwJJ9Do1G+jM8L9h3g=="
+  },
+  {
+    "id": "aspire.npgsql.entityframeworkcore.postgresql",
+    "version": "8.2.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 116530,
+    "sha256": "d3722c3d389bd56fbec66001d458fdb96f52f434338d042bbeb27d86b1ed6b2d",
+    "archive_sha512_base64": "PmIzf1XR1DuIrItXBSjnYpu0V3z+m3Ul+WOjvrXHDnBR8g4e3K2rkwYS1ZxYtRY2vfoAj/CtQEq9a5FCGvUJ7g==",
+    "nuget_content_hash": "G+f8AOVMjX2TD6B0dzykCG+oqI6yqZ6wYSzxeYzrg/LvfK/gjx0K21cYXbLfWfcc86RUNtuNB8qX00fahCEa+w=="
+  },
+  {
+    "id": "aspire.rabbitmq.client",
+    "version": "8.2.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 83579,
+    "sha256": "d2b503815f446a9372e0504627349fe33e2a700dfd81c0967509a27b9cc99868",
+    "archive_sha512_base64": "ysGUIPdjh0upBIlVhEu/y98O8Q5mBg/oeRvndD0VcnakgCjfh/Ti0mg4CHSQ27F+RlvLrWLumxM1pBu5r0fpsQ==",
+    "nuget_content_hash": "6jr52dC61omTjDQliR/J5Q7UZ14qxZFHP7GoL3T5Civb82tK/3i1iE9rYF8xE2sSPtx6Ve23wQh/QdM8xlr1BA=="
+  },
+  {
+    "id": "aspnetcore.healthchecks.rabbitmq",
+    "version": "8.0.1",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 47601,
+    "sha256": "da4f213a065fb55b077ec9cf3028a483c31cc287b88d2d672044a3112dcb64d8",
+    "archive_sha512_base64": "5On9Fn5zw1GomclekrQLr9LM+5gXkLzQgfA22e+dBOkLMhAa/AqT6mroaCOIk2Lm/HWLm3WFxTwh0t91x1cBwg==",
+    "nuget_content_hash": "m4gfYpt54csWtIED0bmHUfx/CLrj48cc4tZ6Ytz8taAC/5S0n6o3FsQanrua9gxCI0PC9gOpLfexJnVZnugw0g=="
+  },
+  {
+    "id": "google.protobuf",
+    "version": "3.22.5",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 1269363,
+    "sha256": "2ae3c2aa86d7eaf13d45812500df6fc3e14fa27162a66b3b904fdc44308b9924",
+    "archive_sha512_base64": "X2cKB5Y+kuT4+NvrJdZm/6yR4Y4/HgBLHg24nFNNLKjYWAlY3kCAvp9y3+ueaGbKQvOqfvZ9daseRZ0HpuQmoQ==",
+    "nuget_content_hash": "tTMtDZPbLxJew8pk7NBdqhLqC4OipfkZdwPuCEUNr2AoDo1siUGcxFqJK0wDewTL8ge5Cjrb16CToMPxBUHMGA=="
+  },
+  {
+    "id": "grpc.core.api",
+    "version": "2.52.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 294033,
+    "sha256": "21280ddf35b0bd5f2a0fb24591a62f78b6e47b4f7e52d501cb74eec7e6472cd7",
+    "archive_sha512_base64": "BJ2FFi7Ypeyzjv8LNrFTE91EdudWSobPDMJnrpQDWjOZShzdoax7qaD1peIw9gGc/Yexo/DDftL/GFVz4s/ALg==",
+    "nuget_content_hash": "SQiPyBczG4vKPmI6Fd+O58GcxxDSFr6nfRAJuBDUNj+PgdokhjWJvZE/La1c09AkL2FVm/jrDloG89nkzmVF7A=="
+  },
+  {
+    "id": "grpc.net.client",
+    "version": "2.52.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 793183,
+    "sha256": "e1185bf0f228576062a217d1c33c751980cf6dc7eac460262f6b81d1ab451539",
+    "archive_sha512_base64": "Icc3uve9uoAyfDnBlVvmpOUNkQC9vN2LJHHEWy1CPOx3PqrjkLdqafC9jPNWwmuD82ogbhCPQawZRXRv+UTAtw==",
+    "nuget_content_hash": "hWVH9g/Nnjz40ni//2S8UIOyEmhueQREoZIkD0zKHEPqLxXcNlbp4eebXIOicZtkwDSx0TFz9NpkbecEDn6rBw=="
+  },
+  {
+    "id": "grpc.net.common",
+    "version": "2.52.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 153836,
+    "sha256": "5e863e8edf8922de92cef0a35125ca29af50f01bb952b349bf6cf584204a0eb6",
+    "archive_sha512_base64": "rKi7ueulH4zfXXeHS72feM6lPgYsK12pA/FqrRMV4wDLnl5Vem5sTytCg+rxdvfqwHNGPRUvbsvlOg8wuPrnFA==",
+    "nuget_content_hash": "di9qzpdx525IxumZdYmu6sG2y/gXJyYeZ1ruFUzB9BJ1nj4kU1/dTAioNCMt1VLRvNVDqh8S8B1oBdKhHJ4xRg=="
+  },
+  {
+    "id": "humanizer.core",
+    "version": "2.14.1",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 538179,
+    "sha256": "117be88dd74fbbef492a0386f4d4908144df5aad51a4e630eda7710cf28327aa",
+    "archive_sha512_base64": "yzqGU/HKNLZ9Uvr6kvSc3wYV/S5O/IvklIUW5WF7MuivGLY8wS5IZnLPkt7D1KW8Et2Enl0I3Lzg2vGWM24Xsw==",
+    "nuget_content_hash": "lQKvtaTDOXnoVJ20ibTuSIOf2i0uO0MPbDhd1jm238I+U/2ZnRENj0cktKZhtchBMtCUSRQ5v4xBCUbKNmyVMw=="
+  },
+  {
+    "id": "microsoft.aspnetcore.authentication.jwtbearer",
+    "version": "8.0.7",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 72020,
+    "sha256": "581ea22e753a1b5aa1f261a6091b2b017acd269b14a46f1017fb89c9e99f3008",
+    "archive_sha512_base64": "7ISFpdBEK6Oy51v1DySh8ewvEJg5tiDb1yP8aKiW0jR3uTsvjrtoSnEIFQ+F1Jkmhv6ujs5UrR0CKWjwU6xp4g==",
+    "nuget_content_hash": "HXcmJizLBx9mP2XtHZZgvi3GZCrGg98PMQ9AozrF1/RqSffp9CqCiTdrz7TaFLqOUph/S4hqx/IJD18Al+zE+w=="
+  },
+  {
+    "id": "microsoft.aspnetcore.openapi",
+    "version": "8.0.7",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 77125,
+    "sha256": "360f753f53101543fe7c38b0cbd35bcd8dd3b1748620745f8cea1643a62b2714",
+    "archive_sha512_base64": "JIxs3UzetQKKdJPHrBcc+dUr8GUO8jrBqEh200ByzzvJzp8oziPqvk0ve8y0v98O5zm8uxoaNSnugtX9Dy5NlA==",
+    "nuget_content_hash": "9SBDNvlwA88r5oD7yUbTmwr9ylkmZWdPQgohBWCdz6cESDAo6JgCD5vEOZS/nq2WIL5SCn3/RamAStcdiRzd4g=="
+  },
+  {
+    "id": "microsoft.bcl.asyncinterfaces",
+    "version": "6.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 76354,
+    "sha256": "e3df87fe2170a7e01f0880af59caa8f6eb380b3c40a4f282dfb43912aaf0f895",
+    "archive_sha512_base64": "IhoFoMkQ96h7Yg2PODHtOStOuV0RK+4nTTXycAmtKiZEXenXzSNf5vtKA/JVCHS9o7493dlu2vnAhSqcI9ewmQ==",
+    "nuget_content_hash": "UcSjPsst+DfAdJGVDsu346FX0ci0ah+lw3WRtn18NUwEqRt70HaOQ7lI72vy3+1LxtqI3T5GWwV39rQSrCzAeg=="
+  },
+  {
+    "id": "microsoft.codeanalysis.analyzers",
+    "version": "3.3.3",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 1111022,
+    "sha256": "a64662820c0bc3c93e095497293cec546b13f8ae3d2f15d44b7547e4f365a426",
+    "archive_sha512_base64": "DUiW24r/nXMcWxyPc6SzdGDD8ICA++rA7PFpq/W9/5yamUd49FOBa4iOk52dDWFSRckaLkujH4XS6o3iInZxBA==",
+    "nuget_content_hash": "j/rOZtLMVJjrfLRlAMckJLPW/1rze9MT1yfWqSIbUPGRu1m1P0fuo9PmqapwsmePfGB5PJrudQLvmUOAMF0DqQ=="
+  },
+  {
+    "id": "microsoft.codeanalysis.common",
+    "version": "4.5.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 4738098,
+    "sha256": "aa8d6854d4c1f4920c10fa22219fb4daabc5fcef0fb2143fe604e3b18f625f42",
+    "archive_sha512_base64": "YfGqIGEhdnD6s+EEPlBotyrtQ5B4ZhlcaTIRQH4rPr1s2XYu0LPp7waWWjPTzj+wnIjzyQCtMv6wSFkiV1pB4w==",
+    "nuget_content_hash": "lwAbIZNdnY0SUNoDmZHkVUwLO8UyNnyyh1t/4XsbFxi4Ounb3xszIYZaWhyj5ZjyfcwqwmtMbE7fUTVCqQEIdQ=="
+  },
+  {
+    "id": "microsoft.codeanalysis.csharp",
+    "version": "4.5.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 10874098,
+    "sha256": "e5d6534bd3d8b58f37bf255ae5b74d1b75ca57912372799d75f52a5a6204dbd0",
+    "archive_sha512_base64": "aNffJrr5Ni7Cyrs1Q9H3pXCw80UFOiPo/utTF8ULo5KCW6+xcQ6+5ckp52LnSXgv0R6q2ztDciTr/Mugi5hfzw==",
+    "nuget_content_hash": "cM59oMKAOxvdv76bdmaKPy5hfj+oR+zxikWoueEB7CwTko7mt9sVKZI8Qxlov0C/LuKEG+WQwifepqL3vuTiBQ=="
+  },
+  {
+    "id": "microsoft.codeanalysis.csharp.workspaces",
+    "version": "4.5.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 1337444,
+    "sha256": "2a6cadd577dcb34ad2647bcdf4f1fde02280a28a8c4bd69b65063b12912a6f6a",
+    "archive_sha512_base64": "R0cD/EdjnhRqymI+LBVzTBcxZ3ieKLwuRvZbhpHYbG206UcjxGnizqPr0fg5X4Fq0Rk1C5GojpW2cG22/5dxSA==",
+    "nuget_content_hash": "h74wTpmGOp4yS4hj+EvNzEiPgg/KVs2wmSfTZ81upJZOtPkJsVkgfsgtxxqmAeapjT/vLKfmYV0bS8n5MNVP+g=="
+  },
+  {
+    "id": "microsoft.codeanalysis.workspaces.common",
+    "version": "4.5.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 4948883,
+    "sha256": "58cec05c96076a068fc76c1a8f6137da01b4a97aba2b1e19862abb626dd65cf2",
+    "archive_sha512_base64": "ZviZUskPrDdwLA3y0E++hWF2hXi6oKowqUciCyU8lS4Qn0u3nIUr1HHBatOVdZPbam5eRomURy9iENdC5qR1fw==",
+    "nuget_content_hash": "l4dDRmGELXG72XZaonnOeORyD/T5RpEu5LGHOUIhnv+MmUWDY/m1kWXGwtcgQ5CJ5ynkFiRnIYzTKXYjUs7rbw=="
+  },
+  {
+    "id": "microsoft.entityframeworkcore",
+    "version": "8.0.4",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 1275288,
+    "sha256": "9e4aeda2a1a7e3745d5634a5c1afe3ccb6a2c6767508d0c34efbd2b9b5264791",
+    "archive_sha512_base64": "MLnX2lacftDzXxX67hzJy7/P/N9Zzat+6GNs7HyPP/8CiUL6Go2+IqUFIwVKWPPycFxj/aAP5mXtPoFuIoJQJw==",
+    "nuget_content_hash": "/kyu9pXuxQvhg8RO/oN5Q5Og7cDIVvZtrt1z48rX7Yido+zEGkUkp3/Bjd9u45N2uuPPF8mn2pKDlAewCvv3/Q=="
+  },
+  {
+    "id": "microsoft.entityframeworkcore",
+    "version": "8.0.8",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 1275276,
+    "sha256": "c38349dcae68b7fa193b9c4819c54b13b9f8c7f2679b3d3f5587ee9a700272e7",
+    "archive_sha512_base64": "6yxYbPCdhMpKe0Z2S/C7IfJTNjSC24zOLTqx2x6NPNhbboTysPUTcPJQuUcX4qT7F1/am1DIJqHPwHXpUrcaJQ==",
+    "nuget_content_hash": "iK+jrJzkfbIxutB7or808BPmJtjUEi5O+eSM7cLDwsyde6+3iOujCSfWnrHrLxY3u+EQrJD+aD8DJ6ogPA2Rtw=="
+  },
+  {
+    "id": "microsoft.entityframeworkcore.abstractions",
+    "version": "8.0.4",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 58382,
+    "sha256": "cb05563a37ba76e55c27c812482e47111d943b4980cdf83a54cb6a96846641f7",
+    "archive_sha512_base64": "DeRYbkED9XwyNUnN9apTPFLbtYrT6AAQmk8nVg51rczXK/vY2aouYxEata9A52D86EgytRybGRrjlHGC6nqMpA==",
+    "nuget_content_hash": "S50pjtPNOvRktacaO6UAhvGCPMT56wxqEq8fQfcjaSUySPGba6mKWo6ackw6DdeAR1cA6U+U0uj27warA2KtJA=="
+  },
+  {
+    "id": "microsoft.entityframeworkcore.abstractions",
+    "version": "8.0.8",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 58368,
+    "sha256": "f77427bc11bd973f53b96c78a35caf12f58cab69378c3ec6efbc88f2997c873f",
+    "archive_sha512_base64": "LUcPX1jGJxyHVSq5W0SDP6HPiXd+ouuV4r+1bm3o8mA8NHVcDCzkeenPyFXwshhK7P8B1LlghnhnQEOv/LFDFA==",
+    "nuget_content_hash": "9mMQkZsfL1c2iifBD8MWRmwy59rvsVtR9NOezJj7+g1j4P7g49MJHd8k8faC/v7d5KuHkQ6KOQiSItvoRt9PXA=="
+  },
+  {
+    "id": "microsoft.entityframeworkcore.analyzers",
+    "version": "8.0.4",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 55756,
+    "sha256": "2aabfd6459759cc275851993de441b379bd2bccad1499e57385f70cf0e6c4bc0",
+    "archive_sha512_base64": "ePFOV6AbKxKG2F56cuUQ9zgSTmyZJf00wZZMSMxvD1IF3SN41ZO3qjJbfUIFKH81slNyKsTouZfdTE9maKplFg==",
+    "nuget_content_hash": "P8hfMZECdbgle4Us8HGRUKAjqVwgbtr5JqtCxqEoiVORrNQAmcpu3g1NKwTAoUsO9Z0QRgExtYoAmdggR/DkMQ=="
+  },
+  {
+    "id": "microsoft.entityframeworkcore.analyzers",
+    "version": "8.0.8",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 55753,
+    "sha256": "c63a9c71a4905bba498a7c163efd9e2ee540daf721209711ae86154dbcb04e74",
+    "archive_sha512_base64": "vtu9ahgo1UVgQzjAPSPTga3pXadFfTsvwv7gtBogog5GYKU5xfQrzMOg0fCVyvBUVRxLONJW5x33E/4E2YGYfw==",
+    "nuget_content_hash": "OlAXMU+VQgLz5y5/SBkLvAa9VeiR3dlJqgIebEEH2M2NGA3evm68/Tv7SLWmSxwnEAtA3nmDEZF2pacK6eXh4Q=="
+  },
+  {
+    "id": "microsoft.entityframeworkcore.design",
+    "version": "8.0.8",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 251263,
+    "sha256": "0717e0f7fc37fdb530b1680049fe5301e2ffec40810e9902532b53f9b2b0af1d",
+    "archive_sha512_base64": "AEx6eVrj+LoBlGqrWArWFc24orGZX8OHpcjJak7qAnUvnUYqTCqOs5ln/ATph8jGhQlwcuWY29M1e0Lsl8pDBA==",
+    "nuget_content_hash": "MmQAMHdjZR8Iyn/FVQrh9weJQTn0HqtKa3vELS9ffQJat/qXgnTam9M9jqvePphjkYp5Scee+Hy+EJR4nmWmOA=="
+  },
+  {
+    "id": "microsoft.entityframeworkcore.relational",
+    "version": "8.0.4",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 946052,
+    "sha256": "4d13ff228afbd3c1108c3d37186c4aa26d9e2cec5c51837532816ace4de5629f",
+    "archive_sha512_base64": "Xj2nYvJc3qhECVo8gU0xWYZjzqrCf9rJJ8GnqdLKkbvudE783wq07uKs66JMchJI5QcGCKB8tsFFoYEszJ9d+Q==",
+    "nuget_content_hash": "aWLT6e9a8oMzXgF0YQpYYa3mDeU+yb2UQSQ+RrIgyGgSpzPfSKgpA7v2kOVDuZr2AQ6NNAlWPaBG7wZuKQI96w=="
+  },
+  {
+    "id": "microsoft.entityframeworkcore.relational",
+    "version": "8.0.8",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 946151,
+    "sha256": "65d849e3252ec68d4d20ccffa82ac328816f60600784308db00572fb4966fca9",
+    "archive_sha512_base64": "sx8Yb6YjM3UzOKt/2XEwEv/Jo37I14HLk+NuPr4AmWhcpKX83Hjnq6G0Fek2iBBdCjflEby1d92ee8QDBKDK7w==",
+    "nuget_content_hash": "3WnrwdXxKg4L98cDx0lNEEau8U2lsfuBJCs0Yzht+5XVTmahboM7MukKfQHAzVsHUPszm6ci929S7Qas0WfVHA=="
+  },
+  {
+    "id": "microsoft.entityframeworkcore.tools",
+    "version": "8.0.8",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 278667,
+    "sha256": "cc68b0ad7cd43906a5be6df8e779058608860a2878803a5ecf3cffedeed99abb",
+    "archive_sha512_base64": "H2hpj1t4zQ5kvUi7KSFsU6l1xKS7H4ekGH0YJEssnrqX4eCckhiENMvUn2xxwlspvbfHuvHyY25jCK87PoHT5w==",
+    "nuget_content_hash": "wjDNbLJk86QpZt2JxJuNVzpBKIbEQsgcJYHGeIFTBuK6NEgvJvyxgneg059HfSJmTVdInZ61lTO4sJGCfFr7+w=="
+  },
+  {
+    "id": "microsoft.extensions.ambientmetadata.application",
+    "version": "8.7.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 141277,
+    "sha256": "0e03ae85fbcbb70db7194c40077f4d6481072014e107f8b42072ec8d95a71b0b",
+    "archive_sha512_base64": "a7El86CP+Wf4LPG0rmj4hDv0MPbM+8vsKtKlAwWtdjAannDGF1aawWRSliWC2Rs8WXP/AVAsVi68BP+jDXLUbA==",
+    "nuget_content_hash": "Rz2ZAmDxyZ33IwtGvgHFvpRkYAmOWTIjpUeGUX83mWtjnjxFTeq3R5QxQNWBdL3THnaYzk6Ylkgr6NQE9eYjPw=="
+  },
+  {
+    "id": "microsoft.extensions.apidescription.server",
+    "version": "6.0.5",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 3615948,
+    "sha256": "4498c15b3f941f1910136b3b09e198753676d7c982b9faf1974781ca465d22de",
+    "archive_sha512_base64": "o76LJqs3WNVH3rVgykGP8jjVw9oHuuW96jH/xYdoN9s1bgpbVUkyhsg4bz4a1qpbx5YNe5EoEZywtu/zFLYLHA==",
+    "nuget_content_hash": "Ckb5EDBUNJdFWyajfXzUIMRkhf52fHZOQuuZg/oiu8y7zDCVwD0iHhew6MnThjHmevanpxL3f5ci2TtHQEN6bw=="
+  },
+  {
+    "id": "microsoft.extensions.caching.abstractions",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 160393,
+    "sha256": "c46a4aaf2c10bd4d569bf5a895823180760415f824346789f8619ce434f7a612",
+    "archive_sha512_base64": "H9wwkSzB6tk2L3CFPeIZqdxwcLwo9iHjhxhWcOYFdG7i8TsN+dsD0LH4kZ1L2q1A6+n4ID46DLthFFqohIvhNg==",
+    "nuget_content_hash": "3KuSxeHoNYdxVYfg2IRZCThcrlJ1XJqIXkAWikCsbm5C/bCjv7G0WoKDyuR98Q+T607QT2Zl5GsbGRkENcV2yQ=="
+  },
+  {
+    "id": "microsoft.extensions.caching.memory",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 187247,
+    "sha256": "45441ed9580e01333d26467fc069bd9ab78aa0298e4b8a4fcafc89581a8c682f",
+    "archive_sha512_base64": "ueo2wtpMR+3s8zb9PH9b8szjQ7Mzp8apjmQV3Sa0+FdMk348y7GVVuFtPeIulWS+qr2/qU/jI5ksvHtH+QVZ+Q==",
+    "nuget_content_hash": "7pqivmrZDzo1ADPkRwjy+8jtRKWRCPag9qPI+p7sgu7Q4QreWhcvbiWXsbhP+yY8XSiDvZpu2/LWdBv7PnmOpQ=="
+  },
+  {
+    "id": "microsoft.extensions.compliance.abstractions",
+    "version": "8.7.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 154466,
+    "sha256": "27639bbb905ee8abaf2a94b35e24fdb0b472ab81349568f0128510298087c4c0",
+    "archive_sha512_base64": "x4ip052Bwk+hRmN44uoK1GRIiyFvZfOcFpgaMvZ0i2NrXXMMHvPfuXqhh4gqFYbhWb1xwxiDQ/btyawJAPJE8Q==",
+    "nuget_content_hash": "3VWIQcw2rrej4RJISIGJA5TNFvkCOPN/vlgf0eFvpjQ2YclWakBrWmEMC+9uuBBvnr5r85H3WiWZlr+2JWqnLg=="
+  },
+  {
+    "id": "microsoft.extensions.configuration",
+    "version": "3.1.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 69294,
+    "sha256": "288d565ef9c5fd77bd70a4dd0e3ce6d2f77987d6e633edca8a7b9696c17f5fe7",
+    "archive_sha512_base64": "MUBW1eAqbVex8q0bnCxZ0npzJtiKCMW5OHWKCBYtScmyJ+iTVP9Pv6R9JnnF0UY+PspIkDPNXqo4pxQi/HV+yw==",
+    "nuget_content_hash": "Lu41BWNmwhKr6LgyQvcYBOge0pPvmiaK8R5UHXX4//wBhonJyWcT2OK1mqYfEM5G7pTf31fPrpIHOT6sN7EGOA=="
+  },
+  {
+    "id": "microsoft.extensions.configuration",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 191129,
+    "sha256": "f413ec012971ad5f229663028dd6f74e251c9b9bc56719019c023f7cd0521320",
+    "archive_sha512_base64": "2kio7ztM0qa+t4AIOC2fzNzdQv86cdnvxaxp1AIEISlKyVsHzxFSA0GmnuJBklzQQNSaOC3yQ+L6GU9olu+XNA==",
+    "nuget_content_hash": "0J/9YNXTMWSZP2p2+nvl8p71zpSwokZXZuJW+VjdErkegAnFdO1XlqtA62SJtgVYHdKu3uPxJHcMR/r35HwFBA=="
+  },
+  {
+    "id": "microsoft.extensions.configuration.abstractions",
+    "version": "3.1.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 60288,
+    "sha256": "18cc6f7f4880896516a346b0943733cdcc4da3cf8c21304ba74fd2aaa628f0b8",
+    "archive_sha512_base64": "E+vpNfcaVEfs9XKdF3gW28ALBS7YkIxzcfYq7zUQYUAx9ieeaU1uo7rtFByRZFVoyYKQ6URdYnjbJFXigTbR1g==",
+    "nuget_content_hash": "ESz6bVoDQX7sgWdKHF6G9Pq672T8k+19AFb/txDXwdz7MoqaNQj2/in3agm/3qae9V+WvQZH86LLTNVo0it8vQ=="
+  },
+  {
+    "id": "microsoft.extensions.configuration.abstractions",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 149230,
+    "sha256": "e1e0690e47fb309a334d99cec10bf071f81129019c3577b42bf905fa1e5197ca",
+    "archive_sha512_base64": "MxYXCRCpQpDI30/tJvqISkfdm/l063rSI2jVpjMIZgoB0tq0pEZiBh2srsz0ugnNq/zNRjb3arMXi+zsWtMaLw==",
+    "nuget_content_hash": "3lE/iLSutpgX1CC0NOW70FJoGARRHbyKmG7dc0klnUZ9Dd9hS6N/POPWhKhMLCEuNN5nXEY5agmlFtH562vqhQ=="
+  },
+  {
+    "id": "microsoft.extensions.configuration.binder",
+    "version": "3.1.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 62811,
+    "sha256": "fc1ed68cf64fbd133e08f81f68242e9d28b69a97251f8a2bac5c4718bb3c528e",
+    "archive_sha512_base64": "llzE7nOPkskFlJLeYstphNtp1CDYJf+xO/A3k99IGuoZim80PZIoB2WfWrB8TpRArQedvXj1iYzsJaWakCRaDA==",
+    "nuget_content_hash": "o9eELDBfNkR7sUtYysFZ1Q7BQ1mYt27DMkups/3vu7xgPyOpMD+iAfrBZFzUXT2iw0fmFb8s1gfNBZS+IgjKdQ=="
+  },
+  {
+    "id": "microsoft.extensions.configuration.binder",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 385489,
+    "sha256": "19a9df2271b3ce83766ca78dc0e37cfc79da9abea5ed14e960b038f423570fd4",
+    "archive_sha512_base64": "mlkx6dQXuM1JA/6LlKqOwHofDUM4Zxe+OBcaXrQysXZdfalefwkuaZfszz9IKNVxYxemj8yP7TLwrU8fgrtyIw==",
+    "nuget_content_hash": "mBMoXLsr5s1y2zOHWmKsE9veDcx8h1x/c3rz4baEdQKTeDcmQAPNbB54Pi/lhFO3K431eEq6PFbMgLaa6PHFfA=="
+  },
+  {
+    "id": "microsoft.extensions.configuration.binder",
+    "version": "8.0.1",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 386980,
+    "sha256": "2983d0618b298811a27b3ec9b219848f2e2416dec04b357141e56cca0204bc70",
+    "archive_sha512_base64": "M+6xd0yKpH47JxXWPa0CViY0CnBXJGITLOjq9gtuqz1xTVGr7+8w53gzh+IFF9K+88rKO2ZeI0gObfCeDhyrbw==",
+    "nuget_content_hash": "2UKFJnLiBt7Od6nCnTqP9rTIUNhzmn9Hv1l2FchyKbz8xieB9ULwZTbQZMw+M24Qw3F5dzzH1U9PPleN0LNLOQ=="
+  },
+  {
+    "id": "microsoft.extensions.configuration.binder",
+    "version": "8.0.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 389312,
+    "sha256": "68607456ea02df861a74012aaf0a1a5cb739aa56b9e69b300d5db12d2991ed21",
+    "archive_sha512_base64": "Y/XV0PXfHH+QoTjHXhTYHzWYr3jCxzanrvUDX/z51ArFoTNXGTWggpDOuS23I1fIIDJhFl+PfwV8RQssYR9sKg==",
+    "nuget_content_hash": "7IQhGK+wjyGrNsPBjJcZwWAr+Wf6D4+TwOptUt77bWtgNkiV8tDEbhFS+dDamtQFZ2X7kWG9m71iZQRj2x3zgQ=="
+  },
+  {
+    "id": "microsoft.extensions.dependencyinjection",
+    "version": "3.1.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 177654,
+    "sha256": "4bbda1cc30185b3adf087e492c9051b703c433f5e3875ec7c1c2ae037c0b86f5",
+    "archive_sha512_base64": "0fSx91hwy6L68zPHp+jTvtvOaUJLBoQJV/O+LpXBP/Q+m94U1I77mCZW8xIImX6srpyxui1Us61tSSZLrXJ8rg==",
+    "nuget_content_hash": "KVkv3aF2MQpmGFRh4xRx2CNbc2sjDFk+lH4ySrjWSOS+XoY1Xc+sJphw3N0iYOpoeCCq8976ceVYDH8sdx2qIQ=="
+  },
+  {
+    "id": "microsoft.extensions.dependencyinjection",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 341717,
+    "sha256": "faa20347c851ceb7821cd103b5470f7d51d076eaf358fa3f9aabe2087efcf844",
+    "archive_sha512_base64": "ljka9K4FQvSulsgAnJ/78wSsrfR2zaJiqOpz4zsXJSlUEEQYbFnWVjd7st5CyfWSXgYyqB9udRbypkbokW8W7A==",
+    "nuget_content_hash": "V8S3bsm50ig6JSyrbcJJ8bW2b9QLGouz+G1miK3UTaOWmMtFwNNNzUf4AleyDWUmTrWMLNnFSLEQtxmxgNQnNQ=="
+  },
+  {
+    "id": "microsoft.extensions.dependencyinjection.abstractions",
+    "version": "8.0.1",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 276691,
+    "sha256": "9734d82e9443022df05bdb91ae44cd26d32669876d1892477412db50abbad0f3",
+    "archive_sha512_base64": "gRjamTLaOCscIjefkWm+qTyrzxf11WwbZhb64jsb8UtKOFObf4QX9j8WGxQCHyY0355Pn6YvX8hGZwGKHZLJZw==",
+    "nuget_content_hash": "fGLiCRLMYd00JYpClraLjJTNKLmMJPnqxMaiRzEBIIvevlzxz33mXy39Lkd48hu1G+N21S7QpaO5ZzKsI6FRuA=="
+  },
+  {
+    "id": "microsoft.extensions.dependencyinjection.autoactivation",
+    "version": "8.7.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 128067,
+    "sha256": "063d58f86baa5d973075bb58e42c21afcfc2d496735131a9d5144f68dafd85f8",
+    "archive_sha512_base64": "71GXmtWIBeStlXsZM379Uzam4aYZooAjZpQDnmdkKqgt6yKf6Fn65dqtTog6RyHq5+Wb5z85AZOWYYu3m2v5SQ==",
+    "nuget_content_hash": "jfIh9IL5RTF+BYLpkk63xChQBJyodArzTjF6U12Gke78KVL01HW/tYf73SuQpJ20/LBNO/L6PzVBNFqHNbzraQ=="
+  },
+  {
+    "id": "microsoft.extensions.dependencymodel",
+    "version": "8.0.1",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 262218,
+    "sha256": "9bc75a5d12b5427f72d9cf129ad5aef72b0b1f0149b445a2510a009cc6a5c3bb",
+    "archive_sha512_base64": "Ks5hYbFUnmTJsxduqiAHp236jWtMITSo7UBj5oRXJGooWr9Ckrayp2oFtZxvbKffE+7SWRAZp/aDaYV7U5+idw==",
+    "nuget_content_hash": "5Ou6varcxLBzQ+Agfm0k0pnH7vrEITYlXMDuE6s7ZHlZHz6/G8XJ3iISZDr5rfwfge6RnXJ1+Wc479mMn52vjA=="
+  },
+  {
+    "id": "microsoft.extensions.diagnostics",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 161630,
+    "sha256": "7c12e56fdc407d38196f572907116cffd780f81941bc5f178340cc901a9d1c3e",
+    "archive_sha512_base64": "5PPIUzwNmj/VQ+M4NSMKcVVDfhl+mwdIu+9v+C7lFWeFE/b2DBTL33qadO5me/5yBotLB+cUjWCDNMWPfaQtWw==",
+    "nuget_content_hash": "3PZp/YSkIXrF7QK7PfC1bkyRYwqOHpWFad8Qx+4wkuumAeXo1NHaxpS9LboNA9OvNSAu+QOVlXbMyoY+pHSqcw=="
+  },
+  {
+    "id": "microsoft.extensions.diagnostics.abstractions",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 152735,
+    "sha256": "5120f9b9939a6a132a8babbba30356c7f2d1e040eb3b0a8fac00229bb891a496",
+    "archive_sha512_base64": "p13QQOPgPpDIuqAGvVaduf0JmDz5wnv8skbZanPiWVzqeu5hFkOJifjfMbVrx/5q2qen/LarlexbHWTQsX/2Fw==",
+    "nuget_content_hash": "JHYCQG7HmugNYUhOl368g+NMxYE/N/AiclCYRNlgCY9eVyiBkOHMwK4x60RYMxv9EL3+rmj1mqHvdCiPpC+D4Q=="
+  },
+  {
+    "id": "microsoft.extensions.diagnostics.exceptionsummarization",
+    "version": "8.7.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 131175,
+    "sha256": "19e260501e385e8484aafbb48b06be31942736558e41c302a626b24a5eb97805",
+    "archive_sha512_base64": "m1o+bV7M7FUaAqYuuj+5tr+8u/wsPGMEPxPM7RFyqm7NC4VOMCun/SSn1rNYfjwQkW+l9QzC8o8IXPtSoqO4bw==",
+    "nuget_content_hash": "duqgZC2+Dymgw0FFQX9TWpr/FWc8bPZyzgye7W4qGRMG6d4VlD+jnZLFCW/OqFzyMa+hnYD8/sJNLSpinYQwCA=="
+  },
+  {
+    "id": "microsoft.extensions.diagnostics.healthchecks",
+    "version": "8.0.8",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 140031,
+    "sha256": "8e206bfbebb893a4782406b81552e2b708227b4e59458622f03e242147b3faac",
+    "archive_sha512_base64": "AbjovcIt/YGpQm9CeEbW5lkBVD6I1xKbAw8yqpGnn22c5H1urEjvSaCLraqBw133rXklstyEb2jHcqB+D4xZXw==",
+    "nuget_content_hash": "Wg8OpwQgQLuYZQlSyNQSjp9GMubE0DKU/g5BTv0nWlShp8qm8stzV+cJRcSe/6l+Kk9XkdIfW7qbwYWI2wKYwA=="
+  },
+  {
+    "id": "microsoft.extensions.diagnostics.healthchecks.abstractions",
+    "version": "8.0.8",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 95577,
+    "sha256": "a2f27311f85d2e13e93c7ce183cb81e9bfb650566a29c8dc8806230f6a1f1930",
+    "archive_sha512_base64": "xav+P7+RW+U2YYzSz7HyWtW3h4CNgtB73GaOljBw9bsNIut7nW7L/+JialD9YUWdeWC0TrxN8/2sz+8Q0dYztA==",
+    "nuget_content_hash": "KcX0+6EeNcN3EpoIoLVh42s72n/6LWCmWKQwf3+gcl3ovIWPO27eikrRW8M8n86Rpto9mSzk/4ag/3CVX3SpJg=="
+  },
+  {
+    "id": "microsoft.extensions.diagnostics.healthchecks.entityframeworkcore",
+    "version": "8.0.8",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 56345,
+    "sha256": "a1ba04eacd5f0bc40317ae78f96d7cf7f11da9bf1d2a7f6bdd4e0603f4f4b007",
+    "archive_sha512_base64": "yB1Gj0J2TLycwlwQWQwgk2F9bAmrbitoIhEji+v0HVb6L38enpMUGUOgSHVZX91dL7Hkfx96vxNlVAEaqvdGBw==",
+    "nuget_content_hash": "eR1OzqieTUqfb8fI3COWjS6lzL4X54rplkA6LKHlUzM5M8mnm+NKb+YXaOwyPZP6ecP4GqSJAYRXt3eN31+PXg=="
+  },
+  {
+    "id": "microsoft.extensions.features",
+    "version": "8.0.8",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 95661,
+    "sha256": "758ee44e499b8917a488a1fbfaa0505b2e8b9fbeed344d6ef40846ce25b7a57c",
+    "archive_sha512_base64": "YwyvM2g0E4to7REccHBjuAuqH1swLL7Kj3TNJRlA370lIQOWvnxrOy50x/4tKO2NyVC7P00lnccy6BTT2TSA+g==",
+    "nuget_content_hash": "twQ7HVVebAchBSLM5VsPeS/rwri3HJwxv22+wUQppr0ByUke97Ipw38gwGqFAnG2dz08N5LicKW2wpNtRng6Fw=="
+  },
+  {
+    "id": "microsoft.extensions.fileproviders.abstractions",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 113833,
+    "sha256": "b904979ade3b5f61c6a159e26af8cb2026cfb43d9179039840c832de5d31b8c5",
+    "archive_sha512_base64": "/pqhjy6BlpTyDjIsk+B14nvuLVfd1TgGJPxIqVZpxSbCcKtcdPWMakch0Y7NtbL+vwMV+HlFha5lYXgxRZ4qCw==",
+    "nuget_content_hash": "ZbaMlhJlpisjuWbvXr4LdAst/1XxH3vZ6A0BsgTphZ2L4PGuxRLz7Jr/S7mkAAnOn78Vu0fKhEgNF5JO3zfjqQ=="
+  },
+  {
+    "id": "microsoft.extensions.hosting.abstractions",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 230753,
+    "sha256": "d09071fb0c2de69d523df3b89b8f4ac4d3973c0cc053403ef2d11cfe2b6fa501",
+    "archive_sha512_base64": "Z4jBbBObokHPLGXk3tELitizhgK0SQpf8n3VKwLJAIO3zUDHtPrEiu2UdC9lRdqVmHC12Im0EHiyJwis12HaZg==",
+    "nuget_content_hash": "AG7HWwVRdCHlaA++1oKDxLsXIBxmDpMPb3VoyOoAghEWnkUvEAdYQUwnV4jJbAaa/nMYNiEh5ByoLauZBEiovg=="
+  },
+  {
+    "id": "microsoft.extensions.http",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 304663,
+    "sha256": "520963ca938b95dd652fb93b8759e86b3373bf2107209c3eafeeae1b3b9c1526",
+    "archive_sha512_base64": "yQptohoBXO60+HhhBrjxwS/tFOwvOsClhGCAYghRa+Y0VuUeTLXuCi8pntIfCb0DvWDV5KZR6t8UVmPAUP3u8Q==",
+    "nuget_content_hash": "cWz4caHwvx0emoYe7NkHPxII/KkTI8R/LC9qdqJqnKv2poTJ4e2qqPGQqvRoQ5kaSA4FU5IV3qFAuLuOhoqULQ=="
+  },
+  {
+    "id": "microsoft.extensions.http.diagnostics",
+    "version": "8.7.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 316560,
+    "sha256": "8ce6b443a4c723bf15b81275335ab565d5309509a8af0bf2a34ca6e3e999aa06",
+    "archive_sha512_base64": "kkOYdLy+bm+jATHZDy1gY+onE5i+TgSi9dglrX/CRP9uIIrpMv6d4WlXn0mbZieSEUaz20N+idBPMc4P3XL7eA==",
+    "nuget_content_hash": "YQi1U9CAKEx0vLt0by94HSGnlLRlM6bQQ2J9gnDpMnz3lrEe74RxJKDtsneFoKLFRGPttdRzvFzfSsSF7t9sZg=="
+  },
+  {
+    "id": "microsoft.extensions.http.resilience",
+    "version": "8.7.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 337123,
+    "sha256": "aa9eb01d495bebfcca6cc9fd5c939e60bd2636b455bdb1c3a87f0cacba171879",
+    "archive_sha512_base64": "6Yy+hG75xOI9uzEwPmtE54rPmhhAIwUiB1pV5Fngb5rAAsKoQN7rn7HTRxFrRuTPVix+Z07HesHQ5rnndifJIA==",
+    "nuget_content_hash": "vrFhj5GD9g0q4jtt+Xb6X3alu4d7g5LrDD6mPCmz3VE4wW4T7WSXzio9sXLbv5cptvdO09jOU1HQ0ey96iSbzQ=="
+  },
+  {
+    "id": "microsoft.extensions.logging",
+    "version": "3.1.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 72799,
+    "sha256": "043aecaa088b600a6120e96712e5f2ea22e8103ff29053b9de67ab1c24867eb4",
+    "archive_sha512_base64": "/SDhPykIshJ0bwuH32hLs8o1mfQM63K3gTvjQ7fb701oZd2Dw3DZ/3GfiDZvSZjO+kgSIukm2yfazCSTthDUFQ==",
+    "nuget_content_hash": "P+8sKQ8L4ooL79sxxqwFPxGGC3aBrUDLB/dZqhs4J0XjTyrkeeyJQ4D4nzJB6OnAhy78HIIgQ/RbD6upOXLynw=="
+  },
+  {
+    "id": "microsoft.extensions.logging",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 232520,
+    "sha256": "31e8746745fb2b23841b897445605cb871e285c00172f0b27d45e06ac990f75a",
+    "archive_sha512_base64": "qjBXbEKN/2m6xfXXFyGvbE71g7xSTtvQqUtJy9gPaYkFAhJg4aQywy5tSM5aMPaCLCCfEdz3yBmrofqDR5JbBg==",
+    "nuget_content_hash": "tvRkov9tAJ3xP51LCv3FJ2zINmv1P8Hi8lhhtcKGqM+ImiTCC84uOPEI4z8Cdq2C3o9e+Aa0Gw0rmrsJD77W+w=="
+  },
+  {
+    "id": "microsoft.extensions.logging.abstractions",
+    "version": "3.0.3",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 55238,
+    "sha256": "5056b08020216cde470ad272dfd5cee2ccf937f3ff672aecd2eaab40773848f2",
+    "archive_sha512_base64": "XYSLba1MpiRQRb3ZNTG773CxYIzqsRVOQgH+gQXHKckgzGvefmEC0i0ZuEsmiSVtUd8Z4GducTKyIQ5Ok868DA==",
+    "nuget_content_hash": "m2Jyi/MEn043WMI1I6J1ALuCThktZ93rd7eqzYeLmMcA0bdZC+TBVl0LuEbEWM01dWeeBjOoagjNwQTzOi2r6A=="
+  },
+  {
+    "id": "microsoft.extensions.logging.abstractions",
+    "version": "3.1.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 60880,
+    "sha256": "0f7187206374afaccb1c73f6ff98edea1074a0cbd1ca5e72b2f56b3d59a6caff",
+    "archive_sha512_base64": "MDsnSaVLvmg1BuiYHDnjw6n3agi8brm9fKcgQHnGqIxoGRpSR2VujJE4Yzvhp3WCBbO6uS/KSh46d0uWMV5qYw==",
+    "nuget_content_hash": "jjo4YXRx6MIpv6DiRxJjSpl+sPP0+5VW0clMEdLyIAz44PPwrDTFrd5PZckIxIXl1kKZ2KK6IL2nkt0+ug2MQg=="
+  },
+  {
+    "id": "microsoft.extensions.logging.abstractions",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 795935,
+    "sha256": "26675d8de83c5394be8814f046554054b7881f1738cabacd82a54c381ec48cce",
+    "archive_sha512_base64": "UKCt2W0w2QWA+44ColzqCqFfTSJ0Qnm1rP4YzIVot0QCqgYtXbE8xYh6CL/STgfLyIsvwQ7o7sLDft87zaf4pw==",
+    "nuget_content_hash": "arDBqTgFCyS0EvRV7O3MZturChstm50OJ0y9bDJvAcmEPJm0FFpFyjU/JLYyStNGGey081DvnQYlncNX5SJJGA=="
+  },
+  {
+    "id": "microsoft.extensions.logging.abstractions",
+    "version": "8.0.1",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 800001,
+    "sha256": "4d871edeabccafdd896c067ad804c1b2871a1f48e8273c34a71d2d60667d3745",
+    "archive_sha512_base64": "yOD9sjDgEz8uPi+E8wAlj0NI/DSvI85ZfPEkRuDpFxHLTU0P7zMz3jrCOkngBqnu82uvldK1t0ScPXVabVXARQ==",
+    "nuget_content_hash": "RIFgaqoaINxkM2KTOw72dmilDmTrYA0ns2KW4lDz4gZ2+o6IQ894CzmdL3StM2oh7QQq44nCWiqKqc4qUI9Jmg=="
+  },
+  {
+    "id": "microsoft.extensions.logging.configuration",
+    "version": "3.1.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 56992,
+    "sha256": "b0fc6be5dce46a8eed11d0eac3962632ef1759c4a354fb43ce93022964497d01",
+    "archive_sha512_base64": "b8T1AykrvxEYfB7w+W7WC9QB42/gaGQQ8KH4zz/fYvNbBP+NtC4nWf6Q4HopFo5Qg5ros4DoX0hp6YXUq6GLZw==",
+    "nuget_content_hash": "yW3nIoNM3T5iZg8bRViiCN4+vIU/02l+mlWSvKqWnr0Fd5Uk1zKdT9jBWKEcJhRIWKVWWSpFWXnM5yWoIAy1Eg=="
+  },
+  {
+    "id": "microsoft.extensions.logging.configuration",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 143523,
+    "sha256": "9b39acb4db158ca4f412d41c740ba419189f0f7d13f3604c198952bbc9382bb5",
+    "archive_sha512_base64": "psdIew2qu/eYdJbs5zazosUEKY2nYsMAk5goUPw3htffbv2S2l/njX7xlK19PiYyyPU5jKcOpsnrzB/Bx7ykGw==",
+    "nuget_content_hash": "ixXXV0G/12g6MXK65TLngYN9V5hQQRuV+fZi882WIoVJT7h5JvoYoxTEwCgdqwLjSneqh1O+66gM8sMr9z/rsQ=="
+  },
+  {
+    "id": "microsoft.extensions.objectpool",
+    "version": "8.0.7",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 92014,
+    "sha256": "fc4117a6f35d759930e206cf5c816702d93c5f29d1e10f4c8edf8b50715439f9",
+    "archive_sha512_base64": "gQPsicWS5ovI5dI12v6rFWr1R2dI88vCB5hdj8cQGSaL+WCN+PqNcqzrIiGQsKmniHeLCi0xEFV7KfuNTh7rHg==",
+    "nuget_content_hash": "2yLweyqmpuuFSRo+I3sLHMxmnAgNcI537kBJiyv49U2ZEqo00jZcG8lrnD8uCiOJp9IklYyTZULtbsXoFVzsjQ=="
+  },
+  {
+    "id": "microsoft.extensions.options",
+    "version": "8.0.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 494417,
+    "sha256": "02372575d75d76d37ff5a1fda60ec2944672716b451cb8bd20f7b518684d432b",
+    "archive_sha512_base64": "zAwQM2WAyVGXQKBCseQtORvLMrY3MhY64RYeHFtVpM1Kc24ZAusqTbuJ14SwrPWEtQQrTzSBph3TCk4in7UjxQ==",
+    "nuget_content_hash": "dWGKvhFybsaZpGmzkGCbNNwBD1rVlWzrZKANLW/CcbFJpCEceMCGzT7zZwHOGBCbwM0SzBuceMj5HN1LKV1QqA=="
+  },
+  {
+    "id": "microsoft.extensions.options.configurationextensions",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 135412,
+    "sha256": "03905bcf0d6488d9208ab939c7c932c7083d94b4dc4a78288de0fea1ca46d512",
+    "archive_sha512_base64": "XDKuZ65OhzIWu77BVVR3jgrL68KDhiot68sRqZXEKl/XX5Q2yNpCGqUbxcEttObE6C8S2h/5QrxabhqM88d6fQ==",
+    "nuget_content_hash": "0f4DMRqEd50zQh+UyJc+/HiBsZ3vhAQALgdkcQEalSH1L2isdC7Yj54M3cyo5e+BeO5fcBQ7Dxly8XiBBcvRgw=="
+  },
+  {
+    "id": "microsoft.extensions.primitives",
+    "version": "3.1.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 79908,
+    "sha256": "2bf703abe2cc7cae1c042bca5a4996002f8807aa445a8951d49e732fad103ef0",
+    "archive_sha512_base64": "q9gwa8SBwapqwBZXbivmvkMyA3r4Da5AeJZydoTnmdUUevL/85oF9b4+hkOR1XU4l7fzXYxX/HIh9cR4PgAs5Q==",
+    "nuget_content_hash": "LEKAnX7lhUhSoIc2XraCTK3M4IU/LdVUzCe464Sa4+7F4ZJuXHHRzZli2mDbiT4xzAZhgqXbvfnb5+CNDcQFfg=="
+  },
+  {
+    "id": "microsoft.extensions.primitives",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 209772,
+    "sha256": "154f2a8f70d1f1b0dd73573e59e199c7f3c265eaaa9ddc1e64cf5ea5ca578d2a",
+    "archive_sha512_base64": "H1R1yj084YRjRW3RNa+sUC1vgv6m5OSBSmH4ZhbDSN7PKLc9FcK7J20aPAOepgZPdeEyn286ZMqjUg1wq5LDLQ==",
+    "nuget_content_hash": "bXJEZrW9ny8vjMF1JV253WeLhpEVzFo1lyaZu1vQ4ZxWUlVvknZ/+ftFgVheLubb4eZPSwwxBeqS1JkCOjxd8g=="
+  },
+  {
+    "id": "microsoft.extensions.resilience",
+    "version": "8.7.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 125810,
+    "sha256": "141d6333bb3d254b189541e597baa70c352528c6daebb133d26fcaf2893e0f21",
+    "archive_sha512_base64": "XCD0194IHkTd2ZghDx6C39yEyukR6JgbJ0wlHvSgCNYlMh++Wrpa87YNS9B6JWKV8ENmCuckV/108bonEvPycA==",
+    "nuget_content_hash": "gUEr6idOLtR9oGZVkqgMnjkJ+5Bd8NpBY0H4sgZka3f16OiERSdyzJuXJyV0aEZUVY4Y90GxmaXcjS6HX9+AkA=="
+  },
+  {
+    "id": "microsoft.extensions.servicediscovery",
+    "version": "8.2.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 94749,
+    "sha256": "9f7e20dceadd29790374a6f3e93b8867b5584037b64223ed6c41f0b1551176cf",
+    "archive_sha512_base64": "Ndfnh/XuPgWCWNozSQXWcyzBJDzMCd/Omtl61ufwnmh6dWnWynDK4e7DS4azXrQF4ps/O6cDxjgJZ3xe4S5bag==",
+    "nuget_content_hash": "Oujamcxcl+ozM7xF659WrtV5mqg+npVq8TBZeVr+yzcnHaqSAWTQJtJ029KZ1+jxFFruMlMrICzMmNNjRmMomw=="
+  },
+  {
+    "id": "microsoft.extensions.servicediscovery.abstractions",
+    "version": "8.2.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 58274,
+    "sha256": "2818fcb1b721c893b7ecf2f5cd055212202436010a79cef9adc65db7908a3183",
+    "archive_sha512_base64": "msjeW24Ut8HWLrkI6A1x3FNXDiNYEhILJok5JDL+4Uv25nyVVQH8J0myJGhylDMvspAU1I7pmnlybttUajfEIw==",
+    "nuget_content_hash": "sX8DAfQR6HWX+o35nK3WRoJ4RHDazco6wvIA7Q/Lhz8IA64yZiIy92+CO5mjqCsDhgko9bWzalx9dYoqaJUO7Q=="
+  },
+  {
+    "id": "microsoft.extensions.telemetry",
+    "version": "8.7.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 323262,
+    "sha256": "8eb2b5e97fd84bab35d7d84b0be7a9803e38358cc3a09efc5cb56b515fe8f49d",
+    "archive_sha512_base64": "HfVxFm7v/XufG+GJea5tRKynKFrT5BszR60C+Imo0E6Qzxa7jVG7eUJg8wyRmrGDa8qhcxiD31pDOkJN9HCZtQ==",
+    "nuget_content_hash": "SEm4GK+HW5XFy7hEXu56sGF3gPdbTu4iYBj+P7KinhrmZ2VqzdoR4wHMierCq2D+5VM0vHOTPX+9TsGEVnQJrQ=="
+  },
+  {
+    "id": "microsoft.extensions.telemetry.abstractions",
+    "version": "8.7.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 325163,
+    "sha256": "46da53e6672130ec994d297e0ac422c480f1a540cbbbfd80186d9a604ed81500",
+    "archive_sha512_base64": "g7OqsDeCKvvC5iOoEKKkMKBXPo2qV36M4RQjppb6Q0Phfitjd94H3r2d49iavp1WeQojbEfTNTeTpbOENRo0yQ==",
+    "nuget_content_hash": "gW0GQNGVoIKQqnfHx40M5Y2JltXjUv6sG+tIBQkLSJe18M80h38HNgPBhP2tTEwVBhiETrbxPQEyFe1mugaCdQ=="
+  },
+  {
+    "id": "microsoft.identitymodel.abstractions",
+    "version": "7.1.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 110367,
+    "sha256": "40dd9bb70b1cf179cea7c471c126389edce9a8522b591660e9964418167a4d06",
+    "archive_sha512_base64": "hl2X3jO6Yy3C8Zd46VwLSgyj4XMwYIlL8P5YdfhVVRwPU4H3dI/oMCUJjJUWUWpnxQzsoxQaKogCnyOamjU05Q==",
+    "nuget_content_hash": "33eTIA2uO/L9utJjZWbKsMSVsQf7F8vtd6q5mQX7ZJzNvCpci5fleD6AeANGlbbb7WX7XKxq9+Dkb5e3GNDrmQ=="
+  },
+  {
+    "id": "microsoft.identitymodel.jsonwebtokens",
+    "version": "7.1.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 369772,
+    "sha256": "9154d2f62de4851effd09064e768f3bf8154981b1baa7b6a572aa40c0fc03ef9",
+    "archive_sha512_base64": "6K8oUp7h2OdLsL127FmEhD04U3i4Qvm+PvqtS6FW4bbcNZZpBLqQG1cjMd8KWPQfAIo/sfJoJCGVjNAgHBzOZw==",
+    "nuget_content_hash": "cloLGeZolXbCJhJBc5OC05uhrdhdPL6MWHuVUnkkUvPDeK7HkwThBaLZ1XjBQVk9YhxXE2OvHXnKi0PLleXxDg=="
+  },
+  {
+    "id": "microsoft.identitymodel.logging",
+    "version": "7.1.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 168180,
+    "sha256": "e8ced8d6ed9c055b0efdd3feaab82430b8ac5db660320c96a11b3952afd027fa",
+    "archive_sha512_base64": "9/xu0oQafxSS0t9WQt+moToZZdQxALkjvVPBjB2EIn+FTv7IefYDfue2+5kuH2j+ksjzf+BHp+NuThorkHkcdw==",
+    "nuget_content_hash": "YCxBt2EeJP8fcXk9desChkWI+0vFqFLvBwrz5hBMsoh0KJE6BC66DnzkdzkJNqMltLromc52dkdT206jJ38cTw=="
+  },
+  {
+    "id": "microsoft.identitymodel.protocols",
+    "version": "7.1.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 171726,
+    "sha256": "e8e5cfd2f43a6d0dd7be3dc8ef77aa9e0e8daaa302e21b562ae33c71c8598562",
+    "archive_sha512_base64": "19weOvyhm1IDDfwcOsHu+C2/RYRn+miL7SJtIiPjxjl5Xi6cxTIWfylJdMpEp8SvWo/QEWzjPrWd0uvyGEIVJQ==",
+    "nuget_content_hash": "SydLwMRFx6EHPWJ+N6+MVaoArN1Htt92b935O3RUWPY1yUF63zEjvd3lBu79eWdZUwedP8TN2I5V9T3nackvIQ=="
+  },
+  {
+    "id": "microsoft.identitymodel.protocols.openidconnect",
+    "version": "7.1.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 330333,
+    "sha256": "700c300ad8beff271d8ea372f0fac13447ae17bbb9818b425fcbc16f6a88291b",
+    "archive_sha512_base64": "9AZSKM1sPoE02qRG54N5zaSX6BKTs9+nlh5DSxh7jA69QJjxFGb+t6htDLzGjaTSBlkbSQnINPYmJvER6vxoOg==",
+    "nuget_content_hash": "6lHQoLXhnMQ42mGrfDkzbIOR3rzKM1W1tgTeMPLgLCqwwGw0d96xFi/UiX/fYsu7d6cD5MJiL3+4HuI8VU+sVQ=="
+  },
+  {
+    "id": "microsoft.identitymodel.tokens",
+    "version": "7.1.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 840638,
+    "sha256": "a9ff32f0a0a8d72b2b2be8c2ae747e0111f095f3163d72f17bb6b8d45560e0e0",
+    "archive_sha512_base64": "RB9m1oTjLp7UeusIYL6I7/l4kJeLlJIRvBruz69Q7+WdOQVU5XZxL+CM+JMKWDTCZH1y2PjJc2wpBcEnuu5tgQ==",
+    "nuget_content_hash": "oICJMqr3aNEDZOwnH5SK49bR6Z4aX0zEAnOLuhloumOSuqnNq+GWBdQyrgILnlcT5xj09xKCP/7Y7gJYB+ls/g=="
+  },
+  {
+    "id": "microsoft.io.recyclablememorystream",
+    "version": "3.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 175299,
+    "sha256": "5815e4ab10b9838b49e3cd6c6b5b9fb77f4ba80ff9871e7239f8937cc44c83fe",
+    "archive_sha512_base64": "7xVI6zAdiOAKchkPULjy33WRp3MPxwoYIB3kx0QWVdF9flb3DhoiGtSHre7c/1R9DIe3shQrriYeiwXWOkA3yg==",
+    "nuget_content_hash": "irv0HuqoH8Ig5i2fO+8dmDNdFdsrO+DoQcedwIlb810qpZHBNQHZLW7C/AHBQDgLLpw2T96vmMAy/aE4Yj55Sg=="
+  },
+  {
+    "id": "microsoft.net.illink.tasks",
+    "version": "8.0.8",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 1445824,
+    "sha256": "b2ded474fc7d00529ff68e967b0b2650a85b3f6206d8a4231d109374fe158f4d",
+    "archive_sha512_base64": "HCpB5wm8IQ6SX63JDovNI6OJMp75ic0ZeD8G3IGlIHU7Tpn1R0mthbV5J2OJagKmy/rQPuAu+q+U+xT6lu1xFA==",
+    "nuget_content_hash": "P8wR6MUWwYXIjPJuBaZgo5zlI/GWI6QEAo6NyVIbPefa9CCkohYu7dP2rD/mrqnjEqfRHyl+h9VZrDoGpELqYg=="
+  },
+  {
+    "id": "microsoft.openapi",
+    "version": "1.4.3",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 176107,
+    "sha256": "be4e3b7bbf0ec28a57271d8b84345b28539ba85dc64a11df3474764b3bdb41e0",
+    "archive_sha512_base64": "z+VqPNc9eVVPBtXUTcmjIhDQP1fp5y0L0ICWeoz6+o56A8ASeISgc8muFkYOT7gsZVcErvcHtYCui38p658vog==",
+    "nuget_content_hash": "rURwggB+QZYcSVbDr7HSdhw/FELvMlriW10OeOzjPT7pstefMo7IThhtNtDudxbXhW+lj0NfX72Ka5EDsG8x6w=="
+  },
+  {
+    "id": "microsoft.openapi",
+    "version": "1.6.14",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 198693,
+    "sha256": "75225489cda8acf19f61582da3d0e27917246ed2e93f2c47b5ff91276b6628f3",
+    "archive_sha512_base64": "suaaGi6QIFRGqr6jbDR1HpQYNuJn6asQ9UMO88YxVovlJ2xfIGC7w1Pjb5kF1HyZO9wn4GNZYGubB3oXEqludQ==",
+    "nuget_content_hash": "tTaBT8qjk3xINfESyOPE2rIellPvB7qpVqiWiyA/lACVvz+xOGiXhFUfohcx82NLbi5avzLW0lx+s6oAqQijfw=="
+  },
+  {
+    "id": "mono.texttemplating",
+    "version": "2.2.1",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 108836,
+    "sha256": "e1362c7dcf2aef83fc16e0f090858f3be5586349a1e07b3864bf2fd2531a06c6",
+    "archive_sha512_base64": "ImJ+4QP+7hHATE7vszs/+HTNVVPHGkKHJmRls77fmAPSe7mYznNsm5d/ebQ2oWiCOp0zY3GDzkZkcMCYGHrLbw==",
+    "nuget_content_hash": "KZYeKBET/2Z0gY1WlTAK7+RHTl7GSbtvTLDXEZZojUdAPqpQNDL6tHv7VUpqfX5VEOh+uRGKaZXkuD253nEOBQ=="
+  },
+  {
+    "id": "npgsql",
+    "version": "8.0.3",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 2850558,
+    "sha256": "c1e046a3f217288e6e7e2c410ae586ecea834b222abc6574ee8c6b1b45e74084",
+    "archive_sha512_base64": "M2PNK6YrFlkYEOCISyRfH2EFN7FAnLz7NeEDwU2B9Q6TjdveeGYYX7rLxJqchV2OUXHrO85KSpGnnx7kTQPgpg==",
+    "nuget_content_hash": "6WEmzsQJCZAlUG1pThKg/RmeF6V+I0DmBBBE/8YzpRtEzhyZzKcK7ulMANDm5CkxrALBEC8H+5plxHWtIL7xnA=="
+  },
+  {
+    "id": "npgsql.dependencyinjection",
+    "version": "8.0.3",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 42677,
+    "sha256": "86d7bc9048cdb5d4ded85924ee3126424d843ee225cfc778563bf52319b93d7c",
+    "archive_sha512_base64": "0y3f/lpedbRmABNpDkd43vHoTTcHMpqrSaiTRyodZ8/soSfaQ9oez8CZpSdfgcsl3prdSP+yHs0rBnfw5UMENg==",
+    "nuget_content_hash": "+5YsjIr2j8vV2IllGWbIrRkMYyHEUBUoH3nCrADg9nI4V/QhQATXjRtnq95z37/U6JQKb5m4eL388QWcKFmqUQ=="
+  },
+  {
+    "id": "npgsql.entityframeworkcore.postgresql",
+    "version": "8.0.4",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 321621,
+    "sha256": "4f9cae32541cfde509b538c7ca046ab443b8c0a73d610495603294ed94bc5885",
+    "archive_sha512_base64": "6JVnT++QyLgxqxQJlUZuJ7r/4otGYnlscvgiegDPHnV21btNEu6W4ko76+iaiFhH/RCRco9efCmfCC9kwOabng==",
+    "nuget_content_hash": "/hHd9MqTRVDgIpsToCcxMDxZqla0HAQACiITkq1+L9J2hmHKV6lBAPlauF+dlNSfHpus7rrljWx4nAanKD6qAw=="
+  },
+  {
+    "id": "npgsql.opentelemetry",
+    "version": "8.0.3",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 31719,
+    "sha256": "acd354f958867dfc5242600bbafc33fb6d1de4dbd61ea69f1022e243e05ccb3c",
+    "archive_sha512_base64": "CoAD0ztZJkMrSfeqye4fcEaAAmWUjoD/NoddbObCl1BS81DpWDIs/mU9Y79HDrW4xjv+Yp+2NWxMPGZGCWikmw==",
+    "nuget_content_hash": "6ONIE4Aj+8roAglYrRfhCogPqyqOnbAULfzNEyl1uGkHrlsuE/ylyCcQK/gQqAopYm0Im1J8Rjw2s1pbbIlsJw=="
+  },
+  {
+    "id": "opentelemetry",
+    "version": "1.6.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 435714,
+    "sha256": "f9ed1cbfbcd9133c4c9e52e2e0e34e30449d78ecaa2c08d8af96b6293e321f29",
+    "archive_sha512_base64": "+slHb1A6rg0ckAy4QeVZCLTJj1nudvECqdA0mdYB2OgokjYLi5A110Avom95o0mt+5Uj0mdDPJ7vMbaGN5xsdg==",
+    "nuget_content_hash": "bTvLk9YIg0nUDb6K+f8mJkMK8b7sfGEyD0Zmg6ckD7kDCkBq1Hk1KjqlA/jEsypJIVnyclP0CGDcOELGYXGpAA=="
+  },
+  {
+    "id": "opentelemetry",
+    "version": "1.9.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 603458,
+    "sha256": "41557a79c9d593bddbbe2e0bc354674ec684507ffa093d3fcc826461d83a0868",
+    "archive_sha512_base64": "zHQ/zpWZ1Z7t+1/Kr/SzaSkBCL5A4lYEc8z1dargpbVar0hQ9PpzpMp3qThfj9sBaGEGtfgfI2RMTWJdIgKb+g==",
+    "nuget_content_hash": "7scS6BUhwYeSXEDGhCxMSezmvyCoDU5kFQbmfyW9iVvVTcWhec+1KIN33/LOCdBXRkzt2y7+g03mkdAB0XZ9Fw=="
+  },
+  {
+    "id": "opentelemetry.api",
+    "version": "1.6.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 128807,
+    "sha256": "97d9163b8d781e6b87de36b11da6016537d12c14a59c838c7adb4d44dff76994",
+    "archive_sha512_base64": "gYIVV9oE7JCmVt12wlVtF9i/6TYltBqys4BBudlu0E8nL8l7xdjyrXCIK+Al7brB/BIac4IYgyna1qjLDeXEWw==",
+    "nuget_content_hash": "LTF4PB6UicJlgrBBg0rblAMyJJLMAVBujg8T9pGPQsl1vVgPNZoJNTLadhC3ZdYUzuKsvYLS31vT0/wl97JtEw=="
+  },
+  {
+    "id": "opentelemetry.api",
+    "version": "1.9.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 169471,
+    "sha256": "ada5e91e2d836779922e7f5d9c9605eb85da3f6ddea5d7eef3381a812a66f3ee",
+    "archive_sha512_base64": "3ogpeVgvaOY+WHccLC0ogpn/G0bbGAAxX1T6AwQ4doo9RSm6tOPHyt7/oi1cfOFTEWxRBng+n56pXEbaUL4Ffw==",
+    "nuget_content_hash": "Xz8ZvM1Lm0m7BbtGBnw2JlPo++YKyMp08zMK5p0mf+cIi5jeMt2+QsYu9X6YEAbjCxBQYwEak5Z8sY6Ig2WcwQ=="
+  },
+  {
+    "id": "opentelemetry.api.providerbuilderextensions",
+    "version": "1.6.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 54239,
+    "sha256": "185d11599fcab79c7288e8736ae6dc4d50efb3cf598a72cc2fe1ec1c60fdb8a5",
+    "archive_sha512_base64": "AKWyuzKsQ0WCgNIAKM3WcOmofcc3slU079TsejlTkx95WD/HkIFsxQyeuFBnGurCENSuYYrcNT8qBpipP1KQtQ==",
+    "nuget_content_hash": "k8lqUAxjXkCV6yKdXfCbxsHMh5x7F7q8lAKm61rP/iP3EJPG1XhOy3j9nyubBYCm/xqlIy4ugWcqY1Inxolozw=="
+  },
+  {
+    "id": "opentelemetry.api.providerbuilderextensions",
+    "version": "1.9.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 72961,
+    "sha256": "632dc470a056ed71fb9e12dcbf0401d0d21fc6218286ecba50f73b309a7111b1",
+    "archive_sha512_base64": "BNT6E6fXqA7BtV/5k9Lo5hk/SO3DjzQvZ15x8fJ1b24cUf2oCq7XK4BFDl2HqMroS/opNM0k9ts+OHdZT/7xTA==",
+    "nuget_content_hash": "L0D4LBR5JFmwLun5MCWVGapsJLV0ANZ+XXu9NEI3JE/HRKkRuUO+J2MuHD5DBwiU//QMYYM4B22oev1hVLoHDQ=="
+  },
+  {
+    "id": "opentelemetry.exporter.opentelemetryprotocol",
+    "version": "1.9.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 824320,
+    "sha256": "dd305b14920e942f1c67021b8daf63f7c1cb5c542b698b3cab4d1c64858071ab",
+    "archive_sha512_base64": "1BuD1wJJvFeHC32itVlUzbftXBSZBulDvRKkwGT6DhMwR7dlhhwj1Sp3BeaZAM1YRAbtvy8bzkU9GyXF3qIVpw==",
+    "nuget_content_hash": "qzFOP3V2eYIVbug3U4BJzzidHe9JhAJ42WZ/H8pUp/45Ry3MQQg/+e/ZieClJcxKnpbkXi7dUq1rpvuNp+yBYA=="
+  },
+  {
+    "id": "opentelemetry.extensions.hosting",
+    "version": "1.9.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 49308,
+    "sha256": "bef22b4de0c6ce0cfc748eff4a42cbd19ad5fbdbb77bdba1bd6e9555db1de8fb",
+    "archive_sha512_base64": "6UWaIZ2di6tL02R2Iu9xh6TJ9nPBsopOgbHlMH4EQKeMXPwkKyyeWSNs8wZz+6J8airZVdSdyVhDA9JErEHNtw==",
+    "nuget_content_hash": "QBQPrKDVCXxTBE+r8tgjmFNKKHi4sKyczmip2XGUcjy8kk3quUNhttnjiMqC4sU50Hemmn4i5752Co26pnKe3A=="
+  },
+  {
+    "id": "opentelemetry.instrumentation.aspnetcore",
+    "version": "1.9.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 134698,
+    "sha256": "5d8a9aee4578ae11cf0a01ec8d0b4cbf22827a65b53af41dff6dd0863aae611e",
+    "archive_sha512_base64": "VOBibnYXXfJvMjCAKwmJtFB/ggFhIAaNcNlKqk5I/eYIBeZBN2niSBxPStkGjd+F/1PzLvjm7BcAgNtMK2fMCw==",
+    "nuget_content_hash": "x4HuWBw1rbWZUh5j8/GpXz3xa7JnrTuKne+ACmBqvcoO/rNGkG7HayRruwoQ7gf52xpMtRGr4gxlhLW8eU0EiQ=="
+  },
+  {
+    "id": "opentelemetry.instrumentation.grpcnetclient",
+    "version": "1.6.0-beta.3",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 116655,
+    "sha256": "1e267281c6ce393aad33fec2a4f5259eefe8e01dcb454ecc6b5505afef430f38",
+    "archive_sha512_base64": "ZRi7VPMCuHmlbukxsKR8HIGXvMqcijmb25g6aXcCphzRODC/lxtO0uMxAIonkPoygwUF41bZynbWb9jxeZSeCw==",
+    "nuget_content_hash": "nzw8D5in6Hg/GbjNlq2FETP4GjSckae9hPGTxAUO7UiOS1lqkyxZJ7f4ntIjFKbiS3wuA9wPfQVH/3CaPV6EvQ=="
+  },
+  {
+    "id": "opentelemetry.instrumentation.http",
+    "version": "1.9.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 132494,
+    "sha256": "cbf51b0edea7ea1783f9acb3bf4c4fbab5cb14d2fe79295dc2aa321a9bc283ba",
+    "archive_sha512_base64": "Fylaho8AlO9MSzoKWh5LI1mVW03P3jr5iJUvGtTARz65TxhcAh25JB3vs4cBrQR/dVnLVHu7Pa3nH3QH3sZGdw==",
+    "nuget_content_hash": "+ZXppf8Qxz3OdC803T8fB6i8iSscc8PsxMnM/JizSOYmkz+8vGiScEiaBBBFNZtMh2KpA0q+qxwnSwQUkbvzog=="
+  },
+  {
+    "id": "opentelemetry.instrumentation.runtime",
+    "version": "1.9.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 44942,
+    "sha256": "5e8bfcf61e0fcbb302cfa4803a3574b63b59bef8c76f1ecdc8f5d9b18d4f6619",
+    "archive_sha512_base64": "y03UnOq4HRKIUqYIH/obRf7dv0JYfYoa5wMI9X/GzqfyShoo2kpogUXP7psx6OwAHifzVWc9R/6O7y/Jr4X33Q==",
+    "nuget_content_hash": "6raJb9Pvi1CaBB59SX86Mr9NQiQbiv9ialO+cQKFRGCq3Bl2WC8cTTcbfGtaRX0quqWnZC/dK7xrXuOuYcwANA=="
+  },
+  {
+    "id": "polly.core",
+    "version": "8.4.1",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 853218,
+    "sha256": "124b00dd4e5c9acae2da3a0cf9232d6ddc0e50c515c485d3f039c7e034802290",
+    "archive_sha512_base64": "bBsAnWxyCRhPGxsw0oQpvSuxPZDLBDtLk36il6OP/urvz292+V5NqukRbojiH0SGBv8XABMqjRbLInBzJyht8g==",
+    "nuget_content_hash": "bg4kE7mFwXc6FJ8NLknTgVgLAMlbToWC7vpdqAITv8lPzKpp9v7aWJPc04GRoZQaJhVY/tdr8K2/VW2aTmaA1Q=="
+  },
+  {
+    "id": "polly.extensions",
+    "version": "8.4.1",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 282171,
+    "sha256": "b8b068e9e9e4f4bf92d5b3ed6b37d9fc69942a30cd40e9d7de5b2a263ef0cab1",
+    "archive_sha512_base64": "xSRHX31ingMmEJIKe2z/+DgQoBSvTiinOL1moA+pR5NUrHcQpJu7AH343R5vkl38YHQOhLEYBPz8JpbnBqg02w==",
+    "nuget_content_hash": "NaRu+mopzJLoDm3qhklrUENIwkhmJbtzLRXK+oMb0c4bGwT84co+BM+TIwqApUfZrcz+BvA/vpB1vk6hB4XtAA=="
+  },
+  {
+    "id": "polly.ratelimiting",
+    "version": "8.4.1",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 192549,
+    "sha256": "27ac2f0f46d593df8a45bf342e409ef6a5918d27793b6ac7fdd30355328be770",
+    "archive_sha512_base64": "o9A7PGkAVscSQNiWvTLO3Y52kzjYOaiy1kqPhPZBar3bITSdg4PomEQCC+1uHQU3XHdWxj9Ccj+OXy5rOIUc7g==",
+    "nuget_content_hash": "YF9/pUUd3VZchjJ7+KWAINv5xtHlaWUvrhpGGC73He/zz0mRHzV7gKVDzqwAZrdDk09CdunA+Gt/a37Bl/rMwQ=="
+  },
+  {
+    "id": "rabbitmq.client",
+    "version": "6.8.1",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 317075,
+    "sha256": "298720d3a46eed98064fa30f011f0dcfc11bd69efa038ae88d0f783fc410e562",
+    "archive_sha512_base64": "HMOdqaF8JCQi+fPK4U1pkz09anZ3zjRl3ArXb5WxwCYFPSg4Zti8mriQJ/VFf8pLBmoZyKwKpY6Omybw6rfTYw==",
+    "nuget_content_hash": "jNsmGgmCNw2S/NzskeN2ijtGywtH4Sk/G6jWUTD5sY9SrC27Xz6BsLIiB8hdsfjeyWCa4j4GvCIGkpE8wrjU1Q=="
+  },
+  {
+    "id": "swashbuckle.aspnetcore",
+    "version": "6.7.1",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 15409,
+    "sha256": "20c3244393d9df09fbffe89b405007f7984ffd6f0c9ce32d2cf95597997acea3",
+    "archive_sha512_base64": "/6kPIABye3o0iY2irSFuGcBe7GRPfuXLRhV5jjeq/5MIlYoA1cVCiny8VB7sIly8YXgJKjmN7GlGo+a/ZW0vew==",
+    "nuget_content_hash": "vLyorZI4TXvKlzC6uEMI9zXBe98wEBEu43wjpUayhqccFggryX94e+2iUjLtQFFDdDyx4f5xtF3afhRmOfQOdg=="
+  },
+  {
+    "id": "swashbuckle.aspnetcore.swagger",
+    "version": "6.7.1",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 145003,
+    "sha256": "7ed461e5507a7cb3c7e85602113d2e057e942668bef5b95cf3e8c8d287cd7e3f",
+    "archive_sha512_base64": "dWu9iq+LhdSnxA2GfQM82JLGL6MmNJrD8UyFBJEhKaoxdsMg4oKwjiqT9aUFD9wlf8TA8gxvBHRbpsLnqnOieQ==",
+    "nuget_content_hash": "+inGEUziCH4qoAOnWxLYX+4ZjBTAj+Y74acJ5akLcPgNzk/qGHwQvt6nZq8Bgb3XmhsxDNMCIACc7iMbuG/h9Q=="
+  },
+  {
+    "id": "swashbuckle.aspnetcore.swaggergen",
+    "version": "6.7.1",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 556807,
+    "sha256": "439c8568d9e57a49c05521031bd148785e3c21522bff80cfe9d0a23858ebfe33",
+    "archive_sha512_base64": "I3hUTketqHk0Xt2wfl7WFtQjVLWzpz8A0hDmohsjZXEj8vqT6w05nBQMZErp9jJwgsxZSKRuojeiMXxXx+uLYA==",
+    "nuget_content_hash": "iMtGuSAtzpvnLaqiqvPy453XaweX6hkTTY0ZXUvpkRNk++7fOBAFXX3/39kJ4F79qoRAd5XX8MXXBd0oic7N5Q=="
+  },
+  {
+    "id": "swashbuckle.aspnetcore.swaggerui",
+    "version": "6.7.1",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 3920152,
+    "sha256": "a867b942364d76665401a271023ccae7ac94913d8dcc5150da66aa2782c34648",
+    "archive_sha512_base64": "Tdb5o5jbMHjJ1rsgIhpLw2UZN8pIgY9l4vf80jP6XHooCiifIkCpoNtg/IfHqx/NYV6ZXbheXfXp4ev54q+CwA==",
+    "nuget_content_hash": "aJ/UfnrODbj/S3FDAnVQ7qz2txj7OcIXGu7ViXsi3bu3xMzhMcizVrH7T+utB2yWcPMBp0VMfc1nwRh77Ct1HQ=="
+  },
+  {
+    "id": "system.codedom",
+    "version": "4.4.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 213263,
+    "sha256": "2f5c72b2927ca4324d54f60a97e14c19fe19c26d2d96ab40c9008d5baa53ebfd",
+    "archive_sha512_base64": "E/lvSfMFPtNflAgdM6AuPU8JbZdqdSoGpU66G7SrduCqdrFyPflaqqV4gN2d0hrCBpu92HaoqpUP5d+g9Itcxw==",
+    "nuget_content_hash": "2sCCb7doXEwtYAbqzbF/8UAeDRMNmPaQbU2q50Psg1J9KzumyVVCgKQY8s53WIPTufNT0DpSe9QRvVjOzfDWBA=="
+  },
+  {
+    "id": "system.collections.immutable",
+    "version": "6.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 393026,
+    "sha256": "0ca11ba45a9708811faa9f69ddecea69d9f96ff4b5613937dbf1102beb4449cb",
+    "archive_sha512_base64": "+ANkEuOExcWvbSj06rJUMgfS67sWxHtw9sRxvFqkufREBMR9d20pUZHyConKqJir1zojBNyvd5eRdM7S2RYBaQ==",
+    "nuget_content_hash": "l4zZJ1WU2hqpQQHXz1rvC3etVZN+2DLmQMO79FhOTZHMn8tDRr+WU287sbomD0BETlmKDn0ygUgVy9k5xkkJdA=="
+  },
+  {
+    "id": "system.composition",
+    "version": "6.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 36690,
+    "sha256": "1f94e79f13b08a123457246eca46ce5ae28548258d37e314118ca5a1adf6f0dc",
+    "archive_sha512_base64": "SGGCl+f88CsFvOAyvN4Ygr54Dg5tFWuDEoVfKi0ID/WQ/XvMeiluvd7J2C9lTZKG5CtCTOB7ESpEm+K/spvLjA==",
+    "nuget_content_hash": "d7wMuKQtfsxUa7S13tITC8n1cQzewuhD5iDjZtK2prwFfKVzdYtgrTHgjaV03Zq7feGQ5gkP85tJJntXwInsJA=="
+  },
+  {
+    "id": "system.composition.attributedmodel",
+    "version": "6.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 74280,
+    "sha256": "d370d1f1e7041d229f833c2e4eec6db115b419beda42d0d2e0b0180a165d19d7",
+    "archive_sha512_base64": "pTwws8/rT8Z3QehTBXB7MkSBpqw5T7GvcazaATCcCQVXQkpDUhNe/+DcN8KVNjREGZQyjYnCJTLY/fjrf3F0BQ==",
+    "nuget_content_hash": "WK1nSDLByK/4VoC7fkNiFuTVEiperuCN/Hyn+VN30R+W2ijO1d0Z2Qm0ScEl9xkSn1G2MyapJi8xpf4R8WRa/w=="
+  },
+  {
+    "id": "system.composition.convention",
+    "version": "6.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 118447,
+    "sha256": "6b70d94bc093da457c755a46c472a83f9c0754ab13fa488f262c5c92961f750a",
+    "archive_sha512_base64": "9N11P6GWMl0aXpoGh06I2WUfgS9IsBNgjv4yLgeboZS99Fh2A7zXGobjP1MQPEix3I8XdoQtXftK+9fotOndAg==",
+    "nuget_content_hash": "XYi4lPRdu5bM4JVJ3/UIHAiG6V6lWWUlkhB9ab4IOq0FrRsp0F4wTyV4Dj+Ds+efoXJ3qbLqlvaUozDO7OLeXA=="
+  },
+  {
+    "id": "system.composition.hosting",
+    "version": "6.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 131638,
+    "sha256": "7e9a21e9604d99a1c41eccf094147f4cd8ddf399707ac7cced991086a62d2f2e",
+    "archive_sha512_base64": "WlozHJHxK2y2PF376hCVmAoKC/pdnjNscxYkVwb2vtr9dqC2iAyix5QV8xhAwjFzAoW5vMO5R0ZZoorJ/avQOw==",
+    "nuget_content_hash": "w/wXjj7kvxuHPLdzZ0PAUt++qJl03t7lENmb2Oev0n3zbxyNULbWBlnd5J5WUMMv15kg5o+/TCZFb6lSwfaUUQ=="
+  },
+  {
+    "id": "system.composition.runtime",
+    "version": "6.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 84119,
+    "sha256": "9c666f836c588616b30233a3856aa5b41b9efa144e28fd083a21463fcc8c056f",
+    "archive_sha512_base64": "zPbQ+kqLtqFwEhKBco6WXfTTRqacVeDs76trgkGVmHbeVoRit9Xb0pCqblEMvxlzgCRm6ZtZp+lbkoiQUqzXnw==",
+    "nuget_content_hash": "qkRH/YBaMPTnzxrS5RDk1juvqed4A6HOD/CwRcDGyPpYps1J27waBddiiq1y93jk2ZZ9wuA/kynM+NO0kb3PKg=="
+  },
+  {
+    "id": "system.composition.typedparts",
+    "version": "6.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 131026,
+    "sha256": "e2e0044df98bd42bc68c76a3cd6a30b049898132a7b850bcbbd95b60fcc03779",
+    "archive_sha512_base64": "jPQ9jRWdwGXAStnsCaYP9DGi/l+z1IIcBKAqEWh+3pu8kA2C9tTW9dKYiVxmSvvg5pgrY6IAWcWIS9uMJleTtw==",
+    "nuget_content_hash": "iUR1eHrL8Cwd82neQCJ00MpwNIBs4NZgXzrPqx8NJf/k4+mwBO0XCRmHYJT4OLSwDDqh5nBLJWkz5cROnrGhRA=="
+  },
+  {
+    "id": "system.diagnostics.diagnosticsource",
+    "version": "7.0.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 398733,
+    "sha256": "f146b07bb996390b03ccc48000fd7a9ee183d454526a3c92f2af9c03ef8c27c1",
+    "archive_sha512_base64": "HTRsQj3IEaqgTzFDa0hxFln38Mh1mXWPhCwQw76yd5xAsCi51HGMde2n+dnkDzQcBfJn+GOqk1cje17dlePCqA==",
+    "nuget_content_hash": "hYr3I9N9811e0Bjf2WNwAGGyTuAFbbTgX1RPLt/3Wbm68x3IGcX5Cl75CMmgT6WlNwLQ2tCCWfqYPpypjaf2xA=="
+  },
+  {
+    "id": "system.diagnostics.diagnosticsource",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 516197,
+    "sha256": "f9a38368311032a95ae516197aad0b87aea3fb190f631ca4ad5bd20a6250f95b",
+    "archive_sha512_base64": "huMsYul3PboZKmO/8OL/zVeCbtESPJJh+oySKfnR3CaWKzdA+wJfatXBORYldabEk7ITqe8/wXR9FcoO3QxYeA==",
+    "nuget_content_hash": "c9xLpVz6PL9lp/djOWtk5KPDZq3cSYpmXoJQY524EOtuFl5z9ZtsotpsyrDW40U1DRnQSYvcPKEUV0X//u6gkQ=="
+  },
+  {
+    "id": "system.identitymodel.tokens.jwt",
+    "version": "7.1.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 307924,
+    "sha256": "10155677483253c40cdb7c5c9534001c4ff219b5ef1caa997d9f346f5547ba25",
+    "archive_sha512_base64": "61/cMxehXzbjNGVe2r9hpJAmAGHw0sj6YGCTdY+jdF3cdC9WgITQIF/VpeXLRjDJbUX8R6K6kJL17IQ79j0sXQ==",
+    "nuget_content_hash": "Thhbe1peAmtSBFaV/ohtykXiZSOkx59Da44hvtWfIMFofDA3M3LaVyjstACf2rKGn4dEDR2cUpRAZ0Xs/zB+7Q=="
+  },
+  {
+    "id": "system.io.pipelines",
+    "version": "6.0.3",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 226212,
+    "sha256": "bfe14e9a34512a50ed0d6ebe4df9b23228a48b4d746065536b41305eef57edc9",
+    "archive_sha512_base64": "pyJGy+JsWn7AmPaXmAYwdnMVKaOy5VWj1BaS71SWIiMo05iM+9jiOlTkdPVCnfPkeFN/heDbwUXSzzwmPb5ybg==",
+    "nuget_content_hash": "ryTgF+iFkpGZY1vRQhfCzX0xTdlV3pyaTTqRu2ETbEv+HlV7O6y7hyQURnghNIXvctl5DuZ//Dpks6HdL/Txgw=="
+  },
+  {
+    "id": "system.memory",
+    "version": "4.5.3",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 154054,
+    "sha256": "0af97b45b45b46ef6a2b37910568dabd492c793da3859054595d523e2a545859",
+    "archive_sha512_base64": "cPzhWlLMdqrLrgXI6J4uOY0dMpA/Y/ZAp91KPldH8seoh9S/0i8qLkAnSQbPkWSN/RaXNPt8dOubT3JhQITh2w==",
+    "nuget_content_hash": "3oDzvc/zzetpTKWMShs1AADwZjQ/36HnsufHRPcOjyRAAMLDlu2iD33MBI2opxnezcVUtXyqDXXjoFMOU9c7SA=="
+  },
+  {
+    "id": "system.memory",
+    "version": "4.5.5",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 208978,
+    "sha256": "10f43da352a29fb2b3188e4edd4dcf5100194c8b526e4f61fe2e2b5623775a22",
+    "archive_sha512_base64": "6MjlNsl7lKw0Q8lAsw2tQ89ul9x6jD2Yk3EEj+dOFoYGOE9eAUO9wNhvd4O/n97oQXlkyzqKXXUnE+kLElFy3A==",
+    "nuget_content_hash": "XIWiDvKPXaTveaB7HVganDlOCRoj03l+jrwNvcge/t8vhGYKvqV+dMv6G4SAX2NoNmN0wZfVPTAlFwZcZvVOUw=="
+  },
+  {
+    "id": "system.reflection.metadata",
+    "version": "6.0.1",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 767969,
+    "sha256": "89ddbbb14e2a20422980a7a73b96f8207b7a2f55ee36c55ee1347d4ca68b583a",
+    "archive_sha512_base64": "euE5FwGK7iyQdNsTSqonytLXEHL32AuxPcFrHeFs7GJQOwZJFNEthjJlNMntKdu67V/Nq3+ItiCuHRxQIrRnOw==",
+    "nuget_content_hash": "III/lNMSn0ZRBuM9m5Cgbiho5j81u0FAEagFX5ta2DKbljZ3T0IpD8j+BIiHQPeKqJppWS9bGEp6JnKnWKze0g=="
+  },
+  {
+    "id": "system.runtime.compilerservices.unsafe",
+    "version": "6.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 84343,
+    "sha256": "6c41b53e70e9eee298cff3a02ce5acdd15b04125589be0273f0566026720a762",
+    "archive_sha512_base64": "1AVzAb5OxJNvJLnOADtexNmWgattm2XVOT3TjQTN7Dd4SqoSwai1CsN2fth42uQldJSQdz/sAec0+TzxBFgisw==",
+    "nuget_content_hash": "/iUeP3tq1S0XdNNoMz5C9twLSrM/TH+qElHkXWaPvuNOt+99G75NrV0OS2EqHx5wMN7popYjpc8oTjC1y16DLg=="
+  },
+  {
+    "id": "system.text.encoding.codepages",
+    "version": "6.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 4242377,
+    "sha256": "9c673603a5d89f0a8672af2b7e04d18c6afebe8212c4d7bfefa9362b7e9ca23e",
+    "archive_sha512_base64": "7Ic6lexRfeLFpTZK2jCXTd1eD6/vKtJRdgmhkAtQWdNXV1Nv0HOAUAH6aNW1aj1GRwEKlsnrIzsdFyo7RfvkqQ==",
+    "nuget_content_hash": "ZFCILZuOvtKPauZ/j/swhvw68ZRi9ATCfvGbk1QfydmcXBkIWecWKn/250UH7rahZ5OoDBaiAudJtPvLwzw85A=="
+  },
+  {
+    "id": "system.text.encodings.web",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 374440,
+    "sha256": "21442442457da68d4b0b442caab8a5ab03733ef9dcfb8795beafa10afabc7ef1",
+    "archive_sha512_base64": "uggiw4w7ZYq6lJVkLSaeiCuCfjvkrS3BQm2Kl9PLxaInfF+AhH0MuTgQeK8BUjMoxJksqgWBRtXY7muKCGCcMg==",
+    "nuget_content_hash": "yev/k9GHAEGx2Rg3/tU6MQh4HGBXJs70y7j1LaM1i/ER9po+6nnQ6RRqTJn1E7Xu0fbIFK80Nh5EoODxrbxwBQ=="
+  },
+  {
+    "id": "system.text.json",
+    "version": "8.0.4",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 1981785,
+    "sha256": "839a13edf6d7c50f486a1d67302af85145ff6b697e1158c9c93af0dc54db21a2",
+    "archive_sha512_base64": "n4fuKjm6T2AqKz7HWEuKosA6f22x4wP0giTbwTndvzyxAZC+BO/h0VkrC/Wy/Zf22PiP1JKkX3eLhP0+YTrLAA==",
+    "nuget_content_hash": "bAkhgDJ88XTsqczoxEMliSrpijKZHhbJQldhAmObj/RbrN3sU5dcokuXmWJWsdQAhiMJ9bTayWsL1C9fbbCRhw=="
+  },
+  {
+    "id": "system.threading.channels",
+    "version": "6.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 181030,
+    "sha256": "9251989eccab8ef5da19eaa07e731ffdd4c030db5c1d8fb33385e1eafd897ee1",
+    "archive_sha512_base64": "Mq3/iVxXq574ZM+JZgQD8EGweEG+fESgw8LIRRodoHaowbTc8cmTtYUwStdUmvpAig95etaBTQ8U63SKH8nOAw==",
+    "nuget_content_hash": "TY8/9+tI0mNaUMgntOxxaq2ndTkdXqLSxvPmas7XEqOlv9lQtB7wLjYGd756lOaO7Dvb5r/WXhluM+0Xe87v5Q=="
+  },
+  {
+    "id": "system.threading.channels",
+    "version": "7.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 195276,
+    "sha256": "0aed208d0b0b211f18be1d01e1c38f252615ab5d1afb717da55cff0b8dc235e3",
+    "archive_sha512_base64": "XXmpdJbyVCagWg3bGfUGNTxKp4EK/3C4Bt8pXhKVYZKwHPjeHPOg0u2wdqHFsojU4u4i9KByAJTyzqLCMqwpUg==",
+    "nuget_content_hash": "qmeeYNROMsONF6ndEZcIQ+VxR4Q/TX/7uIVLJqtwIWL7dDWeh0l1UIqgo4wYyjG//5lUNhwkLDSFl+pAWO6oiA=="
+  },
+  {
+    "id": "system.threading.ratelimiting",
+    "version": "8.0.0",
+    "source": "https://api.nuget.org/v3/index.json",
+    "bytes": 248864,
+    "sha256": "28e11612de99b61bd91c9d96a7bd1df6706106b3eaa1b1900e2dadc2529887fc",
+    "archive_sha512_base64": "ixhwz8JQm1n+6qf8WzbMMfhBAT51Kq0U/71YGhR2bGyDnDERdGbmQF6A8HDwpkp+ntVie832Yiz9xmPs63OPKA==",
+    "nuget_content_hash": "7mu9v0QDv66ar3DpGSZHg9NuNcxDaaAcnMULuZlaTpP9+hwXhrxNGsF5GmLkSHxFdb5bBc1TzeujsRgTrPWi+Q=="
+  }
+]

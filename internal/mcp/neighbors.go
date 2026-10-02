@@ -152,19 +152,23 @@ type BlockNeighbors struct {
 	// Truncated reports that at least one bucket hit MaxNeighborsPerBucket and
 	// was trimmed, so a short list is never mistaken for a small neighborhood.
 	Truncated bool `json:"truncated,omitempty"`
+	// TotalIsExact is false when the traversal work limit made bucket totals lower bounds.
+	TotalIsExact   bool `json:"total_is_exact"`
+	ExpansionLimit int  `json:"expansion_limit,omitempty"`
 }
 
 // NewBlockNeighbors returns an annotation with every bucket allocated empty, the
 // shape an anchor with no edges must produce.
 func NewBlockNeighbors() BlockNeighbors {
 	return BlockNeighbors{
-		Anchors:    []string{},
-		Callers:    []Neighbor{},
-		Callees:    []Neighbor{},
-		Consumers:  []Neighbor{},
-		Publishers: []Neighbor{},
-		DependsOn:  []Neighbor{},
-		SimilarTo:  []Neighbor{},
+		TotalIsExact: true,
+		Anchors:      []string{},
+		Callers:      []Neighbor{},
+		Callees:      []Neighbor{},
+		Consumers:    []Neighbor{},
+		Publishers:   []Neighbor{},
+		DependsOn:    []Neighbor{},
+		SimilarTo:    []Neighbor{},
 		BucketTotals: map[string]int{
 			"callers": 0, "callees": 0, "consumers": 0,
 			"publishers": 0, "depends_on": 0, "similar_to": 0,
@@ -241,7 +245,13 @@ func TrimNeighbors(list []Neighbor) ([]Neighbor, bool) {
 // for the text output format. It returns "" when there is nothing to say, so an
 // un-annotated or edgeless block renders exactly as it did before graph fusion.
 func renderNeighbors(n *BlockNeighbors) string {
-	if n == nil || n.Total() == 0 {
+	if n == nil {
+		return ""
+	}
+	if n.Total() == 0 {
+		if n.ExpansionLimit > 0 {
+			return "[graph] traversal limited; totals are lower bounds"
+		}
 		return ""
 	}
 	var parts []string
@@ -263,12 +273,18 @@ func renderNeighbors(n *BlockNeighbors) string {
 			total = len(bucket.list)
 		}
 		if more := total - len(shown); more > 0 {
-			part += fmt.Sprintf(", +%d more (of %d total)", more, total)
+			if n.ExpansionLimit > 0 {
+				part += fmt.Sprintf(", at least %d more (%d found)", more, total)
+			} else {
+				part += fmt.Sprintf(", +%d more (of %d total)", more, total)
+			}
 		}
 		parts = append(parts, part)
 	}
 	line := "[graph] " + strings.Join(parts, "; ")
-	if n.Truncated {
+	if n.ExpansionLimit > 0 {
+		line += " (traversal limited; totals are lower bounds)"
+	} else if n.Truncated {
 		line += " (buckets trimmed)"
 	}
 	return line

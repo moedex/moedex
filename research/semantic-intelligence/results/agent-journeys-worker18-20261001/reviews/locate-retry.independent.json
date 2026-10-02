@@ -1,0 +1,48 @@
+{
+  "task": "locate-retry",
+  "reviewer": "review18_02 (independent)",
+  "answer_sha256": "9aa5cf4353f0f326b2d9625492e59cc4b76d3c7aa1d93954d02aca2052dabfc9",
+  "atoms": [
+    {
+      "id": "locate-retry.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly identifies RegistrationStateMachine and initial RegistrationSubmitted handling; cites RegistrationStateMachine.cs:16-17,33-34. These spans occur in 002.response.raw block 1 (7-48) and 003.response.raw block 1 (10-42), and match the pinned source."
+    },
+    {
+      "id": "locate-retry.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicit conjunction Payment < 50m AND GetRetryAttempt() == 0, exact-50 exclusion, and nonzero-attempt bypass are correct. Quoted predicate and citation RegistrationStateMachine.cs:33-34 are present in both search_context responses and the pinned source."
+    },
+    {
+      "id": "locate-retry.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Quotes the ApplicationException throw and random message, then explicitly states the predicate is deterministic. RegistrationStateMachine.cs:33-34 precisely supports both facts in 002/003.response.raw and pinned source."
+    },
+    {
+      "id": "locate-retry.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly locates failure after SendRegistrationEmail publish activity and before AddEventAttendee publish activity, citing RegistrationStateMachine.cs:26-40. Both responses contain the full chain; final source/configuration caveat avoids asserting observed delivery."
+    },
+    {
+      "id": "locate-retry.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly reports the complete literal retry interval sequence in the saga definition. Citation RegistrationStateDefinition.cs:12-14 precisely supports UseMessageRetry and the additional Entity Framework outbox statement; 002.response.raw block 3 (6-16) returns these lines and matches pinned source."
+    }
+  ],
+  "correctness_total": 5,
+  "evidence_total": 5,
+  "possible": 5,
+  "unsupported_claims": [],
+  "strict_success": true,
+  "limitations": [
+    "Static source/configuration only; answer explicitly avoids claiming successful retries or delivery.",
+    "All three logged request/response pairs read and transcript hashes verified. Responses complete with HTTP 200 and no errors; both search_context summaries and all blocks report no truncation/clipping. Initial catalog display truncation is reported by solver, but does not affect returned source evidence.",
+    "Both original relevant source SHA-256 hashes match frozen packet. No runtime execution or product calls performed during review.",
+    "Retained transcript records MCP requests/responses, not a complete filesystem access audit; solver isolation self-report cannot independently establish all local access history. No contradiction found in retained evidence."
+  ]
+}

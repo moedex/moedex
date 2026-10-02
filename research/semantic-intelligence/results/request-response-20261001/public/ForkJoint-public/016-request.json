@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": 16,
+  "method": "tools/call",
+  "params": {
+    "name": "compiler_binding_at",
+    "arguments": {
+      "repo": "Sample-ForkJoint",
+      "path": "src/ForkJoint.Api/Services/Fryer.cs",
+      "byte_offset": 236,
+      "raw_sha256": "29daef1412d16c27a5b7f972aae8ba985211714c30a34c33b16c37e5b9887715",
+      "context_id": "context:7e2cde7ad504707f470c6a133fb17a6e207236c01c58fb1fe76a6602b00175d8"
+    }
+  }
+}

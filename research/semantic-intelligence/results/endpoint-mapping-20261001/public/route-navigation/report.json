@@ -1,0 +1,55 @@
+{
+  "classification": "source_configurations_and_enclosing_method_identity_not_runtime_route",
+  "handler": {
+    "id": "symbol:0568563050291f783535b3c9a6a51489eabd2cdaa473763668ec4883321ef182",
+    "language": "csharp",
+    "namespace_kind": "project",
+    "namespace": "Sample-ForkJoint/src/ForkJoint.Api/ForkJoint.Api.csproj",
+    "descriptor": "M:ForkJoint.Api.OrderRoutes.SubmitOrder(ForkJoint.Api.OrderRoutes.Order,MassTransit.IRequestClient{ForkJoint.Contracts.SubmitOrder},System.Threading.CancellationToken)",
+    "descriptor_kind": "documentation_comment_id"
+  },
+  "route_pattern": "/order",
+  "same_context": "context:1d00bb25d97837ffa499ccf9150190c02044678e7049db0c94fe2f1990109ebb",
+  "request_fact": {
+    "kind": "message_request_configuration",
+    "rule": "csharp-framework-v6",
+    "evidence_scope": "compile_time",
+    "targets": [
+      {
+        "role": "request",
+        "symbol": {
+          "id": "symbol:f9f7428de40ae214367041e4d5c99ca3a454f5562eb1964c678ef1e1f589ca58",
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-ForkJoint/src/ForkJoint.Contracts/ForkJoint.Contracts.csproj",
+          "descriptor": "T:ForkJoint.Contracts.SubmitOrder",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      {
+        "role": "response_1",
+        "symbol": {
+          "id": "symbol:dc9e065bb18b52ac031e40b41184fea80630171dc9d0e9549317c5b2b7bb0318",
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-ForkJoint/src/ForkJoint.Contracts/ForkJoint.Contracts.csproj",
+          "descriptor": "T:ForkJoint.Contracts.OrderCompleted",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      {
+        "role": "response_2",
+        "symbol": {
+          "id": "symbol:2111bfe710bebc0344d5724c3d47c8ac2fd251b6857c74bdf3d758ff2433eddf",
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-ForkJoint/src/ForkJoint.Contracts/ForkJoint.Contracts.csproj",
+          "descriptor": "T:ForkJoint.Contracts.OrderFaulted",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      }
+    ]
+  },
+  "definition_navigation_passed": true,
+  "contract_context_passed": true
+}

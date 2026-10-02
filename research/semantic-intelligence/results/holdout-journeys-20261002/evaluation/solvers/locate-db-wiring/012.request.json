@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"read_source","arguments":{"repo":"CleanArchitecture","path":"src/Web/appsettings.SQLite.json","start_line":1,"end_line":4}}}

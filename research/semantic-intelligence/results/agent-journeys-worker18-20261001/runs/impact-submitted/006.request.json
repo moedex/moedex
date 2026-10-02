@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"search_context","arguments":{"repo":"Sample-Outbox","query":"AddMassTransit","top_k":3,"token_budget":6500,"graph_depth":0}}}

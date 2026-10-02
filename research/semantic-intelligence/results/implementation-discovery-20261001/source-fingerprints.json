@@ -1,0 +1,52 @@
+[
+  {
+    "path": "internal/semanticindex/implementations.go",
+    "sha256": "2e38a9436f02f74dcb316c56cf308d8eb2fb7ee878e9364352281438aca186ca",
+    "bytes": 5209
+  },
+  {
+    "path": "internal/semanticindex/implementations_test.go",
+    "sha256": "0d1b6ef190be65ec551e4eec15fff89f07221e7ebea581075b73e33df9495501",
+    "bytes": 12665
+  },
+  {
+    "path": "internal/semanticindex/index.go",
+    "sha256": "04232726dee6d172226dc5172af408453aac3baf0ef52f61b85d23bb844805f0",
+    "bytes": 12247
+  },
+  {
+    "path": "internal/semanticindex/validate.go",
+    "sha256": "d423997acf949e3a48e4df28944b77455357a52d1c85074684a7626a24555583",
+    "bytes": 8601
+  },
+  {
+    "path": "internal/semanticindex/types.go",
+    "sha256": "8c8286ed8036e13b9c02d6c4a0497af883feddb240386ce4e317adc8edf8eced",
+    "bytes": 2771
+  },
+  {
+    "path": "internal/mcp/compiler_implementations.go",
+    "sha256": "273e9f8ec484c82e762a4a0a00178c67373f70283e4d9578685dda854a5046be",
+    "bytes": 13523
+  },
+  {
+    "path": "internal/mcp/compiler_implementations_test.go",
+    "sha256": "9e44f72db5111ff1d69a50641ea51b319c0741feda2d88b05c72951547bea3b9",
+    "bytes": 10006
+  },
+  {
+    "path": "internal/mcp/compiler.go",
+    "sha256": "f3709719384dd5f6a4ae2fc167b1a479f86dc42888a475a192fc709456bb9674",
+    "bytes": 17383
+  },
+  {
+    "path": "internal/app/servecmd/implementation_discovery_public_test.go",
+    "sha256": "38d9912e4666a55fb96888a92fc0129398f4ae95f8e57127cf99b2c38b1e9d52",
+    "bytes": 13375
+  },
+  {
+    "path": "internal/semanticindex/contract_paths_test.go",
+    "sha256": "0b71b8afacfe72a772d21cd42e3a497538b8eac452a7b89e9d7bfb80758676b1",
+    "bytes": 11760
+  }
+]

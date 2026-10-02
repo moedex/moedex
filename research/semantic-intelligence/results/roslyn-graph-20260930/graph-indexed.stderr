@@ -1,0 +1,7 @@
+> build      started
+2026/09/30 18:01:05 server: graph occurrence scan started names=164310 budget_bytes=536870912
+2026/09/30 18:01:08 server: graph occurrence scan complete built=true names=164310/164310 blobs=31998 content_bytes=440573723 occurrences=9409508 retained_bytes=361420356 budget_bytes=536870912 fallback="" elapsed=3.194s
+2026/09/30 18:01:24 server: graph schedule prepared 164310 names as 167371 bounded batches on 8 workers; heaviest="Create" sources=25559 definitions=852 upper_bound=21776268 batches=673 prepare=19.009s
+2026/09/30 18:01:24 server: graph source verification complete: sources=8898523 candidate_pairs=232754358 retained_pair_upper_bound=182597653 (before repository filtering and dedup)
+2026/09/30 18:01:24 server: graph region cache hits=1053636 misses=31619 waits=122 evictions=0 entries=31619 bytes=440274445 budget=536870912
+2026/09/30 18:01:45 server: graph fanout verified 8898523 sources; 232754358 candidate pairs, 182597653 retained before dedup

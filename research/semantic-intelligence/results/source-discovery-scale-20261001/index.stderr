@@ -1,0 +1,14 @@
+> build      started
+> discover   discovering repositories
+> discover   1/1 repos completed
+> ingest     0/1 repos started
+> ingest     1/1 repos progress
+> ingest     1/1 repos completed
+> sidecars   building token and symbol sidecars
+> sidecars   completed
+> graph      building graph sidecar
+2026/10/01 12:41:36 server: graph occurrence scan started names=164310 budget_bytes=536870912
+2026/10/01 12:41:39 server: graph occurrence scan complete built=true names=164310/164310 blobs=31998 content_bytes=440573723 occurrences=9409508 retained_bytes=361420356 budget_bytes=536870912 fallback="" elapsed=2.859s
+2026/10/01 12:42:10 server: graph compact preparation progress 120348/164310 names elapsed=33s
+2026/10/01 12:42:16 server: graph compact census names=164310 sources_verified=8898523 candidate_pairs=232754358 retained_before_dedup=182597653 physical_sources=6373019 target_sets=160696 shared_targets=253951 logical_edges=182597545 elapsed=39.853s
+2026/10/01 12:42:16 server: graph compact heaviest="Create" sources=25559 definitions=852 upper_bound=21776268; region_cache_hits=1053729 misses=31619 retained_bytes=440274445

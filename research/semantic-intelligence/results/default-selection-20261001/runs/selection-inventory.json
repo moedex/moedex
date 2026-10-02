@@ -1,0 +1,191 @@
+[
+  {
+    "anchor": {
+      "id": "symbol:d21eb418d5f0092006a91a360b42932762c21fbf8bf43dde3c3c0a603e6f1223",
+      "key": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "T:Webhooks.API.IntegrationEvents.OrderStatusChangedToShippedIntegrationEventHandler",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    "fact": {
+      "kind": "interface_default_selection",
+      "rule": "csharp-interface-selection-v1",
+      "evidence_scope": "compile_time",
+      "interface_symbol_id": "symbol:7b7f9f21c200df9c6d668d8ead7be1c2914403fbf5cab72b106682ca6c2184bf",
+      "implementing_type_symbol_id": "symbol:d21eb418d5f0092006a91a360b42932762c21fbf8bf43dde3c3c0a603e6f1223",
+      "selected_default_symbol_id": "symbol:fb2de4ff438c3bbb20f35c064d7ea2cf382450e1b838fdccefe2705ef174bdf0",
+      "default_template_symbol_id": "symbol:aae4e60bf57e07a3bbaefb09b7019804b3e797c1b111f6f9070fcebd4db4544c"
+    },
+    "symbols": [
+      {
+        "id": "symbol:7b7f9f21c200df9c6d668d8ead7be1c2914403fbf5cab72b106682ca6c2184bf",
+        "key": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/EventBus/EventBus.csproj",
+          "descriptor": "M:eShop.EventBus.Abstractions.IIntegrationEventHandler.Handle(eShop.EventBus.Events.IntegrationEvent)",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      {
+        "id": "symbol:d21eb418d5f0092006a91a360b42932762c21fbf8bf43dde3c3c0a603e6f1223",
+        "key": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+          "descriptor": "T:Webhooks.API.IntegrationEvents.OrderStatusChangedToShippedIntegrationEventHandler",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      {
+        "id": "symbol:fb2de4ff438c3bbb20f35c064d7ea2cf382450e1b838fdccefe2705ef174bdf0",
+        "key": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/EventBus/EventBus.csproj",
+          "descriptor": "{\"definition\":\"M:eShop.EventBus.Abstractions.IIntegrationEventHandler\\u00601.eShop#EventBus#Abstractions#IIntegrationEventHandler#Handle(eShop.EventBus.Events.IntegrationEvent)\",\"arguments\":[{\"descriptor\":\"T:Webhooks.API.IntegrationEvents.OrderStatusChangedToShippedIntegrationEvent\",\"descriptor_kind\":\"documentation_comment_id\",\"namespace_kind\":\"project\",\"namespace\":\"eShop/src/Webhooks.API/Webhooks.API.csproj\",\"language\":\"csharp\"}]}",
+          "descriptor_kind": "constructed_interface_method_v1"
+        }
+      },
+      {
+        "id": "symbol:aae4e60bf57e07a3bbaefb09b7019804b3e797c1b111f6f9070fcebd4db4544c",
+        "key": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/EventBus/EventBus.csproj",
+          "descriptor": "M:eShop.EventBus.Abstractions.IIntegrationEventHandler`1.eShop#EventBus#Abstractions#IIntegrationEventHandler#Handle(eShop.EventBus.Events.IntegrationEvent)",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      }
+    ]
+  },
+  {
+    "anchor": {
+      "id": "symbol:62a252d9cceed56f091fab62880408e9e3ac913175d51016a5036515fa3bf9bb",
+      "key": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "T:Webhooks.API.IntegrationEvents.OrderStatusChangedToPaidIntegrationEventHandler",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    "fact": {
+      "kind": "interface_default_selection",
+      "rule": "csharp-interface-selection-v1",
+      "evidence_scope": "compile_time",
+      "interface_symbol_id": "symbol:7b7f9f21c200df9c6d668d8ead7be1c2914403fbf5cab72b106682ca6c2184bf",
+      "implementing_type_symbol_id": "symbol:62a252d9cceed56f091fab62880408e9e3ac913175d51016a5036515fa3bf9bb",
+      "selected_default_symbol_id": "symbol:00eefc1d70039ba7c3512b98a67cf43d3d619afe9160e373e5e9aa87edd857ac",
+      "default_template_symbol_id": "symbol:aae4e60bf57e07a3bbaefb09b7019804b3e797c1b111f6f9070fcebd4db4544c"
+    },
+    "symbols": [
+      {
+        "id": "symbol:7b7f9f21c200df9c6d668d8ead7be1c2914403fbf5cab72b106682ca6c2184bf",
+        "key": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/EventBus/EventBus.csproj",
+          "descriptor": "M:eShop.EventBus.Abstractions.IIntegrationEventHandler.Handle(eShop.EventBus.Events.IntegrationEvent)",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      {
+        "id": "symbol:62a252d9cceed56f091fab62880408e9e3ac913175d51016a5036515fa3bf9bb",
+        "key": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+          "descriptor": "T:Webhooks.API.IntegrationEvents.OrderStatusChangedToPaidIntegrationEventHandler",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      {
+        "id": "symbol:00eefc1d70039ba7c3512b98a67cf43d3d619afe9160e373e5e9aa87edd857ac",
+        "key": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/EventBus/EventBus.csproj",
+          "descriptor": "{\"definition\":\"M:eShop.EventBus.Abstractions.IIntegrationEventHandler\\u00601.eShop#EventBus#Abstractions#IIntegrationEventHandler#Handle(eShop.EventBus.Events.IntegrationEvent)\",\"arguments\":[{\"descriptor\":\"T:Webhooks.API.IntegrationEvents.OrderStatusChangedToPaidIntegrationEvent\",\"descriptor_kind\":\"documentation_comment_id\",\"namespace_kind\":\"project\",\"namespace\":\"eShop/src/Webhooks.API/Webhooks.API.csproj\",\"language\":\"csharp\"}]}",
+          "descriptor_kind": "constructed_interface_method_v1"
+        }
+      },
+      {
+        "id": "symbol:aae4e60bf57e07a3bbaefb09b7019804b3e797c1b111f6f9070fcebd4db4544c",
+        "key": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/EventBus/EventBus.csproj",
+          "descriptor": "M:eShop.EventBus.Abstractions.IIntegrationEventHandler`1.eShop#EventBus#Abstractions#IIntegrationEventHandler#Handle(eShop.EventBus.Events.IntegrationEvent)",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      }
+    ]
+  },
+  {
+    "anchor": {
+      "id": "symbol:c0fb26568b68923e1dea7b8132bb6cc574995b1bcdc79e0a3fcee161dea71410",
+      "key": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "T:Webhooks.API.IntegrationEvents.ProductPriceChangedIntegrationEventHandler",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    "fact": {
+      "kind": "interface_default_selection",
+      "rule": "csharp-interface-selection-v1",
+      "evidence_scope": "compile_time",
+      "interface_symbol_id": "symbol:7b7f9f21c200df9c6d668d8ead7be1c2914403fbf5cab72b106682ca6c2184bf",
+      "implementing_type_symbol_id": "symbol:c0fb26568b68923e1dea7b8132bb6cc574995b1bcdc79e0a3fcee161dea71410",
+      "selected_default_symbol_id": "symbol:78ffefce0c021a917bdf5711365dc383d998f62fe4ceb25e31916192e1590f7b",
+      "default_template_symbol_id": "symbol:aae4e60bf57e07a3bbaefb09b7019804b3e797c1b111f6f9070fcebd4db4544c"
+    },
+    "symbols": [
+      {
+        "id": "symbol:7b7f9f21c200df9c6d668d8ead7be1c2914403fbf5cab72b106682ca6c2184bf",
+        "key": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/EventBus/EventBus.csproj",
+          "descriptor": "M:eShop.EventBus.Abstractions.IIntegrationEventHandler.Handle(eShop.EventBus.Events.IntegrationEvent)",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      {
+        "id": "symbol:c0fb26568b68923e1dea7b8132bb6cc574995b1bcdc79e0a3fcee161dea71410",
+        "key": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+          "descriptor": "T:Webhooks.API.IntegrationEvents.ProductPriceChangedIntegrationEventHandler",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      {
+        "id": "symbol:78ffefce0c021a917bdf5711365dc383d998f62fe4ceb25e31916192e1590f7b",
+        "key": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/EventBus/EventBus.csproj",
+          "descriptor": "{\"definition\":\"M:eShop.EventBus.Abstractions.IIntegrationEventHandler\\u00601.eShop#EventBus#Abstractions#IIntegrationEventHandler#Handle(eShop.EventBus.Events.IntegrationEvent)\",\"arguments\":[{\"descriptor\":\"T:Webhooks.API.IntegrationEvents.ProductPriceChangedIntegrationEvent\",\"descriptor_kind\":\"documentation_comment_id\",\"namespace_kind\":\"project\",\"namespace\":\"eShop/src/Webhooks.API/Webhooks.API.csproj\",\"language\":\"csharp\"}]}",
+          "descriptor_kind": "constructed_interface_method_v1"
+        }
+      },
+      {
+        "id": "symbol:aae4e60bf57e07a3bbaefb09b7019804b3e797c1b111f6f9070fcebd4db4544c",
+        "key": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "eShop/src/EventBus/EventBus.csproj",
+          "descriptor": "M:eShop.EventBus.Abstractions.IIntegrationEventHandler`1.eShop#EventBus#Abstractions#IIntegrationEventHandler#Handle(eShop.EventBus.Events.IntegrationEvent)",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      }
+    ]
+  }
+]

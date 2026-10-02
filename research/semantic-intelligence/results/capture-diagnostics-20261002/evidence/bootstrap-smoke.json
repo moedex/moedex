@@ -1,0 +1,17 @@
+{
+  "classification": "unscored local MCP bootstrap smoke",
+  "server_pid": 11054,
+  "instruction_views": 1,
+  "instruction_bytes": 1177,
+  "tool_count": 22,
+  "task_calls_before_smoke": 0,
+  "task_bytes_before_smoke": 0,
+  "task_clock_started": false,
+  "first_call": {
+    "calls": 1,
+    "response_bytes": 414,
+    "native_success": true
+  },
+  "server_returncode": 0,
+  "server_stopped": true
+}

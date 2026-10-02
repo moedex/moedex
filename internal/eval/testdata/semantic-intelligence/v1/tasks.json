@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "label_source": "Source-authored synthetic judgments; not inferred from either engine's output. Requires independent human review before comparative claims.",
+  "sources": ["orders/Contracts.cs", "orders/Startup.cs", "unrelated/Contracts.cs"],
+  "tasks": [
+    {
+      "id": "inheritance-local-with-foreign-collision",
+      "question": "What is the base class of Orders.OrderHandler? Show the source evidence and exclude the unrelated service's OrderBase.",
+      "operation": "hierarchy",
+      "symbol": "OrderHandler",
+      "required": [{"source": "orders/Contracts.cs#OrderHandler", "relation": "extends", "target": "orders/Contracts.cs#OrderBase", "evidence": {"file": "orders/Contracts.cs", "line": 5, "text": "OrderBase"}}],
+      "forbidden": [{"source": "orders/Contracts.cs#OrderHandler", "relation": "extends", "target": "unrelated/Contracts.cs#OrderBase"}]
+    },
+    {
+      "id": "di-local-with-foreign-collision",
+      "question": "Which implementation does Orders.Startup.Configure register? Cite the registration; do not select the identically named implementation in Unrelated.",
+      "operation": "dependencies",
+      "symbol": "Configure",
+      "required": [{"source": "orders/Startup.cs#Configure", "relation": "injects", "target": "orders/Contracts.cs#OrderStore", "evidence": {"file": "orders/Startup.cs", "line": 5, "text": "AddScoped<IOrderStore, OrderStore>"}}],
+      "forbidden": [{"source": "orders/Startup.cs#Configure", "relation": "injects", "target": "unrelated/Contracts.cs#OrderStore"}]
+    }
+  ]
+}

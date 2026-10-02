@@ -1,0 +1,56 @@
+{
+  "task": "impact-attendee",
+  "reviewer": "root",
+  "reviewed_utc": "2026-10-02T02:27:59.562727+00:00",
+  "answer_sha256": "61f7cf333bf0184a7aa28364d5e901e8d9bda3f17ca509cb4709d7475550bdef",
+  "atoms": [
+    {
+      "id": "impact-attendee.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "All three contract fields and types identified at contract 3-8; response 002."
+    },
+    {
+      "id": "impact-attendee.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "First consumer declaration and logging-only MemberId/EventId body correctly cited; response 002 plus compiler declaration in 005."
+    },
+    {
+      "id": "impact-attendee.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Validation consumer declaration and all forwarded arguments stated with source citation and compiler context."
+    },
+    {
+      "id": "impact-attendee.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Both worker consumers and definition explicitly named with focused relevant registration/configuration range 60-87; source response 006."
+    },
+    {
+      "id": "impact-attendee.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Saga mappings and after-failure action order explicitly described with source 14-41 and configured-publication compiler fact; responses 005/008."
+    },
+    {
+      "id": "impact-attendee.6",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Interface/service review and RegistrationValidated propagation correctly cited; response 011 and interface block in 002."
+    },
+    {
+      "id": "impact-attendee.7",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly distinguishes declaration/configuration/startup from activation, ordering, DI resolution or delivery; supported by compiler context and source."
+    }
+  ],
+  "correctness": 7,
+  "evidence": 7,
+  "possible": 7,
+  "unsupported_claims": [],
+  "strict_success": true,
+  "isolation_audit": "Solver attestation and logged RPCs available; full model/tool activity not exposed to root, so host isolation is not independently verified."
+}

@@ -1,0 +1,121 @@
+{
+  "task": {
+    "id": "flow-email",
+    "journey": "explain_cross_service",
+    "prompt": "Explain how registration submission configures a registration-email action and where that email message is consumed. Separate state-machine configuration from proof of delivery.",
+    "requirements": [
+      {
+        "claim": "Saga declares RegistrationSubmitted event and correlates it by Message.RegistrationId.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "start_line": 14,
+            "end_line": 14,
+            "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+          },
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "start_line": 47,
+            "end_line": 47,
+            "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+          }
+        ],
+        "id": "flow-email.1",
+        "weight": 1
+      },
+      {
+        "claim": "Initially When(RegistrationSubmitted) copies date/event/member/payment and transitions to Registered.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "start_line": 16,
+            "end_line": 25,
+            "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+          }
+        ],
+        "id": "flow-email.2",
+        "weight": 1
+      },
+      {
+        "claim": "Fluent Publish configures SendRegistrationEmail using saga CorrelationId/date/event/member.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "start_line": 26,
+            "end_line": 32,
+            "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+          }
+        ],
+        "id": "flow-email.3",
+        "weight": 1
+      },
+      {
+        "claim": "SendRegistrationEmailConsumer declares IConsumer<SendRegistrationEmail>; worker registers it.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+            "start_line": 8,
+            "end_line": 18,
+            "raw_sha256": "0e5c8f13aa04dd9b46c488b677fcfef3c9583998a74a98cb4283087326de7592"
+          },
+          {
+            "path": "src/Sample.Worker/Program.cs",
+            "start_line": 75,
+            "end_line": 75,
+            "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+          }
+        ],
+        "id": "flow-email.4",
+        "weight": 1
+      },
+      {
+        "claim": "Consume only logs notification then returns Task.CompletedTask; checked-in method is not an actual email transport send.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+            "start_line": 18,
+            "end_line": 23,
+            "raw_sha256": "0e5c8f13aa04dd9b46c488b677fcfef3c9583998a74a98cb4283087326de7592"
+          }
+        ],
+        "id": "flow-email.5",
+        "weight": 1
+      },
+      {
+        "claim": "Configured publication and consumption do not prove message delivery or that email was sent.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "start_line": 26,
+            "end_line": 34,
+            "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+          },
+          {
+            "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+            "start_line": 18,
+            "end_line": 23,
+            "raw_sha256": "0e5c8f13aa04dd9b46c488b677fcfef3c9583998a74a98cb4283087326de7592"
+          }
+        ],
+        "id": "flow-email.6",
+        "weight": 1
+      }
+    ],
+    "permissible_unknowns": [
+      "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+      "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+    ]
+  },
+  "scoring": {
+    "atomic_correctness": "Each atom scores 1 if correct and explicit, 0.5 if correct but materially incomplete, 0 if absent/incorrect. Report raw numerator/denominator and per-atom verdicts.",
+    "evidence": "Independently score each atom 1 for precise retrievable citation supporting the whole claim, 0.5 for a relevant but incomplete/broad citation, 0 for absent or contradictory evidence. Line-number equivalents and exact tool source spans are acceptable.",
+    "unsupported_claims": "Inventory false or unsupported claims separately with severity. Unsupported runtime certainty or invented source facts prevents a fully-correct task label even if positive atoms are present.",
+    "abstention": "Explicit unknowns avoid false-claim penalties but do not earn missing source-fact credit. Missing tool capability is incomplete evidence, not itself a false claim.",
+    "task_success": "All atoms receive correctness=1 and evidence=1, no material unsupported claims, and applicable configuration/runtime distinction is stated. Report graded scores as well as this strict success label.",
+    "review": "Two independent source reviewers adjudicate using source, rubric and retained solver transcript; disagreements retained and resolved explicitly. No tool output creates new gold after execution.",
+    "runtime_unknown_atoms": "Citations support the visible source limits, not proof that no unseen runtime evidence could exist."
+  },
+  "source_root": "/Users/zakkeown/Code/moedex/.local/application-impact/Sample-Outbox",
+  "run_directory": "/Users/zakkeown/Code/moedex/.local/journey-readiness/solvers/flow-email",
+  "rubric_source": "research/semantic-intelligence/results/agent-journeys-20261001/source-rubric.json"
+}

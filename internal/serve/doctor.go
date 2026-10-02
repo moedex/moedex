@@ -48,6 +48,7 @@ type ShardDirInfo struct {
 
 	ClusterExists        bool
 	ClusterOpenErr       string
+	ClusterEdgeCap       int
 	ClusterStatus        string
 	ClusterEligibleNodes int
 	ClusterEligibleEdges int
@@ -115,6 +116,7 @@ func InspectShardDir(dir string) (ShardDirInfo, error) {
 				info.ClusterOpenErr = err.Error()
 			} else {
 				info.ClusterStatus = sidecar.Status
+				info.ClusterEdgeCap = sidecar.EdgeCap
 				info.ClusterEligibleNodes = sidecar.EligibleNodes
 				info.ClusterEligibleEdges = sidecar.EligibleEdges
 				info.ClusterCap = sidecar.Cap

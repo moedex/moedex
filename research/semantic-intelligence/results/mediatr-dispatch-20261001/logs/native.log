@@ -1,0 +1,4 @@
+  File "/Users/zakkeown/Code/moedex/tools/semantic-dotnet/test_mediatr_dispatch.py", line 104
+    assert all(t['namespace_kind']=='project' and t['namespace']=='fixture/Fixture.csproj' for t in value['arguments'] if t['descriptor'].startswith(('T:One.','T:Two.'))
+              ^
+SyntaxError: '(' was never closed

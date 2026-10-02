@@ -1,0 +1,17 @@
+{
+  "ordinal": 9,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"repo\":\"CleanArchitecture\",\"path\":\"src/Application/TodoLists/Commands/UpdateTodoList/UpdateTodoListCommandValidator.cs\",\"start_line\":13,\"end_line\":27}"
+  ],
+  "started_monotonic": 79125.85008375,
+  "finished_monotonic": 79125.907070416,
+  "returncode": 0,
+  "stdout_bytes": 2432,
+  "stdout_sha256": "5539e66efe2070d4defc409d67d08574e9141a726202242c03ff5164f8654b93",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

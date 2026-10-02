@@ -1,0 +1,92 @@
+package mcp
+
+import (
+	"encoding/json"
+	"fmt"
+	"sort"
+	"strings"
+
+	"moedex/internal/semantic"
+	"moedex/internal/semanticindex"
+)
+
+// Keep identities separate from descriptors so a common implementing type is
+// materialized once, matching the index's deduplicated implementation budget.
+func compilerImplementationEvidence(r semanticindex.Result, out *CompilerBinding) error {
+	bad := func() error { return fmt.Errorf("compiler reader returned inconsistent implementation evidence") }
+	required := func(s string) bool { return strings.TrimSpace(s) != "" && !strings.ContainsRune(s, 0) }
+	validSymbolText := func(s semantic.Symbol) bool { return required(s.Key.Namespace) && required(s.Key.Descriptor) }
+	facts := r.Binding.ImplementationFacts
+	if len(facts) == 0 {
+		if len(r.ImplementationSymbols) != 0 {
+			return bad()
+		}
+		return nil
+	}
+	if semantic.ValidateImplementationFacts(facts) != nil || len(r.ImplementationSymbols) > semantic.MaxImplementationFacts*7 {
+		return bad()
+	}
+	if r.Binding.Status != "resolved" || r.Occurrence.Role != "declaration" || r.Occurrence.Kind != "declaration" || r.Context.Status != "complete" || r.Binding.Method != "roslyn-semantic-model" || r.Binding.Extractor != "msbuild-roslyn" || (r.Binding.ExtractorVersion != "6" && r.Binding.ExtractorVersion != "7" && r.Binding.ExtractorVersion != "8" && r.Binding.ExtractorVersion != "9" && (r.Binding.ExtractorVersion != "10" && (r.Binding.ExtractorVersion != "11" && r.Binding.ExtractorVersion != "12"))) || r.Context.Extractor != r.Binding.Extractor || r.Context.ExtractorVersion != r.Binding.ExtractorVersion {
+		return bad()
+	}
+	if r.Symbol == nil || !validSymbolText(*r.Symbol) || r.Symbol.ID != r.Binding.SymbolID || r.Symbol.ID != r.Symbol.ComputeID() || r.Occurrence.ID != r.Binding.OccurrenceID || r.Occurrence.SourceID != r.Source.ID || r.Occurrence.ContextID != r.Context.ID || r.Source.SnapshotID != r.Snapshot.ID || r.Context.SnapshotID != r.Snapshot.ID || r.Source.ID == "" || r.Context.ID == "" || r.Snapshot.ID == "" || r.Occurrence.ID == "" {
+		return bad()
+	}
+	if r.Symbol.Key.Namespace != r.Snapshot.Repo+"/"+r.Context.Project {
+		return bad()
+	}
+	raw, _ := json.Marshal(facts)
+	cost := uint64(len(raw))*2 + 1024
+	sy := make(map[string]semantic.Symbol, len(r.ImplementationSymbols))
+	for _, symbol := range r.ImplementationSymbols {
+		cost += 2 * uint64(512+len(symbol.ID)+len(symbol.Key.Language)+len(symbol.Key.NamespaceKind)+len(symbol.Key.Namespace)+len(symbol.Key.Descriptor)+len(symbol.Key.DescriptorKind))
+		if cost > semanticindex.MaxQueryBytes {
+			return fmt.Errorf("compiler implementation evidence exceeds byte budget")
+		}
+		if _, exists := sy[symbol.ID]; exists || !validSymbolText(symbol) || symbol.ID != symbol.ComputeID() {
+			return bad()
+		}
+		sy[symbol.ID] = symbol
+	}
+	used := map[string]bool{}
+	for _, fact := range facts {
+		if semantic.ValidateImplementationExtractor(fact, r.Binding.ExtractorVersion) != nil {
+			return bad()
+		}
+		iface, ok := sy[fact.InterfaceSymbolID]
+		if !ok {
+			return bad()
+		}
+		typ, ok := sy[fact.ImplementingTypeSymbolID]
+		if !ok {
+			return bad()
+		}
+		var selection []semantic.Symbol
+		for _, id := range fact.SymbolIDs()[2:] {
+			symbol, ok := sy[id]
+			if !ok {
+				return bad()
+			}
+			selection = append(selection, symbol)
+			used[id] = true
+		}
+		if semantic.ValidateImplementationSymbols(fact, *r.Symbol, iface, typ, selection...) != nil {
+			return bad()
+		}
+		used[iface.ID] = true
+		used[typ.ID] = true
+	}
+	if len(used) != len(sy) {
+		return bad()
+	}
+	out.ImplementationFacts = append([]semantic.ImplementationFact(nil), facts...)
+	ids := make([]string, 0, len(sy))
+	for id := range sy {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		out.ImplementationSymbols = append(out.ImplementationSymbols, compilerSymbol(sy[id]))
+	}
+	return nil
+}

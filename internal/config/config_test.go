@@ -111,6 +111,7 @@ func TestRegistryDefaultsMatchRuntimeContracts(t *testing.T) {
 	for name, want := range map[string]string{
 		"MOEDEX_GRAPH_LSP_REQUESTS_PER_SECOND": "100",
 		"MOEDEX_GRAPH_CLUSTER_MAX_NODES":       "250000",
+		"MOEDEX_GRAPH_CLUSTER_MAX_EDGES":       "1000000",
 		"MOEDEX_VERIFY_CONTENT":                "true",
 	} {
 		if got := values[name]; got != want {

@@ -1,0 +1,17 @@
+{
+  "ordinal": 24,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"repo\":\"CleanArchitecture\",\"path\":\"src/Domain/Common/BaseEvent.cs\",\"format\":\"text\"}"
+  ],
+  "started_monotonic": 78849.153461875,
+  "finished_monotonic": 78849.212079458,
+  "returncode": 0,
+  "stdout_bytes": 1411,
+  "stdout_sha256": "03392f54fad86e0b3eb60c80c5d8fcce83efa99b2b7c26e960da17186ba89fe1",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

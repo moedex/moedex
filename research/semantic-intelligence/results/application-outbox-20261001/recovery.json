@@ -1,0 +1,63 @@
+{
+  "sdk": {
+    "name": "dotnet-sdk-osx-arm64.tar.gz",
+    "rid": "osx-arm64",
+    "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.100/dotnet-sdk-10.0.100-osx-arm64.tar.gz",
+    "hash": "0ee9c774f9c63601844619b67d6ca829d70fa26b9949b808e801380c35edb12e4c9418baf8e2ef8ba1dc6dc7d307dbf5830fb0f4f97666032a391c5c097ee607"
+  },
+  "sdk_archive_sha512_verified": true,
+  "worker_sha256": "38ec7043920318c51ce4bd2b219db66168949131be3de78ac0209ca5e7156360",
+  "original_worker_sha256": "373308a0630f2510fd3840bdd8e5a79ac92ba09ea2956f703004e268efd70b56",
+  "detector_source_sha256": "f056bfb341b7b3281a1c65fb0e27c426a8e12b4b77f4d497f4446b3021930be1",
+  "detector_unchanged": true,
+  "source_matches_baseline": true,
+  "runner_sha256": "b8174b50e0c98e9c0fa7bfdf009ba4a1ed295d40f9ebaa25ef33b36f208e9d21",
+  "bundle_manifest_sha256": "a663485f8a29371a407d3208046267b25159f2751c5a135228f609f200ae008b",
+  "acquisition_commands": [
+    [
+      "curl",
+      "-fL",
+      "https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/10.0/releases.json",
+      "-o",
+      ".local/application-impact/dotnet-releases.json"
+    ],
+    [
+      "curl",
+      "-fL",
+      "https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.100/dotnet-sdk-10.0.100-osx-arm64.tar.gz",
+      "-o",
+      ".local/application-impact/dotnet-sdk.tar.gz"
+    ],
+    [
+      "git",
+      "clone",
+      "https://github.com/MassTransit/Sample-Outbox.git",
+      ".local/application-impact/Sample-Outbox"
+    ],
+    [
+      ".local/application-impact/dotnet/dotnet",
+      "build",
+      ".local/application-impact/worker-source/Moedex.SemanticWorker.csproj"
+    ],
+    [
+      ".local/application-impact/dotnet/dotnet",
+      "restore",
+      ".local/application-impact/Sample-Outbox/Sample-Outbox.sln",
+      "--packages",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/packages",
+      "--source",
+      "https://api.nuget.org/v3/index.json",
+      "-p:NuGetAudit=false"
+    ],
+    [
+      ".local/application-impact/moe",
+      "semantic",
+      "dependencies",
+      "pack",
+      "--packages",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/packages",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/bundle"
+    ]
+  ]
+}

@@ -1,0 +1,1 @@
+If the registration-validation method signature changes, identify the interface, implementation, callers, and registration configuration that need review. Cite source.

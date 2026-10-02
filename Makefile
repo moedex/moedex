@@ -43,6 +43,13 @@ BENCHTIME ?= 20x
 BENCHN    ?= 20
 
 ## verify: master gate — everything must pass for DoD.
+.PHONY: public-corpus-parity
+
+## public-corpus-parity: explicit pinned Roslyn gate; no acquisition or schedule.
+public-corpus-parity:
+	@test -n "$(PUBLIC_CORPUS)" -a -n "$(PUBLIC_RUN)" || { echo "set PUBLIC_CORPUS to the Roslyn checkout and PUBLIC_RUN to a new external run directory" >&2; exit 2; }
+	sh scripts/public-corpus-parity.sh "$(PUBLIC_CORPUS)" "$(PUBLIC_RUN)" $(if $(PUBLIC_BINARY),"$(PUBLIC_BINARY)")
+
 verify: health roundtrip parity
 	@echo "=== make verify: ALL GATES GREEN ==="
 
@@ -65,13 +72,14 @@ import-fence:
 ## Runtime-dependent integration assertions may skip; this gate prevents rot.
 tagged-check: vet-lsp test-dense vet-simd
 
-## graph-eval: hermetic production-handler graph quality and context-budget gate.
+## graph-eval: source-extraction plus hermetic traversal/context-budget gates.
 graph-eval:
-	go test ./internal/eval -run '^TestHermeticGraphGoldGate$$' -count=1 -v
+	go test ./internal/eval -run '^(TestHermeticGraphGoldGate|TestSemanticExtractionThroughMCP|TestSemanticTaskSchemaRejectsInvalidLabels|TestScopedContext.*|TestCompilerGold.*|TestSemanticArtifact.*|TestSemanticIndex.*|TestSemanticPrimaryConstructor.*)$$' -count=1 -v
 
 ## graph-eval-private: reviewed >=30-query self-hosted tier. Requires
 ## MOEDEX_GRAPH_EVAL_SHARDS and MOEDEX_GRAPH_GOLD.
 graph-eval-private: graph-eval
+	@test -n "$$MOEDEX_GRAPH_EVAL_SHARDS" -a -n "$$MOEDEX_GRAPH_GOLD" || { echo "graph-eval-private requires MOEDEX_GRAPH_EVAL_SHARDS and MOEDEX_GRAPH_GOLD; a skipped private gate is not acceptance evidence" >&2; exit 1; }
 	go test ./internal/eval -run '^TestPrivateGraphGoldGate$$' -count=1 -v
 
 require-source-digest:

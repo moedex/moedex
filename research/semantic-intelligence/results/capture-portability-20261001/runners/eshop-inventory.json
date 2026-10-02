@@ -1,0 +1,13 @@
+{
+  "contexts": 5,
+  "sources": 247,
+  "generated_sources": 73,
+  "symbols": 4481,
+  "bindings": 45896,
+  "compiler_versions": [
+    "4.11.0.0"
+  ],
+  "context_statuses": {
+    "complete": 5
+  }
+}

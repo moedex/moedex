@@ -1,0 +1,363 @@
+{
+  "date_local": "2026-09-30",
+  "status": "passed ordered-response, fresh-artifact, anchor and unchanged-refresh gates; startup and clustering remain limited",
+  "source": {
+    "source_snapshot": "20260930T230839Z-1",
+    "source_commit": "36d26c5466e4d25940657ccb8d5b9557ccaf7be1",
+    "shards": [
+      {
+        "name": "shard-0000.idx",
+        "bytes": 426353753,
+        "sha256": "c7c1941da48b15d33902954a7733e7d2f83cae01d70f701febe3f353510e7320"
+      },
+      {
+        "name": "shard-0001.idx",
+        "bytes": 418489359,
+        "sha256": "41fb5b8ceb6d875e656142355cfbce3bf17f1ce3054e897e889ecc761a6c5676"
+      },
+      {
+        "name": "shard-0002.idx",
+        "bytes": 368739716,
+        "sha256": "c67034c72fcd3fe28cfb05299dcd974181fc6aeb06165e5ed58c2019c971c603"
+      }
+    ]
+  },
+  "graph": {
+    "sha256": "fcc77570f2f18640264f216d29a54c68cd5253490d34270d5e0fb436efa8d002",
+    "bytes": 763241278,
+    "generation": 1,
+    "logical_edges": 182844081,
+    "physical_records": 6619555,
+    "target_sets": 69394,
+    "nodes": 2215076,
+    "identical_to_prior_graph": true,
+    "unchanged_refresh_byte_identical": true
+  },
+  "runs": {
+    "baseline-mcp": {
+      "command": [
+        "/usr/bin/env",
+        "MOEDEX_ROSLYN_GRAPH_DIR=/private/tmp/moedex-roslyn-factored-20261001/shards",
+        "/private/tmp/moedex-roslyn-latency-20261001/baseline.test",
+        "-test.run",
+        "^TestPinnedRoslynFactoredGraphMCP$",
+        "-test.v",
+        "-test.cpuprofile",
+        "/private/tmp/moedex-roslyn-latency-20261001/baseline.cpu.pprof"
+      ],
+      "cwd": "/Users/zakkeown/Code/moedex",
+      "environment": {
+        "PATH": "/usr/bin:/bin",
+        "HOME": "/private/tmp/moedex-roslyn-latency-20261001/home",
+        "TMPDIR": "/private/tmp/moedex-roslyn-latency-20261001/tmp",
+        "GOMAXPROCS": "8",
+        "GOMEMLIMIT": "6GiB"
+      },
+      "started_utc": "2026-10-01T00:52:40.526054+00:00",
+      "elapsed_seconds": 107.1778967920036,
+      "exit_code": 0,
+      "stop_reasons": [],
+      "timeout_seconds": 600,
+      "max_log_bytes": 16777216,
+      "memory_metric": "macos_physical_footprint",
+      "max_memory_bytes": 8589934592,
+      "sampled_peak_memory_bytes": 3503541896,
+      "memory_samples": 422,
+      "sample_interval_seconds": 0.25,
+      "memory_scope": "direct child only",
+      "runner_sha256": "65eedda0b780ec22cf4a948f83c16f05953b176d7bdd0eec8abe20bc242a6e18"
+    },
+    "optimized-mcp": {
+      "command": [
+        "/usr/bin/env",
+        "MOEDEX_ROSLYN_GRAPH_DIR=/private/tmp/moedex-roslyn-factored-20261001/shards",
+        "/private/tmp/moedex-roslyn-latency-20261001/optimized.test",
+        "-test.run",
+        "^TestPinnedRoslynFactoredGraphMCP$",
+        "-test.v",
+        "-test.cpuprofile",
+        "/private/tmp/moedex-roslyn-latency-20261001/optimized.cpu.pprof"
+      ],
+      "cwd": "/Users/zakkeown/Code/moedex",
+      "environment": {
+        "PATH": "/usr/bin:/bin",
+        "HOME": "/private/tmp/moedex-roslyn-latency-20261001/home",
+        "TMPDIR": "/private/tmp/moedex-roslyn-latency-20261001/tmp",
+        "GOMAXPROCS": "8",
+        "GOMEMLIMIT": "6GiB"
+      },
+      "started_utc": "2026-10-01T00:58:53.690679+00:00",
+      "elapsed_seconds": 77.35988533299678,
+      "exit_code": 0,
+      "stop_reasons": [],
+      "timeout_seconds": 600,
+      "max_log_bytes": 16777216,
+      "memory_metric": "macos_physical_footprint",
+      "max_memory_bytes": 8589934592,
+      "sampled_peak_memory_bytes": 2517469632,
+      "memory_samples": 304,
+      "sample_interval_seconds": 0.25,
+      "memory_scope": "direct child only",
+      "runner_sha256": "65eedda0b780ec22cf4a948f83c16f05953b176d7bdd0eec8abe20bc242a6e18"
+    },
+    "build": {
+      "command": [
+        "/private/tmp/moedex-roslyn-latency-20261001/moedex",
+        "graph",
+        "build",
+        "--shard-dir",
+        "/private/tmp/moedex-roslyn-latency-20261001/shards"
+      ],
+      "cwd": "/Users/zakkeown/Code/moedex",
+      "environment": {
+        "PATH": "/usr/bin:/bin",
+        "HOME": "/private/tmp/moedex-roslyn-latency-20261001/home",
+        "TMPDIR": "/private/tmp/moedex-roslyn-latency-20261001/tmp",
+        "GOMAXPROCS": "8",
+        "GOMEMLIMIT": "6GiB"
+      },
+      "started_utc": "2026-10-01T01:00:38.530741+00:00",
+      "elapsed_seconds": 211.00321687499672,
+      "exit_code": 0,
+      "stop_reasons": [],
+      "timeout_seconds": 600,
+      "max_log_bytes": 16777216,
+      "memory_metric": "macos_physical_footprint",
+      "max_memory_bytes": 8589934592,
+      "sampled_peak_memory_bytes": 6289479776,
+      "memory_samples": 829,
+      "sample_interval_seconds": 0.25,
+      "memory_scope": "direct child only",
+      "runner_sha256": "65eedda0b780ec22cf4a948f83c16f05953b176d7bdd0eec8abe20bc242a6e18"
+    },
+    "anchors": {
+      "command": [
+        "/usr/bin/env",
+        "MOEDEX_ROSLYN_SOURCE=/private/tmp/moedex-public-oracle/corpus/roslyn",
+        "MOEDEX_ROSLYN_GRAPH=/private/tmp/moedex-roslyn-latency-20261001/shards/corpus-graph.graph",
+        "/private/tmp/moedex-roslyn-latency-20261001/build.test",
+        "-test.run",
+        "^TestPinnedRoslynGraphLiteralDefinitions$",
+        "-test.v"
+      ],
+      "cwd": "/Users/zakkeown/Code/moedex",
+      "environment": {
+        "PATH": "/usr/bin:/bin",
+        "HOME": "/private/tmp/moedex-roslyn-latency-20261001/home",
+        "TMPDIR": "/private/tmp/moedex-roslyn-latency-20261001/tmp",
+        "GOMAXPROCS": "8",
+        "GOMEMLIMIT": "6GiB"
+      },
+      "started_utc": "2026-10-01T01:04:49.336131+00:00",
+      "elapsed_seconds": 2.7960652080000727,
+      "exit_code": 0,
+      "stop_reasons": [],
+      "timeout_seconds": 600,
+      "max_log_bytes": 16777216,
+      "memory_metric": "macos_physical_footprint",
+      "max_memory_bytes": 8589934592,
+      "sampled_peak_memory_bytes": 68207840,
+      "memory_samples": 11,
+      "sample_interval_seconds": 0.25,
+      "memory_scope": "direct child only",
+      "runner_sha256": "65eedda0b780ec22cf4a948f83c16f05953b176d7bdd0eec8abe20bc242a6e18"
+    },
+    "refresh": {
+      "command": [
+        "/private/tmp/moedex-roslyn-latency-20261001/moedex",
+        "graph",
+        "build",
+        "--shard-dir",
+        "/private/tmp/moedex-roslyn-latency-20261001/shards"
+      ],
+      "cwd": "/Users/zakkeown/Code/moedex",
+      "environment": {
+        "PATH": "/usr/bin:/bin",
+        "HOME": "/private/tmp/moedex-roslyn-latency-20261001/home",
+        "TMPDIR": "/private/tmp/moedex-roslyn-latency-20261001/tmp",
+        "GOMAXPROCS": "8",
+        "GOMEMLIMIT": "6GiB"
+      },
+      "started_utc": "2026-10-01T01:05:09.706957+00:00",
+      "elapsed_seconds": 107.42932470900269,
+      "exit_code": 0,
+      "stop_reasons": [],
+      "timeout_seconds": 600,
+      "max_log_bytes": 16777216,
+      "memory_metric": "macos_physical_footprint",
+      "max_memory_bytes": 8589934592,
+      "sampled_peak_memory_bytes": 2344029880,
+      "memory_samples": 418,
+      "sample_interval_seconds": 0.25,
+      "memory_scope": "direct child only",
+      "runner_sha256": "65eedda0b780ec22cf4a948f83c16f05953b176d7bdd0eec8abe20bc242a6e18"
+    }
+  },
+  "query_observations": {
+    "baseline": {
+      "open_seconds": 83.821522208,
+      "Main_seconds": 0.599696417,
+      "Create_seconds": 15.384995458,
+      "impact_Create_seconds": 6.274205334
+    },
+    "optimized": {
+      "open_seconds": 75.385537458,
+      "Main_seconds": 0.065841958,
+      "Create_seconds": 0.161969334,
+      "impact_Create_seconds": 0.154476625
+    }
+  },
+  "response_parity": {
+    "status": "passed",
+    "comparisons": [
+      {
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "name": "graph_schema",
+            "arguments": {}
+          }
+        },
+        "sha256": "414e4a9c8abeb39f0c57562a687f695e569140b73c27ead338088b8d6c22902d"
+      },
+      {
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 2,
+          "method": "tools/call",
+          "params": {
+            "name": "trace_calls",
+            "arguments": {
+              "symbol": "Main",
+              "hops": 1
+            }
+          }
+        },
+        "sha256": "07e99d874f399cb93de80175754b2b5a0574aa3cb1b1ce264a84393e1ca149c7"
+      },
+      {
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 2,
+          "method": "tools/call",
+          "params": {
+            "name": "trace_calls",
+            "arguments": {
+              "symbol": "Create",
+              "hops": 1
+            }
+          }
+        },
+        "sha256": "5948ad68803e040dacd9ad4bd135dbf846c145c32b05c0cb487aa2d7a848900b"
+      },
+      {
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 3,
+          "method": "tools/call",
+          "params": {
+            "name": "impact_analysis",
+            "arguments": {
+              "symbol": "Create",
+              "depth": 1
+            }
+          }
+        },
+        "sha256": "3763136ed63cd669458078170458af75454e79a2b0fc59dbdb3ce6f8836091ec"
+      }
+    ]
+  },
+  "finalization_parity": {
+    "status": "passed",
+    "counts_identical": true,
+    "cluster_status_counts_membership_identical_excluding_build_time": true,
+    "cluster": {
+      "version": 3,
+      "generation": 1,
+      "status": "over_cap",
+      "observed_nodes": 2215076,
+      "observed_edges": 182844081,
+      "eligible_nodes": 651659,
+      "eligible_edges": 80254679,
+      "cap": 250000,
+      "edge_cap": 1000000,
+      "clusters": []
+    }
+  },
+  "cluster": {
+    "version": 3,
+    "generation": 1,
+    "status": "over_cap",
+    "observed_nodes": 2215076,
+    "observed_edges": 182844081,
+    "eligible_nodes": 651659,
+    "eligible_edges": 80254679,
+    "cap": 250000,
+    "edge_cap": 1000000,
+    "build_millis": 892,
+    "clusters": []
+  },
+  "binary_sha256": {
+    "moedex": "0868b2c85313ebf9da01fc62c08096d8a453f89af752d1839ca56c561ffc1805",
+    "baseline.test": "afab162fc9b44529822271618e71cdf0a3f816a78e2b914348a6ace025a3022d",
+    "optimized.test": "c9aeef12cc65eb012d06b8b3aefdfb6e2a20c48295040ff29e079a67704f6ea3",
+    "microbench.test": "3533612e65733b85cbf8497ff647b62983ba20e5fe6737d397f354411c95d1d4",
+    "build.test": "c2317effc725d3ec249e329e9bf74decb2f9d1a03ccc9e2c3b9596a65d325b48"
+  },
+  "validation": {
+    "go_test_all": "passed",
+    "go_vet_all": "passed",
+    "executable_and_test_builds": "passed",
+    "focused_race": "finalization/refresh, result ordering/proximity, catalog and parallel symbol extraction passed",
+    "tagged_lsp": "go test -tags lsp ./internal/graph/build -run LSP|Factored|Finalize -count=1 passed",
+    "legacy_response_oracle": "12 seeded complete result cases plus location/path/identity edge cases passed",
+    "parallel_symbols": "serial-equivalence, sorted shard publication and indexed BOM identity passed",
+    "finalization_ownership": "borrowed and owned graph/sweep success/error paths and hidden artifact paths passed",
+    "review": "independent serving and finalization correctness reviews found no blocker"
+  },
+  "scope": [
+    "single sequential local CPU-profiled MCP runs, not latency distribution or production SLO",
+    "baseline startup overlapped some implementation/test work",
+    "build comparison is with prior compact-storage acceptance run, not isolated finalization microbenchmark",
+    "same bounded truncated graph semantics; no exhaustive-query claim",
+    "startup dominated by C# extraction; parallelism contribution not isolated",
+    "clustering over_cap, optional audit exhaustive, multi-repository target-roster growth unmeasured",
+    "Go pprof tool unavailable; standard CPU profiles retained with recorded manual protobuf decoder"
+  ],
+  "evidence_sha256": {
+    "after-refresh.json": "beb321fbab8a59bbc5edfd343beff5e48f6eb2e56089048a60722cca2c7cbb32",
+    "anchors.json": "62504dbc9084a9bff764a5f9204e759aa7bbb8fc503389c8da277dbb20e6ea38",
+    "anchors.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "anchors.stdout": "4e331cb7a8c4d7a75ef9237a6476ddbdc492bc4ec1cc1e77483275f3a461798f",
+    "baseline-mcp.json": "78bbdf95ef385a189aff37f5dbeceb960b368427dc53d2b916031aadae76d362",
+    "baseline-mcp.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "baseline-mcp.stdout": "cdfd047b93977211587a9301ae4fe00173d0370b1e1ee7b361e95b68f6b91c2a",
+    "baseline-profile-summary.txt": "41e3adec824160ff3122cfeffac6e4d69415d02bc6533574a566abd1ce1d2010",
+    "baseline.cpu.pprof": "af2acc676c4d902bc1623cb44c79468ec7d38f06dce8349cb654b7441ace4dd3",
+    "before-refresh.json": "12ec02c2e0f91be7a3ca0fae71b76c16fe201fc4e057f595fed64cd723f0a1c3",
+    "binary-sha256.json": "994c52eb66330b2e3d6845025bd65df034a3779bbefd03ba158016be4e734f3f",
+    "build.json": "6dbcc6f10f86b7d9d7ccba2580c2aa6b196057ea2c4b25793e21c860749e6b4c",
+    "build.stderr": "922cc0673c718b1cc2cce35eafc2fd688838e3fdad864a45904a79d8d20e3fca",
+    "build.stdout": "4e92a7ef273527402ec30628c874e667a47274ba85f2a0b573d3651ae4ed2339",
+    "clusters.json": "eecf8df778e5b0f187ec3c476338a5f3ec73fe3eada99628d6668a6708de206e",
+    "decode_profile.py": "dd89ef03fec774c1043630af98031666b6746d0bc0505889932d169d72391314",
+    "finalization-parity.json": "4cb5f5caed92e26c336d6d80b96918ca2b947ba3fdded4eae56eb3edb64d0050",
+    "implementation-sha256.json": "43d0e31a1d07a0d90e3ece32a70f943e52f4bde404460c359fc39ffd7fb2ad34",
+    "inputs.json": "70e925115d306bd14f01035cfeb6dae1ef54d85677fca75bcaf66e4a46fba2ee",
+    "optimized-mcp.json": "33bba5aa9c171f0009f0889ef6579a631a00c5c4c32b5ab9e7275abb0d02a206",
+    "optimized-mcp.stderr": "d0924bfc36d6f6d028d1021e8c3c6508f74f97798a56fa116f29d329a375d930",
+    "optimized-mcp.stdout": "0be51c4a55d7036146c21b95cb130e4f883e06757377b305b07ea4d63eee8679",
+    "optimized-profile-summary.txt": "450e512dc48538469782c95afbc01efeb5e1179dc4bc63e416a6202c11391519",
+    "optimized.cpu.pprof": "9f02a3f17c680f20454e4dcbd67d2536ffbd3e48f9721b12725dc263e3490715",
+    "refresh.json": "c01978ae42c39b561d940e311171be4c302dec6fef3d2899116012124fa0c005",
+    "refresh.stderr": "247352fcb97e64f09c36981fedbbb8cd417e7f4820f71bb3252fbb7b202b157b",
+    "refresh.stdout": "a2f4133b11747176ac10ef6522094bbc0acddf40b826de8a0c62d83422d382ec",
+    "response-parity.json": "c15e8db7d0e197f22d63195c8b222b1d5306c9d44bbef6dc50cc18cd3230abc7",
+    "result-baseline-profile-summary.txt": "81be63b80fd99e661a03401013d2ca6de369545218556cc1cec0b687b4a5841c",
+    "result-baseline.cpu.pprof": "e86c69ffa79cb75804f884b024e515238ea8bcc05068207c12da47e7fbddda13",
+    "result-benchmarks.txt": "975507f412a530e1a1e183f209d30eb94ac94d6eb115c495d29513857264c606",
+    "runner.py": "65eedda0b780ec22cf4a948f83c16f05953b176d7bdd0eec8abe20bc242a6e18"
+  }
+}

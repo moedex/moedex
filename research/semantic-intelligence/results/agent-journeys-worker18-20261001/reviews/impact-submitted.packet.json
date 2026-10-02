@@ -1,0 +1,103 @@
+{
+  "task": {
+    "id": "impact-submitted",
+    "journey": "contract_impact",
+    "prompt": "Assess the source impact of changing RegistrationSubmitted.RegistrationId. Identify producer, consumer, and saga-correlation references, separating compile-time references from runtime routing.",
+    "requirements": [
+      {
+        "claim": "RegistrationSubmitted declares Guid RegistrationId.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+            "start_line": 3,
+            "end_line": 5,
+            "raw_sha256": "0f659a342b91338f1aca4f547bebebe11e65d42c5606a3b7164f74ce46d63bf0"
+          }
+        ],
+        "id": "impact-submitted.1",
+        "weight": 1
+      },
+      {
+        "claim": "RegistrationService populates the message RegistrationId from the entity.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "start_line": 34,
+            "end_line": 40,
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+          }
+        ],
+        "id": "impact-submitted.2",
+        "weight": 1
+      },
+      {
+        "claim": "Saga correlation reads m.Message.RegistrationId; a type/meaning change requires reviewing that correlation.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "start_line": 14,
+            "end_line": 14,
+            "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+          }
+        ],
+        "id": "impact-submitted.3",
+        "weight": 1
+      },
+      {
+        "claim": "NotifyRegistrationConsumer consumes the contract but its body reads member/event/date, not RegistrationId directly.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+            "start_line": 8,
+            "end_line": 21,
+            "raw_sha256": "5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81"
+          }
+        ],
+        "id": "impact-submitted.4",
+        "weight": 1
+      },
+      {
+        "claim": "Saga initial event handling is another contract consumer/configuration site; downstream email/attendee IDs come from saga CorrelationId.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "start_line": 16,
+            "end_line": 40,
+            "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+          }
+        ],
+        "id": "impact-submitted.5",
+        "weight": 1
+      },
+      {
+        "claim": "These are source references/configuration; runtime routing or deployed compatibility is not established.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Worker/Program.cs",
+            "start_line": 74,
+            "end_line": 88,
+            "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+          }
+        ],
+        "id": "impact-submitted.6",
+        "weight": 1
+      }
+    ],
+    "permissible_unknowns": [
+      "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+      "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+    ]
+  },
+  "scoring": {
+    "atomic_correctness": "Each atom scores 1 if correct and explicit, 0.5 if correct but materially incomplete, 0 if absent/incorrect. Report raw numerator/denominator and per-atom verdicts.",
+    "evidence": "Independently score each atom 1 for precise retrievable citation supporting the whole claim, 0.5 for a relevant but incomplete/broad citation, 0 for absent or contradictory evidence. Line-number equivalents and exact tool source spans are acceptable.",
+    "unsupported_claims": "Inventory false or unsupported claims separately with severity. Unsupported runtime certainty or invented source facts prevents a fully-correct task label even if positive atoms are present.",
+    "abstention": "Explicit unknowns avoid false-claim penalties but do not earn missing source-fact credit. Missing tool capability is incomplete evidence, not itself a false claim.",
+    "task_success": "All atoms receive correctness=1 and evidence=1, no material unsupported claims, and applicable configuration/runtime distinction is stated. Report graded scores as well as this strict success label.",
+    "review": "Two independent source reviewers adjudicate using source, rubric and retained solver transcript; disagreements retained and resolved explicitly. No tool output creates new gold after execution.",
+    "runtime_unknown_atoms": "Citations support the visible source limits, not proof that no unseen runtime evidence could exist."
+  },
+  "source_root": "/Users/zakkeown/Code/moedex/.local/application-impact/Sample-Outbox",
+  "run_directory": "/Users/zakkeown/Code/moedex/.local/journey-readiness/solvers/impact-submitted",
+  "rubric_source": "research/semantic-intelligence/results/agent-journeys-20261001/source-rubric.json"
+}

@@ -1,0 +1,53 @@
+{
+  "task": "impact-validation-signature",
+  "reviewer": "independent-review18_10",
+  "answer_sha256": "ab1447c11a3cf6eced8ae2459ce986f94706fa3ba442880d5ad414627c1cb7fd",
+  "atoms": [
+    {
+      "id": "impact-validation-signature.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicit exact Task signature and interface review; citation IRegistrationValidationService.cs:3\u20136 matches pinned source and 002/004.response.raw block."
+    },
+    {
+      "id": "impact-validation-signature.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicit implementation and RegistrationId = registrationId publication review; RegistrationValidationService.cs:7\u201321, specifically 17\u201320, matches pinned source and 002/004.response.raw."
+    },
+    {
+      "id": "impact-validation-signature.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicit Consume call with EventId, MemberId, RegistrationId argument order and awaited result handling; ValidateRegistrationConsumer.cs:21\u201324 supports it in pinned source and 002/004.response.raw."
+    },
+    {
+      "id": "impact-validation-signature.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicit scoped interface/implementation registration review with method-only change caveat. Program.cs:62 precisely supports registration in pinned source and 005.response.raw (59\u201389)."
+    },
+    {
+      "id": "impact-validation-signature.5",
+      "correctness": 1,
+      "evidence": 0.5,
+      "reason": "Injection, configured definition, and static/runtime distinction are explicit and correct. Consumer.cs:13\u201319 and ConsumerDefinition.cs:6\u201316 citations support injection/definition, but answer cites Program.cs:78 for AddConsumer pairing: actual pairing is line 77; line 78 registers the saga. 005.response.raw includes correct line 77. Citation support for entire wiring claim is therefore incomplete."
+    }
+  ],
+  "correctness_total": 5,
+  "evidence_total": 4.5,
+  "possible": 5,
+  "unsupported_claims": [
+    {
+      "claim": "Program.cs line 78 registers AddConsumer<ValidateRegistrationConsumer, ValidateRegistrationConsumerDefinition>().",
+      "severity": "minor",
+      "reason": "Off-by-one citation; pinned Program.cs:77 and 005.response.raw contain this expression, while :78 is AddSagaStateMachine. Underlying configuration fact is supported; this is citation precision, not invented wiring."
+    }
+  ],
+  "strict_success": false,
+  "limitations": [
+    "All five logged requests/responses and answer were reviewed; first 11 search blocks are identical across 002 and 004, and structured texts match textual content. All four packet SHA-256 source hashes match original files. Additional cited definition, message contract and state machine were checked in original source.",
+    "003 returns graph_unavailable; 004 reports omitted lower-ranked context; 005 returns requested 59\u201389 with truncated=true because it is a partial file. Answer appropriately disclaims exhaustive callers and runtime execution.",
+    "Retained transcript logs public requests/responses, not shell permission flags or all local reads. Isolation/escalation/display-truncation self-report cannot be independently verified from those logs and is not treated as product evidence."
+  ]
+}

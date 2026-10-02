@@ -1,0 +1,258 @@
+{
+  "date": "2026-10-01",
+  "status": "passed",
+  "scope": "Pinned external application; paired internal API task evaluation, not runtime proof or CodeGraph comparison",
+  "repo": "https://github.com/MassTransit/Sample-Outbox",
+  "commit": "1ab8e66ebf96e5733e68c2f4d2201276f38ed9c5",
+  "gold_sha256": "2b0bab11f6bc2f90c4a7dbacba518b14004a2673732a2d3160abb8cbaf5f2052",
+  "task_gold_sha256": "12742046b0c89b8cd2e85de55e9fb76390c6679d3d006c6ab0219bcef3467d21",
+  "baseline_preserved": "../application-outbox-20261001/result.json",
+  "metrics": {
+    "supported_expected": 10,
+    "true_positive": 10,
+    "false_negative": 0,
+    "false_positive": 0,
+    "context_expected": 18,
+    "context_observed": 18,
+    "context_missed": 0,
+    "audit_facts": 18,
+    "served_facts": 18,
+    "negative_cases": 2,
+    "negative_violations": 0,
+    "unsupported_patterns": 7
+  },
+  "normal_race_reports_equal": true,
+  "paired_tasks": {
+    "source_authored_tasks": 4,
+    "selected_context_variants": 8,
+    "all_equivalent": true,
+    "selected_context_execution": {
+      "baseline": {
+        "calls": 32,
+        "complete_response_bytes": 71670,
+        "structured_content_bytes": 63214
+      },
+      "candidate": {
+        "calls": 8,
+        "complete_response_bytes": 51702,
+        "structured_content_bytes": 48870
+      }
+    },
+    "discovery_separately": {
+      "baseline": {
+        "calls": 4,
+        "complete_response_bytes": 6232,
+        "structured_content_bytes": 4980
+      },
+      "candidate": {
+        "calls": 4,
+        "complete_response_bytes": 9418,
+        "structured_content_bytes": 8002
+      }
+    },
+    "discovery_inclusive_amortized_once_per_contract": {
+      "baseline": {
+        "calls": 36,
+        "complete_response_bytes": 77902,
+        "structured_content_bytes": 68194
+      },
+      "candidate": {
+        "calls": 12,
+        "complete_response_bytes": 61120,
+        "structured_content_bytes": 56872
+      }
+    },
+    "discovery_definition_only_contexts": {
+      "registration-service": [
+        "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+        "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3"
+      ]
+    },
+    "budget_per_task": {
+      "max_calls": 12,
+      "max_complete_response_bytes": 65536
+    },
+    "limitations": [
+      "Context selection uses frozen source-project expectations and captured IDs; discovery is measured separately and does not choose contexts automatically.",
+      "Discovery-inclusive totals amortize one discovery per contract over two retained context alternatives; not independent fresh-session task totals.",
+      "API byte totals measure serialized tool returns, not transport framing, token counts, latency, or end-user answer quality.",
+      "Seven selected framework/wrapper gaps remain unsupported."
+    ]
+  },
+  "artifacts": {
+    "Api.semantic": {
+      "sha256": "5e64ecdc1dfa8b500f1287c237b27d3cefc90ae12edc34bb7f344f799e03902c",
+      "bytes": 1679037
+    },
+    "composed.semantic": {
+      "sha256": "ebe931fc7b01ad66c35a29692e681f883cf423798dd46063082319ade1c40282",
+      "bytes": 2925489
+    },
+    "Worker.semantic": {
+      "sha256": "96161ae6338811d57af3b7f345fa3594fe3ebb52d592355dcc3b1083ca0f06be",
+      "bytes": 1403045
+    }
+  },
+  "checks": [
+    {
+      "command": "go test ./internal/app/servecmd -run 'Test(PublicApplication|Application)' -count=1 -v",
+      "status": "passed",
+      "log": "normal.log"
+    },
+    {
+      "command": "go test -race ./internal/app/servecmd -run 'Test(PublicApplication|Application)' -count=1 -v",
+      "status": "passed",
+      "log": "race.log"
+    },
+    {
+      "command": "go test ./...",
+      "status": "passed",
+      "log": "resume-final-test.log",
+      "note": "Root executed before final test-only discovery harness extension; final package/race checks include extension."
+    },
+    {
+      "command": "go vet ./...",
+      "status": "passed",
+      "evidence": "Root reported observed exit0 after restart."
+    },
+    {
+      "command": "go build ./...",
+      "status": "passed",
+      "evidence": "Root reported observed exit0 after restart."
+    }
+  ],
+  "files": {
+    "application-report.json": {
+      "sha256": "b2e28d9204a16b4f17fb63979f59f95546434b3a36d8fb9f3c549061664db4f6",
+      "bytes": 49768
+    },
+    "capture-capture-Api.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "capture-capture-Api.stdout": {
+      "sha256": "3f64da81eeb9143c4171e6b545127fa7aa2cf0864270d66d93e4d400ad932fb2",
+      "bytes": 625
+    },
+    "capture-capture-Worker.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "capture-capture-Worker.stdout": {
+      "sha256": "242e6201d592b5366ab56b552aca957753aecd1f7ae8c11de094fc36ccdc96fc",
+      "bytes": 629
+    },
+    "capture-clone-publication.stderr": {
+      "sha256": "ac6e381224786c1c338faff890033034ae5acb195c079041f4212c5236368d19",
+      "bytes": 106
+    },
+    "capture-clone-publication.stdout": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "capture-commands.json": {
+      "sha256": "ef3e6770a13ae2e9129cb35d0177c4631360d56bb6b3076af259ce8fa9c0690f",
+      "bytes": 3978
+    },
+    "capture-compose.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "capture-compose.stdout": {
+      "sha256": "0bcef733320c9991cdebbcf28d6a91ed0f46acea3aed9be35f56af36fc6ae3f0",
+      "bytes": 1020
+    },
+    "capture-inputs.json": {
+      "sha256": "9a63d1259414ba9b1557b9e2ea09adec75a8d6d42cead21794acbc05de509331",
+      "bytes": 5221
+    },
+    "capture-publish.stderr": {
+      "sha256": "e6e2ca017a9e4ba96a0e8a666e26cb1ea42e89bce36e7c30aec3db1e0d3ffa96",
+      "bytes": 211
+    },
+    "capture-publish.stdout": {
+      "sha256": "5ce667f2d48ee84eeaee9c946c6797723c7d5786a16e05d3a5c01d91837efe33",
+      "bytes": 100
+    },
+    "capture-roots.json": {
+      "sha256": "efcf3816137bf6925367ef6aa25c71e6b7e3d17db5d04c70245cf76780f5768b",
+      "bytes": 404
+    },
+    "context-discovery-bound.log": {
+      "sha256": "9ecc2256b24ef859aae9d20df8124c27ea7852df78ce25eb01df55172935886a",
+      "bytes": 42
+    },
+    "context-race.log": {
+      "sha256": "df1eaeeed5d34d9b5acb445a613396bf43ce55299870e1e20966336f97fad35f",
+      "bytes": 74
+    },
+    "context-tests.log": {
+      "sha256": "cd9d760a72809cdd043144772ad85cf7a52039ab38fd8ce527623ed991140052",
+      "bytes": 74
+    },
+    "normal.log": {
+      "sha256": "9ae45cc4aea3ff043f3ef074b66385c43988d157a3989a59f358eb3e7ba09c2f",
+      "bytes": 5310
+    },
+    "published-snapshot.json": {
+      "sha256": "cc205bf49610527c7f8bcdd211bbde548149b7382353edfab89491bb5a49e549",
+      "bytes": 2778
+    },
+    "race-report.json": {
+      "sha256": "b2e28d9204a16b4f17fb63979f59f95546434b3a36d8fb9f3c549061664db4f6",
+      "bytes": 49768
+    },
+    "race.log": {
+      "sha256": "8d91cd325d1b055040d641d7d3c095e400e1eec862982a38d094e864d62fc4c0",
+      "bytes": 5310
+    },
+    "resume-final-test.log": {
+      "sha256": "49d052ee7b52f7b44a9c5ebc789d587e4ff49533a5b8fcb000e6f9f9e5699473",
+      "bytes": 2656
+    },
+    "resume-version-race.log": {
+      "sha256": "5ce41eab7e1e972227d059769ea15bb21c9a4f2627b4d3f10a32791a0bb166bc",
+      "bytes": 80
+    },
+    "sources.json": {
+      "sha256": "5a10b5a151ddcfc5f4b979f749a9b558e05cc3f23aafc4f9b7baedae24db3539",
+      "bytes": 6132
+    },
+    "task-race-report.json": {
+      "sha256": "4a77c69891491cec1fff88f65078ac4fb053a8c0537f2e49f6b38d1e7d780dbe",
+      "bytes": 190507
+    },
+    "task-race-report.json.discovery.json": {
+      "sha256": "d3619c53ac0935977435bc1d4d4296c3f56a9a29ac9bfbad439c1350a4f5448e",
+      "bytes": 8512
+    },
+    "task-report.json": {
+      "sha256": "4a77c69891491cec1fff88f65078ac4fb053a8c0537f2e49f6b38d1e7d780dbe",
+      "bytes": 190507
+    },
+    "task-report.json.discovery.json": {
+      "sha256": "d3619c53ac0935977435bc1d4d4296c3f56a9a29ac9bfbad439c1350a4f5448e",
+      "bytes": 8512
+    },
+    "worker-v3-build.stderr": {
+      "sha256": "ad62ba0ccba6a276f168ca77b1e8fd3d18340b1e7c2d0aa05718dc18db63307d",
+      "bytes": 79
+    },
+    "worker-v3-build.stdout": {
+      "sha256": "f3e2d39041282745107598346d48581fd4f335f76539cc434c060adc8fd95cab",
+      "bytes": 295
+    },
+    "worker-v3-inputs.json": {
+      "sha256": "2cf433eb6ed5442a79157f3977986f47711ae7f7b44a2bb0359dee96c3188c02",
+      "bytes": 618
+    },
+    "worker-v3-tests.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "worker-v3-tests.stdout": {
+      "sha256": "2d9cab69ab5dcfbbd74fcd3c632cfa6d86811aefc9b84b36540eb5bf27cc70a4",
+      "bytes": 400
+    }
+  }
+}

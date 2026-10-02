@@ -85,9 +85,9 @@ func WriteReport(res *Result, meta ReportMeta, path string) error {
 	w("same Go engine, so moedex ⊆ gold always — an over-approximation vs gold would ")
 	w("signal a deep bug.\n\n")
 
-	// --- Engine bug found & fixed ------------------------------------------
-	w("## Engine fix surfaced by this run\n\n")
-	w("`internal/search` verified candidate lines with a literal prefilter ")
+	// --- Historical regression covered by the battery ----------------------
+	w("## Previously fixed regression exercised by this gate\n\n")
+	w("Historically, `internal/search` verified candidate lines with a literal prefilter ")
 	w("(`requiredRun`) that returned the literal bytes for an `OpLiteral` **without ")
 	w("checking `FoldCase`**. For a case-insensitive pattern (e.g. `(?i)public`, ")
 	w("which Go normalizes to an `OpLiteral` with `Rune=\"PUBLIC\"`), the prefilter ")

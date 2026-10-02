@@ -1,0 +1,42 @@
+          
+   ERROR  
+          
+  Semantic capture: worker: semanticrun: process failed: exit status 1: n/Application.csproj"}                        
+  {"code":"workspace","message":"Msbuild failed when processing the file '/Users/zakkeown/Code/moedex/.local/holdout- 
+  cleanarchitecture/capture/workspace/semantic-git-projection-3492959776/source/src/Application/Application.csproj'   
+  with message: Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. 
+  Consider upgrading your TargetFramework to net11.0 or later. You may also set                                       
+  \u003cSuppressTfmSupportBuildWarnings\u003etrue\u003c/SuppressTfmSupportBuildWarnings\u003e in the project file to  
+  ignore this warning and attempt to run in this unsupported configuration at your own                                
+  risk.","project":"src/Application/Application.csproj"} {"code":"workspace","message":"Msbuild failed when processing
+  the file '/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/capture/workspace/semantic-git-projection-   
+  3492959776/source/src/Application/Application.csproj' with message: Microsoft.Build.Tasks.Core 18.10.1-1.26427.6    
+  doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or      
+  later. You may also set \u003cSuppressTfmSupportBuildWarnings\u003etrue\u003c/SuppressTfmSupportBuildWarnings\u003e 
+  in the project file to ignore this warning and attempt to run in this unsupported configuration at your own         
+  risk.","project":"src/Application/Application.csproj"} {"code":"workspace","message":"Msbuild failed when processing
+  the file '/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/capture/workspace/semantic-git-projection-   
+  3492959776/source/src/Application/Application.csproj' with message: Microsoft.Build.Utilities.Core 18.10.1-1.26427.6
+  doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or      
+  later. You may also set \u003cSuppressTfmSupportBuildWarnings\u003etrue\u003c/SuppressTfmSupportBuildWarnings\u003e 
+  in the project file to ignore this warning and attempt to run in this unsupported configuration at your own         
+  risk.","project":"src/Application/Application.csproj"} {"code":"workspace","message":"Msbuild failed when processing
+  the file '/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/capture/workspace/semantic-git-projection-   
+  3492959776/source/src/Application/Application.csproj' with message: Microsoft.Build.Utilities.Core 18.10.1-1.26427.6
+  doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or      
+  later. You may also set \u003cSuppressTfmSupportBuildWarnings\u003etrue\u003c/SuppressTfmSupportBuildWarnings\u003e 
+  in the project file to ignore this warning and attempt to run in this unsupported configuration at your own         
+  risk.","project":"src/Application/Application.csproj"} {"code":"workspace","message":"Msbuild failed when processing
+  the file '/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/capture/workspace/semantic-git-projection-   
+  3492959776/source/src/Application/Application.csproj' with message: Microsoft.NET.StringTools 18.10.1-1.26427.6     
+  doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or      
+  later. You may also set \u003cSuppressTfmSupportBuildWarnings\u003etrue\u003c/SuppressTfmSupportBuildWarnings\u003e 
+  in the project file to ignore this warning and attempt to run in this unsupported configuration at your own         
+  risk.","project":"src/Application/Application.csproj"} {"code":"workspace","message":"Msbuild failed when processing
+  the file '/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/capture/workspace/semantic-git-projection-   
+  3492959776/source/src/Application/Application.csproj' with message: Microsoft.NET.StringTools 18.10.1-1.26427.6     
+  doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or      
+  later. You may also set \u003cSuppressTfmSupportBuildWarnings\u003etrue\u003c/SuppressTfmSupportBuildWarnings\u003e 
+  in the project file to ignore this warning and attempt to run in this unsupported configuration at your own         
+  risk.","project":"src/Application/Application.csproj"}.                                                             
+

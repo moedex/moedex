@@ -1,0 +1,17 @@
+{
+  "ordinal": 13,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"repo\":\"CleanArchitecture\",\"path\":\"src/Web/Program.cs\",\"start_line\":1,\"end_line\":80}"
+  ],
+  "started_monotonic": 78372.479065375,
+  "finished_monotonic": 78372.537289208,
+  "returncode": 0,
+  "stdout_bytes": 3958,
+  "stdout_sha256": "ebd0b4ca4c68cdf2f84956c43ca06944b3f1010560012132ae04e94274e18d33",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

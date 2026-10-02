@@ -1,0 +1,7 @@
+          
+   ERROR  
+          
+  Semantic capture: worker: semanticrun: process failed: exit status 1: semantic worker failed: FileNotFoundException:
+  Could not find file '/Users/zakkeown/Code/moedex/.local/holdout-quartz/capture-02/workspace/semantic-git-projection-
+  196531462/source/artifacts/bin/Quartz.Analyzers/debug/Quartz.Analyzers.dll'..                                       
+

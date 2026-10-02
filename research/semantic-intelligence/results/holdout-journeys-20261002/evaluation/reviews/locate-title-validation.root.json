@@ -1,0 +1,34 @@
+{
+  "task": "locate-title-validation",
+  "answer_sha256": "1ad2372ff025bf6ab235bb4e286ab19152f0ec0232d9dc80273382ba38046e85",
+  "classification": "infrastructure blocked; no product answer evidence",
+  "atoms": [
+    {
+      "id": "locate-title-validation.1",
+      "correctness": 0,
+      "evidence": 0,
+      "reason": "No repository evidence obtained; abstention is appropriate but does not answer atom."
+    },
+    {
+      "id": "locate-title-validation.2",
+      "correctness": 0,
+      "evidence": 0,
+      "reason": "No repository evidence obtained; abstention is appropriate but does not answer atom."
+    },
+    {
+      "id": "locate-title-validation.3",
+      "correctness": 0,
+      "evidence": 0,
+      "reason": "No repository evidence obtained; abstention is appropriate but does not answer atom."
+    },
+    {
+      "id": "locate-title-validation.4",
+      "correctness": 0,
+      "evidence": 0,
+      "reason": "No repository evidence obtained; abstention is appropriate but does not answer atom."
+    }
+  ],
+  "material_unsupported_claims": [],
+  "runtime_distinction_preserved": true,
+  "strict_success": false
+}

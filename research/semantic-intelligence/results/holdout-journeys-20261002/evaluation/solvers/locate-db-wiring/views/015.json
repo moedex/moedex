@@ -1,0 +1,17 @@
+{
+  "ordinal": 15,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"repo\":\"CleanArchitecture\",\"path\":\"src/Infrastructure/Data/ApplicationDbContext.cs\",\"start_line\":10,\"end_line\":23}"
+  ],
+  "started_monotonic": 77509.85076575,
+  "finished_monotonic": 77509.955126916,
+  "returncode": 0,
+  "stdout_bytes": 2314,
+  "stdout_sha256": "31f116613adfd3b12f3644964bd8e796ff8bd2d0a21d3cb7d847df80d77757ee",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

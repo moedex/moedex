@@ -1,0 +1,143 @@
+{
+  "classification": "Moedex source-only holdout; compiler arm setup failed; no CodeGraph paired result",
+  "tasks": [
+    {
+      "task": "locate-title-validation",
+      "atoms": 4,
+      "correctness": 0,
+      "evidence": 0,
+      "strict_success": false,
+      "material_unsupported_claims": [],
+      "minor_issues": [
+        "The statement that no budget was exceeded is stronger than the available transport accounting: call count and elapsed time are within limits, but response accounting is explicitly unknown. The answer also acknowledges that uncertainty.",
+        "The view log supports the stated evidence-access account, but cannot independently verify every negative access assertion, OS-enforced isolation, or model attention."
+      ],
+      "calls": 1,
+      "response_bytes_observed": 0,
+      "transport_accounting_known": false,
+      "classification": "infrastructure-blocked; excluded only from conditional answer-quality denominator",
+      "elapsed_upper_bound_seconds": 130.2583356670075,
+      "views": 4
+    },
+    {
+      "task": "locate-db-wiring",
+      "atoms": 5,
+      "correctness": 5,
+      "evidence": 5,
+      "strict_success": true,
+      "material_unsupported_claims": [],
+      "minor_issues": [],
+      "calls": 23,
+      "response_bytes_observed": 108348,
+      "transport_accounting_known": true,
+      "classification": "evaluable source-only task",
+      "elapsed_upper_bound_seconds": 449.2373612079973,
+      "views": 28
+    },
+    {
+      "task": "flow-completion-event",
+      "atoms": 7,
+      "correctness": 7,
+      "evidence": 7,
+      "strict_success": true,
+      "material_unsupported_claims": [],
+      "minor_issues": [],
+      "calls": 19,
+      "response_bytes_observed": 74491,
+      "transport_accounting_known": true,
+      "classification": "evaluable source-only task",
+      "elapsed_upper_bound_seconds": 427.60829424999247,
+      "views": 24
+    },
+    {
+      "task": "flow-validation-error",
+      "atoms": 5,
+      "correctness": 5,
+      "evidence": 5,
+      "strict_success": true,
+      "material_unsupported_claims": [],
+      "minor_issues": [],
+      "calls": 16,
+      "response_bytes_observed": 83703,
+      "transport_accounting_known": true,
+      "classification": "evaluable source-only task",
+      "elapsed_upper_bound_seconds": 342.54609833299764,
+      "views": 20
+    },
+    {
+      "task": "impact-done-semantics",
+      "atoms": 5,
+      "correctness": 5,
+      "evidence": 5,
+      "strict_success": true,
+      "material_unsupported_claims": [],
+      "minor_issues": [],
+      "calls": 23,
+      "response_bytes_observed": 118626,
+      "transport_accounting_known": true,
+      "classification": "evaluable source-only task",
+      "elapsed_upper_bound_seconds": 462.8467421660025,
+      "views": 30
+    },
+    {
+      "task": "impact-title-uniqueness",
+      "atoms": 4,
+      "correctness": 4,
+      "evidence": 4,
+      "strict_success": true,
+      "material_unsupported_claims": [],
+      "minor_issues": [],
+      "calls": 6,
+      "response_bytes_observed": 23955,
+      "transport_accounting_known": true,
+      "classification": "evaluable source-only task",
+      "elapsed_upper_bound_seconds": 210.5227652080066,
+      "views": 10
+    }
+  ],
+  "assigned": {
+    "tasks": 6,
+    "atoms": 30,
+    "correctness_points_with_blocked_zero": 26,
+    "evidence_points_with_blocked_zero": 26,
+    "strict_successes": 5
+  },
+  "conditional_evaluable": {
+    "tasks": 5,
+    "atoms": 26,
+    "correctness": 26,
+    "evidence": 26,
+    "strict_successes": 5
+  },
+  "observed_response_bytes": 409123,
+  "attempted_calls": 88,
+  "all_transport_accounting_known": false,
+  "score_differences_pending_adjudication": [
+    {
+      "id": "impact-done-semantics.4",
+      "root": {
+        "id": "impact-done-semantics.4",
+        "correctness": 1,
+        "evidence": 0.5,
+        "reason": "Answer identifies clearing/publication and handler correctly, but cites the ClearDomainEvents call without the BaseEntity.ClearDomainEvents body (gold evidence completion). Provisional incomplete evidence for actual clearing; reviewer may distinguish review-site evidence from behavior proof."
+      },
+      "independent": {
+        "id": "impact-done-semantics.4",
+        "correctness": 1,
+        "evidence": 1,
+        "reason": "Correctly describes selecting tracked entities, snapshotting events, clearing queues before publication, and the declared LogTodoItemCompleted consumer and its logging behavior. ClearDomainEvents implementation was also displayed.",
+        "answer_citations": [
+          "src/Infrastructure/Data/Interceptors/DispatchDomainEventsInterceptor.cs:32-48",
+          "src/Application/TodoItems/EventHandlers/LogTodoItemCompleted.cs:6-19"
+        ],
+        "inspected_evidence": [
+          "011.stdout: DispatchDomainEventsInterceptor.cs 1-51",
+          "030.stdout: DispatchDomainEventsInterceptor.cs 17-50",
+          "019.stdout: LogTodoItemCompleted.cs 6-21",
+          "023.stdout: BaseEntity.cs 1-31",
+          "Compared displayed source selections against pinned source; verified packet source SHA-256 and excerpts."
+        ]
+      }
+    }
+  ]
+}

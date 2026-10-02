@@ -93,12 +93,15 @@ type ShardManifest struct {
 // Manifest is the freshness sidecar written alongside the shards. It is the
 // only persisted record of repo→shard membership and per-repo git HEAD.
 type Manifest struct {
-	Version  int             `json:"version"`
-	Root     string          `json:"root"`
-	BuiltAt  time.Time       `json:"built_at"`
-	ShardDir string          `json:"shard_dir"`
-	Heads    []RepoHead      `json:"heads"`
-	Shards   []ShardManifest `json:"shards"`
+	// ShardBytes is the file-boundary content target. Zero in legacy manifests
+	// means DefaultShardBytes; one oversized file may exceed the target alone.
+	ShardBytes int64           `json:"shard_bytes,omitempty"`
+	Version    int             `json:"version"`
+	Root       string          `json:"root"`
+	BuiltAt    time.Time       `json:"built_at"`
+	ShardDir   string          `json:"shard_dir"`
+	Heads      []RepoHead      `json:"heads"`
+	Shards     []ShardManifest `json:"shards"`
 
 	// Skipped records repos that Rebuild could not re-ingest for a reason other
 	// than a rejected privacy policy (which is fatal, not skipped) or a genuine
@@ -388,6 +391,35 @@ func Rebuild(old *Manifest, ch Changes, newShardDir string, builtAt time.Time,
 		privacyFingerprints[source.Dir] = fingerprint
 	}
 
+	// Close over shard/repository co-residency before copying anything. A repo
+	// can span shards: rebuilding all its files while carrying one of its old
+	// shards would duplicate occurrences and retain stale content.
+	repoShards := make(map[string][]int)
+	for i, shard := range old.Shards {
+		for _, repo := range shard.Repos {
+			repoShards[repo] = append(repoShards[repo], i)
+		}
+	}
+	queue := make([]string, 0, len(affected))
+	for repo := range affected {
+		queue = append(queue, repo)
+	}
+	visitedShard := make([]bool, len(old.Shards))
+	for pos := 0; pos < len(queue); pos++ {
+		for _, i := range repoShards[queue[pos]] {
+			if visitedShard[i] {
+				continue
+			}
+			visitedShard[i] = true
+			for _, repo := range old.Shards[i].Repos {
+				if !affected[repo] {
+					affected[repo] = true
+					queue = append(queue, repo)
+				}
+			}
+		}
+	}
+
 	// Partition old shards into carry-forward vs rebuild, and collect the repo
 	// set that must be re-ingested (every repo on any affected shard).
 	reingest := map[string]bool{} // repo dir -> needs re-ingest
@@ -430,11 +462,16 @@ func Rebuild(old *Manifest, ch Changes, newShardDir string, builtAt time.Time,
 		addReingest(r)
 	}
 
+	target := old.ShardBytes
+	if target <= 0 {
+		target = DefaultShardBytes
+	}
 	m := &Manifest{
-		Version:  ManifestVersion,
-		Root:     old.Root,
-		BuiltAt:  builtAt,
-		ShardDir: newShardDir,
+		ShardBytes: target,
+		Version:    ManifestVersion,
+		Root:       old.Root,
+		BuiltAt:    builtAt,
+		ShardDir:   newShardDir,
 	}
 
 	shardIdx := 0
@@ -471,11 +508,9 @@ func Rebuild(old *Manifest, ch Changes, newShardDir string, builtAt time.Time,
 		}
 	}
 
-	// Re-ingest the affected repos into fresh shards. We pack each repo into its
-	// own shard for simplicity and determinism; this matches a tiny-corpus build
-	// and keeps the rebuilt region's dedup correct within each repo. (For the
-	// full corpus a content-byte threshold could re-pack co-resident repos, but
-	// correctness does not require it — see the package caveats.)
+	// Re-ingest affected repositories, bounding each shard at file boundaries.
+	// Repacking within each repo preserves the existing refresh order; content
+	// and occurrence parity do not depend on identical clean-build boundaries.
 	for _, dir := range reingestOrder {
 		source, ok := sourceByDir[dir]
 		if !ok {
@@ -498,15 +533,33 @@ func Rebuild(old *Manifest, ch Changes, newShardDir string, builtAt time.Time,
 			continue
 		}
 		ix := index.New()
-		var bytes int64
+		var contentBytes int64
+		flush := func() error {
+			if ix.NumBlobs() == 0 {
+				return nil
+			}
+			dst := nextShardPath()
+			if err := diskstore.Save(ix, dst); err != nil {
+				return fmt.Errorf("save rebuilt shard for %s: %w", dir, err)
+			}
+			m.Shards = append(m.Shards, ShardManifest{Path: dst, Repos: []string{dir}, ContentBytes: contentBytes})
+			ix = index.New()
+			contentBytes = 0
+			return nil
+		}
 		seen := map[string]bool{}
 		for _, f := range files {
 			if seen[f.AbsPath] {
 				continue
 			}
 			seen[f.AbsPath] = true
+			if ix.NumBlobs() > 0 && int64(len(f.Content)) > target-contentBytes {
+				if err := flush(); err != nil {
+					return nil, err
+				}
+			}
 			ix.AddFile(f.Repo, f.RelPath, f.AbsPath, f.SHA, f.Content)
-			bytes += int64(len(f.Content))
+			contentBytes += int64(len(f.Content))
 		}
 		head, _ := headFn(dir)
 		currentPrivacyFingerprint, err := ingest.AIPrivacyFingerprint(dir)
@@ -524,18 +577,9 @@ func Rebuild(old *Manifest, ch Changes, newShardDir string, builtAt time.Time,
 			PrivacyFingerprint: currentPrivacyFingerprint,
 			ProjectID:          source.ProjectID, Managed: source.Managed,
 		}
-		if ix.NumBlobs() == 0 {
-			// A globally Restricted repository intentionally contributes no shard,
-			// but its HEAD remains recorded so freshness does not classify it as a
-			// perpetually-added source on every refresh.
-			appendHead(repoHead)
-			continue
+		if err := flush(); err != nil {
+			return nil, err
 		}
-		dst := nextShardPath()
-		if err := diskstore.Save(ix, dst); err != nil {
-			return nil, fmt.Errorf("save rebuilt shard for %s: %w", dir, err)
-		}
-		m.Shards = append(m.Shards, ShardManifest{Path: dst, Repos: []string{dir}, ContentBytes: bytes})
 		appendHead(repoHead)
 	}
 

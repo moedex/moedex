@@ -1,0 +1,40 @@
+{
+  "task": "flow-validation-error",
+  "answer_sha256": "3e2f28693fd89f4dcb7a7d9a4bf30ab66bc2e355f5c4ae253e3650d1ce119c94",
+  "classification": "coordinator provisional scoring independent of subsequent reviewer",
+  "atoms": [
+    {
+      "id": "flow-validation-error.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer explicitly traces validators/cancellation, failure aggregation and next suppression, exception error grouping, application exception identity, HTTP400 writing, DI and middleware wiring with precise inspected source."
+    },
+    {
+      "id": "flow-validation-error.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer explicitly traces validators/cancellation, failure aggregation and next suppression, exception error grouping, application exception identity, HTTP400 writing, DI and middleware wiring with precise inspected source."
+    },
+    {
+      "id": "flow-validation-error.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer explicitly traces validators/cancellation, failure aggregation and next suppression, exception error grouping, application exception identity, HTTP400 writing, DI and middleware wiring with precise inspected source."
+    },
+    {
+      "id": "flow-validation-error.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer explicitly traces validators/cancellation, failure aggregation and next suppression, exception error grouping, application exception identity, HTTP400 writing, DI and middleware wiring with precise inspected source."
+    },
+    {
+      "id": "flow-validation-error.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer explicitly traces validators/cancellation, failure aggregation and next suppression, exception error grouping, application exception identity, HTTP400 writing, DI and middleware wiring with precise inspected source."
+    }
+  ],
+  "material_unsupported_claims": [],
+  "runtime_distinction_preserved": true,
+  "strict_success": true
+}

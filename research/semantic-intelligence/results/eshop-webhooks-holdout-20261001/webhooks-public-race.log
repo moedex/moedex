@@ -1,0 +1,7 @@
+=== RUN   TestPublicWebhooksHoldout
+server: token index loaded from cache
+server: symbol index loaded from cache
+2026/10/01 11:34:22 INFO graph artifact absent; preparing source-only serving snapshot
+--- PASS: TestPublicWebhooksHoldout (0.97s)
+PASS
+ok  	moedex/internal/app/servecmd	2.194s

@@ -1,0 +1,2304 @@
+{
+  "nodes": [
+    {
+      "id": 1,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Api",
+      "label": "Namespace",
+      "name": "Sample.Api",
+      "qualifiedName": "Sample.Api",
+      "filePath": "src/Sample.Api/RecreateDatabaseHostedService.cs",
+      "startLine": 1,
+      "endLine": 53,
+      "properties": {},
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 2,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Api",
+      "label": "Namespace",
+      "name": "Sample.Api.Controllers",
+      "qualifiedName": "Sample.Api.Controllers",
+      "filePath": "src/Sample.Api/Controllers/RegistrationController.cs",
+      "startLine": 1,
+      "endLine": 46,
+      "properties": {},
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 3,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Api",
+      "label": "Class",
+      "name": "RegistrationController",
+      "qualifiedName": "Sample.Api.Controllers.RegistrationController",
+      "filePath": "src/Sample.Api/Controllers/RegistrationController.cs",
+      "startLine": 7,
+      "endLine": 46,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": false,
+        "base_types": "Microsoft.AspNetCore.Mvc.ControllerBase"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 4,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Api",
+      "label": "Method",
+      "name": "Submit",
+      "qualifiedName": "Sample.Api.Controllers.RegistrationController.Submit(Sample.Api.RegistrationModel)",
+      "filePath": "src/Sample.Api/Controllers/RegistrationController.cs",
+      "startLine": 19,
+      "endLine": 45,
+      "properties": {
+        "signature": "Task\u003CIActionResult\u003E RegistrationController.Submit(RegistrationModel model)",
+        "return_type": "System.Threading.Tasks.Task\u003CMicrosoft.AspNetCore.Mvc.IActionResult\u003E",
+        "is_async": true,
+        "is_static": false,
+        "complexity": 3,
+        "parameter_count": 1,
+        "is_entry_point": true,
+        "is_test": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 5,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Api",
+      "label": "Class",
+      "name": "RecreateDatabaseHostedService",
+      "qualifiedName": "Sample.Api.RecreateDatabaseHostedService\u003CTDbContext\u003E",
+      "filePath": "src/Sample.Api/RecreateDatabaseHostedService.cs",
+      "startLine": 8,
+      "endLine": 53,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": true,
+        "base_types": "Microsoft.Extensions.Hosting.IHostedService"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 6,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Api",
+      "label": "Method",
+      "name": "StartAsync",
+      "qualifiedName": "Sample.Api.RecreateDatabaseHostedService\u003CTDbContext\u003E.StartAsync(System.Threading.CancellationToken)",
+      "filePath": "src/Sample.Api/RecreateDatabaseHostedService.cs",
+      "startLine": 22,
+      "endLine": 47,
+      "properties": {
+        "signature": "Task RecreateDatabaseHostedService\u003CTDbContext\u003E.StartAsync(CancellationToken cancellationToken)",
+        "return_type": "System.Threading.Tasks.Task",
+        "is_async": true,
+        "is_static": false,
+        "complexity": 2,
+        "parameter_count": 1,
+        "is_entry_point": false,
+        "is_test": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 7,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Api",
+      "label": "Method",
+      "name": "StopAsync",
+      "qualifiedName": "Sample.Api.RecreateDatabaseHostedService\u003CTDbContext\u003E.StopAsync(System.Threading.CancellationToken)",
+      "filePath": "src/Sample.Api/RecreateDatabaseHostedService.cs",
+      "startLine": 49,
+      "endLine": 52,
+      "properties": {
+        "signature": "Task RecreateDatabaseHostedService\u003CTDbContext\u003E.StopAsync(CancellationToken cancellationToken)",
+        "return_type": "System.Threading.Tasks.Task",
+        "is_async": false,
+        "is_static": false,
+        "complexity": 1,
+        "parameter_count": 1,
+        "is_entry_point": false,
+        "is_test": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 8,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Api",
+      "label": "Class",
+      "name": "RegistrationModel",
+      "qualifiedName": "Sample.Api.RegistrationModel",
+      "filePath": "src/Sample.Api/RegistrationModel.cs",
+      "startLine": 6,
+      "endLine": 16,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": false,
+        "base_types": ""
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 9,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Api",
+      "label": "Property",
+      "name": "EventId",
+      "qualifiedName": "Sample.Api.RegistrationModel.EventId",
+      "filePath": "src/Sample.Api/RegistrationModel.cs",
+      "startLine": 8,
+      "endLine": 9,
+      "properties": {
+        "type": "string",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 10,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Api",
+      "label": "Property",
+      "name": "MemberId",
+      "qualifiedName": "Sample.Api.RegistrationModel.MemberId",
+      "filePath": "src/Sample.Api/RegistrationModel.cs",
+      "startLine": 11,
+      "endLine": 12,
+      "properties": {
+        "type": "string",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 11,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Api",
+      "label": "Property",
+      "name": "Payment",
+      "qualifiedName": "Sample.Api.RegistrationModel.Payment",
+      "filePath": "src/Sample.Api/RegistrationModel.cs",
+      "startLine": 14,
+      "endLine": 15,
+      "properties": {
+        "type": "decimal",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 12,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Api",
+      "label": "Class",
+      "name": "RegistrationResult",
+      "qualifiedName": "Sample.Api.RegistrationResult",
+      "filePath": "src/Sample.Api/RegistrationResult.cs",
+      "startLine": 3,
+      "endLine": 8,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": false,
+        "base_types": ""
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 13,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Api",
+      "label": "Property",
+      "name": "EventId",
+      "qualifiedName": "Sample.Api.RegistrationResult.EventId",
+      "filePath": "src/Sample.Api/RegistrationResult.cs",
+      "startLine": 6,
+      "endLine": 6,
+      "properties": {
+        "type": "string?",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 14,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Api",
+      "label": "Property",
+      "name": "MemberId",
+      "qualifiedName": "Sample.Api.RegistrationResult.MemberId",
+      "filePath": "src/Sample.Api/RegistrationResult.cs",
+      "startLine": 7,
+      "endLine": 7,
+      "properties": {
+        "type": "string?",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 15,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Api",
+      "label": "Property",
+      "name": "RegistrationId",
+      "qualifiedName": "Sample.Api.RegistrationResult.RegistrationId",
+      "filePath": "src/Sample.Api/RegistrationResult.cs",
+      "startLine": 5,
+      "endLine": 5,
+      "properties": {
+        "type": "System.Guid",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 16,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Namespace",
+      "name": "Sample.Components",
+      "qualifiedName": "Sample.Components",
+      "filePath": "src/Sample.Components/DuplicateRegistrationException.cs",
+      "startLine": 1,
+      "endLine": 18,
+      "properties": {},
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 17,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Namespace",
+      "name": "Sample.Components.Consumers",
+      "qualifiedName": "Sample.Components.Consumers",
+      "filePath": "src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+      "startLine": 1,
+      "endLine": 24,
+      "properties": {},
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 18,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Class",
+      "name": "AddEventAttendeeConsumer",
+      "qualifiedName": "Sample.Components.Consumers.AddEventAttendeeConsumer",
+      "filePath": "src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+      "startLine": 8,
+      "endLine": 24,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": false,
+        "base_types": "MassTransit.IConsumer\u003CSample.Components.Contracts.AddEventAttendee\u003E, MassTransit.IConsumer"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 19,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Method",
+      "name": "Consume",
+      "qualifiedName": "Sample.Components.Consumers.AddEventAttendeeConsumer.Consume(MassTransit.ConsumeContext\u003CSample.Components.Contracts.AddEventAttendee\u003E)",
+      "filePath": "src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+      "startLine": 18,
+      "endLine": 23,
+      "properties": {
+        "signature": "Task AddEventAttendeeConsumer.Consume(ConsumeContext\u003CAddEventAttendee\u003E context)",
+        "return_type": "System.Threading.Tasks.Task",
+        "is_async": false,
+        "is_static": false,
+        "complexity": 1,
+        "parameter_count": 1,
+        "is_entry_point": false,
+        "is_test": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 20,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Class",
+      "name": "NotifyRegistrationConsumer",
+      "qualifiedName": "Sample.Components.Consumers.NotifyRegistrationConsumer",
+      "filePath": "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+      "startLine": 8,
+      "endLine": 25,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": false,
+        "base_types": "MassTransit.IConsumer\u003CSample.Components.Contracts.RegistrationSubmitted\u003E, MassTransit.IConsumer"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 21,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Method",
+      "name": "Consume",
+      "qualifiedName": "Sample.Components.Consumers.NotifyRegistrationConsumer.Consume(MassTransit.ConsumeContext\u003CSample.Components.Contracts.RegistrationSubmitted\u003E)",
+      "filePath": "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+      "startLine": 18,
+      "endLine": 24,
+      "properties": {
+        "signature": "Task NotifyRegistrationConsumer.Consume(ConsumeContext\u003CRegistrationSubmitted\u003E context)",
+        "return_type": "System.Threading.Tasks.Task",
+        "is_async": false,
+        "is_static": false,
+        "complexity": 1,
+        "parameter_count": 1,
+        "is_entry_point": false,
+        "is_test": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 22,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Record",
+      "name": "RegistrationValidated",
+      "qualifiedName": "Sample.Components.Consumers.RegistrationValidated",
+      "filePath": "src/Sample.Components/Consumers/RegistrationValidated.cs",
+      "startLine": 3,
+      "endLine": 6,
+      "properties": {
+        "is_generic": false,
+        "base_types": "System.IEquatable\u003CSample.Components.Consumers.RegistrationValidated\u003E"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 23,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "RegistrationId",
+      "qualifiedName": "Sample.Components.Consumers.RegistrationValidated.RegistrationId",
+      "filePath": "src/Sample.Components/Consumers/RegistrationValidated.cs",
+      "startLine": 5,
+      "endLine": 5,
+      "properties": {
+        "type": "System.Guid",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 24,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Class",
+      "name": "SendRegistrationEmailConsumer",
+      "qualifiedName": "Sample.Components.Consumers.SendRegistrationEmailConsumer",
+      "filePath": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+      "startLine": 8,
+      "endLine": 25,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": false,
+        "base_types": "MassTransit.IConsumer\u003CSample.Components.Contracts.SendRegistrationEmail\u003E, MassTransit.IConsumer"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 25,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Method",
+      "name": "Consume",
+      "qualifiedName": "Sample.Components.Consumers.SendRegistrationEmailConsumer.Consume(MassTransit.ConsumeContext\u003CSample.Components.Contracts.SendRegistrationEmail\u003E)",
+      "filePath": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+      "startLine": 18,
+      "endLine": 24,
+      "properties": {
+        "signature": "Task SendRegistrationEmailConsumer.Consume(ConsumeContext\u003CSendRegistrationEmail\u003E context)",
+        "return_type": "System.Threading.Tasks.Task",
+        "is_async": false,
+        "is_static": false,
+        "complexity": 1,
+        "parameter_count": 1,
+        "is_entry_point": false,
+        "is_test": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 26,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Class",
+      "name": "ValidateRegistrationConsumer",
+      "qualifiedName": "Sample.Components.Consumers.ValidateRegistrationConsumer",
+      "filePath": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+      "startLine": 9,
+      "endLine": 25,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": false,
+        "base_types": "MassTransit.IConsumer\u003CSample.Components.Contracts.AddEventAttendee\u003E, MassTransit.IConsumer"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 27,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Method",
+      "name": "Consume",
+      "qualifiedName": "Sample.Components.Consumers.ValidateRegistrationConsumer.Consume(MassTransit.ConsumeContext\u003CSample.Components.Contracts.AddEventAttendee\u003E)",
+      "filePath": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+      "startLine": 21,
+      "endLine": 24,
+      "properties": {
+        "signature": "Task ValidateRegistrationConsumer.Consume(ConsumeContext\u003CAddEventAttendee\u003E context)",
+        "return_type": "System.Threading.Tasks.Task",
+        "is_async": true,
+        "is_static": false,
+        "complexity": 1,
+        "parameter_count": 1,
+        "is_entry_point": false,
+        "is_test": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 28,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Class",
+      "name": "ValidateRegistrationConsumerDefinition",
+      "qualifiedName": "Sample.Components.Consumers.ValidateRegistrationConsumerDefinition",
+      "filePath": "src/Sample.Components/Consumers/ValidateRegistrationConsumerDefinition.cs",
+      "startLine": 6,
+      "endLine": 16,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": false,
+        "base_types": "MassTransit.ConsumerDefinition\u003CSample.Components.Consumers.ValidateRegistrationConsumer\u003E, MassTransit.IConsumerDefinition\u003CSample.Components.Consumers.ValidateRegistrationConsumer\u003E, MassTransit.IConsumerDefinition, MassTransit.IDefinition"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 29,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Method",
+      "name": "ConfigureConsumer",
+      "qualifiedName": "Sample.Components.Consumers.ValidateRegistrationConsumerDefinition.ConfigureConsumer(MassTransit.IReceiveEndpointConfigurator, MassTransit.IConsumerConfigurator\u003CSample.Components.Consumers.ValidateRegistrationConsumer\u003E, MassTransit.IRegistrationContext)",
+      "filePath": "src/Sample.Components/Consumers/ValidateRegistrationConsumerDefinition.cs",
+      "startLine": 9,
+      "endLine": 15,
+      "properties": {
+        "signature": "void ValidateRegistrationConsumerDefinition.ConfigureConsumer(IReceiveEndpointConfigurator endpointConfigurator, IConsumerConfigurator\u003CValidateRegistrationConsumer\u003E consumerConfigurator, IRegistrationContext context)",
+        "return_type": "void",
+        "is_async": false,
+        "is_static": false,
+        "complexity": 1,
+        "parameter_count": 3,
+        "is_entry_point": false,
+        "is_test": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 30,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Namespace",
+      "name": "Sample.Components.Contracts",
+      "qualifiedName": "Sample.Components.Contracts",
+      "filePath": "src/Sample.Components/Contracts/AddEventAttendee.cs",
+      "startLine": 1,
+      "endLine": 8,
+      "properties": {},
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 31,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Record",
+      "name": "AddEventAttendee",
+      "qualifiedName": "Sample.Components.Contracts.AddEventAttendee",
+      "filePath": "src/Sample.Components/Contracts/AddEventAttendee.cs",
+      "startLine": 3,
+      "endLine": 8,
+      "properties": {
+        "is_generic": false,
+        "base_types": "System.IEquatable\u003CSample.Components.Contracts.AddEventAttendee\u003E"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 32,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "EventId",
+      "qualifiedName": "Sample.Components.Contracts.AddEventAttendee.EventId",
+      "filePath": "src/Sample.Components/Contracts/AddEventAttendee.cs",
+      "startLine": 7,
+      "endLine": 7,
+      "properties": {
+        "type": "string",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 33,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "MemberId",
+      "qualifiedName": "Sample.Components.Contracts.AddEventAttendee.MemberId",
+      "filePath": "src/Sample.Components/Contracts/AddEventAttendee.cs",
+      "startLine": 6,
+      "endLine": 6,
+      "properties": {
+        "type": "string",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 34,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "RegistrationId",
+      "qualifiedName": "Sample.Components.Contracts.AddEventAttendee.RegistrationId",
+      "filePath": "src/Sample.Components/Contracts/AddEventAttendee.cs",
+      "startLine": 5,
+      "endLine": 5,
+      "properties": {
+        "type": "System.Guid",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 35,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Record",
+      "name": "RegistrationSubmitted",
+      "qualifiedName": "Sample.Components.Contracts.RegistrationSubmitted",
+      "filePath": "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+      "startLine": 3,
+      "endLine": 10,
+      "properties": {
+        "is_generic": false,
+        "base_types": "System.IEquatable\u003CSample.Components.Contracts.RegistrationSubmitted\u003E"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 36,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "EventId",
+      "qualifiedName": "Sample.Components.Contracts.RegistrationSubmitted.EventId",
+      "filePath": "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+      "startLine": 8,
+      "endLine": 8,
+      "properties": {
+        "type": "string",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 37,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "MemberId",
+      "qualifiedName": "Sample.Components.Contracts.RegistrationSubmitted.MemberId",
+      "filePath": "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+      "startLine": 7,
+      "endLine": 7,
+      "properties": {
+        "type": "string",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 38,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "Payment",
+      "qualifiedName": "Sample.Components.Contracts.RegistrationSubmitted.Payment",
+      "filePath": "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+      "startLine": 9,
+      "endLine": 9,
+      "properties": {
+        "type": "decimal",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 39,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "RegistrationDate",
+      "qualifiedName": "Sample.Components.Contracts.RegistrationSubmitted.RegistrationDate",
+      "filePath": "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+      "startLine": 6,
+      "endLine": 6,
+      "properties": {
+        "type": "System.DateTime",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 40,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "RegistrationId",
+      "qualifiedName": "Sample.Components.Contracts.RegistrationSubmitted.RegistrationId",
+      "filePath": "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+      "startLine": 5,
+      "endLine": 5,
+      "properties": {
+        "type": "System.Guid",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 41,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Record",
+      "name": "SendRegistrationEmail",
+      "qualifiedName": "Sample.Components.Contracts.SendRegistrationEmail",
+      "filePath": "src/Sample.Components/Contracts/SendRegistrationEmail.cs",
+      "startLine": 3,
+      "endLine": 9,
+      "properties": {
+        "is_generic": false,
+        "base_types": "System.IEquatable\u003CSample.Components.Contracts.SendRegistrationEmail\u003E"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 42,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "EventId",
+      "qualifiedName": "Sample.Components.Contracts.SendRegistrationEmail.EventId",
+      "filePath": "src/Sample.Components/Contracts/SendRegistrationEmail.cs",
+      "startLine": 8,
+      "endLine": 8,
+      "properties": {
+        "type": "string",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 43,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "MemberId",
+      "qualifiedName": "Sample.Components.Contracts.SendRegistrationEmail.MemberId",
+      "filePath": "src/Sample.Components/Contracts/SendRegistrationEmail.cs",
+      "startLine": 7,
+      "endLine": 7,
+      "properties": {
+        "type": "string",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 44,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "RegistrationDate",
+      "qualifiedName": "Sample.Components.Contracts.SendRegistrationEmail.RegistrationDate",
+      "filePath": "src/Sample.Components/Contracts/SendRegistrationEmail.cs",
+      "startLine": 6,
+      "endLine": 6,
+      "properties": {
+        "type": "System.DateTime",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 45,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "RegistrationId",
+      "qualifiedName": "Sample.Components.Contracts.SendRegistrationEmail.RegistrationId",
+      "filePath": "src/Sample.Components/Contracts/SendRegistrationEmail.cs",
+      "startLine": 5,
+      "endLine": 5,
+      "properties": {
+        "type": "System.Guid",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 46,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Class",
+      "name": "DuplicateRegistrationException",
+      "qualifiedName": "Sample.Components.DuplicateRegistrationException",
+      "filePath": "src/Sample.Components/DuplicateRegistrationException.cs",
+      "startLine": 3,
+      "endLine": 18,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": false,
+        "base_types": "System.Exception, System.Runtime.Serialization.ISerializable"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 47,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Interface",
+      "name": "IRegistrationService",
+      "qualifiedName": "Sample.Components.IRegistrationService",
+      "filePath": "src/Sample.Components/IRegistrationService.cs",
+      "startLine": 3,
+      "endLine": 6,
+      "properties": {
+        "is_generic": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 48,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Method",
+      "name": "SubmitRegistration",
+      "qualifiedName": "Sample.Components.IRegistrationService.SubmitRegistration(string, string, decimal)",
+      "filePath": "src/Sample.Components/IRegistrationService.cs",
+      "startLine": 5,
+      "endLine": 5,
+      "properties": {
+        "signature": "Task\u003CRegistration\u003E IRegistrationService.SubmitRegistration(string eventId, string memberId, decimal payment)",
+        "return_type": "System.Threading.Tasks.Task\u003CSample.Components.Registration\u003E",
+        "is_async": false,
+        "is_static": false,
+        "complexity": 1,
+        "parameter_count": 3,
+        "is_entry_point": false,
+        "is_test": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 49,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Class",
+      "name": "Registration",
+      "qualifiedName": "Sample.Components.Registration",
+      "filePath": "src/Sample.Components/Registration.cs",
+      "startLine": 3,
+      "endLine": 14,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": false,
+        "base_types": ""
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 50,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "EventId",
+      "qualifiedName": "Sample.Components.Registration.EventId",
+      "filePath": "src/Sample.Components/Registration.cs",
+      "startLine": 11,
+      "endLine": 11,
+      "properties": {
+        "type": "string",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 51,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "Id",
+      "qualifiedName": "Sample.Components.Registration.Id",
+      "filePath": "src/Sample.Components/Registration.cs",
+      "startLine": 5,
+      "endLine": 5,
+      "properties": {
+        "type": "int",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 52,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "MemberId",
+      "qualifiedName": "Sample.Components.Registration.MemberId",
+      "filePath": "src/Sample.Components/Registration.cs",
+      "startLine": 10,
+      "endLine": 10,
+      "properties": {
+        "type": "string",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 53,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "Payment",
+      "qualifiedName": "Sample.Components.Registration.Payment",
+      "filePath": "src/Sample.Components/Registration.cs",
+      "startLine": 13,
+      "endLine": 13,
+      "properties": {
+        "type": "decimal",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 54,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "RegistrationDate",
+      "qualifiedName": "Sample.Components.Registration.RegistrationDate",
+      "filePath": "src/Sample.Components/Registration.cs",
+      "startLine": 8,
+      "endLine": 8,
+      "properties": {
+        "type": "System.DateTime",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 55,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "RegistrationId",
+      "qualifiedName": "Sample.Components.Registration.RegistrationId",
+      "filePath": "src/Sample.Components/Registration.cs",
+      "startLine": 7,
+      "endLine": 7,
+      "properties": {
+        "type": "System.Guid",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 56,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Class",
+      "name": "RegistrationDbContext",
+      "qualifiedName": "Sample.Components.RegistrationDbContext",
+      "filePath": "src/Sample.Components/RegistrationDbContext.cs",
+      "startLine": 10,
+      "endLine": 53,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": false,
+        "base_types": "MassTransit.EntityFrameworkCoreIntegration.SagaDbContext, Microsoft.EntityFrameworkCore.Infrastructure.IInfrastructure\u003CSystem.IServiceProvider\u003E, Microsoft.EntityFrameworkCore.Internal.IDbContextDependencies, Microsoft.EntityFrameworkCore.Internal.IDbSetCache, Microsoft.EntityFrameworkCore.Internal.IDbContextPoolable, Microsoft.EntityFrameworkCore.Infrastructure.IResettableService, System.IDisposable, System.IAsyncDisposable"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 57,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "Configurations",
+      "qualifiedName": "Sample.Components.RegistrationDbContext.Configurations",
+      "filePath": "src/Sample.Components/RegistrationDbContext.cs",
+      "startLine": 18,
+      "endLine": 21,
+      "properties": {
+        "type": "System.Collections.Generic.IEnumerable\u003CMassTransit.EntityFrameworkCoreIntegration.ISagaClassMap\u003E",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 58,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Method",
+      "name": "MapRegistration",
+      "qualifiedName": "Sample.Components.RegistrationDbContext.MapRegistration(Microsoft.EntityFrameworkCore.ModelBuilder)",
+      "filePath": "src/Sample.Components/RegistrationDbContext.cs",
+      "startLine": 34,
+      "endLine": 52,
+      "properties": {
+        "signature": "void RegistrationDbContext.MapRegistration(ModelBuilder modelBuilder)",
+        "return_type": "void",
+        "is_async": false,
+        "is_static": true,
+        "complexity": 1,
+        "parameter_count": 1,
+        "is_entry_point": false,
+        "is_test": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 59,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Method",
+      "name": "OnModelCreating",
+      "qualifiedName": "Sample.Components.RegistrationDbContext.OnModelCreating(Microsoft.EntityFrameworkCore.ModelBuilder)",
+      "filePath": "src/Sample.Components/RegistrationDbContext.cs",
+      "startLine": 23,
+      "endLine": 32,
+      "properties": {
+        "signature": "void RegistrationDbContext.OnModelCreating(ModelBuilder modelBuilder)",
+        "return_type": "void",
+        "is_async": false,
+        "is_static": false,
+        "complexity": 1,
+        "parameter_count": 1,
+        "is_entry_point": false,
+        "is_test": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 60,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Class",
+      "name": "RegistrationService",
+      "qualifiedName": "Sample.Components.RegistrationService",
+      "filePath": "src/Sample.Components/RegistrationService.cs",
+      "startLine": 9,
+      "endLine": 54,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": false,
+        "base_types": "Sample.Components.IRegistrationService"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 61,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Method",
+      "name": "SubmitRegistration",
+      "qualifiedName": "Sample.Components.RegistrationService.SubmitRegistration(string, string, decimal)",
+      "filePath": "src/Sample.Components/RegistrationService.cs",
+      "startLine": 21,
+      "endLine": 53,
+      "properties": {
+        "signature": "Task\u003CRegistration\u003E RegistrationService.SubmitRegistration(string eventId, string memberId, decimal payment)",
+        "return_type": "System.Threading.Tasks.Task\u003CSample.Components.Registration\u003E",
+        "is_async": true,
+        "is_static": false,
+        "complexity": 2,
+        "parameter_count": 3,
+        "is_entry_point": false,
+        "is_test": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 62,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Namespace",
+      "name": "Sample.Components.Services",
+      "qualifiedName": "Sample.Components.Services",
+      "filePath": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+      "startLine": 1,
+      "endLine": 6,
+      "properties": {},
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 63,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Interface",
+      "name": "IRegistrationValidationService",
+      "qualifiedName": "Sample.Components.Services.IRegistrationValidationService",
+      "filePath": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+      "startLine": 3,
+      "endLine": 6,
+      "properties": {
+        "is_generic": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 64,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Method",
+      "name": "ValidateRegistration",
+      "qualifiedName": "Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(string, string, System.Guid)",
+      "filePath": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+      "startLine": 5,
+      "endLine": 5,
+      "properties": {
+        "signature": "Task IRegistrationValidationService.ValidateRegistration(string eventId, string memberId, Guid registrationId)",
+        "return_type": "System.Threading.Tasks.Task",
+        "is_async": false,
+        "is_static": false,
+        "complexity": 1,
+        "parameter_count": 3,
+        "is_entry_point": false,
+        "is_test": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 65,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Class",
+      "name": "RegistrationValidationService",
+      "qualifiedName": "Sample.Components.Services.RegistrationValidationService",
+      "filePath": "src/Sample.Components/Services/RegistrationValidationService.cs",
+      "startLine": 7,
+      "endLine": 21,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": false,
+        "base_types": "Sample.Components.Services.IRegistrationValidationService"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 66,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Method",
+      "name": "ValidateRegistration",
+      "qualifiedName": "Sample.Components.Services.RegistrationValidationService.ValidateRegistration(string, string, System.Guid)",
+      "filePath": "src/Sample.Components/Services/RegistrationValidationService.cs",
+      "startLine": 17,
+      "endLine": 20,
+      "properties": {
+        "signature": "Task RegistrationValidationService.ValidateRegistration(string eventId, string memberId, Guid registrationId)",
+        "return_type": "System.Threading.Tasks.Task",
+        "is_async": true,
+        "is_static": false,
+        "complexity": 1,
+        "parameter_count": 3,
+        "is_entry_point": false,
+        "is_test": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 67,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Namespace",
+      "name": "Sample.Components.StateMachines",
+      "qualifiedName": "Sample.Components.StateMachines",
+      "filePath": "src/Sample.Components/StateMachines/RegistrationState.cs",
+      "startLine": 1,
+      "endLine": 17,
+      "properties": {},
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 68,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Class",
+      "name": "RegistrationState",
+      "qualifiedName": "Sample.Components.StateMachines.RegistrationState",
+      "filePath": "src/Sample.Components/StateMachines/RegistrationState.cs",
+      "startLine": 6,
+      "endLine": 17,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": false,
+        "base_types": "MassTransit.SagaStateMachineInstance, MassTransit.ISaga"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 69,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "CorrelationId",
+      "qualifiedName": "Sample.Components.StateMachines.RegistrationState.CorrelationId",
+      "filePath": "src/Sample.Components/StateMachines/RegistrationState.cs",
+      "startLine": 16,
+      "endLine": 16,
+      "properties": {
+        "type": "System.Guid",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 70,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "CurrentState",
+      "qualifiedName": "Sample.Components.StateMachines.RegistrationState.CurrentState",
+      "filePath": "src/Sample.Components/StateMachines/RegistrationState.cs",
+      "startLine": 9,
+      "endLine": 9,
+      "properties": {
+        "type": "string",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 71,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "EventId",
+      "qualifiedName": "Sample.Components.StateMachines.RegistrationState.EventId",
+      "filePath": "src/Sample.Components/StateMachines/RegistrationState.cs",
+      "startLine": 13,
+      "endLine": 13,
+      "properties": {
+        "type": "string",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 72,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "MemberId",
+      "qualifiedName": "Sample.Components.StateMachines.RegistrationState.MemberId",
+      "filePath": "src/Sample.Components/StateMachines/RegistrationState.cs",
+      "startLine": 14,
+      "endLine": 14,
+      "properties": {
+        "type": "string",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 73,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "Payment",
+      "qualifiedName": "Sample.Components.StateMachines.RegistrationState.Payment",
+      "filePath": "src/Sample.Components/StateMachines/RegistrationState.cs",
+      "startLine": 15,
+      "endLine": 15,
+      "properties": {
+        "type": "decimal",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 74,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "RegistrationDate",
+      "qualifiedName": "Sample.Components.StateMachines.RegistrationState.RegistrationDate",
+      "filePath": "src/Sample.Components/StateMachines/RegistrationState.cs",
+      "startLine": 11,
+      "endLine": 11,
+      "properties": {
+        "type": "System.DateTime",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 75,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Class",
+      "name": "RegistrationStateDefinition",
+      "qualifiedName": "Sample.Components.StateMachines.RegistrationStateDefinition",
+      "filePath": "src/Sample.Components/StateMachines/RegistrationStateDefinition.cs",
+      "startLine": 6,
+      "endLine": 16,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": false,
+        "base_types": "MassTransit.SagaDefinition\u003CSample.Components.StateMachines.RegistrationState\u003E, MassTransit.ISagaDefinition\u003CSample.Components.StateMachines.RegistrationState\u003E, MassTransit.ISagaDefinition, MassTransit.IDefinition"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 76,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Method",
+      "name": "ConfigureSaga",
+      "qualifiedName": "Sample.Components.StateMachines.RegistrationStateDefinition.ConfigureSaga(MassTransit.IReceiveEndpointConfigurator, MassTransit.ISagaConfigurator\u003CSample.Components.StateMachines.RegistrationState\u003E, MassTransit.IRegistrationContext)",
+      "filePath": "src/Sample.Components/StateMachines/RegistrationStateDefinition.cs",
+      "startLine": 9,
+      "endLine": 15,
+      "properties": {
+        "signature": "void RegistrationStateDefinition.ConfigureSaga(IReceiveEndpointConfigurator endpointConfigurator, ISagaConfigurator\u003CRegistrationState\u003E consumerConfigurator, IRegistrationContext context)",
+        "return_type": "void",
+        "is_async": false,
+        "is_static": false,
+        "complexity": 1,
+        "parameter_count": 3,
+        "is_entry_point": false,
+        "is_test": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 77,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Class",
+      "name": "RegistrationStateMachine",
+      "qualifiedName": "Sample.Components.StateMachines.RegistrationStateMachine",
+      "filePath": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+      "startLine": 7,
+      "endLine": 48,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": false,
+        "base_types": "MassTransit.MassTransitStateMachine\u003CSample.Components.StateMachines.RegistrationState\u003E, MassTransit.SagaStateMachine\u003CSample.Components.StateMachines.RegistrationState\u003E, MassTransit.StateMachine\u003CSample.Components.StateMachines.RegistrationState\u003E, MassTransit.StateMachine, MassTransit.IVisitable, MassTransit.IProbeSite"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 78,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "Registered",
+      "qualifiedName": "Sample.Components.StateMachines.RegistrationStateMachine.Registered",
+      "filePath": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+      "startLine": 46,
+      "endLine": 46,
+      "properties": {
+        "type": "MassTransit.State",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 79,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Property",
+      "name": "RegistrationSubmitted",
+      "qualifiedName": "Sample.Components.StateMachines.RegistrationStateMachine.RegistrationSubmitted",
+      "filePath": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+      "startLine": 47,
+      "endLine": 47,
+      "properties": {
+        "type": "MassTransit.Event\u003CSample.Components.Contracts.RegistrationSubmitted\u003E",
+        "is_static": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 80,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Class",
+      "name": "RegistrationStateMap",
+      "qualifiedName": "Sample.Components.StateMachines.RegistrationStateMap",
+      "filePath": "src/Sample.Components/StateMachines/RegistrationStateMap.cs",
+      "startLine": 8,
+      "endLine": 20,
+      "properties": {
+        "is_abstract": false,
+        "is_static": false,
+        "is_generic": false,
+        "base_types": "MassTransit.SagaClassMap\u003CSample.Components.StateMachines.RegistrationState\u003E, MassTransit.EntityFrameworkCoreIntegration.ISagaClassMap\u003CSample.Components.StateMachines.RegistrationState\u003E, MassTransit.EntityFrameworkCoreIntegration.ISagaClassMap"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 81,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Components",
+      "label": "Method",
+      "name": "Configure",
+      "qualifiedName": "Sample.Components.StateMachines.RegistrationStateMap.Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder\u003CSample.Components.StateMachines.RegistrationState\u003E, Microsoft.EntityFrameworkCore.ModelBuilder)",
+      "filePath": "src/Sample.Components/StateMachines/RegistrationStateMap.cs",
+      "startLine": 11,
+      "endLine": 19,
+      "properties": {
+        "signature": "void RegistrationStateMap.Configure(EntityTypeBuilder\u003CRegistrationState\u003E entity, ModelBuilder model)",
+        "return_type": "void",
+        "is_async": false,
+        "is_static": false,
+        "complexity": 1,
+        "parameter_count": 2,
+        "is_entry_point": false,
+        "is_test": false
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    },
+    {
+      "id": 82,
+      "project": "Sample-Outbox",
+      "dotnetProject": "Sample.Api",
+      "label": "Route",
+      "name": "POST registration",
+      "qualifiedName": "route:Sample-Outbox:POST:registration",
+      "filePath": "src/Sample.Api/Controllers/RegistrationController.cs",
+      "startLine": 19,
+      "endLine": 45,
+      "properties": {
+        "http_method": "POST",
+        "route_template": "registration"
+      },
+      "doNotTrust": false,
+      "description": null,
+      "analysisConfidence": null
+    }
+  ],
+  "edges": [
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 18,
+      "targetId": 19,
+      "type": "DEFINES_METHOD",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 18,
+      "targetId": 31,
+      "type": "CONSUMES",
+      "properties": {
+        "confidence_band": "high"
+      }
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 20,
+      "targetId": 21,
+      "type": "DEFINES_METHOD",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 20,
+      "targetId": 35,
+      "type": "CONSUMES",
+      "properties": {
+        "confidence_band": "high"
+      }
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 24,
+      "targetId": 25,
+      "type": "DEFINES_METHOD",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 24,
+      "targetId": 41,
+      "type": "CONSUMES",
+      "properties": {
+        "confidence_band": "high"
+      }
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 27,
+      "targetId": 64,
+      "type": "CALLS",
+      "properties": {
+        "confidence": 1,
+        "confidence_band": "high"
+      }
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 26,
+      "targetId": 27,
+      "type": "DEFINES_METHOD",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 26,
+      "targetId": 63,
+      "type": "INJECTS",
+      "properties": {
+        "parameter_name": "validationService"
+      }
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 26,
+      "targetId": 31,
+      "type": "CONSUMES",
+      "properties": {
+        "confidence_band": "high"
+      }
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 28,
+      "targetId": 29,
+      "type": "DEFINES_METHOD",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 47,
+      "targetId": 48,
+      "type": "DEFINES_METHOD",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 56,
+      "targetId": 58,
+      "type": "DEFINES_METHOD",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 59,
+      "targetId": 58,
+      "type": "CALLS",
+      "properties": {
+        "confidence": 1,
+        "confidence_band": "high"
+      }
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 56,
+      "targetId": 59,
+      "type": "DEFINES_METHOD",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 61,
+      "targetId": 35,
+      "type": "PUBLISHES",
+      "properties": {
+        "confidence_band": "high"
+      }
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 60,
+      "targetId": 61,
+      "type": "DEFINES_METHOD",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 60,
+      "targetId": 47,
+      "type": "IMPLEMENTS",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 63,
+      "targetId": 64,
+      "type": "DEFINES_METHOD",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 66,
+      "targetId": 22,
+      "type": "PUBLISHES",
+      "properties": {
+        "confidence_band": "high"
+      }
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 65,
+      "targetId": 66,
+      "type": "DEFINES_METHOD",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 65,
+      "targetId": 63,
+      "type": "IMPLEMENTS",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 75,
+      "targetId": 76,
+      "type": "DEFINES_METHOD",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 80,
+      "targetId": 81,
+      "type": "DEFINES_METHOD",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 4,
+      "targetId": 48,
+      "type": "CALLS",
+      "properties": {
+        "confidence": 1,
+        "confidence_band": "high"
+      }
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 82,
+      "targetId": 4,
+      "type": "HANDLES",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 3,
+      "targetId": 4,
+      "type": "DEFINES_METHOD",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 3,
+      "targetId": 47,
+      "type": "INJECTS",
+      "properties": {
+        "parameter_name": "registrationService"
+      }
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 5,
+      "targetId": 7,
+      "type": "DEFINES_METHOD",
+      "properties": {}
+    },
+    {
+      "id": 0,
+      "project": "Sample-Outbox",
+      "sourceId": 5,
+      "targetId": 6,
+      "type": "DEFINES_METHOD",
+      "properties": {}
+    }
+  ],
+  "unresolvedCalls": [],
+  "unresolvedImports": [
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+      "importedNamespace": "Microsoft.Extensions.Logging"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+      "importedNamespace": "MassTransit"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+      "importedNamespace": "Contracts"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+      "importedNamespace": "Microsoft.Extensions.Logging"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+      "importedNamespace": "MassTransit"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+      "importedNamespace": "Contracts"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+      "importedNamespace": "Microsoft.Extensions.Logging"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+      "importedNamespace": "MassTransit"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+      "importedNamespace": "Contracts"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+      "importedNamespace": "Services"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+      "importedNamespace": "Microsoft.Extensions.Logging"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+      "importedNamespace": "MassTransit"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+      "importedNamespace": "Contracts"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/Consumers/ValidateRegistrationConsumerDefinition.cs",
+      "importedNamespace": "MassTransit"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/RegistrationDbContext.cs",
+      "importedNamespace": "StateMachines"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/RegistrationDbContext.cs",
+      "importedNamespace": "Microsoft.EntityFrameworkCore.Metadata.Builders"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/RegistrationDbContext.cs",
+      "importedNamespace": "Microsoft.EntityFrameworkCore"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/RegistrationDbContext.cs",
+      "importedNamespace": "MassTransit.EntityFrameworkCoreIntegration"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/RegistrationDbContext.cs",
+      "importedNamespace": "MassTransit"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/RegistrationService.cs",
+      "importedNamespace": "Npgsql"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/RegistrationService.cs",
+      "importedNamespace": "Microsoft.EntityFrameworkCore"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/RegistrationService.cs",
+      "importedNamespace": "MassTransit"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/RegistrationService.cs",
+      "importedNamespace": "Contracts"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/Services/RegistrationValidationService.cs",
+      "importedNamespace": "MassTransit"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/Services/RegistrationValidationService.cs",
+      "importedNamespace": "Consumers"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/StateMachines/RegistrationState.cs",
+      "importedNamespace": "MassTransit"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/StateMachines/RegistrationStateDefinition.cs",
+      "importedNamespace": "MassTransit"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+      "importedNamespace": "MassTransit"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+      "importedNamespace": "Contracts"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/StateMachines/RegistrationStateMap.cs",
+      "importedNamespace": "Microsoft.EntityFrameworkCore.Metadata.Builders"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/StateMachines/RegistrationStateMap.cs",
+      "importedNamespace": "Microsoft.EntityFrameworkCore"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/StateMachines/RegistrationStateMap.cs",
+      "importedNamespace": "MassTransit"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/obj/Debug/net8.0/Sample.Components.GlobalUsings.g.cs",
+      "importedNamespace": "System.Threading.Tasks"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/obj/Debug/net8.0/Sample.Components.GlobalUsings.g.cs",
+      "importedNamespace": "System.Threading"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/obj/Debug/net8.0/Sample.Components.GlobalUsings.g.cs",
+      "importedNamespace": "System.Net.Http"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/obj/Debug/net8.0/Sample.Components.GlobalUsings.g.cs",
+      "importedNamespace": "System.Linq"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/obj/Debug/net8.0/Sample.Components.GlobalUsings.g.cs",
+      "importedNamespace": "System.IO"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/obj/Debug/net8.0/Sample.Components.GlobalUsings.g.cs",
+      "importedNamespace": "System.Collections.Generic"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/obj/Debug/net8.0/Sample.Components.GlobalUsings.g.cs",
+      "importedNamespace": "System"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/obj/Debug/net8.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs",
+      "importedNamespace": "System.Reflection"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/obj/Debug/net8.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs",
+      "importedNamespace": "System"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/obj/Debug/net8.0/Sample.Components.AssemblyInfo.cs",
+      "importedNamespace": "System.Reflection"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Components/obj/Debug/net8.0/Sample.Components.AssemblyInfo.cs",
+      "importedNamespace": "System"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/Controllers/RegistrationController.cs",
+      "importedNamespace": "Microsoft.AspNetCore.Mvc"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/Controllers/RegistrationController.cs",
+      "importedNamespace": "Components"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/Program.cs",
+      "importedNamespace": "Serilog.Events"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/Program.cs",
+      "importedNamespace": "Serilog"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/Program.cs",
+      "importedNamespace": "Sample.Components"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/Program.cs",
+      "importedNamespace": "Sample.Api"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/Program.cs",
+      "importedNamespace": "OpenTelemetry.Trace"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/Program.cs",
+      "importedNamespace": "OpenTelemetry.Resources"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/Program.cs",
+      "importedNamespace": "OpenTelemetry"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/Program.cs",
+      "importedNamespace": "Microsoft.EntityFrameworkCore"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/Program.cs",
+      "importedNamespace": "MassTransit.Metadata"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/Program.cs",
+      "importedNamespace": "MassTransit.Logging"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/Program.cs",
+      "importedNamespace": "MassTransit.EntityFrameworkCoreIntegration"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/Program.cs",
+      "importedNamespace": "MassTransit"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/Program.cs",
+      "importedNamespace": "System.Reflection"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/Program.cs",
+      "importedNamespace": "System.Diagnostics"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/RecreateDatabaseHostedService.cs",
+      "importedNamespace": "Microsoft.EntityFrameworkCore"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/RecreateDatabaseHostedService.cs",
+      "importedNamespace": "MassTransit.RetryPolicies"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/RecreateDatabaseHostedService.cs",
+      "importedNamespace": "MassTransit"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/RegistrationModel.cs",
+      "importedNamespace": "System.ComponentModel.DataAnnotations"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.GlobalUsings.g.cs",
+      "importedNamespace": "System.Threading.Tasks"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.GlobalUsings.g.cs",
+      "importedNamespace": "System.Threading"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.GlobalUsings.g.cs",
+      "importedNamespace": "System.Net.Http.Json"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.GlobalUsings.g.cs",
+      "importedNamespace": "System.Net.Http"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.GlobalUsings.g.cs",
+      "importedNamespace": "System.Linq"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.GlobalUsings.g.cs",
+      "importedNamespace": "System.IO"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.GlobalUsings.g.cs",
+      "importedNamespace": "System.Collections.Generic"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.GlobalUsings.g.cs",
+      "importedNamespace": "System"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.GlobalUsings.g.cs",
+      "importedNamespace": "Microsoft.Extensions.Logging"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.GlobalUsings.g.cs",
+      "importedNamespace": "Microsoft.Extensions.Hosting"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.GlobalUsings.g.cs",
+      "importedNamespace": "Microsoft.Extensions.DependencyInjection"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.GlobalUsings.g.cs",
+      "importedNamespace": "Microsoft.Extensions.Configuration"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.GlobalUsings.g.cs",
+      "importedNamespace": "Microsoft.AspNetCore.Routing"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.GlobalUsings.g.cs",
+      "importedNamespace": "Microsoft.AspNetCore.Http"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.GlobalUsings.g.cs",
+      "importedNamespace": "Microsoft.AspNetCore.Hosting"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.GlobalUsings.g.cs",
+      "importedNamespace": "Microsoft.AspNetCore.Builder"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs",
+      "importedNamespace": "System.Reflection"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs",
+      "importedNamespace": "System"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.AssemblyInfo.cs",
+      "importedNamespace": "System.Reflection"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Api/obj/Debug/net8.0/Sample.Api.AssemblyInfo.cs",
+      "importedNamespace": "System"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/Program.cs",
+      "importedNamespace": "Serilog.Events"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/Program.cs",
+      "importedNamespace": "Serilog"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/Program.cs",
+      "importedNamespace": "Sample.Components.StateMachines"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/Program.cs",
+      "importedNamespace": "Sample.Components.Services"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/Program.cs",
+      "importedNamespace": "Sample.Components.Consumers"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/Program.cs",
+      "importedNamespace": "Sample.Components"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/Program.cs",
+      "importedNamespace": "OpenTelemetry.Trace"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/Program.cs",
+      "importedNamespace": "OpenTelemetry.Resources"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/Program.cs",
+      "importedNamespace": "OpenTelemetry"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/Program.cs",
+      "importedNamespace": "Microsoft.EntityFrameworkCore"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/Program.cs",
+      "importedNamespace": "MassTransit.Metadata"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/Program.cs",
+      "importedNamespace": "MassTransit"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/Program.cs",
+      "importedNamespace": "System.Diagnostics"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/obj/Debug/net8.0/Sample.Worker.GlobalUsings.g.cs",
+      "importedNamespace": "System.Threading.Tasks"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/obj/Debug/net8.0/Sample.Worker.GlobalUsings.g.cs",
+      "importedNamespace": "System.Threading"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/obj/Debug/net8.0/Sample.Worker.GlobalUsings.g.cs",
+      "importedNamespace": "System.Net.Http"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/obj/Debug/net8.0/Sample.Worker.GlobalUsings.g.cs",
+      "importedNamespace": "System.Linq"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/obj/Debug/net8.0/Sample.Worker.GlobalUsings.g.cs",
+      "importedNamespace": "System.IO"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/obj/Debug/net8.0/Sample.Worker.GlobalUsings.g.cs",
+      "importedNamespace": "System.Collections.Generic"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/obj/Debug/net8.0/Sample.Worker.GlobalUsings.g.cs",
+      "importedNamespace": "System"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/obj/Debug/net8.0/Sample.Worker.GlobalUsings.g.cs",
+      "importedNamespace": "Microsoft.Extensions.Logging"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/obj/Debug/net8.0/Sample.Worker.GlobalUsings.g.cs",
+      "importedNamespace": "Microsoft.Extensions.Hosting"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/obj/Debug/net8.0/Sample.Worker.GlobalUsings.g.cs",
+      "importedNamespace": "Microsoft.Extensions.DependencyInjection"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/obj/Debug/net8.0/Sample.Worker.GlobalUsings.g.cs",
+      "importedNamespace": "Microsoft.Extensions.Configuration"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/obj/Debug/net8.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs",
+      "importedNamespace": "System.Reflection"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/obj/Debug/net8.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs",
+      "importedNamespace": "System"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/obj/Debug/net8.0/Sample.Worker.AssemblyInfo.cs",
+      "importedNamespace": "System.Reflection"
+    },
+    {
+      "fileQN": "Sample-Outbox:src/Sample.Worker/obj/Debug/net8.0/Sample.Worker.AssemblyInfo.cs",
+      "importedNamespace": "System"
+    }
+  ],
+  "semantics": "Native GraphBuffer.ResolveEdges only; IndexingPipeline.ResolveCalls, database, cross-repo linker and queries are not executed."
+}

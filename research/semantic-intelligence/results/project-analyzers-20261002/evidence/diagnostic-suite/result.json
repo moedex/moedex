@@ -1,0 +1,341 @@
+[
+  {
+    "fixture": "tuple",
+    "returncode": 0,
+    "summary": {
+      "schema": "moedex.semantic-worker.v1",
+      "record_type": "stream_summary",
+      "projects": 1,
+      "compilation_status": "complete",
+      "declarations": 6,
+      "references": 45
+    },
+    "build_diagnostics": {
+      "policy": "native-build-events-v2",
+      "verified": true,
+      "logs": 1,
+      "builds_started": 1,
+      "builds_finished": 1,
+      "reader_assembly": {
+        "path": "sdk/Microsoft.Build.dll",
+        "scope": "sdk",
+        "sha256": "0c70309f8f0bd0f73af687ce0b0c65d4d4e0346fc1c31fc97bfdd145d770f4c1",
+        "byte_size": 7235880
+      },
+      "failed_build_or_log": false,
+      "workspace_diagnostics": 0,
+      "matched_warnings": 0,
+      "workspace_warnings": [],
+      "projects": [
+        {
+          "project": "Probe.csproj",
+          "started": 1,
+          "finished": 1
+        }
+      ],
+      "warnings": [],
+      "errors": []
+    },
+    "workspace_diagnostics": []
+  },
+  {
+    "fixture": "warning",
+    "returncode": 0,
+    "summary": {
+      "schema": "moedex.semantic-worker.v1",
+      "record_type": "stream_summary",
+      "projects": 1,
+      "compilation_status": "complete",
+      "declarations": 6,
+      "references": 45
+    },
+    "build_diagnostics": {
+      "policy": "native-build-events-v2",
+      "verified": true,
+      "logs": 1,
+      "builds_started": 1,
+      "builds_finished": 1,
+      "reader_assembly": {
+        "path": "sdk/Microsoft.Build.dll",
+        "scope": "sdk",
+        "sha256": "0c70309f8f0bd0f73af687ce0b0c65d4d4e0346fc1c31fc97bfdd145d770f4c1",
+        "byte_size": 7235880
+      },
+      "failed_build_or_log": false,
+      "workspace_diagnostics": 1,
+      "matched_warnings": 1,
+      "workspace_warnings": [],
+      "projects": [
+        {
+          "project": "Probe.csproj",
+          "started": 1,
+          "finished": 1
+        }
+      ],
+      "warnings": [
+        {
+          "project": "Probe.csproj",
+          "code": "MOE001",
+          "message": "identical diagnostic text"
+        }
+      ],
+      "errors": []
+    },
+    "workspace_diagnostics": [
+      {
+        "schema": "moedex.semantic-worker.v1",
+        "record_type": "diagnostic",
+        "project": "Probe.csproj",
+        "build_context": "8aac653891fa6cf525ddc4d8073ddf711bc6fc032709b73dc9fd39921b07d8b2",
+        "code": "workspace",
+        "severity": "warning",
+        "message": "[Failure] Msbuild failed when processing the file '/Users/zakkeown/Code/moedex/.local/project-analyzers/diagnostic-suite/warning/Probe.csproj' with message: identical diagnostic text"
+      }
+    ]
+  },
+  {
+    "fixture": "duplicate_warning",
+    "returncode": 0,
+    "summary": {
+      "schema": "moedex.semantic-worker.v1",
+      "record_type": "stream_summary",
+      "projects": 1,
+      "compilation_status": "complete",
+      "declarations": 6,
+      "references": 45
+    },
+    "build_diagnostics": {
+      "policy": "native-build-events-v2",
+      "verified": true,
+      "logs": 1,
+      "builds_started": 1,
+      "builds_finished": 1,
+      "reader_assembly": {
+        "path": "sdk/Microsoft.Build.dll",
+        "scope": "sdk",
+        "sha256": "0c70309f8f0bd0f73af687ce0b0c65d4d4e0346fc1c31fc97bfdd145d770f4c1",
+        "byte_size": 7235880
+      },
+      "failed_build_or_log": false,
+      "workspace_diagnostics": 2,
+      "matched_warnings": 2,
+      "workspace_warnings": [],
+      "projects": [
+        {
+          "project": "Probe.csproj",
+          "started": 1,
+          "finished": 1
+        }
+      ],
+      "warnings": [
+        {
+          "project": "Probe.csproj",
+          "code": "MOE001",
+          "message": "identical diagnostic text"
+        },
+        {
+          "project": "Probe.csproj",
+          "code": "MOE001",
+          "message": "identical diagnostic text"
+        }
+      ],
+      "errors": []
+    },
+    "workspace_diagnostics": [
+      {
+        "schema": "moedex.semantic-worker.v1",
+        "record_type": "diagnostic",
+        "project": "Probe.csproj",
+        "build_context": "058ccfa18cc2981da32790ae78fde33b9ec1f9766475871847de3c6a42d49dda",
+        "code": "workspace",
+        "severity": "warning",
+        "message": "[Failure] Msbuild failed when processing the file '/Users/zakkeown/Code/moedex/.local/project-analyzers/diagnostic-suite/duplicate_warning/Probe.csproj' with message: identical diagnostic text"
+      }
+    ]
+  },
+  {
+    "fixture": "error",
+    "returncode": 2,
+    "summary": {
+      "schema": "moedex.semantic-worker.v1",
+      "record_type": "stream_summary",
+      "projects": 1,
+      "compilation_status": "incomplete",
+      "declarations": 6,
+      "references": 45
+    },
+    "build_diagnostics": {
+      "policy": "native-build-events-v2",
+      "verified": false,
+      "logs": 1,
+      "builds_started": 1,
+      "builds_finished": 1,
+      "reader_assembly": {
+        "path": "sdk/Microsoft.Build.dll",
+        "scope": "sdk",
+        "sha256": "0c70309f8f0bd0f73af687ce0b0c65d4d4e0346fc1c31fc97bfdd145d770f4c1",
+        "byte_size": 7235880
+      },
+      "failed_build_or_log": true,
+      "workspace_diagnostics": 1,
+      "matched_warnings": 0,
+      "workspace_warnings": [],
+      "projects": [
+        {
+          "project": "Probe.csproj",
+          "started": 1,
+          "finished": 1
+        }
+      ],
+      "warnings": [],
+      "errors": [
+        {
+          "project": "Probe.csproj",
+          "code": "MOE001",
+          "message": "identical diagnostic text"
+        }
+      ]
+    },
+    "workspace_diagnostics": [
+      {
+        "schema": "moedex.semantic-worker.v1",
+        "record_type": "diagnostic",
+        "project": "Probe.csproj",
+        "build_context": "1b8fe690c55643acaba8869ad7d6bedf3cff5b45322759713928836ba13d6c89",
+        "code": "workspace",
+        "severity": "error",
+        "message": "[Failure] Msbuild failed when processing the file '/Users/zakkeown/Code/moedex/.local/project-analyzers/diagnostic-suite/error/Probe.csproj' with message: identical diagnostic text"
+      }
+    ]
+  },
+  {
+    "fixture": "warning_and_error",
+    "returncode": 2,
+    "summary": {
+      "schema": "moedex.semantic-worker.v1",
+      "record_type": "stream_summary",
+      "projects": 1,
+      "compilation_status": "incomplete",
+      "declarations": 6,
+      "references": 45
+    },
+    "build_diagnostics": {
+      "policy": "native-build-events-v2",
+      "verified": false,
+      "logs": 1,
+      "builds_started": 1,
+      "builds_finished": 1,
+      "reader_assembly": {
+        "path": "sdk/Microsoft.Build.dll",
+        "scope": "sdk",
+        "sha256": "0c70309f8f0bd0f73af687ce0b0c65d4d4e0346fc1c31fc97bfdd145d770f4c1",
+        "byte_size": 7235880
+      },
+      "failed_build_or_log": true,
+      "workspace_diagnostics": 2,
+      "matched_warnings": 1,
+      "workspace_warnings": [],
+      "projects": [
+        {
+          "project": "Probe.csproj",
+          "started": 1,
+          "finished": 1
+        }
+      ],
+      "warnings": [
+        {
+          "project": "Probe.csproj",
+          "code": "MOE001",
+          "message": "identical diagnostic text"
+        }
+      ],
+      "errors": [
+        {
+          "project": "Probe.csproj",
+          "code": "MOE001",
+          "message": "identical diagnostic text"
+        }
+      ]
+    },
+    "workspace_diagnostics": [
+      {
+        "schema": "moedex.semantic-worker.v1",
+        "record_type": "diagnostic",
+        "project": "Probe.csproj",
+        "build_context": "a4ef296cd1842707513a040f6e382f0605ba21572cd2930c006c3f151ead6c60",
+        "code": "workspace",
+        "severity": "error",
+        "message": "[Failure] Msbuild failed when processing the file '/Users/zakkeown/Code/moedex/.local/project-analyzers/diagnostic-suite/warning_and_error/Probe.csproj' with message: identical diagnostic text"
+      }
+    ]
+  },
+  {
+    "fixture": "compiler_warning_as_error",
+    "returncode": 2,
+    "summary": {
+      "schema": "moedex.semantic-worker.v1",
+      "record_type": "stream_summary",
+      "projects": 1,
+      "compilation_status": "incomplete",
+      "declarations": 6,
+      "references": 45
+    },
+    "build_diagnostics": {
+      "policy": "native-build-events-v2",
+      "verified": true,
+      "logs": 1,
+      "builds_started": 1,
+      "builds_finished": 1,
+      "reader_assembly": {
+        "path": "sdk/Microsoft.Build.dll",
+        "scope": "sdk",
+        "sha256": "0c70309f8f0bd0f73af687ce0b0c65d4d4e0346fc1c31fc97bfdd145d770f4c1",
+        "byte_size": 7235880
+      },
+      "failed_build_or_log": false,
+      "workspace_diagnostics": 0,
+      "matched_warnings": 0,
+      "workspace_warnings": [],
+      "projects": [
+        {
+          "project": "Probe.csproj",
+          "started": 1,
+          "finished": 1
+        }
+      ],
+      "warnings": [],
+      "errors": []
+    },
+    "workspace_diagnostics": []
+  },
+  {
+    "fixture": "missing_reference",
+    "returncode": 1,
+    "complete": false
+  },
+  {
+    "fixture": "duplicate_diagnostic",
+    "returncode": 2,
+    "complete": false
+  },
+  {
+    "fixture": "missing_diagnostic",
+    "returncode": 2,
+    "complete": false
+  },
+  {
+    "fixture": "unmatched_diagnostic",
+    "returncode": 2,
+    "complete": false
+  },
+  {
+    "fixture": "missing_log",
+    "returncode": 2,
+    "complete": false
+  },
+  {
+    "fixture": "truncated_log",
+    "returncode": 1,
+    "complete": false
+  }
+]

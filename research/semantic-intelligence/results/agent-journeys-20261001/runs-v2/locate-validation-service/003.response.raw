@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":3,"result":{"_meta":{"dev.moedex/server":{"version":"dev+unknown"},"dev.moedex/snapshot":{"cacheable":false}},"content":[{"type":"text","text":"graph tools are closed"}],"structuredContent":{"error":{"code":"tool_error","message":"graph tools are closed"}},"isError":true}}

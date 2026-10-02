@@ -186,8 +186,9 @@ func (e Edge) CrossShard() bool { return e.Source.Shard != e.Target.Shard }
 // borrows the indices rather than copying them, so they (and, for a served
 // corpus, the mmap backing their content) must outlive it.
 type Corpus struct {
-	syms *symbol.Corpus
-	idxs []*index.Index
+	textOccurrences *textOccurrenceIndex
+	syms            *symbol.Corpus
+	idxs            []*index.Index
 	// postings[i] records whether shard i's index can answer a trigram query at
 	// all. A content-only index (index.Restore with nil postings — what
 	// server.OpenSymbols builds, since symbol extraction never queries trigrams)
@@ -202,10 +203,11 @@ type Corpus struct {
 // Preparing once and generating bounded source batches avoids rebuilding the
 // corpus-wide occurrence list for every batch of a high-frequency name.
 type PreparedName struct {
-	corpus *Corpus
-	name   string
-	defs   []symbol.ShardRef
-	srcs   []occurrence
+	corpus           *Corpus
+	name             string
+	defs             []symbol.ShardRef
+	srcs             []occurrence
+	definitionCounts map[Site]int
 }
 
 // PrepareName resolves name's definitions and source occurrences once. It
@@ -241,7 +243,11 @@ func PrepareName(c *Corpus, name string) *PreparedName {
 		}
 		return a.typ < b.typ
 	})
-	return &PreparedName{corpus: c, name: name, defs: defs, srcs: srcs}
+	counts := make(map[Site]int, len(defs))
+	for _, d := range defs {
+		counts[Site{Shard: d.Shard, Blob: d.Blob, Start: d.Start}]++
+	}
+	return &PreparedName{corpus: c, name: name, defs: defs, srcs: srcs, definitionCounts: counts}
 }
 
 // NumSources reports how many distinct source positions were found.
@@ -278,6 +284,40 @@ func (p *PreparedName) CrossShard() bool {
 		}
 	}
 	return false
+}
+
+// SourceCandidates returns one evidence prototype per source, without target
+// expansion. Target is deliberately unset: source-only verification may inspect
+// these prototypes, but they must not be persisted as graph edges.
+func (p *PreparedName) SourceCandidates() []Edge {
+	if p == nil {
+		return nil
+	}
+	out := make([]Edge, len(p.srcs))
+	for i, src := range p.srcs {
+		blob := p.corpus.Blob(src.site)
+		var evidence graph.Evidence
+		if blob != nil && src.site.Start >= 0 && src.site.End > src.site.Start {
+			evidence = graph.Evidence{BlobSHA: blob.SHA, ByteOffset: uint64(src.site.Start), ByteLength: uint64(src.site.End - src.site.Start)}
+		}
+		out[i] = Edge{Name: p.name, Source: src.site, Type: src.typ, Confidence: graph.Candidate, Evidence: evidence, sourceBlob: blob}
+	}
+	return out
+}
+
+// DefinitionSite returns a target in the same position order used by Generate.
+func (p *PreparedName) DefinitionSite(i int) Site {
+	d := p.defs[i]
+	return Site{Shard: d.Shard, Blob: d.Blob, Start: d.Start, End: d.End}
+}
+
+// NumTargets excludes every self-position pair, exactly as Generate does.
+func (p *PreparedName) NumTargets(source Site) int {
+	if p == nil {
+		return 0
+	}
+	source.End = 0
+	return len(p.defs) - p.definitionCounts[source]
 }
 
 // Generate returns candidates for the half-open source range [start,end). The

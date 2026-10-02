@@ -1,0 +1,44 @@
+          
+   ERROR  
+          
+  Semantic capture: offline restore: semanticrun: process failed: exit status 1:                                      
+  ers/zakkeown/Code/moedex/.local/fresh-paths/eShopOnWeb-capture-v1/workspace/semantic-git-projection-                
+  368967501/source/src/BlazorAdmin/BlazorAdmin.csproj : error NU1101: Unable to find package                          
+  Microsoft.NETCore.App.Ref. No packages exist with this id in source(s): /Users/zakkeown/Code/moedex/.local/fresh-   
+  paths/eShopOnWeb-capture-v1/workspace/empty-feed [/Users/zakkeown/Code/moedex/.local/fresh-paths/eShopOnWeb-capture-
+  v1/workspace/semantic-git-projection-368967501/source/src/Web/Web.csproj] /Users/zakkeown/Code/moedex/.local/fresh- 
+  paths/eShopOnWeb-capture-v1/workspace/semantic-git-projection-368967501/source/src/BlazorAdmin/BlazorAdmin.csproj : 
+  error NU1101: Unable to find package Microsoft.NETCore.App.Runtime.Mono.browser-wasm. No packages exist with this id
+  in source(s): /Users/zakkeown/Code/moedex/.local/fresh-paths/eShopOnWeb-capture-v1/workspace/empty-feed             
+  [/Users/zakkeown/Code/moedex/.local/fresh-paths/eShopOnWeb-capture-v1/workspace/semantic-git-projection-            
+  368967501/source/src/Web/Web.csproj] /Users/zakkeown/Code/moedex/.local/fresh-paths/eShopOnWeb-capture-             
+  v1/workspace/semantic-git-projection-368967501/source/src/BlazorAdmin/BlazorAdmin.csproj : error NU1101: Unable to  
+  find package Microsoft.AspNetCore.App.Ref. No packages exist with this id in source(s):                             
+  /Users/zakkeown/Code/moedex/.local/fresh-paths/eShopOnWeb-capture-v1/workspace/empty-feed                           
+  [/Users/zakkeown/Code/moedex/.local/fresh-paths/eShopOnWeb-capture-v1/workspace/semantic-git-projection-            
+  368967501/source/src/Web/Web.csproj] Failed to restore /Users/zakkeown/Code/moedex/.local/fresh-paths/eShopOnWeb-   
+  capture-v1/workspace/semantic-git-projection-368967501/source/src/BlazorAdmin/BlazorAdmin.csproj (in 13 ms).        
+  /Users/zakkeown/Code/moedex/.local/fresh-paths/eShopOnWeb-capture-v1/workspace/semantic-git-projection-             
+  368967501/source/src/BlazorShared/BlazorShared.csproj : error NU1101: Unable to find package                        
+  Microsoft.NETCore.App.Ref. No packages exist with this id in source(s): /Users/zakkeown/Code/moedex/.local/fresh-   
+  paths/eShopOnWeb-capture-v1/workspace/empty-feed [/Users/zakkeown/Code/moedex/.local/fresh-paths/eShopOnWeb-capture-
+  v1/workspace/semantic-git-projection-368967501/source/src/Web/Web.csproj] /Users/zakkeown/Code/moedex/.local/fresh- 
+  paths/eShopOnWeb-capture-v1/workspace/semantic-git-projection-368967501/source/src/BlazorShared/BlazorShared.csproj 
+  : error NU1101: Unable to find package Microsoft.AspNetCore.App.Ref. No packages exist with this id in source(s):   
+  /Users/zakkeown/Code/moedex/.local/fresh-paths/eShopOnWeb-capture-v1/workspace/empty-feed                           
+  [/Users/zakkeown/Code/moedex/.local/fresh-paths/eShopOnWeb-capture-v1/workspace/semantic-git-projection-            
+  368967501/source/src/Web/Web.csproj] Failed to restore /Users/zakkeown/Code/moedex/.local/fresh-paths/eShopOnWeb-   
+  capture-v1/workspace/semantic-git-projection-368967501/source/src/BlazorShared/BlazorShared.csproj (in 2 ms).       
+  /Users/zakkeown/Code/moedex/.local/fresh-paths/eShopOnWeb-capture-v1/workspace/semantic-git-projection-             
+  368967501/source/src/ApplicationCore/ApplicationCore.csproj : error NU1101: Unable to find package                  
+  Microsoft.NETCore.App.Ref. No packages exist with this id in source(s): /Users/zakkeown/Code/moedex/.local/fresh-   
+  paths/eShopOnWeb-capture-v1/workspace/empty-feed [/Users/zakkeown/Code/moedex/.local/fresh-paths/eShopOnWeb-capture-
+  v1/workspace/semantic-git-projection-368967501/source/src/Web/Web.csproj] /Users/zakkeown/Code/moedex/.local/fresh- 
+  paths/eShopOnWeb-capture-v1/workspace/semantic-git-projection-                                                      
+  368967501/source/src/ApplicationCore/ApplicationCore.csproj : error NU1101: Unable to find package                  
+  Microsoft.AspNetCore.App.Ref. No packages exist with this id in source(s): /Users/zakkeown/Code/moedex/.local/fresh-
+  paths/eShopOnWeb-capture-v1/workspace/empty-feed [/Users/zakkeown/Code/moedex/.local/fresh-paths/eShopOnWeb-capture-
+  v1/workspace/semantic-git-projection-368967501/source/src/Web/Web.csproj] Failed to restore                         
+  /Users/zakkeown/Code/moedex/.local/fresh-paths/eShopOnWeb-capture-v1/workspace/semantic-git-projection-             
+  368967501/source/src/ApplicationCore/ApplicationCore.csproj (in 3 ms)..                                             
+

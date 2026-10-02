@@ -1,0 +1,11 @@
+  EventBus -> /Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/EventBus/bin/Debug/net8.0/EventBus.dll
+  eShop.ServiceDefaults -> /Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/eShop.ServiceDefaults/bin/Debug/net8.0/eShop.ServiceDefaults.dll
+  IntegrationEventLogEF -> /Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/IntegrationEventLogEF/bin/Debug/net8.0/IntegrationEventLogEF.dll
+  EventBusRabbitMQ -> /Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/EventBusRabbitMQ/bin/Debug/net8.0/EventBusRabbitMQ.dll
+  Webhooks.API -> /Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/Webhooks.API/bin/Debug/net8.0/Webhooks.API.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.86

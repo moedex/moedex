@@ -1,0 +1,355 @@
+package semanticindex
+
+import (
+	"context"
+	"crypto/sha256"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"moedex/internal/semantic"
+)
+
+func addImplementationDeclaration(a *semantic.Artifact, c semantic.BuildContext, offset uint64) {
+	o, b := a.Occurrences[0], a.Bindings[0]
+	o.ContextID, o.Offset = c.ID, offset
+	o.ID = o.ComputeID()
+	b.OccurrenceID = o.ID
+	b.ID = b.ComputeID()
+	a.Occurrences = append(a.Occurrences, o)
+	a.Bindings = append(a.Bindings, b)
+}
+
+func addImplementationVariant(a *semantic.Artifact, n int) {
+	c := a.Contexts[0]
+	c.Capture = fmt.Sprintf(`{"variant":%d}`, n)
+	c.InputFingerprint = hash(c.Capture)
+	c.ID = c.ComputeID()
+	a.Contexts = append(a.Contexts, c)
+	addImplementationDeclaration(a, c, 0)
+}
+
+func TestImplementationsExactDiscoverySelectionAndOwnership(t *testing.T) {
+	a := wrapperFixture()
+	addImplementationVariant(a, 1)
+	x, _ := openFixture(t, a)
+	iface := a.Symbols[3].ID
+	q, err := x.Implementations(context.Background(), iface, nil, 100)
+	if err != nil || !q.Supported || q.Interface == nil || q.Interface.ID != iface || len(q.Contexts) != 2 || len(q.Matches) != 0 || q.Truncated || q.RowsVisited != 2 {
+		t.Fatalf("discovery %+v %v", q, err)
+	}
+	limited, err := x.Implementations(context.Background(), iface, nil, 1)
+	if err != nil || len(limited.Contexts) != 1 || !limited.Truncated {
+		t.Fatalf("limited discovery %+v %v", limited, err)
+	}
+	for _, c := range a.Contexts {
+		q, err = x.Implementations(context.Background(), iface, []string{c.ID}, 1)
+		if err != nil || len(q.Matches) != 1 || q.Truncated || q.RowsVisited != 1 || q.Matches[0].Result.Context.ID != c.ID || q.Matches[0].ImplementationFactIndex != 0 || q.Matches[0].Result.Binding.ImplementationFacts[0].InterfaceSymbolID != iface {
+			t.Fatalf("selected %+v %v", q, err)
+		}
+	}
+	for _, ids := range [][]string{{a.Contexts[0].ID, a.Contexts[1].ID}, {a.Contexts[0].ID, a.Contexts[0].ID}, {"context:" + hash("unknown")}, make([]string, 33)} {
+		if _, err := x.Implementations(context.Background(), iface, ids, 100); !errors.Is(err, ErrContractContextSelection) {
+			t.Fatalf("invalid selection accepted %v", err)
+		}
+	}
+	for _, id := range []string{a.Symbols[0].ID, a.Symbols[1].ID, "symbol:" + hash("unknown")} {
+		empty, err := x.Implementations(context.Background(), id, nil, 100)
+		if err != nil || !empty.Supported || empty.Interface != nil || len(empty.Matches) != 0 || len(empty.Contexts) != 0 {
+			t.Fatalf("unrecorded subject promoted %+v %v", empty, err)
+		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := x.Implementations(ctx, iface, nil, 100); err != context.Canceled {
+		t.Fatal("cancellation ignored", err)
+	}
+	for _, limit := range []int{0, 101} {
+		if _, err := x.Implementations(context.Background(), iface, nil, limit); err == nil {
+			t.Fatal("invalid limit accepted")
+		}
+	}
+	if _, err := x.Implementations(context.Background(), "IService.Send", nil, 1); err == nil {
+		t.Fatal("name lookup accepted")
+	}
+	x.Close()
+	if q.Matches[0].Result.ImplementationSymbols[0].ID == "" || q.Interface.Key.Descriptor != "M:IService.Send" {
+		t.Fatal("results depend on closed mapping")
+	}
+	if _, err := x.Implementations(context.Background(), iface, nil, 1); err == nil {
+		t.Fatal("closed index queried")
+	}
+}
+
+func TestImplementationsDiscoverySkipsPopulationAndCapsContexts(t *testing.T) {
+	a := wrapperFixture()
+	for i := 1; i <= ContractWorkLimit; i++ {
+		addImplementationDeclaration(a, a.Contexts[0], uint64(100+i))
+	}
+	for i := 1; i <= 32; i++ {
+		addImplementationVariant(a, i)
+	}
+	x, _ := openFixture(t, a)
+	q, err := x.Implementations(context.Background(), a.Symbols[3].ID, nil, 100)
+	if err != nil || len(q.Contexts) != 32 || q.RowsVisited != 32 || !q.Truncated || len(q.Matches) != 0 {
+		t.Fatalf("unbounded discovery %+v %v", q, err)
+	}
+	q, err = x.Implementations(context.Background(), a.Symbols[3].ID, []string{a.Contexts[0].ID}, 100)
+	if err != nil || len(q.Matches) != 100 || q.RowsVisited != 100 || !q.Truncated || q.WorkLimit != ContractWorkLimit {
+		t.Fatalf("unbounded matches rows=%d matches=%d truncated=%v err=%v", q.RowsVisited, len(q.Matches), q.Truncated, err)
+	}
+}
+
+func TestImplementationsMetadataAndOrdinal(t *testing.T) {
+	a := wrapperFixture()
+	iface := a.Symbols[3]
+	iface.Key.NamespaceKind, iface.Key.Namespace = "assembly", "Interfaces, Version=1.0.0.0"
+	iface.ID = iface.ComputeID()
+	a.Symbols = append(a.Symbols, iface)
+	f := a.Bindings[0].ImplementationFacts[0]
+	f.InterfaceSymbolID = iface.ID
+	a.Bindings[0].ImplementationFacts = append(a.Bindings[0].ImplementationFacts, f)
+	if a.Bindings[0].ImplementationFacts[0].InterfaceSymbolID > iface.ID {
+		a.Bindings[0].ImplementationFacts[0], a.Bindings[0].ImplementationFacts[1] = a.Bindings[0].ImplementationFacts[1], a.Bindings[0].ImplementationFacts[0]
+	}
+	a.Bindings[0].ID = a.Bindings[0].ComputeID()
+	x, _ := openFixture(t, a)
+	q, err := x.Implementations(context.Background(), iface.ID, []string{a.Contexts[0].ID}, 100)
+	if err != nil || len(q.Matches) != 1 || q.Interface.Key.NamespaceKind != "assembly" || q.Matches[0].Result.Binding.ImplementationFacts[q.Matches[0].ImplementationFactIndex].InterfaceSymbolID != iface.ID {
+		t.Fatalf("metadata relationship lost %+v %v", q, err)
+	}
+}
+
+func TestImplementationsDiscoveryExactCapAndDistinctProjects(t *testing.T) {
+	a := wrapperFixture()
+	for i := 1; i < MaxContractContexts; i++ {
+		addImplementationVariant(a, i)
+	}
+	x, _ := openFixture(t, a)
+	q, err := x.Implementations(context.Background(), a.Symbols[3].ID, nil, 100)
+	if err != nil || len(q.Contexts) != MaxContractContexts || q.Truncated {
+		t.Fatalf("exact context boundary marked incomplete %+v %v", q, err)
+	}
+	a = wrapperFixture()
+	c := a.Contexts[0]
+	c.Project = "Other.csproj"
+	c.ID = c.ComputeID()
+	a.Contexts = append(a.Contexts, c)
+	addImplementationDeclaration(a, c, 0)
+	impl, typ := a.Symbols[1], a.Symbols[2]
+	impl.Key.Namespace, typ.Key.Namespace = "repo/Other.csproj", "repo/Other.csproj"
+	impl.ID, typ.ID = impl.ComputeID(), typ.ComputeID()
+	a.Symbols = append(a.Symbols, impl, typ)
+	b := &a.Bindings[len(a.Bindings)-1]
+	b.SymbolID = impl.ID
+	b.ImplementationFacts = append([]semantic.ImplementationFact(nil), b.ImplementationFacts...)
+	b.ImplementationFacts[0].ImplementingTypeSymbolID = typ.ID
+	b.ID = b.ComputeID()
+	x, _ = openFixture(t, a)
+	q, err = x.Implementations(context.Background(), a.Symbols[3].ID, []string{c.ID, a.Contexts[0].ID}, 2)
+	if err != nil || len(q.Matches) != 2 || len(q.Contexts) != 2 || q.Truncated {
+		t.Fatalf("distinct projects lost %+v %v", q, err)
+	}
+}
+
+func TestImplementationsOldVersionsUnavailable(t *testing.T) {
+	a := fixture(3)
+	x, path := openFixture(t, a)
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, version := range []uint64{1, 2, 3} {
+		var old []byte
+		if version < 3 {
+			old = legacyIndexBytes(raw, version)
+		} else {
+			end := x.sections[contractPostings].off + x.sections[contractPostings].n*widths[contractPostings]
+			old = append(append([]byte(nil), raw[:contractHeaderSize]...), raw[headerSize:end]...)
+			le.PutUint64(old[8:], version)
+			le.PutUint64(old[16:], uint64(len(old)))
+			clear(old[120+contractSectionCount*16 : contractHeaderSize])
+			for i := 0; i < contractSectionCount; i++ {
+				at := 120 + i*16
+				le.PutUint64(old[at:], le.Uint64(old[at:])-uint64(headerSize-contractHeaderSize))
+			}
+			sum := sha256.Sum256(old[contractHeaderSize:])
+			copy(old[24:56], sum[:])
+		}
+		p := filepath.Join(t.TempDir(), "legacy")
+		if err := os.WriteFile(p, old, 0600); err != nil {
+			t.Fatal(err)
+		}
+		legacy, err := Open(p, provenance(), Limits{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		q, err := legacy.Implementations(context.Background(), a.Symbols[0].ID, nil, 100)
+		bindings, bindingErr := legacy.Definitions(context.Background(), a.Symbols[0].ID, Filter{}, 100)
+		legacy.Close()
+		if err != nil || q.Supported || bindingErr != nil || len(bindings.Results) == 0 {
+			t.Fatalf("legacy%d regression %+v %v %v", version, q, err, bindingErr)
+		}
+	}
+}
+
+func TestInterfaceDirectoryRejectsCorruptionAndMissingRows(t *testing.T) {
+	a := wrapperFixture()
+	addImplementationDeclaration(a, a.Contexts[0], 100)
+	x, path := openFixture(t, a)
+	original, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, mutate := range map[string]func([]byte) []byte{
+		"wrong target": func(b []byte) []byte {
+			le.PutUint64(b[x.sections[interfacePostings].off:], x.field(facts, x.field(interfacePostings, 0, 1), 9)-1)
+			return b
+		},
+		"invalid target": func(b []byte) []byte {
+			le.PutUint64(b[x.sections[interfacePostings].off:], x.sections[symbols].n)
+			return b
+		},
+		"invalid fact": func(b []byte) []byte {
+			le.PutUint64(b[x.sections[interfacePostings].off+8:], x.sections[facts].n)
+			return b
+		},
+		"invalid ordinal": func(b []byte) []byte { le.PutUint64(b[x.sections[interfacePostings].off+16:], 32); return b },
+		"duplicate":       func(b []byte) []byte { p := x.sections[interfacePostings].off; copy(b[p+24:p+48], b[p:p+24]); return b },
+		"unsorted": func(b []byte) []byte {
+			p := x.sections[interfacePostings].off
+			first := append([]byte(nil), b[p:p+24]...)
+			copy(b[p:p+24], b[p+24:p+48])
+			copy(b[p+24:p+48], first)
+			return b
+		},
+		"missing": func(b []byte) []byte { le.PutUint64(b[128+interfacePostings*16:], 1); return b[:len(b)-24] },
+	} {
+		t.Run(name, func(t *testing.T) {
+			b := mutate(append([]byte(nil), original...))
+			le.PutUint64(b[16:], uint64(len(b)))
+			sum := sha256.Sum256(b[headerSize:])
+			copy(b[24:56], sum[:])
+			p := filepath.Join(t.TempDir(), "corrupt")
+			if err := os.WriteFile(p, b, 0600); err != nil {
+				t.Fatal(err)
+			}
+			bad, err := Open(p, provenance(), Limits{})
+			if err == nil {
+				bad.Close()
+				t.Fatal("corrupt reverse directory accepted")
+			}
+		})
+	}
+}
+
+func TestImplementationsGenuineV4Conversion(t *testing.T) {
+	a := wrapperFixture()
+	x, path := openFixture(t, a)
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	end := x.sections[implementationPostings].off + x.sections[implementationPostings].n*widths[implementationPostings]
+	old := append(append([]byte(nil), raw[:implementationHeaderSize]...), raw[headerSize:end]...)
+	le.PutUint64(old[8:], 4)
+	le.PutUint64(old[16:], uint64(len(old)))
+	clear(old[120+implementationSectionCount*16 : implementationHeaderSize])
+	for i := 0; i < implementationSectionCount; i++ {
+		at := 120 + i*16
+		le.PutUint64(old[at:], le.Uint64(old[at:])-uint64(headerSize-implementationHeaderSize))
+	}
+	sum := sha256.Sum256(old[implementationHeaderSize:])
+	copy(old[24:56], sum[:])
+	p := filepath.Join(t.TempDir(), "v4")
+	if err := os.WriteFile(p, old, 0600); err != nil {
+		t.Fatal(err)
+	}
+	legacy, err := Open(p, provenance(), Limits{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer legacy.Close()
+	q, err := legacy.Implementations(context.Background(), a.Symbols[3].ID, nil, 100)
+	if err != nil || q.Supported {
+		t.Fatal("legacy reverse capability invented", err)
+	}
+	paths, err := legacy.ContractPaths(context.Background(), a.Symbols[0].ID, []string{a.Contexts[0].ID}, 100)
+	if err != nil || len(paths.Paths) != 2 {
+		t.Fatal("v4 wrapper path regression", err)
+	}
+}
+
+func TestImplementationsCumulativeByteBudget(t *testing.T) {
+	a := wrapperFixture()
+	// Moderate descriptors fit individually, but repeated declaration results
+	// must charge the complete symbol table on every serialized occurrence.
+	oldType, oldMethod := a.Symbols[2].ID, a.Symbols[1].ID
+	name := "Service" + strings.Repeat("A", 16000)
+	a.Symbols[2].Key.Descriptor = "T:" + name
+	a.Symbols[2].ID = a.Symbols[2].ComputeID()
+	a.Symbols[1].Key.Descriptor = "M:" + name + ".Send"
+	a.Symbols[1].ID = a.Symbols[1].ComputeID()
+	for i := range a.Bindings {
+		b := &a.Bindings[i]
+		if b.SymbolID == oldMethod {
+			b.SymbolID = a.Symbols[1].ID
+		}
+		if b.EnclosingSymbolID == oldMethod {
+			b.EnclosingSymbolID = a.Symbols[1].ID
+		}
+		for j := range b.ImplementationFacts {
+			if b.ImplementationFacts[j].ImplementingTypeSymbolID == oldType {
+				b.ImplementationFacts[j].ImplementingTypeSymbolID = a.Symbols[2].ID
+			}
+		}
+		b.ID = b.ComputeID()
+	}
+	for i := 1; i < 40; i++ {
+		addImplementationDeclaration(a, a.Contexts[0], uint64(100+i))
+	}
+	x, _ := openFixture(t, a)
+	if q, err := x.Implementations(context.Background(), a.Symbols[3].ID, []string{a.Contexts[0].ID}, 1); err != nil || len(q.Matches) != 1 {
+		t.Fatal("single bounded result rejected", err)
+	}
+	q, err := x.Implementations(context.Background(), a.Symbols[3].ID, []string{a.Contexts[0].ID}, 100)
+	if err == nil || !strings.Contains(err.Error(), "byte budget") || len(q.Matches) != 0 {
+		t.Fatal("cumulative materialization escaped budget", err)
+	}
+}
+
+// New workers retain earlier fact generations; the persisted index must accept
+// them even when a fixture does not exercise the latest domain rules.
+func TestImplementationsWorkerVersions(t *testing.T) {
+	for _, version := range []string{"6", "7", "8", "9", "10", "11", "12", "13", "14", "15"} {
+		t.Run(version, func(t *testing.T) {
+			a := wrapperFixture()
+			c := &a.Contexts[0]
+			c.ExtractorVersion = version
+			c.ID = c.ComputeID()
+			occurrenceIDs := map[string]string{}
+			for i := range a.Occurrences {
+				o := &a.Occurrences[i]
+				old := o.ID
+				o.ContextID = c.ID
+				o.ID = o.ComputeID()
+				occurrenceIDs[old] = o.ID
+			}
+			for i := range a.Bindings {
+				b := &a.Bindings[i]
+				b.OccurrenceID = occurrenceIDs[b.OccurrenceID]
+				b.ExtractorVersion = version
+				b.ID = b.ComputeID()
+			}
+			x, _ := openFixture(t, a)
+			defer x.Close()
+			q, err := x.Implementations(context.Background(), a.Symbols[3].ID, []string{c.ID}, 100)
+			if err != nil || len(q.Matches) != 1 || q.Matches[0].Result.Binding.ExtractorVersion != version {
+				t.Fatalf("%+v %v", q, err)
+			}
+		})
+	}
+}

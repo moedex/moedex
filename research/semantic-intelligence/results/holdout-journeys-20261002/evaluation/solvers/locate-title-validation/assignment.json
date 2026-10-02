@@ -1,0 +1,7 @@
+{
+  "task": "locate-title-validation",
+  "assigned_utc": "2026-10-02T13:25:47.257350+00:00",
+  "assigned_monotonic": 77188.631328333,
+  "deadline_monotonic": 77788.631328333,
+  "agent": "/root/holdout_solver_01"
+}

@@ -1,0 +1,7 @@
+{
+  "repository": "https://github.com/quartznet/quartznet",
+  "commit": "15d90a9c2681cd9e273dcd3901c0fbbdbdc5fe90",
+  "selection": "First candidate selected for this new packet. Scheduler lifecycle, DI ownership and cron misfires diversify previous application/outbox corpora.",
+  "prior_use_check": "rg -il quartznet|quartz.net over research/semantic-intelligence and docs/plans/semantic-intelligence returned no matches before clone. This is current-record novelty only, not training or all-session novelty.",
+  "source_selection": "Public default-branch HEAD shallow clone, then immutable commit pin; no candidate replacement or product queries."
+}

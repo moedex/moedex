@@ -1,0 +1,1 @@
+Does this checked-in source prove that every successful registration request delivers exactly one email in the running system? Give the strongest supported answer and identify the missing evidence.

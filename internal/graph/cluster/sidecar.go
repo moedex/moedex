@@ -9,10 +9,11 @@ import (
 )
 
 const (
-	SidecarVersion     = 2
+	SidecarVersion     = 3
 	StatusAvailable    = "available"
 	StatusOverCap      = "over_cap"
 	StatusUnderCovered = "under_covered"
+	StatusOverEdgeCap  = "over_edge_cap"
 
 	MinCoverageNumerator   = 1
 	MinCoverageDenominator = 100
@@ -29,6 +30,7 @@ type Sidecar struct {
 	EligibleNodes int       `json:"eligible_nodes"`
 	EligibleEdges int       `json:"eligible_edges"`
 	Cap           int       `json:"cap"`
+	EdgeCap       int       `json:"edge_cap,omitempty"`
 	BuildMillis   int64     `json:"build_millis"`
 	Clusters      []Cluster `json:"clusters"`
 }
@@ -40,6 +42,7 @@ type BuildReport struct {
 	EligibleNodes int    `json:"eligible_nodes"`
 	EligibleEdges int    `json:"eligible_edges"`
 	Cap           int    `json:"cap"`
+	EdgeCap       int    `json:"edge_cap,omitempty"`
 	Clusters      int    `json:"clusters"`
 	BuildMillis   int64  `json:"build_millis"`
 }
@@ -48,7 +51,7 @@ func (s Sidecar) Report() BuildReport {
 	return BuildReport{
 		Status: s.Status, ObservedNodes: s.ObservedNodes, ObservedEdges: s.ObservedEdges,
 		EligibleNodes: s.EligibleNodes, EligibleEdges: s.EligibleEdges,
-		Cap: s.Cap, Clusters: len(s.Clusters), BuildMillis: s.BuildMillis,
+		Cap: s.Cap, EdgeCap: s.EdgeCap, Clusters: len(s.Clusters), BuildMillis: s.BuildMillis,
 	}
 }
 
@@ -130,14 +133,23 @@ func validateSidecar(sidecar Sidecar) error {
 	if sidecar.Version != SidecarVersion {
 		return fmt.Errorf("cluster: sidecar version %d is unsupported (want %d)", sidecar.Version, SidecarVersion)
 	}
-	if sidecar.Status != StatusAvailable && sidecar.Status != StatusOverCap && sidecar.Status != StatusUnderCovered {
+	if sidecar.Status != StatusAvailable && sidecar.Status != StatusOverCap && sidecar.Status != StatusUnderCovered && sidecar.Status != StatusOverEdgeCap {
 		return fmt.Errorf("cluster: invalid sidecar status %q", sidecar.Status)
 	}
-	if sidecar.ObservedNodes < 0 || sidecar.ObservedEdges < 0 || sidecar.EligibleNodes < 0 || sidecar.EligibleEdges < 0 || sidecar.Cap < 1 || sidecar.BuildMillis < 0 {
+	if sidecar.ObservedNodes < 0 || sidecar.ObservedEdges < 0 || sidecar.EligibleNodes < 0 || sidecar.EligibleEdges < 0 || sidecar.Cap < 1 || sidecar.EdgeCap < 0 || sidecar.BuildMillis < 0 {
 		return fmt.Errorf("cluster: invalid negative counts or non-positive cap")
 	}
 	if sidecar.EligibleNodes > sidecar.ObservedNodes || sidecar.EligibleEdges > sidecar.ObservedEdges {
 		return fmt.Errorf("cluster: eligible counts exceed observed graph")
+	}
+	if sidecar.Status == StatusOverEdgeCap {
+		if sidecar.EdgeCap < 1 || sidecar.EligibleEdges <= sidecar.EdgeCap {
+			return fmt.Errorf("cluster: over_edge_cap status must exceed a positive edge cap")
+		}
+		if len(sidecar.Clusters) != 0 {
+			return fmt.Errorf("cluster: over_edge_cap sidecar must not contain partial communities")
+		}
+		return nil
 	}
 	if sidecar.Status == StatusOverCap {
 		if sidecar.EligibleNodes <= sidecar.Cap {
@@ -162,6 +174,9 @@ func validateSidecar(sidecar Sidecar) error {
 	}
 	if sidecar.EligibleNodes > sidecar.Cap {
 		return fmt.Errorf("cluster: available sidecar has %d eligible nodes above cap %d", sidecar.EligibleNodes, sidecar.Cap)
+	}
+	if sidecar.EdgeCap > 0 && sidecar.EligibleEdges > sidecar.EdgeCap {
+		return fmt.Errorf("cluster: available sidecar exceeds edge cap")
 	}
 	totalMembers := 0
 	for i, community := range sidecar.Clusters {

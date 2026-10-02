@@ -1,0 +1,45 @@
+using Microsoft.CodeAnalysis;
+
+static partial class Worker
+{
+    // Compiler declaration correspondence, not runtime interface dispatch.
+    // Closed interface arguments and explicit default templates stay distinct.
+    // Inherited class mappings and large correspondence sets remain excluded.
+    static object[]? ImplementationFacts(State state, ISymbol declared)
+    {
+        if (!state.Complete || declared is not IMethodSymbol method || method.IsStatic || method.IsAbstract || method.IsExtern || method.IsGenericMethod ||
+            method.MethodKind is not (MethodKind.Ordinary or MethodKind.ExplicitInterfaceImplementation) ||
+            method.ContainingType is not { } type ||
+            !method.Locations.Any(l => l.IsInSource)) return null;
+        // Explicit default interface bodies record the compiler correspondence at
+        // their own source declaration. This is an open template, not a closed
+        // class implementation or an assertion that its forwarding call executes.
+        if (type.TypeKind == TypeKind.Interface && method.MethodKind == MethodKind.ExplicitInterfaceImplementation &&
+            method.ExplicitInterfaceImplementations.Length is > 0 and <= 32 &&
+            method.ExplicitInterfaceImplementations.All(m => DomainTarget(m.ContainingType) && !m.IsGenericMethod && !m.IsStatic))
+            return method.ExplicitInterfaceImplementations.Select(member => new
+            {
+                Kind = "interface_method_implementation", Rule = "csharp-interface-default-v1", EvidenceScope = "compile_time",
+                InterfaceSymbol = Symbol(member), ImplementingType = Symbol(type)
+            }).Cast<object>().ToArray();
+        if (type.TypeKind != TypeKind.Class || !DomainTarget(type)) return null;
+        var interfaces = new List<IMethodSymbol>();
+        foreach (var iface in type.AllInterfaces)
+        {
+            if (!DomainTarget(iface) && !(iface.Arity > 0 && iface.ContainingType is null && iface.TypeArguments.Length <= 8 && iface.TypeArguments.All(DomainTarget))) continue;
+            foreach (var member in iface.GetMembers().OfType<IMethodSymbol>())
+            {
+                if (member.MethodKind != MethodKind.Ordinary || member.IsStatic || !member.IsAbstract || member.IsGenericMethod) continue;
+                if (!SymbolEqualityComparer.Default.Equals(type.FindImplementationForInterfaceMember(member), method)) continue;
+                interfaces.Add(member);
+                if (interfaces.Count > 32) return null;
+            }
+        }
+        if (interfaces.Count == 0) return null;
+        return interfaces.Select(member => new
+        {
+            Kind = "interface_method_implementation", Rule = ClosedInterfaceMethod(member) ? "csharp-interface-closed-v1" : "csharp-interface-v1", EvidenceScope = "compile_time",
+            InterfaceSymbol = Symbol(member), ImplementingType = Symbol(type)
+        }).OrderBy(fact => System.Text.Json.JsonSerializer.Serialize(fact.InterfaceSymbol, Json), StringComparer.Ordinal).Cast<object>().ToArray();
+    }
+}

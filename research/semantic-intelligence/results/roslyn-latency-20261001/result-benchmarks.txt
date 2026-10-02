@@ -1,0 +1,32 @@
+Benchmark tool outputs transcribed from this session. One-iteration timings are
+microbenchmark evidence, not a substitute for real-corpus MCP measurements.
+Fixture: 768 nodes, 128 roots, deterministic locations and hop/confidence ranks.
+Host: darwin/arm64, Apple M5 Max.
+
+Before production edits:
+go test ./internal/graph/serve -run '^$' -bench '^BenchmarkGraphMakeResultManyRoots$' -benchtime=1x -count=1 -cpuprofile=/private/tmp/moedex-result-baseline.cpu
+BenchmarkGraphMakeResultManyRoots-18 1 469442584 ns/op 285489536 B/op 4738114 allocs/op
+PASS
+ok moedex/internal/graph/serve 1.481s
+
+After production edits, three one-iteration runs:
+BenchmarkGraphMakeResultManyRoots-18 1 2778625 ns/op 413792 B/op 6000 allocs/op
+BenchmarkGraphMakeResultManyRoots-18 1 2794417 ns/op 413808 B/op 6000 allocs/op
+BenchmarkGraphMakeResultManyRoots-18 1 2771834 ns/op 413808 B/op 6000 allocs/op
+
+Paired optimized versus frozen legacy implementation, same current binary:
+go test ./internal/graph/serve -run '^$' -bench '^BenchmarkGraphMakeResult(Legacy)?ManyRoots$' -benchtime=1x -count=1
+BenchmarkGraphMakeResultManyRoots-18 1 3587000 ns/op 413808 B/op 6000 allocs/op
+BenchmarkGraphMakeResultLegacyManyRoots-18 1 877755083 ns/op 289213976 B/op 4804243 allocs/op
+PASS
+ok moedex/internal/graph/serve 1.157s
+
+Validation:
+go test -race ./internal/graph/serve -run 'TestGraphMakeResult|TestGraphProximity|TestGraphRootLocation|TestCompact|TestTraceCalls|TestImpactAnalysis' -count=1
+ok moedex/internal/graph/serve 2.348s
+
+Independent legacy oracle covers 12 seeded full results, hop/confidence/name/ID
+ordering, path.Dir normalization, empty paths, dot/dot-dot, absolute and repeated
+separators, Unicode and invalid UTF-8 bytes, empty/multiple repositories,
+multi-location nodes, root duplicate locations, legacy NUL identity collisions,
+and nil versus empty root-location output.

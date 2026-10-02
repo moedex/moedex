@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "/Users/zakkeown/Code/moedex/.local/application-impact/dotnet/dotnet",
+    "/Users/zakkeown/Code/moedex/.local/application-impact/comparison/codegraph-build-v4/bin/Release/net10.0/CodeGraphComponent.dll",
+    "/Users/zakkeown/Code/moedex/.local/application-impact/comparison/codegraph-outbox-v2/source",
+    "/Users/zakkeown/Code/moedex/.local/application-impact/comparison/codegraph-outbox-v2/source/Sample-Outbox.sln",
+    "/Users/zakkeown/Code/moedex/.local/application-impact/comparison/codegraph-outbox-v2/native",
+    "Sample-Outbox"
+  ],
+  "cwd": "/Users/zakkeown/Code/moedex/.local/application-impact/comparison/codegraph-outbox-v2/source",
+  "returncode": 0,
+  "elapsed_seconds": 6.135667085647583
+}

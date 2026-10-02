@@ -1,0 +1,17 @@
+{
+  "ordinal": 22,
+  "argv": [
+    "call",
+    "--name",
+    "search_context",
+    "--arguments",
+    "{\"query\":\"const string Database\",\"repo\":\"CleanArchitecture\",\"path_prefix\":\"src/Shared\",\"top_k\":1,\"token_budget\":500,\"graph_depth\":0}"
+  ],
+  "started_monotonic": 77608.094732875,
+  "finished_monotonic": 77608.153149041,
+  "returncode": 0,
+  "stdout_bytes": 3666,
+  "stdout_sha256": "0802de1d65639eacbb09a13ce0625af1d148944b5c736eb2931bd331b1b2b4da",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

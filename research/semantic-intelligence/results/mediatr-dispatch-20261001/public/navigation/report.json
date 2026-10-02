@@ -1,0 +1,25 @@
+{
+  "classification": "direct_request_construction_and_declared_response_not_runtime_handler_selection",
+  "calls": [
+    {
+      "anchor": "mediator-orders",
+      "tool": "compiler_definitions",
+      "passed": true
+    },
+    {
+      "anchor": "mediator-orders",
+      "tool": "compiler_contract_context",
+      "passed": true
+    },
+    {
+      "anchor": "mediator-details",
+      "tool": "compiler_definitions",
+      "passed": true
+    },
+    {
+      "anchor": "mediator-details",
+      "tool": "compiler_contract_context",
+      "passed": true
+    }
+  ]
+}

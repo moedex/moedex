@@ -1,0 +1,5 @@
+# moedex/internal/semantic [moedex/internal/semantic.test]
+internal/semantic/masstransit_scan_test.go:33:43: invalid operation: (err == nil) != version (mismatched types untyped bool and string)
+FAIL	moedex/internal/semantic [build failed]
+ok  	moedex/internal/semanticimport	0.274s
+FAIL

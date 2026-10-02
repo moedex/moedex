@@ -1,0 +1,1 @@
+Trace a cron misfire policy from CronScheduleBuilder into CronTriggerImpl.UpdateAfterMisfire. Contrast SmartPolicy, DoNothing, and FireAndProceed, including calendar handling. Does that method itself execute a job? Cite precise checked-in source ranges. Describe static behavior and its conditions; do not claim that a scheduler or job actually ran.

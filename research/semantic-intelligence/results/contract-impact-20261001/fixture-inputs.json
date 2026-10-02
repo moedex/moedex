@@ -1,0 +1,17 @@
+{
+  "source_sha256": {
+    "Aggregate/Aggregate.csproj": "b6f961257ab8ff375814e967f2081fbd85084b2fdb49a22f4ef1f969330e1bb1",
+    "Consumer/Consumer.cs": "62360ea2dc7e1a6c524c173235322b14fbc98e157b02819d36513ab2bf3a5f56",
+    "Consumer/Consumer.csproj": "bdf0dd85ab7afa186e02f8dbeefd0ed13ad42f43dc7dc64845ccf209a308fce1",
+    "Contracts/Contracts.csproj": "484e30acbb8864055c0cf99dc18344e4bbec3787e78d4750dc462e9e36783e04",
+    "Contracts/Notice.cs": "faa874d8efcd78219791e7f4c42b4fcc435535a64ad7347c3b4957e4295073a1",
+    "Directory.Build.props": "d1dad792079dadde2af8c57522e1ef032524cc93bfc9c0dd144f0bdecbd77c00",
+    "Distractor/Distractor.cs": "eb2163ea711e5ddc177f6bd308b9176931acd499ce888c102974e14afba1e74d",
+    "Distractor/Distractor.csproj": "54ba8a83cd87a40191318ebd610081ee7f7ac30bf3121264904d5c60b37462f8",
+    "Publisher/Producer.cs": "b180f58e5341be6018a3360bd2e5801022c2bcaa93dfbe9687aa9366f303eb49",
+    "Publisher/Publisher.csproj": "bdf0dd85ab7afa186e02f8dbeefd0ed13ad42f43dc7dc64845ccf209a308fce1",
+    "Storage/Storage.csproj": "955712085f79c287bfe24cbc42b75393e9277ef634da8877fb42dffe47b72b5b",
+    "Storage/Store.cs": "d2fa3f201eaad318a11370e5aa6ed3e12c5e1bf440948b6cd8c4bc4c070be1dc"
+  },
+  "public_package_manifest": "/private/tmp/moedex-domain-gold-20261001/packages.json"
+}

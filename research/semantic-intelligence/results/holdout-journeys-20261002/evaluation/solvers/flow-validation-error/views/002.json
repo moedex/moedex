@@ -1,0 +1,15 @@
+{
+  "ordinal": 2,
+  "argv": [
+    "catalog",
+    "--tool",
+    "list_repos"
+  ],
+  "started_monotonic": 78238.225840333,
+  "finished_monotonic": 78238.336705916,
+  "returncode": 0,
+  "stdout_bytes": 1658,
+  "stdout_sha256": "37e4010f00fc5e725d4e26d43a2445ec6d00f72ba3246b7b3429f0e749a46b03",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

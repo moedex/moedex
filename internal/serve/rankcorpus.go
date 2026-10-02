@@ -15,6 +15,7 @@ import (
 	"moedex/internal/mcp"
 	"moedex/internal/parity"
 	"moedex/internal/rank"
+	"moedex/internal/sourcescope"
 	"moedex/internal/symbol"
 	"moedex/internal/tokenindex"
 )
@@ -77,6 +78,7 @@ type RankCorpus struct {
 	// corpusFingerprint is captured from the shard/content set at open time and
 	// remains bound to this RankCorpus across hot reloads.
 	corpusFingerprint string
+	shardDirectory    string
 	// corpusRoot is the directory the corpus was built under, recovered from the
 	// shard dir's manifest.json (parity.Manifest.Root). Empty if the manifest is
 	// absent/unreadable. It lets the MCP layer emit each hit's full
@@ -88,6 +90,15 @@ type RankCorpus struct {
 // dir's manifest), or "" if it could not be determined. The MCP server uses it
 // (via mcp.WithCorpusRoot) to recover each hit's full path_with_namespace.
 func (rc *RankCorpus) CorpusRoot() string { return rc.corpusRoot }
+
+// CorpusFingerprint is captured when this rank generation opens; it never
+// consults the current shard directory after publication.
+func (rc *RankCorpus) CorpusFingerprint() string { return rc.corpusFingerprint }
+
+// ShardDirectory identifies the absolute directory opened by this generation.
+// It lets snapshot preparation reject components from a different directory;
+// it is not a content fingerprint or a claim about a mutable directory's files.
+func (rc *RankCorpus) ShardDirectory() string { return rc.shardDirectory }
 
 // Close releases every mapping backing the corpus: the shared content store
 // (deduped dirs), the token index, and the dense store, each only when loaded
@@ -126,6 +137,11 @@ func (rc *RankCorpus) Close() error {
 // corpus under ctx — the boot-time dense-arm cost — so callers should pass a
 // cancellable context.
 func OpenRank(ctx context.Context, dir string, cfg RankConfig) (*RankCorpus, error) {
+	absoluteDir, err := filepath.Abs(dir)
+	if err != nil {
+		return nil, err
+	}
+	dir = absoluteDir
 	ix, paths, cs, err := loadUnified(dir)
 	if err != nil {
 		return nil, err
@@ -219,7 +235,7 @@ func OpenRank(ctx context.Context, dir string, cfg RankConfig) (*RankCorpus, err
 	searcher.SetEnclosingBytes(syms.EnclosingBytesFunc())
 
 	ok = true // hand cs ownership to the RankCorpus; the deferred close is now a no-op
-	return &RankCorpus{ix: ix, ti: ti, syms: syms, store: store, content: cs, denseCached: cached, tokenCached: tokenCached, symsCached: symsCached, searcher: searcher, corpusRoot: loadCorpusRoot(dir), corpusFingerprint: corpusFingerprint(paths)}, nil
+	return &RankCorpus{ix: ix, ti: ti, syms: syms, store: store, content: cs, denseCached: cached, tokenCached: tokenCached, symsCached: symsCached, searcher: searcher, corpusRoot: loadCorpusRoot(dir), corpusFingerprint: corpusFingerprint(paths), shardDirectory: absoluteDir}, nil
 }
 
 // loadCorpusRoot best-effort reads the corpus build root from the shard dir's
@@ -713,11 +729,20 @@ func (rc *RankCorpus) SearchContext(ctx context.Context, query string, tokenBudg
 // before releasing its acquired generation.
 func (rc *RankCorpus) SearchContextWithSnapshot(ctx context.Context, query string, tokenBudget, topK int) (mcp.ContextSearchResult, error) {
 	result, err := rc.searcher.SearchContextWithSnapshot(ctx, query, tokenBudget, topK)
+	return rc.stampContext(result, err)
+}
+
+func (rc *RankCorpus) SearchContextScopedWithSnapshot(ctx context.Context, query string, tokenBudget, topK int, scope sourcescope.Scope) (mcp.ContextSearchResult, error) {
+	result, err := rc.searcher.SearchContextScopedWithSnapshot(ctx, query, tokenBudget, topK, scope)
+	return rc.stampContext(result, err)
+}
+
+func (rc *RankCorpus) stampContext(result mcp.ContextSearchResult, err error) (mcp.ContextSearchResult, error) {
 	if err != nil {
 		return mcp.ContextSearchResult{}, err
 	}
 	result.Snapshot.CorpusFingerprint = rc.corpusFingerprint
-	result.Snapshot.Cacheable = true
+	result.Snapshot.Cacheable = len(result.Window.Warnings) == 0
 	for _, block := range result.Window.Blocks {
 		if block.BlobSHA == "" {
 			result.Snapshot.Cacheable = false

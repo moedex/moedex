@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "tools/call",
+  "params": {
+    "name": "compiler_definitions",
+    "arguments": {
+      "symbol_id": "symbol:a0bc21c2a7f3b1a5575077aeafadada850e9eba88db06ac284be3a17a3ef1663",
+      "repo": "eShopOnWeb"
+    }
+  }
+}

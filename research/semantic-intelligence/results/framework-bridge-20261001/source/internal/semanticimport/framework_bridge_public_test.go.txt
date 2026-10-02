@@ -1,0 +1,125 @@
+package semanticimport_test
+
+import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"moedex/internal/mcp"
+	"moedex/internal/semantic"
+	"moedex/internal/semanticimport"
+	"moedex/internal/semanticindex"
+)
+
+func TestPublicFrameworkBridge(t *testing.T) {
+	stream, root := os.Getenv("MOEDEX_BRIDGE_STREAM"), os.Getenv("MOEDEX_BRIDGE_ROOT")
+	if stream == "" || root == "" {
+		t.Skip("set MOEDEX_BRIDGE_STREAM/ROOT for native fixture")
+	}
+	raw, err := os.ReadFile(stream)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, err := semanticimport.Import(context.Background(), bytes.NewReader(raw), semanticimport.Options{Repo: "fixture", Root: root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "artifact")
+	if err := semantic.Write(path, a); err != nil {
+		t.Fatal(err)
+	}
+	a, err = semantic.Read(path, semantic.Limits{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	artifact, _ := os.ReadFile(path)
+	sha := fmt.Sprintf("%x", sha256.Sum256(artifact))
+	provenance := semanticindex.Provenance{ArtifactSHA256: sha, CorpusFingerprint: strings.Repeat("b", 64)}
+	ip := filepath.Join(t.TempDir(), "index")
+	if err := semanticindex.Build(ip, a, provenance); err != nil {
+		t.Fatal(err)
+	}
+	x, err := semanticindex.Open(ip, provenance, semanticindex.Limits{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer x.Close()
+	p := &domainGoldProvider{index: x, artifact: sha}
+	tools := map[string]mcp.ToolHandler{}
+	for _, tool := range mcp.CompilerTools(p) {
+		tools[tool.Name()] = tool
+	}
+	call := func(name string, args any) map[string]any {
+		t.Helper()
+		raw, _ := json.Marshal(args)
+		out, err := tools[name].Call(context.Background(), raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out["isError"] == true {
+			t.Fatal(out)
+		}
+		wire, _ := json.Marshal(out["structuredContent"])
+		var result map[string]any
+		if json.Unmarshal(wire, &result) != nil {
+			t.Fatal("bad response")
+		}
+		return result
+	}
+	declarations := call("compiler_symbols", map[string]any{"repo": "fixture", "path": "Fixture.cs"})
+	if declarations["status"] != "ok" || declarations["truncated"] != false {
+		t.Fatal(declarations)
+	}
+	closed, defaults, keyed := 0, 0, 0
+	for _, b := range a.Bindings {
+		for _, f := range b.ImplementationFacts {
+			if f.Rule == "csharp-interface-closed-v1" {
+				closed++
+			}
+			if f.Rule == "csharp-interface-default-v1" {
+				defaults++
+			}
+			reverse := call("compiler_implementations", map[string]any{"symbol_id": f.InterfaceSymbolID})
+			if reverse["status"] != "context_required" {
+				t.Fatal(reverse)
+			}
+			contexts := reverse["contexts"].([]any)
+			if len(contexts) != 1 {
+				t.Fatal(reverse)
+			}
+			id := contexts[0].(map[string]any)["context_id"]
+			selected := call("compiler_implementations", map[string]any{"symbol_id": f.InterfaceSymbolID, "context_ids": []any{id}})
+			if selected["status"] != "ok" || len(selected["matches"].([]any)) != 1 {
+				t.Fatal(selected)
+			}
+		}
+		for _, f := range b.DomainFacts {
+			if f.Rule != "csharp-keyed-di-v1" {
+				continue
+			}
+			keyed++
+			impact := call("compiler_contract_impact", map[string]any{"symbol_id": f.Targets[2].SymbolID})
+			if impact["status"] != "context_required" {
+				t.Fatal(impact)
+			}
+			contexts := impact["contexts"].([]any)
+			id := contexts[0].(map[string]any)["context_id"]
+			selected := call("compiler_contract_impact", map[string]any{"symbol_id": f.Targets[2].SymbolID, "context_ids": []any{id}})
+			if selected["status"] != "ok" || len(selected["paths"].([]any)) == 0 {
+				t.Fatal(selected)
+			}
+		}
+	}
+	if closed != 2 || defaults != 1 || keyed != 4 {
+		t.Fatalf("closed=%d default=%d keyed=%d", closed, defaults, keyed)
+	}
+	if p.acquired != p.released {
+		t.Fatal("lease leak")
+	}
+}

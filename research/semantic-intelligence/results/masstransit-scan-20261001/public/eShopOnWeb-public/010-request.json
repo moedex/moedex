@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "method": "tools/call",
+  "params": {
+    "name": "compiler_binding_at",
+    "arguments": {
+      "repo": "eShopOnWeb",
+      "path": "src/Web/Configuration/ConfigureWebServices.cs",
+      "byte_offset": 365,
+      "raw_sha256": "74723f33e98728b101e499581d0e758b54b8f99f3f048f8a198ae8873cce8fb8",
+      "context_id": "context:f1ccb81e1109e77702533bbe190d0f88fac31aa53286e36fa6ed3bd4b2629633"
+    }
+  }
+}

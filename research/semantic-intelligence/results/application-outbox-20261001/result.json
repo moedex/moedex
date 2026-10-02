@@ -1,0 +1,166 @@
+{
+  "date": "2026-10-01",
+  "status": "passed",
+  "scope": "external application sample; source-only labels frozen before extraction; not general application recall or runtime proof",
+  "repo": "https://github.com/MassTransit/Sample-Outbox",
+  "commit": "1ab8e66ebf96e5733e68c2f4d2201276f38ed9c5",
+  "gold_sha256": "b91cdf38bbeb036274ff689618056e43c712c62f73a7f659726869a1437c3605",
+  "metrics": {
+    "supported_sites": 8,
+    "true_positive": 8,
+    "false_negative": 0,
+    "false_positive": 0,
+    "context_observations": 14,
+    "audit_facts": 14,
+    "served_facts": 14,
+    "negative_controls": 2,
+    "negative_violations": 0,
+    "selected_unsupported_gaps": 9,
+    "queries": 72
+  },
+  "normal_race_reports_equal": true,
+  "artifacts": {
+    "Api.semantic": {
+      "sha256": "e7835d1bb6682042e01b29bef81f45f0768df131e1d4d5a6f8d790c2178b60ec",
+      "bytes": 1678433
+    },
+    "Worker.semantic": {
+      "sha256": "751a6ab569a65639f7dbe43efafaadad20abfb3cc02bf300b33330e389d909bc",
+      "bytes": 1402445
+    },
+    "composed.semantic": {
+      "sha256": "546fdf0f7bd37684ee222a1f1d925913f46f7d654b4965b1ce6768efbe4245d8",
+      "bytes": 2924281
+    }
+  },
+  "checks": [
+    {
+      "command": "go test ./...",
+      "status": "passed",
+      "log": "full-test.log"
+    },
+    {
+      "command": "go vet ./...",
+      "status": "passed",
+      "evidence": "observed exit0; transcribed"
+    },
+    {
+      "command": "go build ./...",
+      "status": "passed",
+      "evidence": "observed exit0; transcribed"
+    },
+    {
+      "command": "go test -race ./internal/app/indexcmd ./internal/app/servecmd ./internal/semantic ./internal/semanticimport ./internal/snapshot",
+      "status": "passed",
+      "log": "race.log"
+    }
+  ],
+  "initial_workflow_failure": {
+    "stage": "publication",
+    "reason": "conflicting optional generated editorconfig across retained captures",
+    "raw_logs": "lost when restart cleared /private/tmp; preserved as transcribed observation",
+    "fix": "optional unindexed variants allowed only after per-root revalidation; indexed and required conflicts still reject"
+  },
+  "files": {
+    "application-normal.log": {
+      "sha256": "656acb28159649b793a99efd0fa1c8b7d96d00107e63148d6e91b5a405369956",
+      "bytes": 504
+    },
+    "application-race.log": {
+      "sha256": "1eab7e4366e22dfb14db00337427299c6e686870afee1d0bc530bf06b86d74c3",
+      "bytes": 504
+    },
+    "application-report.json": {
+      "sha256": "797b94c86ca59f051253d0488f8d786d1e42824e7c2407f380ecd0a774b380e1",
+      "bytes": 46443
+    },
+    "baseline-inputs.json": {
+      "sha256": "58d9dd390643b62c111622727637b50c0bd63ccbb9df39d4701cf55ca13cac05",
+      "bytes": 7024
+    },
+    "capture-Api.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "capture-Api.stdout": {
+      "sha256": "4a4ff01ba0adf1584448881788de23abef39d8b9637da3686e4f6c99fdadd8b8",
+      "bytes": 618
+    },
+    "capture-Worker.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "capture-Worker.stdout": {
+      "sha256": "92f8f6c17940fd609655af4c15b4ff00309264a352c4cddb38b52a78ff564293",
+      "bytes": 622
+    },
+    "commands.json": {
+      "sha256": "5db5d60ee8a8b6e857e88d05468f0ec71855e4581f3a806c645604a05b7b1946",
+      "bytes": 3930
+    },
+    "compose.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "compose.stdout": {
+      "sha256": "a1bf727110f5a84822ba1bc03f79af09ac2cce6773829371e7d3ed50ed2afe52",
+      "bytes": 1011
+    },
+    "full-test.log": {
+      "sha256": "1faf69cb5a0315c17005fbe0db541d73b2430546cb160e3e3d7933deef990f71",
+      "bytes": 2660
+    },
+    "inputs.json": {
+      "sha256": "297328d63ffc492303ff65c32c96d235c7d58edec5d84b8c0750c0f34827b882",
+      "bytes": 5221
+    },
+    "packages.json": {
+      "sha256": "9c1b6b8d534be7a2880b507af335198493db4d35d25d3061c1f38c814d6e2982",
+      "bytes": 15181
+    },
+    "publish.stderr": {
+      "sha256": "e6e2ca017a9e4ba96a0e8a666e26cb1ea42e89bce36e7c30aec3db1e0d3ffa96",
+      "bytes": 211
+    },
+    "publish.stdout": {
+      "sha256": "5ce667f2d48ee84eeaee9c946c6797723c7d5786a16e05d3a5c01d91837efe33",
+      "bytes": 100
+    },
+    "published-snapshot.json": {
+      "sha256": "c09e6274b30c0acefb23e5b54ee54a29c0f7742f096d9f32946a3ddd71bd0dc0",
+      "bytes": 2778
+    },
+    "race-report.json": {
+      "sha256": "797b94c86ca59f051253d0488f8d786d1e42824e7c2407f380ecd0a774b380e1",
+      "bytes": 46443
+    },
+    "race.log": {
+      "sha256": "8a498d3811826b7db12f00c838cf298831a4a51113f96560d523be0e80f9b8ef",
+      "bytes": 203
+    },
+    "recovery.json": {
+      "sha256": "2e8e1ee8b4e6088643e60125a94ad73557e887592fab86e53d2920ba149da38a",
+      "bytes": 2254
+    },
+    "scoring-race.log": {
+      "sha256": "2f359159b24b6495d0ec51c362ba0b4e33257bc5fc5f9c47d77308aebb3692d9",
+      "bytes": 41
+    },
+    "scoring-tests.log": {
+      "sha256": "cbc31acdb9ff5c1e3b4a37bf0f7b54c418fa066cd35a4fe7b9ebb25c9f0d3587",
+      "bytes": 41
+    },
+    "sdk-selection.json": {
+      "sha256": "6f0449625179432790f06d5dc127ffd326bbf7f7aa5279f6479e3a1b50fff598",
+      "bytes": 313
+    },
+    "source-gold.json": {
+      "sha256": "b91cdf38bbeb036274ff689618056e43c712c62f73a7f659726869a1437c3605",
+      "bytes": 32604
+    },
+    "sources.json": {
+      "sha256": "9a6ed9bbc48db905917829b850d5efdcf9aa2b189692f9715c658b7688d6df6e",
+      "bytes": 16728
+    }
+  }
+}

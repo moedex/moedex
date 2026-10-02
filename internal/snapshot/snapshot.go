@@ -140,7 +140,7 @@ func Validate(m *Manifest) error {
 			}
 		}
 	}
-	return nil
+	return validateSemanticComponent(m)
 }
 
 func validateID(id string) error {
@@ -315,6 +315,9 @@ func readCurrentID(indexDir string) (string, error) {
 func Resolve(indexDir string) (Resolved, error) {
 	m, root, err := Current(indexDir)
 	if err == nil {
+		if err := VerifySemanticComponent(root, m); err != nil {
+			return Resolved{}, err
+		}
 		return Resolved{ID: m.ID, Root: root, Manifest: m}, nil
 	}
 	if !errors.Is(err, ErrNoCurrent) {

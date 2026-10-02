@@ -5,26 +5,14 @@ package candidates
 // the trigram arm (unclassified, complete), which is the step the plan calls the
 // trigram fan-out.
 //
-// The trigram arm reuses the engine's positional-literal machinery: the begin-gram
-// and end-gram posting lists are both sorted by (Blob, Offset), so intersecting
-// them at a fixed positional distance is a single forward merge-join with no map
-// and no allocation, and every surviving position is confirmed byte-exact against
-// the blob's content. This is the same reduction internal/search runs for a
-// literal query, restricted here to returning (blob, offset) instead of
-// line-granular matches: a graph edge is anchored at a byte offset, and the line
-// a reference sits on is not enough to point a verifier at it.
+// The trigram arm uses one required gram as a positional driver, then confirms
+// the entire name against the blob. Choosing a sparse driver avoids decoding
+// common prefix/suffix lists for every name in a large corpus. A bounded set of
+// count-only probes keeps selection work independent of the name's length.
 //
-// Soundness follows the engine's rule that a filter may only ever WIDEN. Three
-// cases cannot be answered by the postings, and each falls back to a full content
-// scan rather than to an empty answer:
-//
-//   - a name shorter than a trigram (no gram to look up),
-//   - a selective build that deselected the begin or end gram (its postings are
-//     UNKNOWN, not zero — see index.IndexedGram),
-//   - an index carrying no postings at all (see Corpus.postings).
-//
-// All three produce identical results to the positional path, just slower, which
-// is exactly the trade the parity core makes everywhere else.
+// Soundness follows the engine's rule that a filter may only ever WIDEN. A short
+// name, a shard without postings, or a selective index without a usable driver
+// falls back to scanning content. A deselected gram is UNKNOWN, never zero.
 
 import (
 	"bytes"
@@ -86,6 +74,19 @@ func (c *Corpus) occurrences(name string) []occurrence {
 		})
 	}
 
+	if c.textOccurrences != nil {
+		entry := c.textOccurrences.find(name)
+		if entry.name != "" {
+			for _, k := range entry.sites {
+				if _, dup := seen[k]; dup {
+					continue
+				}
+				out = append(out, occurrence{site: Site{Shard: k.shard, Blob: k.blob, Start: k.start, End: k.start + len(name)}, typ: TextOccurrence})
+			}
+			return out
+		}
+	}
+
 	// Trigram arm, every shard — including the shards the symbol arm already
 	// reported, because a shard's extractor sees only the code it understands and
 	// the name may also appear in a comment, a string, or a sibling file of a
@@ -127,49 +128,65 @@ func (c *Corpus) appendTextOccurrences(out []occurrence, seen map[siteKey]struct
 	return out
 }
 
-// positionalOccurrences calls add for every position where needle occurs in ix,
-// found by intersecting the begin-gram and end-gram posting lists at the fixed
-// positional distance between them and confirming the full byte string. It
-// reports false without calling add when the index cannot answer soundly (a
-// deselected gram), leaving the caller to scan instead.
+// positionalOccurrences calls add for every position where needle occurs in ix.
+// Every occurrence must contain the chosen gram at its fixed offset, so a single
+// posting list plus byte verification is sufficient; no begin/end intersection
+// is needed. Posting order also preserves ascending (blob, occurrence offset).
+// It returns false without calling add if no probed gram is trustworthy.
 //
 // needle must be at least trigram.N bytes.
 func positionalOccurrences(ix *index.Index, needle []byte, add func(blob uint64, content []byte, off int)) bool {
-	begin := trigram.Trigram{needle[0], needle[1], needle[2]}
-	end := trigram.Trigram{needle[len(needle)-3], needle[len(needle)-2], needle[len(needle)-1]}
-	// Selective-index gate: a deselected gram's posting list is UNKNOWN, so
-	// intersecting it would under-approximate — the one thing a recall-complete
-	// pass may not do. On the default all-trigram build this never triggers.
-	if ix.Selective() && (!ix.IndexedGram(begin) || !ix.IndexedGram(end)) {
-		return false
-	}
-
-	dist := len(needle) - trigram.N
-	begins := ix.Postings(begin)
-	ends := ix.Postings(end)
-	// Both lists are sorted by (Blob, Offset) (see index.AddFile), and the target
-	// key (p.Blob, p.Offset+dist) is therefore monotonically non-decreasing as we
-	// walk begins — so one forward cursor over ends suffices: O(n+m), no map.
-	j := 0
-	var cur *index.Blob
-	for _, p := range begins {
-		want := p.Offset + dist
-		for j < len(ends) && (ends[j].Blob < p.Blob || (ends[j].Blob == p.Blob && ends[j].Offset < want)) {
-			j++
+	last := len(needle) - trigram.N
+	// Probe the middle first: generated names often share both their prefix and
+	// suffix. At most three unique grams are counted, and an already sparse
+	// driver needs no further probing. Counts do not materialize mmap postings.
+	positions := [3]int{last / 2, 0, last}
+	var grams [3]trigram.Trigram
+	n := 0
+	driverOffset, driverCount := -1, 0
+	var driver trigram.Trigram
+	for _, off := range positions {
+		gram := trigram.Trigram{needle[off], needle[off+1], needle[off+2]}
+		duplicate := false
+		for _, prior := range grams[:n] {
+			if gram == prior {
+				duplicate = true
+				break
+			}
 		}
-		if j >= len(ends) || ends[j].Blob != p.Blob || ends[j].Offset != want {
+		if duplicate || !ix.IndexedGram(gram) {
 			continue
 		}
+		grams[n] = gram
+		n++
+		count := ix.PostingCount(gram)
+		if count == 0 {
+			return true // A materialized required gram proves there is no match.
+		}
+		if driverOffset < 0 || count < driverCount {
+			driver, driverOffset, driverCount = gram, off, count
+		}
+		if driverCount <= 64 {
+			break
+		}
+	}
+	if driverOffset < 0 {
+		return false
+	}
+	var cur *index.Blob
+	for _, p := range ix.Postings(driver) {
+		if p.Offset < driverOffset {
+			continue
+		}
+		off := p.Offset - driverOffset
 		if cur == nil || cur.ID != p.Blob {
 			if cur = ix.Blob(p.Blob); cur == nil {
 				continue
 			}
 		}
-		// The gram intersection is a necessary condition, not a sufficient one
-		// (the interior bytes were never checked), so confirm the whole string.
-		// Guard the upper bound: a truncated blob must not panic the sweep.
-		if p.Offset+len(needle) <= len(cur.Content) && bytes.Equal(cur.Content[p.Offset:p.Offset+len(needle)], needle) {
-			add(p.Blob, cur.Content, p.Offset)
+		// Subtraction avoids overflow for malformed out-of-range offsets.
+		if off <= len(cur.Content) && len(needle) <= len(cur.Content)-off && bytes.Equal(cur.Content[off:off+len(needle)], needle) {
+			add(p.Blob, cur.Content, off)
 		}
 	}
 	return true
@@ -231,6 +248,12 @@ func identifierAt(content []byte, off, n int) bool {
 // a name occurs in a blob (as far as candidate generation is concerned) if and
 // only if it equals one of these runs.
 func EachIdentifier(content []byte, fn func(run []byte) bool) {
+	eachIdentifierPosition(content, func(start, end int) bool { return fn(content[start:end]) })
+}
+
+// eachIdentifierPosition is the shared byte scanner for incremental dirty-name
+// discovery and the scoped occurrence index. False means the callback stopped it.
+func eachIdentifierPosition(content []byte, fn func(start, end int) bool) bool {
 	for i := 0; i < len(content); {
 		if !identByte(content[i]) {
 			i++
@@ -240,11 +263,12 @@ func EachIdentifier(content []byte, fn func(run []byte) bool) {
 		for j < len(content) && identByte(content[j]) {
 			j++
 		}
-		if !fn(content[i:j]) {
-			return
+		if !fn(i, j) {
+			return false
 		}
 		i = j
 	}
+	return true
 }
 
 // identByte reports whether b can continue an identifier.

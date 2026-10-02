@@ -1,0 +1,47 @@
+{
+  "task": "flow-runtime-proof",
+  "reviewer": "review18_08",
+  "answer_sha256": "322dcde71fc1e902f8dab74f514ac81b0a7a877d4085a84676795354e9c5de92",
+  "atoms": [
+    {
+      "id": "flow-runtime-proof.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly rejects universal exactly-one actual email delivery. Opening cites src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs:18\u201323 (005.response.raw); controller success path is precisely cited at src/Sample.Api/Controllers/RegistrationController.cs:19\u201335 (003.response.raw). Both match pinned source and show the limit claimed."
+    },
+    {
+      "id": "flow-runtime-proof.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly says HTTP OK follows SubmitRegistration, Publish and SaveChangesAsync and is not downstream notification acknowledgment. Citations src/Sample.Api/Controllers/RegistrationController.cs:19\u201335 and src/Sample.Components/RegistrationService.cs:21\u201352 are exact method/path spans in 003/004.response.raw, including save at 45 and return at 52."
+    },
+    {
+      "id": "flow-runtime-proof.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly identifies logging and Task.CompletedTask, with no provider call or acknowledgment. src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs:18\u201323 is fully returned in 005.response.raw and matches the pinned implementation."
+    },
+    {
+      "id": "flow-runtime-proof.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly distinguishes configured bus outbox, saga retry/EF outbox and 30-second duplicate detection from activation, delivery and execution counts. Precise citations src/Sample.Api/Program.cs:73\u201387, src/Sample.Worker/Program.cs:65\u201370, and src/Sample.Components/StateMachines/RegistrationStateDefinition.cs:9\u201314 are supported by complete 007/008/009.response.raw and matching pinned source."
+    },
+    {
+      "id": "flow-runtime-proof.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Missing-evidence paragraph explicitly requests deployed build/configuration and active endpoints, correlated HTTP/transaction/outbox/broker/saga/consumer records, actual sending and provider/recipient delivery evidence, and outage/restart evidence; it states no observed runtime delivery evidence was retrieved. This covers operational broker/database evidence through records and outage cases. Earlier precise citations to src/Sample.Worker/Program.cs:74\u201388 (008.response.raw), API configuration and consumer :18\u201323 (005.response.raw) support visible source limits; none of the 12 responses contains runtime traces. No extra citation proving absence of unseen traces is required by frozen scoring."
+    }
+  ],
+  "correctness_total": 5,
+  "evidence_total": 5,
+  "possible": 5,
+  "unsupported_claims": [],
+  "strict_success": true,
+  "limitations": [
+    "Reviewed all 12 logged requests/responses plus answer and transcript; all response_complete values are true, all returned source spans and file tree report truncated=false. Transcript totals 42,681 response bytes. The answer reports a separately truncated catalog display, not source evidence truncation.",
+    "All six distinct packet-pinned source hashes match. Also inspected original sources for extra saga, database model, and database recreation claims; these claims match responses and are framed as static/conditional rather than observed effects. RegistrationDbContext response omits original UTF-8 BOM, with no substantive or line-number difference.",
+    "No runtime/deployment investigation performed or implied. Isolation-note claims about unlogged activity cannot be independently established from the retained public-call transcript; no contradictory evidence is present."
+  ]
+}

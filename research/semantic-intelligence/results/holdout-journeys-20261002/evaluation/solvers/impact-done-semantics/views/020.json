@@ -1,0 +1,17 @@
+{
+  "ordinal": 20,
+  "argv": [
+    "call",
+    "--name",
+    "file_tree",
+    "--arguments",
+    "{\"repo\":\"CleanArchitecture\",\"prefix\":\"src/Web/Infrastructure\"}"
+  ],
+  "started_monotonic": 78803.8008105,
+  "finished_monotonic": 78803.852463541,
+  "returncode": 0,
+  "stdout_bytes": 1393,
+  "stdout_sha256": "3dd01ceaad4c886e175ad9389d09ca2a9b03d32c90f07d4fa6d311f16b59f316",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

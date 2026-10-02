@@ -1,0 +1,10 @@
+  Determining projects to restore...
+CSSM_ModuleLoad(): One or more parameters passed to a function were not valid.
+  All projects are up-to-date for restore.
+  Moedex.SemanticWorker -> /Users/zakkeown/Code/moedex/.local/build-event-severity/worker20/bin/Debug/net10.0/Moedex.SemanticWorker.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.07

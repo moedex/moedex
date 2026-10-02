@@ -1,0 +1,193 @@
+{
+  "status": "frozen_launch_packet_awaiting_delegation_authorization",
+  "classification": "single_product_development_agent_journey_current_build",
+  "repo": "https://github.com/MassTransit/Sample-Outbox",
+  "commit": "1ab8e66ebf96e5733e68c2f4d2201276f38ed9c5",
+  "tasks": [
+    {
+      "id": "locate-duplicate",
+      "journey": "locate_behavior",
+      "prompt": "Where does the application enforce uniqueness of an event/member registration, and how does a duplicate reach the HTTP response? Cite the relevant code."
+    },
+    {
+      "id": "locate-retry",
+      "journey": "locate_behavior",
+      "prompt": "Find the deliberately intermittent registration-processing failure. State its exact payment and retry conditions, with source evidence."
+    },
+    {
+      "id": "locate-validation-service",
+      "journey": "locate_behavior",
+      "prompt": "Which implementation is registered for registration validation, with what lifetime, and where is it called? Distinguish configured registration from runtime instance selection."
+    },
+    {
+      "id": "locate-persistence",
+      "journey": "locate_behavior",
+      "prompt": "Locate creation, entity insertion, publication, and persistence of a new registration. Describe their source order without claiming a runtime transaction guarantee."
+    },
+    {
+      "id": "flow-notification",
+      "journey": "explain_cross_service",
+      "prompt": "Trace a submitted registration from the HTTP action to the recorded RegistrationSubmitted publisher and notification consumer. Explain where interface dispatch remains a static candidate."
+    },
+    {
+      "id": "flow-email",
+      "journey": "explain_cross_service",
+      "prompt": "Explain how registration submission configures a registration-email action and where that email message is consumed. Separate state-machine configuration from proof of delivery."
+    },
+    {
+      "id": "flow-validation",
+      "journey": "explain_cross_service",
+      "prompt": "Trace AddEventAttendee consumption through validation to RegistrationValidated publication. Cite the interface/implementation step and state what execution is not proven."
+    },
+    {
+      "id": "flow-runtime-proof",
+      "journey": "explain_cross_service",
+      "prompt": "Does this checked-in source prove that every successful registration request delivers exactly one email in the running system? Give the strongest supported answer and identify the missing evidence."
+    },
+    {
+      "id": "impact-submitted",
+      "journey": "contract_impact",
+      "prompt": "Assess the source impact of changing RegistrationSubmitted.RegistrationId. Identify producer, consumer, and saga-correlation references, separating compile-time references from runtime routing."
+    },
+    {
+      "id": "impact-validation-signature",
+      "journey": "contract_impact",
+      "prompt": "If the registration-validation method signature changes, identify the interface, implementation, callers, and registration configuration that need review. Cite source."
+    },
+    {
+      "id": "impact-entity-uniqueness",
+      "journey": "contract_impact",
+      "prompt": "If registration uniqueness changes from event-plus-member to registration identifier, identify the entity mapping and duplicate-handling code to review. Do not invent a physical table name."
+    },
+    {
+      "id": "impact-attendee",
+      "journey": "contract_impact",
+      "prompt": "Which checked-in classes and state-machine actions should be reviewed if AddEventAttendee changes? Distinguish consumer declarations, configured consumers, configured publication, and runtime activation."
+    }
+  ],
+  "arms": [
+    "Moedex production HTTP MCP, CPU only, worker18 / SDK10 Roslyn5 Outbox snapshot"
+  ],
+  "competitive_comparison": false,
+  "repetitions_per_task": 1,
+  "initial_solver_information": [
+    "Identical task prompt",
+    "Repository label and source commit",
+    "Product public tool catalog and published tool usage instructions",
+    "No source-gold labels, symbol/context/occurrence IDs, file paths, byte spans, audit files, or prior solver transcript"
+  ],
+  "budgets": {
+    "attempted_tool_calls": 24,
+    "complete_serialized_tool_return_bytes": 131072,
+    "wall_seconds": 600,
+    "model_tokens": null,
+    "model_tokens_status": "unavailable; original proposed 64000 token budget not enforceable or claimed"
+  },
+  "budget_policy": "Initial public catalog is setup information, uncharged. All tools/call requests and optional later tools/list requests, including errors and retries, count. Retain and deliver complete response crossing byte budget, then block further requests. Stop before call 25. Record 600 second wall deadline; harness bounds request time, solver instructed to finish by deadline. Root records completion time separately.",
+  "isolation": "Fresh subagent per task, fork_turns=none. Instructed to use only logged wrapper for repository evidence, without filesystem/source/gold/web/prior transcripts. Host filesystem and other tools remain technically accessible; this is instruction-enforced isolation, not an OS security boundary. Inspect solver activity and record any deviation. Root already knows gold/source and must not substitute its own answers as independent solvers. Shared workspace access remains technically possible.",
+  "model": "Inherited current Codex session default for all solvers; exact model build, seed, randomness, and token accounting not exposed. No reproducible model-version or token-budget claim.",
+  "scoring": "Source-authored atomic requirements frozen before execution; root independently reviews rubric. Source correctness, evidence support, completeness, uncertainty/runtime distinction and unsupported claims recorded. Inspect actual returned evidence, not merely plausible final answer. Independent second reviewer scores final answers with source rubric.",
+  "deviations_from_proposal": [
+    "One product only; native CodeGraph production dependency blocker persists.",
+    "One developmental run per task, no five-repeat latency comparison.",
+    "Instruction-only isolation, not host-tool sandbox.",
+    "No available model version/randomness controls or token counters; no token compliance claim."
+  ],
+  "claims_excluded": [
+    "competitive product or agent win",
+    "heldout quality",
+    "PROGRAM30 completion",
+    "controlled latency benchmark",
+    "GPU or dense retrieval validation"
+  ],
+  "frozen_at_utc": "2026-10-02T01:09:27.511916+00:00",
+  "local_cli_errors": "Local argument parse errors recorded separately; MCP budget counts attempted RPC requests. Argparse usage failures inventoried from solver disclosure.",
+  "frozen_inputs": {
+    "research/semantic-intelligence/results/agent-journeys-20261001/source-rubric.json": {
+      "sha256": "52e70223e4f285049c6273753dbaa974b2d755fd7d038b9e3be1861b99d83e8c",
+      "bytes": 59448
+    },
+    "research/semantic-intelligence/results/agent-journeys-20261001/rubric-review.json": {
+      "sha256": "cf5180834b1a4e5dc378d1785fb2dc4545dcaf15d81b85b3a6b5b44d084b359f",
+      "bytes": 982
+    },
+    "research/semantic-intelligence/agent-journeys/client.py": {
+      "sha256": "6e2934d7f16a8f87ba961d716899a8f298c8abf9feea367cce2b9e2fc00c36a1",
+      "bytes": 10398
+    },
+    ".local/routing-slip/moedex": {
+      "sha256": "5d345043efea5b4a7c30465dfd31c30231aec25b94f810ee323c4794fbf5e7b0",
+      "bytes": 32945970
+    },
+    ".local/routing-slip/worker-default/bin/Debug/net10.0/Moedex.SemanticWorker.dll": {
+      "sha256": "ff8cbfd34de0eaa4f98b9a0bfbf50e4199036dd066bc687476b29256742efecb",
+      "bytes": 135680
+    },
+    ".local/journey-readiness/capture-sdk10/composed.semantic": {
+      "sha256": "acc29d4e10e577dc2947327c682120a3a554bbfe98f1bcafebef46bac0398431",
+      "bytes": 2940017
+    },
+    ".local/journey-readiness/catalog.json": {
+      "sha256": "8e950e85faff8fecd8fa1445c02cd615f1886ae84b6c1e9c9290acf6dc93ed9b",
+      "bytes": 262642
+    },
+    ".local/application-impact/bundle/manifest.json": {
+      "sha256": "a663485f8a29371a407d3208046267b25159f2751c5a135228f609f200ae008b",
+      "bytes": 558909
+    },
+    "research/semantic-intelligence/results/journey-readiness-20261001/solver-instructions.txt": {
+      "sha256": "d91410c2839587b08a47b67845aa1a4fd2d3d22a390911b68851a81780b09e1f",
+      "bytes": 3030
+    }
+  },
+  "server": {
+    "endpoint": "http://127.0.0.1:19457/mcp",
+    "snapshot": "application-real",
+    "index": "/Users/zakkeown/Code/moedex/.local/journey-readiness/capture-sdk10/index",
+    "embeddings": "none",
+    "graph": "absent; immutable source and compiler evidence available",
+    "mcp_max_concurrency": 1,
+    "native_semantic_artifact_sha256": "acc29d4e10e577dc2947327c682120a3a554bbfe98f1bcafebef46bac0398431",
+    "worker_version": "18",
+    "compiler_version": "5.0.0.0",
+    "sdk": "10.0.100",
+    "owner": "coordinator must start and retain ownership during execution"
+  },
+  "successor_of_sha256": "b0b9c57d37a5df2a5613a466a522bc6d2f2696addd193ac7a791a88cad620a68",
+  "execution_plan": {
+    "tasks": 12,
+    "fresh_solver_per_task": true,
+    "fork_turns": "none",
+    "maximum_concurrent_children": 1,
+    "task_order": [
+      "locate-duplicate",
+      "locate-retry",
+      "locate-validation-service",
+      "locate-persistence",
+      "flow-notification",
+      "flow-email",
+      "flow-validation",
+      "flow-runtime-proof",
+      "impact-submitted",
+      "impact-validation-signature",
+      "impact-entity-uniqueness",
+      "impact-attendee"
+    ],
+    "repeat_old_three": true,
+    "pool_prior_scores": false,
+    "launch_authorized": false,
+    "reason": "User requested single threaded, no more subagents for now; fresh independent solvers and reviewers require an explicit exception.",
+    "review": "Root scores each task against frozen rubric and actual logged evidence; a fresh independent reviewer checks each task sequentially. Resolve and retain disagreements.",
+    "timing": "Record assignment and final-answer UTC timestamps and coordinator monotonic deadline; interrupt at 600 seconds. Preserve incomplete answers, errors and failed attempts. Never silently rerun an evidence-exposed task.",
+    "activity_audit": "Record observable agent tool activity and isolation attestations. If full activity cannot be inspected, mark audit incomplete and do not claim verified isolation."
+  },
+  "prior_baseline": {
+    "result_sha256": "48c35f8252dd95e31eaeeb8728f32900fb18859dac3d10f34df74244511cc2ae",
+    "executed_tasks": 3,
+    "planned_tasks": 12,
+    "strict_successes": 2,
+    "correctness": "14/14",
+    "evidence": "13.5/14",
+    "current_results": "none; smoke is not scored"
+  }
+}

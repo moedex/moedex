@@ -2,6 +2,10 @@ package graphbuild
 
 import (
 	"testing"
+
+	"moedex/internal/diskstore"
+	"moedex/internal/graph"
+	"moedex/internal/graph/diskgraph"
 )
 
 func TestExtractAngularSelectors(t *testing.T) {
@@ -248,4 +252,134 @@ func tagNames(tags []templateTag) []string {
 		names[i] = t.name
 	}
 	return names
+}
+
+// All edges below are extracted from source, never injected into the builder.
+func renderFixtureComponent(repo, path, selector, class string) graphFile {
+	return graphFile{repo: repo, path: path, content: "@Component({ selector: '" + selector + "' })\nexport class " + class + " { }\n"}
+}
+
+func buildRenderFixture(t *testing.T, files []graphFile) []graphRecord {
+	t.Helper()
+	dir := t.TempDir()
+	writeGraphShards(t, dir, files, 1)
+	path, _, err := BuildGraph(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []graphRecord
+	for _, record := range readGraph(t, path) {
+		if record.edge.Type == diskgraph.EdgeRenders {
+			out = append(out, record)
+		}
+	}
+	_, stats, err := RefreshGraph(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !stats.Unchanged {
+		t.Fatalf("unchanged render graph rebuilt: %+v", stats)
+	}
+	return out
+}
+
+func TestRenderOwnersAndSelectorsRespectRepositoryContext(t *testing.T) {
+	files := []graphFile{
+		renderFixtureComponent("one", "src/parent.component.ts", "app-parent", "OneParent"),
+		renderFixtureComponent("one", "src/child.component.ts", "app-child", "OneChild"),
+		{repo: "one", path: "src/parent.component.html", content: "<app-child>one</app-child>"},
+		renderFixtureComponent("two", "src/parent.component.ts", "app-parent", "TwoParent"),
+		renderFixtureComponent("two", "src/child.component.ts", "app-child", "TwoChild"),
+		{repo: "two", path: "src/parent.component.html", content: "<app-child>two</app-child>"},
+	}
+	sha := func(i int) string { return diskstore.GitBlobSHA1([]byte(files[i].content)) }
+	edges := buildRenderFixture(t, files)
+	if len(edges) != 4 {
+		t.Fatalf("got %d render edges, want both local and diagnostic foreign targets: %+v", len(edges), edges)
+	}
+	for _, edge := range edges {
+		owner, local, template := 0, 1, 2
+		if edge.key.BlobSHA == sha(3) {
+			owner, local, template = 3, 4, 5
+		}
+		if edge.key.BlobSHA != sha(owner) || edge.edge.Evidence.BlobSHA != sha(template) {
+			t.Errorf("template attributed to wrong repository owner: %+v", edge)
+		}
+		want := graph.Candidate
+		if edge.edge.TargetBlob == sha(local) {
+			want = graph.Pattern
+		}
+		if edge.edge.Confidence != want {
+			t.Errorf("render tier %s, want %s: %+v", edge.edge.Confidence, want, edge)
+		}
+		if edge.edge.Evidence.ByteOffset != 1 || edge.edge.Evidence.ByteLength != uint64(len("app-child")) {
+			t.Errorf("wrong tag evidence: %+v", edge)
+		}
+	}
+	// Different shard order must not choose a different selector winner.
+	reversed := append([]graphFile{}, files...)
+	for i, j := 0, len(reversed)-1; i < j; i, j = i+1, j-1 {
+		reversed[i], reversed[j] = reversed[j], reversed[i]
+	}
+	requireSameGraph(t, "render shard order", withoutGenerations(edges), withoutGenerations(buildRenderFixture(t, reversed)))
+}
+
+func TestRenderAmbiguityRemainsCandidate(t *testing.T) {
+	parent := renderFixtureComponent("one", "parent.component.ts", "app-parent", "Parent")
+	child := renderFixtureComponent("one", "child.component.ts", "app-child", "Child")
+	template := graphFile{repo: "one", path: "parent.component.html", content: "<app-child></app-child>"}
+	for _, tc := range []struct {
+		name  string
+		files []graphFile
+		want  int
+	}{
+		{"duplicate local selector", []graphFile{parent, child, template, renderFixtureComponent("one", "other.component.ts", "app-child", "OtherChild")}, 2},
+		{"shared template", []graphFile{parent, child, template, {repo: "two", path: template.path, content: template.content}}, 1},
+		{"shared owner", []graphFile{parent, child, template, {repo: "two", path: parent.path, content: parent.content}}, 1},
+		{"shared target", []graphFile{parent, child, template, {repo: "two", path: child.path, content: child.content}}, 1},
+		{"multiple owner types", []graphFile{{repo: parent.repo, path: parent.path, content: "export class OtherOwner { }\n" + parent.content}, child, template}, 2},
+		{"multiple target types", []graphFile{parent, {repo: child.repo, path: child.path, content: "export class OtherChild { }\n" + child.content}, template}, 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			edges := buildRenderFixture(t, tc.files)
+			if len(edges) != tc.want {
+				t.Fatalf("got %d edges, want %d: %+v", len(edges), tc.want, edges)
+			}
+			for _, edge := range edges {
+				if edge.edge.Confidence != graph.Candidate {
+					t.Errorf("ambiguous render promoted: %+v", edge)
+				}
+			}
+		})
+	}
+}
+
+func TestRenderFallbackRetainsAllCandidates(t *testing.T) {
+	files := []graphFile{
+		renderFixtureComponent("one", "parent.component.ts", "app-parent", "Parent"),
+		{repo: "one", path: "parent.component.html", content: "<app-ghost></app-ghost>"},
+		{repo: "one", path: "first.ts", content: "export class AppGhostComponent { }\n"},
+		{repo: "two", path: "second.ts", content: "// unrelated definition\nexport class AppGhostComponent { }\n"},
+		{repo: "one", path: "third.cs", content: "public class AppGhostComponent { }\n"},
+	}
+	edges := buildRenderFixture(t, files)
+	if len(edges) != 2 {
+		t.Fatalf("fallback must retain both TS types: %+v", edges)
+	}
+	for _, edge := range edges {
+		if edge.edge.Confidence != graph.Candidate {
+			t.Errorf("fallback promoted: %+v", edge)
+		}
+	}
+}
+
+func TestRenderNeverBorrowsOwnerFromAnotherRepository(t *testing.T) {
+	files := []graphFile{
+		renderFixtureComponent("two", "parent.component.ts", "app-parent", "Parent"),
+		renderFixtureComponent("one", "child.component.ts", "app-child", "Child"),
+		{repo: "one", path: "parent.component.html", content: "<app-child></app-child>"},
+	}
+	if edges := buildRenderFixture(t, files); len(edges) != 0 {
+		t.Fatalf("foreign owner borrowed: %+v", edges)
+	}
 }

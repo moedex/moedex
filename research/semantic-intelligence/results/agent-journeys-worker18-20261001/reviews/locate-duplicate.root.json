@@ -1,0 +1,38 @@
+{
+  "task": "locate-duplicate",
+  "reviewer": "root",
+  "reviewed_utc": "2026-10-02T01:57:15.850267+00:00",
+  "answer_sha256": "156697f3fd2b7a67d32c1927cfbb9d54d281bc448fff5bda395360bef667c73e",
+  "atoms": [
+    {
+      "id": "locate-duplicate.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Unique MemberId/EventId mapping explicitly cited at lines 47-51; response 002 contains the full mapping."
+    },
+    {
+      "id": "locate-duplicate.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Correct exception and inner PostgreSQL UniqueViolation filter, supported by response 002 service lines 43-49."
+    },
+    {
+      "id": "locate-duplicate.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Translation to DuplicateRegistrationException stated and retrieved in response 002."
+    },
+    {
+      "id": "locate-duplicate.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Controller Conflict with both identifiers stated with precise 37-43 citation; responses 002 and 003 support it. Runtime limits explicit."
+    }
+  ],
+  "correctness": 4,
+  "evidence": 4,
+  "possible": 4,
+  "unsupported_claims": [],
+  "strict_success": true,
+  "isolation_audit": "Solver attestation and logged RPCs available; full model/tool activity not exposed to root, so host isolation is not independently verified."
+}

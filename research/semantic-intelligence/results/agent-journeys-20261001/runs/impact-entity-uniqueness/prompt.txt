@@ -1,0 +1,1 @@
+If registration uniqueness changes from event-plus-member to registration identifier, identify the entity mapping and duplicate-handling code to review. Do not invent a physical table name.

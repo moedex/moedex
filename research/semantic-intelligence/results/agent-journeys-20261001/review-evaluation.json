@@ -1,0 +1,495 @@
+{
+  "version": 1,
+  "reviewer": "evaluation_resume independent source reviewer",
+  "reviewed_at_utc": "2026-10-01T18:23:22.148176+00:00",
+  "rubric_sha256": "52e70223e4f285049c6273753dbaa974b2d755fd7d038b9e3be1861b99d83e8c",
+  "classification": "partial_single_product_development_pilot",
+  "tasks": [
+    {
+      "task_id": "locate-duplicate",
+      "status": "completed_scored",
+      "answer_sha256": "078280ba0620544ee0082b38abd4d5f7f6f88c169669fcfaeeae7c37282c5647",
+      "atoms": [
+        {
+          "id": "locate-duplicate.1",
+          "correctness": 1,
+          "evidence": 1,
+          "reason": "Opening paragraph identifies composite unique mapping and precise member/event pair.",
+          "transcript_support": [
+            {
+              "response_file": "002.response.raw",
+              "response_sha256": "95730d5cf09468ea7c74f049769e73455e39a06ce086f906317dc500f68875cc",
+              "path": "src/Sample.Components/RegistrationDbContext.cs",
+              "start_line": 47,
+              "end_line": 51,
+              "source_matches_frozen_checkout": true
+            }
+          ]
+        },
+        {
+          "id": "locate-duplicate.2",
+          "correctness": 1,
+          "evidence": 1,
+          "reason": "Step 2 states both exception types and UniqueViolation filter.",
+          "transcript_support": [
+            {
+              "response_file": "002.response.raw",
+              "response_sha256": "95730d5cf09468ea7c74f049769e73455e39a06ce086f906317dc500f68875cc",
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "start_line": 43,
+              "end_line": 49,
+              "source_matches_frozen_checkout": true
+            }
+          ]
+        },
+        {
+          "id": "locate-duplicate.3",
+          "correctness": 1,
+          "evidence": 1,
+          "reason": "Step 2 names translated DuplicateRegistrationException.",
+          "transcript_support": [
+            {
+              "response_file": "002.response.raw",
+              "response_sha256": "95730d5cf09468ea7c74f049769e73455e39a06ce086f906317dc500f68875cc",
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "start_line": 47,
+              "end_line": 49,
+              "source_matches_frozen_checkout": true
+            }
+          ]
+        },
+        {
+          "id": "locate-duplicate.4",
+          "correctness": 1,
+          "evidence": 1,
+          "reason": "Step 3 identifies Conflict payload and HTTP 409; runtime deployment explicitly unobserved.",
+          "transcript_support": [
+            {
+              "response_file": "002.response.raw",
+              "response_sha256": "95730d5cf09468ea7c74f049769e73455e39a06ce086f906317dc500f68875cc",
+              "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+              "start_line": 37,
+              "end_line": 43,
+              "source_matches_frozen_checkout": true
+            }
+          ]
+        }
+      ],
+      "correctness": {
+        "earned": 4,
+        "possible": 4
+      },
+      "evidence": {
+        "earned": 4,
+        "possible": 4
+      },
+      "strict_task_success": true,
+      "unsupported_claims": [],
+      "calls": 3,
+      "complete_response_bytes": 29116,
+      "public_tool_errors": 1,
+      "tools_called": [
+        "list_repos",
+        "search_context",
+        "search_context"
+      ],
+      "transcript_hashes_and_lengths_verified": true,
+      "answer_isolation_statement": "Self-attested compliance only; host filesystem access was not OS-enforced.",
+      "files": {
+        "001.request.json": {
+          "sha256": "552334ae766461b732db42d768b09d67ea17b8207ef470d688567243af999a5a",
+          "bytes": 116
+        },
+        "001.response.raw": {
+          "sha256": "77ad11fa22b8428e0678ca570efbdcb42fa40e02ebadf4eb7bbf8e8f75dc007c",
+          "bytes": 295
+        },
+        "002.request.json": {
+          "sha256": "c90dcf07333740ea4146f55b5b108a2498f95c46dccedd764418e968bf729418",
+          "bytes": 165
+        },
+        "002.response.raw": {
+          "sha256": "95730d5cf09468ea7c74f049769e73455e39a06ce086f906317dc500f68875cc",
+          "bytes": 17590
+        },
+        "003.request.json": {
+          "sha256": "afe6e4416d4bd7b8d743818abc2db294aa80272bc6af1d7b4d08e2dfd499c512",
+          "bytes": 187
+        },
+        "003.response.raw": {
+          "sha256": "cd354819b13ea4965c144993dcc7f2b682eefa8752f29fc7ffae3da812348a81",
+          "bytes": 11231
+        },
+        "answer.md": {
+          "sha256": "078280ba0620544ee0082b38abd4d5f7f6f88c169669fcfaeeae7c37282c5647",
+          "bytes": 1855
+        },
+        "catalog.json": {
+          "sha256": "f78b27da012a0491e1093bfff6aba30b681e13dce979f079d2c05888141a6aff",
+          "bytes": 21052
+        },
+        "prompt.txt": {
+          "sha256": "b14bf655d5f11f581e6f7dd325b0614d1b2a22e78991cc7ef409ff0ec322a0aa",
+          "bytes": 153
+        },
+        "state.json": {
+          "sha256": "78b62e42fba533a66a2091e342d403e08608a24dcee965f01efac28bf02479e1",
+          "bytes": 1155
+        },
+        "transcript.jsonl": {
+          "sha256": "c74be38bb1ade408e70d9724ec378eff7dbec1a0eb38bb5836234551dcc99404",
+          "bytes": 2174
+        }
+      }
+    },
+    {
+      "task_id": "locate-retry",
+      "status": "completed_scored",
+      "answer_sha256": "5717028522fad313478f330ccbfc278de07835bbf8f0a28ad793a911630f9b9c",
+      "atoms": [
+        {
+          "id": "locate-retry.1",
+          "correctness": 1,
+          "evidence": 1,
+          "reason": "Opening identifies state machine and initial RegistrationSubmitted handling.",
+          "transcript_support": [
+            {
+              "response_file": "002.response.raw",
+              "response_sha256": "68cde4b3b232138de5aac84b4657044a6e5bde3399198fd8889bff68df29db65",
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "start_line": 16,
+              "end_line": 34,
+              "source_matches_frozen_checkout": true
+            }
+          ]
+        },
+        {
+          "id": "locate-retry.2",
+          "correctness": 1,
+          "evidence": 1,
+          "reason": "Quoted exact conjunction and boundary explanation distinguish payment 50 and retry zero.",
+          "transcript_support": [
+            {
+              "response_file": "002.response.raw",
+              "response_sha256": "68cde4b3b232138de5aac84b4657044a6e5bde3399198fd8889bff68df29db65",
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "start_line": 33,
+              "end_line": 34,
+              "source_matches_frozen_checkout": true
+            }
+          ]
+        },
+        {
+          "id": "locate-retry.3",
+          "correctness": 1,
+          "evidence": 1,
+          "reason": "Quoted ApplicationException plus explicit deterministic/nonrandom explanation.",
+          "transcript_support": [
+            {
+              "response_file": "002.response.raw",
+              "response_sha256": "68cde4b3b232138de5aac84b4657044a6e5bde3399198fd8889bff68df29db65",
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "start_line": 33,
+              "end_line": 34,
+              "source_matches_frozen_checkout": true
+            }
+          ]
+        },
+        {
+          "id": "locate-retry.4",
+          "correctness": 1,
+          "evidence": 1,
+          "reason": "Middle paragraph places failure between the two publish activities.",
+          "transcript_support": [
+            {
+              "response_file": "002.response.raw",
+              "response_sha256": "68cde4b3b232138de5aac84b4657044a6e5bde3399198fd8889bff68df29db65",
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "start_line": 26,
+              "end_line": 40,
+              "source_matches_frozen_checkout": true
+            }
+          ]
+        },
+        {
+          "id": "locate-retry.5",
+          "correctness": 1,
+          "evidence": 1,
+          "reason": "Exact eight retry interval literals and saga-definition citation are included.",
+          "transcript_support": [
+            {
+              "response_file": "002.response.raw",
+              "response_sha256": "68cde4b3b232138de5aac84b4657044a6e5bde3399198fd8889bff68df29db65",
+              "path": "src/Sample.Components/StateMachines/RegistrationStateDefinition.cs",
+              "start_line": 9,
+              "end_line": 14,
+              "source_matches_frozen_checkout": true
+            }
+          ]
+        }
+      ],
+      "correctness": {
+        "earned": 5,
+        "possible": 5
+      },
+      "evidence": {
+        "earned": 5,
+        "possible": 5
+      },
+      "strict_task_success": true,
+      "unsupported_claims": [],
+      "calls": 2,
+      "complete_response_bytes": 13207,
+      "public_tool_errors": 1,
+      "tools_called": [
+        "list_repos",
+        "search_context"
+      ],
+      "transcript_hashes_and_lengths_verified": true,
+      "answer_isolation_statement": "Self-attested compliance only; host filesystem access was not OS-enforced.",
+      "files": {
+        "001.request.json": {
+          "sha256": "552334ae766461b732db42d768b09d67ea17b8207ef470d688567243af999a5a",
+          "bytes": 116
+        },
+        "001.response.raw": {
+          "sha256": "77ad11fa22b8428e0678ca570efbdcb42fa40e02ebadf4eb7bbf8e8f75dc007c",
+          "bytes": 295
+        },
+        "002.request.json": {
+          "sha256": "3147f91c78f9b7932a3032add0cea41af755f4f232b858d105146cd2c9f564f6",
+          "bytes": 162
+        },
+        "002.response.raw": {
+          "sha256": "68cde4b3b232138de5aac84b4657044a6e5bde3399198fd8889bff68df29db65",
+          "bytes": 12912
+        },
+        "answer.md": {
+          "sha256": "5717028522fad313478f330ccbfc278de07835bbf8f0a28ad793a911630f9b9c",
+          "bytes": 1934
+        },
+        "catalog.json": {
+          "sha256": "f78b27da012a0491e1093bfff6aba30b681e13dce979f079d2c05888141a6aff",
+          "bytes": 21052
+        },
+        "prompt.txt": {
+          "sha256": "9bcf48141bd19b04a798ed743daa35fe7c244f3c854d68733f07fe861ae81866",
+          "bytes": 136
+        },
+        "state.json": {
+          "sha256": "c4ea610100b7bd80c909677cf790fa962b2eee79f5184ed7398405ccaad7d08f",
+          "bytes": 1155
+        },
+        "transcript.jsonl": {
+          "sha256": "68aae6b2f374b630c61054ba5c3cafeda02e7595f81a19795838024a46390306",
+          "bytes": 1442
+        }
+      }
+    },
+    {
+      "task_id": "locate-validation-service",
+      "status": "completed_scored",
+      "answer_sha256": "b9fbd2ccdb44db2e5d9f3b4321ef9bbf188f77590f5e0705a54bdbeaaa6a43f6",
+      "atoms": [
+        {
+          "id": "locate-validation-service.1",
+          "correctness": 1,
+          "evidence": 1,
+          "reason": "Opening quotes exact AddScoped mapping. Worker citation spans the block but the quoted expression disambiguates the precise evidence.",
+          "transcript_support": [
+            {
+              "response_file": "002.response.raw",
+              "response_sha256": "9838ca0e1112259e5c33f2be1328157f5d38a135d76be5759f31f178d48fca0a",
+              "path": "src/Sample.Worker/Program.cs",
+              "start_line": 62,
+              "end_line": 62,
+              "source_matches_frozen_checkout": true
+            }
+          ]
+        },
+        {
+          "id": "locate-validation-service.2",
+          "correctness": 1,
+          "evidence": 1,
+          "reason": "Implementation paragraph states interface declaration and method, with matching interface citation.",
+          "transcript_support": [
+            {
+              "response_file": "002.response.raw",
+              "response_sha256": "9838ca0e1112259e5c33f2be1328157f5d38a135d76be5759f31f178d48fca0a",
+              "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+              "start_line": 7,
+              "end_line": 19,
+              "source_matches_frozen_checkout": true
+            },
+            {
+              "response_file": "002.response.raw",
+              "response_sha256": "9838ca0e1112259e5c33f2be1328157f5d38a135d76be5759f31f178d48fca0a",
+              "path": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+              "start_line": 3,
+              "end_line": 5,
+              "source_matches_frozen_checkout": true
+            }
+          ]
+        },
+        {
+          "id": "locate-validation-service.3",
+          "correctness": 1,
+          "evidence": 1,
+          "reason": "Call-site paragraph states constructor injection and field assignment.",
+          "transcript_support": [
+            {
+              "response_file": "002.response.raw",
+              "response_sha256": "9838ca0e1112259e5c33f2be1328157f5d38a135d76be5759f31f178d48fca0a",
+              "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+              "start_line": 13,
+              "end_line": 18,
+              "source_matches_frozen_checkout": true
+            }
+          ]
+        },
+        {
+          "id": "locate-validation-service.4",
+          "correctness": 1,
+          "evidence": 1,
+          "reason": "Call-site paragraph quotes ordered arguments and specifically identifies line 23.",
+          "transcript_support": [
+            {
+              "response_file": "002.response.raw",
+              "response_sha256": "9838ca0e1112259e5c33f2be1328157f5d38a135d76be5759f31f178d48fca0a",
+              "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+              "start_line": 21,
+              "end_line": 23,
+              "source_matches_frozen_checkout": true
+            }
+          ]
+        },
+        {
+          "id": "locate-validation-service.5",
+          "correctness": 1,
+          "evidence": 1,
+          "reason": "Final substantive paragraph explicitly distinguishes configuration from actual instance/scope/execution/delivery.",
+          "transcript_support": [
+            {
+              "response_file": "002.response.raw",
+              "response_sha256": "9838ca0e1112259e5c33f2be1328157f5d38a135d76be5759f31f178d48fca0a",
+              "path": "src/Sample.Worker/Program.cs",
+              "start_line": 62,
+              "end_line": 62,
+              "source_matches_frozen_checkout": true
+            },
+            {
+              "response_file": "002.response.raw",
+              "response_sha256": "9838ca0e1112259e5c33f2be1328157f5d38a135d76be5759f31f178d48fca0a",
+              "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+              "start_line": 13,
+              "end_line": 23,
+              "source_matches_frozen_checkout": true
+            }
+          ]
+        }
+      ],
+      "correctness": {
+        "earned": 5,
+        "possible": 5
+      },
+      "evidence": {
+        "earned": 5,
+        "possible": 5
+      },
+      "strict_task_success": true,
+      "unsupported_claims": [],
+      "calls": 3,
+      "complete_response_bytes": 24087,
+      "public_tool_errors": 2,
+      "tools_called": [
+        "list_repos",
+        "search_context",
+        "read_source"
+      ],
+      "transcript_hashes_and_lengths_verified": true,
+      "answer_isolation_statement": "Self-attested compliance only; host filesystem access was not OS-enforced.",
+      "files": {
+        "001.request.json": {
+          "sha256": "ee5b290bd0f666e7a51861a441b7058354ecf1238ea2a598c56971e4a0649922",
+          "bytes": 92
+        },
+        "001.response.raw": {
+          "sha256": "77ad11fa22b8428e0678ca570efbdcb42fa40e02ebadf4eb7bbf8e8f75dc007c",
+          "bytes": 295
+        },
+        "002.request.json": {
+          "sha256": "193f22d1fdd3a941799d777c43b4ae3688920c5f427d509d057256220db3dc75",
+          "bytes": 159
+        },
+        "002.response.raw": {
+          "sha256": "9838ca0e1112259e5c33f2be1328157f5d38a135d76be5759f31f178d48fca0a",
+          "bytes": 23497
+        },
+        "003.request.json": {
+          "sha256": "7f4ec2fb38200017022138f91353c38c2951e5c9d0d30774c12c3d2c373de206",
+          "bytes": 183
+        },
+        "003.response.raw": {
+          "sha256": "4b8698bc2893715712523bb26fb0098519e2e2de62df3f8141afc6854d54184e",
+          "bytes": 295
+        },
+        "answer.md": {
+          "sha256": "b9fbd2ccdb44db2e5d9f3b4321ef9bbf188f77590f5e0705a54bdbeaaa6a43f6",
+          "bytes": 2481
+        },
+        "catalog.json": {
+          "sha256": "f78b27da012a0491e1093bfff6aba30b681e13dce979f079d2c05888141a6aff",
+          "bytes": 21052
+        },
+        "prompt.txt": {
+          "sha256": "379548341ef9995c160ab6107228fc3fd74a80e123f109b0c2c96e7d9495d516",
+          "bytes": 177
+        },
+        "state.json": {
+          "sha256": "344e559421eeb9610a905cd60249c2dd5485dbb0b36246e61927c02038adbb5b",
+          "bytes": 1155
+        },
+        "transcript.jsonl": {
+          "sha256": "5645f2bd65d02931e9d75508a01533a5fd19fbc1e136602a01dd708f976daa5d",
+          "bytes": 2159
+        }
+      }
+    }
+  ],
+  "aggregate_completed_only": {
+    "tasks": 3,
+    "strict_successes": 3,
+    "correctness": {
+      "earned": 14,
+      "possible": 14
+    },
+    "evidence": {
+      "earned": 14,
+      "possible": 14
+    },
+    "calls": 8,
+    "complete_response_bytes": 66410,
+    "public_tool_errors": 4
+  },
+  "unexecuted_task_ids": [
+    "locate-persistence",
+    "flow-notification",
+    "flow-email",
+    "flow-validation",
+    "flow-runtime-proof",
+    "impact-submitted",
+    "impact-validation-signature",
+    "impact-entity-uniqueness",
+    "impact-attendee"
+  ],
+  "limits": [
+    "The nine unexecuted tasks are unscored; no quality result is inferred.",
+    "No comparative CodeGraph execution, no heldout claim, no inference about cross-service or impact journeys.",
+    "Only lexical search_context supplied answer evidence in these three runs; this does not establish use or benefit of compiler or reverse-implementation APIs.",
+    "Response token estimates are not model usage. Actual model tokens unknown; no token-budget compliance claim.",
+    "Instruction-only isolation and solver self-attestations are not OS isolation proof.",
+    "Same-task retries after zero-evidence infrastructure failures retain prior solver setup familiarity; initial attempts must be preserved separately.",
+    "This review verifies request/response hashes, byte counts and every scored source span against pinned authored source; end-to-end solver wall time is coordinator-owned."
+  ],
+  "adjudication_status": "independent review complete; root second review pending"
+}

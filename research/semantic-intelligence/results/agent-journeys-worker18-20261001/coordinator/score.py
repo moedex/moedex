@@ -1,0 +1,6 @@
+import pathlib,json,sys,hashlib,datetime
+base=pathlib.Path('.local/journey-readiness');task=sys.argv[1];rubric=json.loads(pathlib.Path('research/semantic-intelligence/results/agent-journeys-20261001/source-rubric.json').read_text());t=next(t for t in rubric['tasks'] if t['id']==task);run=base/'solvers'/task
+# Called only after coordinator has manually read the answer and supporting returned evidence.
+notes=json.loads(sys.argv[2]);assert len(notes)==len(t['requirements'])
+atoms=[{'id':r['id'],'correctness':n[0],'evidence':n[1],'reason':n[2]} for r,n in zip(t['requirements'],notes)]
+d={'task':task,'reviewer':'root','reviewed_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'answer_sha256':hashlib.sha256((run/'answer.md').read_bytes()).hexdigest(),'atoms':atoms,'correctness':sum(a['correctness'] for a in atoms),'evidence':sum(a['evidence'] for a in atoms),'possible':len(atoms),'unsupported_claims':[],'strict_success':all(a['correctness']==a['evidence']==1 for a in atoms),'isolation_audit':'Solver attestation and logged RPCs available; full model/tool activity not exposed to root, so host isolation is not independently verified.'};(base/'reviews'/(task+'.root.json')).write_text(json.dumps(d,indent=2)+'\n')

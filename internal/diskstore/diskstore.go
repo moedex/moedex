@@ -68,6 +68,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 	"syscall"
 
 	"moedex/internal/index"
@@ -401,7 +402,16 @@ func LoadMmap(path string) (*index.Index, io.Closer, error) {
 // an index restored from it stays on the all-indexed universal-true fast path.
 type mmapProvider struct {
 	raw map[trigram.Trigram][]byte
+	// The mapping is immutable for the provider's lifetime. Cache only scalar
+	// counts, never decoded postings, and bound retained memory per shard.
+	countsMu sync.RWMutex
+	counts   map[trigram.Trigram]int
 }
+
+const (
+	postingCountCacheEntries  = 4096
+	postingCountCacheMinBytes = 256
+)
 
 func (p *mmapProvider) Postings(t trigram.Trigram) []index.Posting {
 	return index.DecodePostings(p.raw[t])
@@ -428,9 +438,36 @@ func (p *selectiveMmapProvider) IndexedGram(t trigram.Trigram) bool {
 // walks the grouped-varint encoding summing per-blob counts (and skipping the
 // offset deltas). Driver selection in the positional search path uses this to
 // pick the rarest trigram before decoding only the winner, so a common trigram
-// is never fully decoded just to be measured.
+// is never fully decoded just to be measured. Counts for larger lists are
+// cached within a fixed entry budget for this immutable provider.
 func (p *mmapProvider) PostingCount(t trigram.Trigram) int {
 	b := p.raw[t]
+	// Absent and tiny lists are cheap to walk and should not evict useful
+	// counts or fill the cache before a common gram is encountered.
+	if len(b) < postingCountCacheMinBytes {
+		return countEncodedPostings(b)
+	}
+	p.countsMu.RLock()
+	count, ok := p.counts[t]
+	p.countsMu.RUnlock()
+	if ok {
+		return count
+	}
+	// Do not hold a shard-wide lock during a potentially long varint walk.
+	// Concurrent misses may duplicate that work; the immutable result agrees.
+	count = countEncodedPostings(b)
+	p.countsMu.Lock()
+	if len(p.counts) < postingCountCacheEntries {
+		if p.counts == nil {
+			p.counts = make(map[trigram.Trigram]int)
+		}
+		p.counts[t] = count
+	}
+	p.countsMu.Unlock()
+	return count
+}
+
+func countEncodedPostings(b []byte) int {
 	n, pos := 0, 0
 	for pos < len(b) {
 		_, k := binary.Uvarint(b[pos:]) // blob delta

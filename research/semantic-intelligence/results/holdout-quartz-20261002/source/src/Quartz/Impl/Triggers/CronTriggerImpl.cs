@@ -1,0 +1,731 @@
+#region License
+
+/*
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy
+ * of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ *
+ */
+
+#endregion
+
+using Microsoft.Extensions.Logging;
+
+using Quartz.Diagnostics;
+using Quartz.Extensibility;
+using Quartz.Util;
+
+namespace Quartz.Impl.Triggers;
+
+/// <summary>
+/// A concrete <see cref="ITrigger" /> that is used to fire a <see cref="IJobDetail" />
+/// at given moments in time, defined with Unix 'cron-like' definitions.
+/// </summary>
+/// <remarks>
+/// <para>
+/// For those unfamiliar with "cron", this means being able to create a firing
+/// schedule such as: "At 8:00am every Monday through Friday" or "At 1:30am
+/// every last Friday of the month".
+/// </para>
+///
+/// <para>
+/// The format of a "Cron-Expression" string is documented on the
+/// <see cref="CronExpression" /> class.
+/// </para>
+///
+/// <para>
+/// Here are some full examples: <br />
+/// <table cellspacing="8">
+/// <tr>
+/// <th align="left">Expression</th>
+/// <th align="left"> </th>
+/// <th align="left">Meaning</th>
+/// </tr>
+/// <tr>
+/// <td align="left">"0 0 12 * * ?"" /></td>
+/// <td align="left"> </td>
+/// <td align="left">Fire at 12pm (noon) every day" /></td>
+/// </tr>
+/// <tr>
+/// <td align="left">"0 15 10 ? * *"" /></td>
+/// <td align="left"> </td>
+/// <td align="left">Fire at 10:15am every day" /></td>
+/// </tr>
+/// <tr>
+/// <td align="left">"0 15 10 * * ?"" /></td>
+/// <td align="left"> </td>
+/// <td align="left">Fire at 10:15am every day" /></td>
+/// </tr>
+/// <tr>
+/// <td align="left">"0 15 10 * * ? *"" /></td>
+/// <td align="left"> </td>
+/// <td align="left">Fire at 10:15am every day" /></td>
+/// </tr>
+/// <tr>
+/// <td align="left">"0 15 10 * * ? 2005"" /></td>
+/// <td align="left"> </td>
+/// <td align="left">Fire at 10:15am every day during the year 2005" />
+/// </td>
+/// </tr>
+/// <tr>
+/// <td align="left">"0 * 14 * * ?"" /></td>
+/// <td align="left"> </td>
+/// <td align="left">Fire every minute starting at 2pm and ending at 2:59pm, every day" />
+/// </td>
+/// </tr>
+/// <tr>
+/// <td align="left">"0 0/5 14 * * ?"" /></td>
+/// <td align="left"> </td>
+/// <td align="left">Fire every 5 minutes starting at 2pm and ending at 2:55pm, every day" />
+/// </td>
+/// </tr>
+/// <tr>
+/// <td align="left">"0 0/5 14,18 * * ?"" /></td>
+/// <td align="left"> </td>
+/// <td align="left">Fire every 5 minutes starting at 2pm and ending at 2:55pm, AND fire every 5 minutes starting at 6pm and ending at 6:55pm, every day" />
+/// </td>
+/// </tr>
+/// <tr>
+/// <td align="left">"0 0-5 14 * * ?"" /></td>
+/// <td align="left"> </td>
+/// <td align="left">Fire every minute starting at 2pm and ending at 2:05pm, every day" />
+/// </td>
+/// </tr>
+/// <tr>
+/// <td align="left">"0 10,44 14 ? 3 WED"" /></td>
+/// <td align="left"> </td>
+/// <td align="left">Fire at 2:10pm and at 2:44pm every Wednesday in the month of March." />
+/// </td>
+/// </tr>
+/// <tr>
+/// <td align="left">"0 15 10 ? * MON-FRI"" /></td>
+/// <td align="left"> </td>
+/// <td align="left">Fire at 10:15am every Monday, Tuesday, Wednesday, Thursday and Friday" />
+/// </td>
+/// </tr>
+/// <tr>
+/// <td align="left">"0 15 10 15 * ?"" /></td>
+/// <td align="left"> </td>
+/// <td align="left">Fire at 10:15am on the 15th day of every month" />
+/// </td>
+/// </tr>
+/// <tr>
+/// <td align="left">"0 15 10 L * ?"" /></td>
+/// <td align="left"> </td>
+/// <td align="left">Fire at 10:15am on the last day of every month" />
+/// </td>
+/// </tr>
+/// <tr>
+/// <td align="left">"0 15 10 ? * 6L"" /></td>
+/// <td align="left"> </td>
+/// <td align="left">Fire at 10:15am on the last Friday of every month" />
+/// </td>
+/// </tr>
+/// <tr>
+/// <td align="left">"0 15 10 ? * 6L"" /></td>
+/// <td align="left"> </td>
+/// <td align="left">Fire at 10:15am on the last Friday of every month" />
+/// </td>
+/// </tr>
+/// <tr>
+/// <td align="left">"0 15 10 ? * 6L 2002-2005"" /></td>
+/// <td align="left"> </td>
+/// <td align="left">Fire at 10:15am on every last Friday of every month during the years 2002, 2003, 2004 and 2005" />
+/// </td>
+/// </tr>
+/// <tr>
+/// <td align="left">"0 15 10 ? * 6#3"" /></td>
+/// <td align="left"> </td>
+/// <td align="left">Fire at 10:15am on the third Friday of every month" />
+/// </td>
+/// </tr>
+/// </table>
+/// </para>
+///
+/// <para>
+/// Pay attention to the effects of '?' and '*' in the day-of-week and
+/// day-of-month fields!
+/// </para>
+///
+/// <para>
+/// <b>NOTES:</b>
+/// <ul>
+/// <li>Support for specifying both a day-of-week and a day-of-month value is
+/// not complete (you'll need to use the '?' character in on of these fields).
+/// </li>
+/// <li>Be careful when setting fire times between mid-night and 1:00 AM -
+/// "daylight savings" can cause a skip or a repeat depending on whether the
+/// time moves back or jumps forward.</li>
+/// </ul>
+/// </para>
+/// </remarks>
+/// <seealso cref="ITrigger"/>
+/// <seealso cref="ISimpleTrigger"/>
+/// <author>Sharada Jambula</author>
+/// <author>James House</author>
+/// <author>Contributions from Mads Henderson</author>
+/// <author>Marko Lahma (.NET)</author>
+[Serializable]
+public class CronTriggerImpl : TriggerBase, ICronTrigger
+{
+    private CronExpression? cronEx;
+    private DateTimeOffset startTimeUtc = DateTimeOffset.MinValue;
+    private DateTimeOffset? endTimeUtc;
+
+    // With binary serialization the time zone does not need serializing, since it is part of the
+    // CronExpression. With JSON serialization the cron expression is written as a string as well as an
+    // object, so the zone is written separately - as its id, by TimeZoneInfoConverter on the Newtonsoft
+    // side and by the trigger serializers on both.
+    [NonSerialized] private TimeZoneInfo? timeZone;
+
+    /// <summary>
+    /// Create a <see cref="CronTriggerImpl" /> with no settings.
+    /// </summary>
+    /// <remarks>
+    /// The start-time will also be set to the current time, and the time zone
+    /// will be set to the system's default time zone.
+    /// </remarks>
+    /// <param name="timeProvider">Time provider instance to use, defaults to <see cref="TimeProvider.System"/></param>
+    public CronTriggerImpl(TimeProvider? timeProvider = null) : base(timeProvider)
+    {
+        StartTimeUtc = TimeProvider.GetUtcNow();
+        TimeZone = TimeZoneInfo.Local;
+    }
+
+    /// <summary>
+    /// The constructor JSON deserialization uses.
+    /// </summary>
+    /// <remarks>
+    /// Newtonsoft's <c>ConstructorHandling.AllowNonPublicDefaultConstructor</c> wants a genuinely
+    /// parameterless constructor; one whose single parameter merely has a default value is not one as
+    /// far as reflection is concerned. Without this, a trigger stored by the Newtonsoft serializer
+    /// cannot be read back. It sets no start time and no time zone on purpose - the payload carries
+    /// both, and defaulting them here would overwrite what is about to be read.
+    /// </remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0051:Remove unused private member", Justification = "Invoked reflectively by JSON deserialization.")]
+    private CronTriggerImpl() : base(timeProvider: null)
+    {
+    }
+
+    /// <summary>
+    /// Create a <see cref="CronTriggerImpl" /> with the given name, group and
+    /// expression.
+    /// </summary>
+    /// <remarks>
+    /// The start-time will also be set to the current time, and the time zone
+    /// will be set to the system's default time zone. Everything else this trigger
+    /// needs is a settable property, so the object-initializer form
+    /// <c>new CronTriggerImpl { Key = ..., JobKey = ..., EndTimeUtc = ... }</c> replaces
+    /// the constructor overloads that used to spell out each combination.
+    /// </remarks>
+    /// <param name="name">The name of the <see cref="ITrigger" /></param>
+    /// <param name="group">The group of the <see cref="ITrigger" /></param>
+    /// <param name="cronExpression"> A cron expression dictating the firing sequence of the <see cref="ITrigger" /></param>
+    /// <param name="timeProvider">A <see cref="TimeProvider" /> to use, if not specified defaults to TimeProvider.System</param>
+    /// <exception cref="ArgumentNullException"><paramref name="name"/> or <paramref name="group"/> are <see langword="null"/>.</exception>
+    public CronTriggerImpl(string name, string group, string cronExpression, TimeProvider? timeProvider = null) : base(timeProvider)
+    {
+        Key = new TriggerKey(name, group);
+        CronExpressionString = cronExpression;
+        StartTimeUtc = TimeProvider.GetUtcNow();
+        TimeZone = TimeZoneInfo.Local;
+    }
+
+    /// <summary>
+    /// Clones this instance.
+    /// </summary>
+    public override ITrigger Clone()
+    {
+        CronTriggerImpl copy = (CronTriggerImpl) MemberwiseClone();
+        if (cronEx is not null)
+        {
+            // CronExpression is immutable, so the copy shares this instance; assigning through the
+            // property keeps the copy's own time zone field in step with it.
+            copy.CronExpression = cronEx;
+        }
+        return copy;
+    }
+
+    /// <summary>
+    /// Gets or sets the cron expression string.
+    /// </summary>
+    /// <value>The cron expression string.</value>
+    public string? CronExpressionString
+    {
+        set
+        {
+            TimeZoneInfo originalTimeZone = TimeZone;
+            cronEx = new CronExpression(value!, originalTimeZone);
+        }
+        get => cronEx?.CronExpressionString;
+    }
+
+    /// <summary>
+    /// Set the CronExpression to the given one.  The TimeZone on the passed-in
+    /// CronExpression over-rides any that was already set on the Trigger.
+    /// </summary>
+    /// <value>The cron expression.</value>
+    public CronExpression? CronExpression
+    {
+        get => cronEx;
+        set
+        {
+            cronEx = value;
+            timeZone = value?.TimeZone;
+        }
+    }
+
+    /// <summary>
+    /// Returns the date/time on which the trigger may begin firing. This
+    /// defines the initial boundary for trigger firings the trigger
+    /// will not fire prior to this date and time.
+    /// </summary>
+    public override DateTimeOffset StartTimeUtc
+    {
+        get => startTimeUtc;
+        set
+        {
+            DateTimeOffset? eTime = EndTimeUtc;
+            if (eTime.HasValue && eTime.Value < value)
+            {
+                Throw.ArgumentException("End time cannot be before start time");
+            }
+
+            // round off millisecond...
+            DateTimeOffset dt = new DateTimeOffset(value.Year, value.Month, value.Day, value.Hour, value.Minute, value.Second, value.Offset);
+            startTimeUtc = dt;
+        }
+    }
+
+    /// <summary>
+    /// Get or sets the time at which the <c>CronTrigger</c> should quit
+    /// repeating - even if repeatCount isn't yet satisfied.
+    /// </summary>
+    public override DateTimeOffset? EndTimeUtc
+    {
+        get => endTimeUtc;
+        set
+        {
+            DateTimeOffset sTime = StartTimeUtc;
+            if (value.HasValue && sTime > value.Value)
+            {
+                Throw.ArgumentException("End time cannot be before start time");
+            }
+
+            endTimeUtc = value;
+        }
+    }
+
+    /// <summary>
+    /// Returns the next time at which the <see cref="ITrigger" /> is scheduled to fire. If
+    /// the trigger will not fire again, <see langword="null" /> will be returned.  Note that
+    /// the time returned can possibly be in the past, if the time that was computed
+    /// for the trigger to next fire has already arrived, but the scheduler has not yet
+    /// been able to fire the trigger (which would likely be due to lack of resources
+    /// e.g. threads).
+    /// </summary>
+    ///<remarks>
+    /// The value returned is not guaranteed to be valid until after the <see cref="ITrigger" />
+    /// has been added to the scheduler.
+    /// </remarks>
+    public override DateTimeOffset? NextFireTimeUtc { get; set; }
+
+    /// <summary>
+    /// Returns the previous time at which the <see cref="ITrigger" /> fired.
+    /// If the trigger has not yet fired, <see langword="null" /> will be returned.
+    /// </summary>
+    public override DateTimeOffset? PreviousFireTimeUtc { get; set; }
+
+    /// <summary>
+    /// Sets the time zone for which the <see cref="ICronTrigger.CronExpressionString" /> of this
+    /// <see cref="ICronTrigger" /> will be resolved.
+    /// </summary>
+    /// <remarks>
+    /// If <see cref="ICronTrigger.CronExpressionString" /> is set after this
+    /// property, the TimeZone setting on the CronExpression will "win".  However
+    /// if <see cref="CronExpressionString" /> is set after this property, the
+    /// time zone applied by this method will remain in effect, since the
+    /// string cron expression does not carry a time zone!
+    /// </remarks>
+    /// <value>The time zone.</value>
+    public TimeZoneInfo TimeZone
+    {
+        get
+        {
+            if (cronEx is not null)
+            {
+                return cronEx.TimeZone;
+            }
+
+            if (timeZone is null)
+            {
+                timeZone = TimeZoneInfo.Local;
+            }
+            return timeZone;
+        }
+        set
+        {
+            if (cronEx is not null)
+            {
+                // CronExpression is immutable and may be shared with other triggers built from the
+                // same schedule builder, so retiming this trigger means rebuilding its own copy.
+                cronEx = cronEx.WithTimeZone(value);
+            }
+            timeZone = value;
+        }
+    }
+
+    /// <summary>
+    /// Returns the next time at which the <see cref="ITrigger" /> will fire,
+    /// after the given time. If the trigger will not fire after the given time,
+    /// <see langword="null" /> will be returned.
+    /// </summary>
+    public override DateTimeOffset? GetFireTimeAfter(DateTimeOffset? afterTimeUtc)
+    {
+        if (!afterTimeUtc.HasValue)
+        {
+            afterTimeUtc = TimeProvider.GetUtcNow();
+        }
+
+        if (StartTimeUtc > afterTimeUtc.Value)
+        {
+            afterTimeUtc = startTimeUtc.AddSeconds(-1);
+        }
+
+        if (EndTimeUtc.HasValue && afterTimeUtc.Value.CompareTo(EndTimeUtc.Value) >= 0)
+        {
+            return null;
+        }
+
+        DateTimeOffset? pot = GetTimeAfter(afterTimeUtc.Value);
+        if (EndTimeUtc.HasValue && pot.HasValue && pot.Value > EndTimeUtc.Value)
+        {
+            return null;
+        }
+
+        return pot;
+    }
+
+    /// <inheritdoc />
+    public CronTriggerMisfireInstruction MisfireInstruction => (CronTriggerMisfireInstruction) MisfireInstructionCode;
+
+    /// <inheritdoc />
+    public override IScheduleBuilder GetScheduleBuilder()
+    {
+        // The trigger is already holding the parsed, immutable expression, and its time zone is that
+        // expression's, so handing the instance over says everything passing the string back through the
+        // parser said - without parsing anything. A trigger with no expression keeps the ArgumentException
+        // that naming a null expression has always produced here.
+        CronScheduleBuilder cb = cronEx is not null
+            ? CronScheduleBuilder.Create(cronEx)
+            : CronScheduleBuilder.Create(CronExpressionString!);
+
+        CronTriggerMisfireInstruction instruction = MisfireInstruction;
+        if (Enum.IsDefined(instruction))
+        {
+            cb.WithMisfireInstruction(instruction);
+        }
+        else
+        {
+            var logger = LogProvider.CreateLogger<CronTriggerImpl>();
+            logger.UnrecognizedCronMisfirePolicy(MisfireInstructionCode);
+        }
+
+        return cb;
+    }
+
+    /// <summary>
+    /// Returns the last UTC time at which the <see cref="ITrigger" /> will fire, if
+    /// the Trigger will repeat indefinitely, null will be returned.
+    /// <para>
+    /// Note that the return time *may* be in the past.
+    /// </para>
+    /// </summary>
+    public override DateTimeOffset? FinalFireTimeUtc
+    {
+        get
+        {
+            if (!EndTimeUtc.HasValue)
+            {
+                // a cron schedule without an end bound has no final fire time
+                return null;
+            }
+
+            DateTimeOffset? resultTime = GetPreviousValidTimeBefore(EndTimeUtc.Value.AddSeconds(1));
+            if (resultTime.HasValue && resultTime.Value < StartTimeUtc)
+            {
+                return null;
+            }
+
+            return resultTime;
+        }
+    }
+
+    /// <summary>
+    /// Tells whether this Trigger instance can handle events
+    /// in millisecond precision.
+    /// </summary>
+    protected override bool HasMillisecondPrecision => false;
+
+    /// <summary>
+    /// Used by the <see cref="IScheduler" /> to determine whether or not
+    /// it is possible for this <see cref="ITrigger" /> to fire again.
+    /// <para>
+    /// If the returned value is <see langword="false" /> then the <see cref="IScheduler" />
+    /// may remove the <see cref="ITrigger" /> from the <see cref="IJobStore" />.
+    /// </para>
+    /// </summary>
+    public override bool MayFireAgain => NextFireTimeUtc.HasValue;
+
+    /// <summary>
+    /// Validates the misfire instruction.
+    /// </summary>
+    /// <param name="misfireInstruction">The misfire instruction.</param>
+    protected override bool ValidateMisfireInstruction(int misfireInstruction)
+    {
+        if (misfireInstruction < Quartz.MisfireInstruction.IgnoreMisfirePolicy)
+        {
+            return false;
+        }
+
+        if (misfireInstruction > Quartz.MisfireInstruction.CronTrigger.DoNothing)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// This method should not be used by the Quartz client.
+    /// <para>
+    /// To be implemented by the concrete classes that extend this class.
+    /// </para>
+    /// <para>
+    /// The implementation should update the <see cref="ITrigger" />'s state according to the misfire
+    /// instruction the <see cref="ITrigger" /> was built with, read as
+    /// <see cref="ITrigger.MisfireInstructionCode" />.
+    /// </para>
+    /// </summary>
+    public override void UpdateAfterMisfire(ICalendar? calendar)
+    {
+        int instr = MisfireInstructionCode;
+
+        if (instr == Quartz.MisfireInstruction.SmartPolicy)
+        {
+            instr = Quartz.MisfireInstruction.CronTrigger.FireOnceNow;
+        }
+
+        if (instr == Quartz.MisfireInstruction.CronTrigger.DoNothing)
+        {
+            DateTimeOffset? newFireTime = GetFireTimeAfter(TimeProvider.GetUtcNow());
+
+            while (newFireTime.HasValue && calendar is not null
+                                        && !calendar.IsTimeIncluded(newFireTime.Value))
+            {
+                newFireTime = GetFireTimeAfter(newFireTime);
+
+                if (!newFireTime.HasValue)
+                {
+                    break;
+                }
+
+                //avoid infinite loop
+                if (newFireTime.Value.Year > TriggerConstants.YearToGiveUpSchedulingAt)
+                {
+                    newFireTime = null;
+                }
+            }
+            NextFireTimeUtc = newFireTime;
+        }
+        else if (instr == Quartz.MisfireInstruction.CronTrigger.FireOnceNow)
+        {
+            NextFireTimeUtc = TimeProvider.GetUtcNow();
+        }
+    }
+
+    /// <summary>
+    /// Determines whether the date and (optionally) time of the given Calendar
+    /// instance falls on a scheduled fire-time of this trigger.
+    /// <para>
+    /// Note that the value returned is NOT validated against the related
+    /// ICalendar (if any).
+    /// </para>
+    /// </summary>
+    /// <param name="timeUtc">The time to compare.</param>
+    /// <param name="dayOnly">If set to true, the method will only determine if the
+    /// trigger will fire during the day represented by the given Calendar
+    /// (hours, minutes and seconds will be ignored).</param>
+    public bool WillFireOn(DateTimeOffset timeUtc, bool dayOnly = false)
+    {
+        if (dayOnly)
+        {
+            timeUtc = new DateTimeOffset(timeUtc.Year, timeUtc.Month, timeUtc.Day, 0, 0, 0, TimeProvider.LocalTimeZone.BaseUtcOffset);
+        }
+
+        DateTimeOffset? fta = GetFireTimeAfter(timeUtc.AddMilliseconds(-1 * 1000));
+
+        if (fta is null)
+        {
+            return false;
+        }
+
+        DateTimeOffset p = TimeZones.ConvertTime(fta.Value, TimeZone);
+
+        if (dayOnly)
+        {
+            return p.Year == timeUtc.Year
+                   && p.Month == timeUtc.Month
+                   && p.Day == timeUtc.Day;
+        }
+
+        while (fta is not null && fta.Value < timeUtc)
+        {
+            fta = GetFireTimeAfter(fta);
+        }
+
+        if (fta.Equals(timeUtc))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Called when the <see cref="IScheduler" /> has decided to 'fire'
+    /// the trigger (Execute the associated <see cref="IJob" />), in order to
+    /// give the <see cref="ITrigger" /> a chance to update itself for its next
+    /// triggering (if any).
+    /// </summary>
+    /// <seealso cref="JobExecutionException" />
+    public override void Triggered(ICalendar? calendar)
+    {
+        PreviousFireTimeUtc = NextFireTimeUtc;
+        NextFireTimeUtc = GetFireTimeAfter(NextFireTimeUtc);
+
+        while (NextFireTimeUtc.HasValue && calendar is not null
+                                        && !calendar.IsTimeIncluded(NextFireTimeUtc.Value))
+        {
+            NextFireTimeUtc = GetFireTimeAfter(NextFireTimeUtc);
+        }
+    }
+
+    /// <summary>
+    /// Updates the trigger with new calendar.
+    /// </summary>
+    /// <param name="calendar">The calendar to update with.</param>
+    /// <param name="misfireThreshold">The misfire threshold.</param>
+    public override void UpdateWithNewCalendar(ICalendar calendar, TimeSpan misfireThreshold)
+    {
+        NextFireTimeUtc = GetFireTimeAfter(PreviousFireTimeUtc);
+
+        if (!NextFireTimeUtc.HasValue || calendar is null)
+        {
+            return;
+        }
+
+        DateTimeOffset now = TimeProvider.GetUtcNow();
+
+        while (NextFireTimeUtc.HasValue && !calendar.IsTimeIncluded(NextFireTimeUtc.Value))
+        {
+            NextFireTimeUtc = GetFireTimeAfter(NextFireTimeUtc);
+
+            if (!NextFireTimeUtc.HasValue)
+            {
+                break;
+            }
+
+            // avoid infinite loop
+            if (NextFireTimeUtc.Value.Year > TriggerConstants.YearToGiveUpSchedulingAt)
+            {
+                NextFireTimeUtc = null;
+            }
+
+            if (NextFireTimeUtc.HasValue && NextFireTimeUtc.Value < now)
+            {
+                TimeSpan diff = now - NextFireTimeUtc.Value;
+                if (diff >= misfireThreshold)
+                {
+                    NextFireTimeUtc = GetFireTimeAfter(NextFireTimeUtc);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Called by the scheduler at the time a <see cref="ITrigger" /> is first
+    /// added to the scheduler, in order to have the <see cref="ITrigger" />
+    /// compute its first fire time, based on any associated calendar.
+    /// <para>
+    /// After this method has been called, <see cref="NextFireTimeUtc" />
+    /// should return a valid answer.
+    /// </para>
+    /// </summary>
+    /// <returns>
+    /// the first time at which the <see cref="ITrigger" /> will be fired
+    /// by the scheduler, which is also the same value <see cref="NextFireTimeUtc" />
+    /// will return (until after the first firing of the <see cref="ITrigger" />).
+    /// </returns>
+    public override DateTimeOffset? ComputeFirstFireTimeUtc(ICalendar? calendar)
+    {
+        var now = TimeProvider.GetUtcNow();
+
+        // If the end time is in the past, the trigger should never fire
+        if (EndTimeUtc.HasValue && EndTimeUtc.Value < now)
+        {
+            return null;
+        }
+
+        NextFireTimeUtc = GetFireTimeAfter(startTimeUtc.AddSeconds(-1));
+
+        // If the computed fire time is in the past, advance to the next fire time
+        // after now to prevent spurious firing when a trigger is rescheduled
+        // with an old StartTimeUtc (e.g., via GetTriggerBuilder().Build())
+        if (NextFireTimeUtc.HasValue && NextFireTimeUtc.Value < now)
+        {
+            NextFireTimeUtc = GetFireTimeAfter(now);
+        }
+
+        while (NextFireTimeUtc.HasValue && calendar is not null && !calendar.IsTimeIncluded(NextFireTimeUtc.Value))
+        {
+            NextFireTimeUtc = GetFireTimeAfter(NextFireTimeUtc);
+        }
+
+        return NextFireTimeUtc;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    //
+    // Computation Functions
+    //
+    ////////////////////////////////////////////////////////////////////////////
+
+    /// <summary>
+    /// Gets the next time to fire after the given time.
+    /// </summary>
+    /// <param name="afterTime">The time to compute from.</param>
+    private DateTimeOffset? GetTimeAfter(DateTimeOffset afterTime)
+    {
+        return cronEx?.GetTimeAfter(afterTime);
+    }
+
+    /// <summary>
+    /// Returns the time before the given time that this <see cref="ICronTrigger" /> will fire.
+    /// </summary>
+    /// <param name="date">The date.</param>
+    protected DateTimeOffset? GetPreviousValidTimeBefore(DateTimeOffset date)
+    {
+        return cronEx?.GetPreviousValidTimeBefore(date);
+    }
+}

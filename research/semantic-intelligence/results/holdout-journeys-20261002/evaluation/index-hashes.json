@@ -1,0 +1,52 @@
+[
+  {
+    "path": ".snapshot-build.lock",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "CURRENT",
+    "bytes": 26,
+    "sha256": "5e641d7ace0e4afe65261059cc75a0800ac2db4e092419239533e420aaa2b771"
+  },
+  {
+    "path": "snapshots/holdout-cleanarchitecture/serve/corpus-symbols.sym",
+    "bytes": 27208,
+    "sha256": "cbcc21840feb6b56396c2a97a6c2106358de47587d3a6e0c219d1a5c7867a2b8"
+  },
+  {
+    "path": "snapshots/holdout-cleanarchitecture/serve/corpus-symbols.sym.meta",
+    "bytes": 113,
+    "sha256": "5c2042dfcc3c04712116de5c5460e9df761bc7e5c460d0f178e78908bfedba9d"
+  },
+  {
+    "path": "snapshots/holdout-cleanarchitecture/serve/corpus-tokens.tki",
+    "bytes": 2568644,
+    "sha256": "a679055735e4c4a84d6006516f5f88713bcd991bf5c9e9a855c669db57c0c21d"
+  },
+  {
+    "path": "snapshots/holdout-cleanarchitecture/serve/corpus-tokens.tki.meta",
+    "bytes": 98,
+    "sha256": "e4b4b27d606e3fae7f7b9fbb9c708c1cb16cf3998992a7a5a9886a04404d1516"
+  },
+  {
+    "path": "snapshots/holdout-cleanarchitecture/serve/manifest.json",
+    "bytes": 1002,
+    "sha256": "f057e5366f621fdbe10dfb6cb3723ccd8090ab4709493e87b703f4ea5a872e26"
+  },
+  {
+    "path": "snapshots/holdout-cleanarchitecture/serve/shard-0000.idx",
+    "bytes": 4345540,
+    "sha256": "971657e9c7442d3e9062e5f92a5f1624aad014d1f02d71142cc644146152cba0"
+  },
+  {
+    "path": "snapshots/holdout-cleanarchitecture/serve/shard-0000.idx.graph-symbols",
+    "bytes": 27288,
+    "sha256": "c3b91e2e6d560566bc829eb9e44a92c50d2d0cc7c64a1506e8ef08a576cea681"
+  },
+  {
+    "path": "snapshots/holdout-cleanarchitecture/snapshot.json",
+    "bytes": 1631,
+    "sha256": "446d4116caaf66883a8c5f8a0047d9cd6c39e9dbe953989a04ed746347f67bae"
+  }
+]

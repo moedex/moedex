@@ -1,0 +1,64 @@
+package semantic
+
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+)
+
+func TestConstructedInterfaceV2Bounds(t *testing.T) {
+	simple := SymbolKey{Language: "csharp", NamespaceKind: "project", Namespace: "repo/contracts", DescriptorKind: "documentation_comment_id", Descriptor: "T:Reply"}
+	descriptor := func(def string, args ...SymbolKey) string {
+		b, _ := json.Marshal(map[string]any{"definition": def, "arguments": args})
+		return string(b)
+	}
+	response := SymbolKey{Language: "csharp", NamespaceKind: "assembly", Namespace: "System.Collections", DescriptorKind: "constructed_named_type_v1", Descriptor: descriptor("T:System.Collections.Generic.IEnumerable`1", simple)}
+	key := SymbolKey{Language: "csharp", NamespaceKind: "assembly", Namespace: "MediatR", DescriptorKind: "constructed_interface_method_v2", Descriptor: descriptor("M:MediatR.IRequestHandler`2.Handle(`0,System.Threading.CancellationToken)", simple, response)}
+	if err := ValidateConstructedInterfaceMethod(key); err != nil {
+		t.Fatal(err)
+	}
+	original := Symbol{Key: key}
+	other := simple
+	other.Namespace = "repo/other"
+	changed := response
+	changed.Descriptor = descriptor("T:System.Collections.Generic.IEnumerable`1", other)
+	altered := key
+	altered.Descriptor = descriptor("M:MediatR.IRequestHandler`2.Handle(`0,System.Threading.CancellationToken)", simple, changed)
+	if original.ComputeID() == (Symbol{Key: altered}).ComputeID() {
+		t.Fatal("argument ownership collapsed")
+	}
+	for name, mutate := range map[string]func(*SymbolKey){
+		"downgrade":   func(k *SymbolKey) { k.DescriptorKind = "constructed_interface_method_v1" },
+		"simple-only": func(k *SymbolKey) { k.Descriptor = descriptor("M:I`1.Handle", simple) },
+		"recursive": func(k *SymbolKey) {
+			nested := response
+			nested.Descriptor = descriptor("T:List`1", response)
+			k.Descriptor = descriptor("M:I`1.Handle", nested)
+		},
+		"trailing": func(k *SymbolKey) { k.Descriptor += " {}" },
+		"oversize": func(k *SymbolKey) { k.Descriptor += strings.Repeat(" ", 32769) },
+		"arity":    func(k *SymbolKey) { k.Descriptor = descriptor("M:I`2.Handle", response) },
+		"owner": func(k *SymbolKey) {
+			bad := response
+			bad.Namespace = ""
+			k.Descriptor = descriptor("M:I`1.Handle", bad)
+		},
+		"unknown-field": func(k *SymbolKey) {
+			k.Descriptor = strings.Replace(k.Descriptor, `"arguments":`, `"extra":true,"arguments":`, 1)
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			bad := key
+			mutate(&bad)
+			if ValidateConstructedInterfaceMethod(bad) == nil {
+				t.Fatal("unbounded identity accepted")
+			}
+		})
+	}
+	f := ImplementationFact{Rule: "csharp-interface-closed-v2"}
+	for _, v := range []string{"7", "13", "14", "15", "16", "17", "18", "19", "20"} {
+		if got := ValidateImplementationExtractor(f, v); (got == nil) != (v == "14" || (v == "15" || (v == "16" || (v == "17" || (v == "18" || v == "19"))))) {
+			t.Fatalf("worker %s: %v", v, got)
+		}
+	}
+}

@@ -1,0 +1,113 @@
+{
+  "task": "impact-entity-uniqueness",
+  "classification": "source_authored_public_tool_walkthrough",
+  "calls": 6,
+  "response_bytes": 52413,
+  "stopped": null,
+  "evidence": [
+    {
+      "subject": "RegistrationDbContext",
+      "snippet": "MemberId",
+      "citations": [
+        {
+          "path": "src/Sample.Components/RegistrationDbContext.cs",
+          "line": 43,
+          "text": "registration.Property(x => x.MemberId).HasMaxLength(64);"
+        },
+        {
+          "path": "src/Sample.Components/RegistrationDbContext.cs",
+          "line": 49,
+          "text": "x.MemberId,"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationDbContext",
+      "snippet": "EventId",
+      "citations": [
+        {
+          "path": "src/Sample.Components/RegistrationDbContext.cs",
+          "line": 44,
+          "text": "registration.Property(x => x.EventId).HasMaxLength(64);"
+        },
+        {
+          "path": "src/Sample.Components/RegistrationDbContext.cs",
+          "line": 50,
+          "text": "x.EventId"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationDbContext",
+      "snippet": "IsUnique",
+      "citations": [
+        {
+          "path": "src/Sample.Components/RegistrationDbContext.cs",
+          "line": 51,
+          "text": "}).IsUnique();"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationDbContext",
+      "snippet": "RegistrationId",
+      "citations": [
+        {
+          "path": "src/Sample.Components/RegistrationDbContext.cs",
+          "line": 41,
+          "text": "registration.Property(x => x.RegistrationId);"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationService",
+      "snippet": "PostgresErrorCodes.UniqueViolation",
+      "citations": [
+        {
+          "path": "src/Sample.Components/RegistrationService.cs",
+          "line": 47,
+          "text": "catch (DbUpdateException exception) when (exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationService",
+      "snippet": "DuplicateRegistrationException",
+      "citations": [
+        {
+          "path": "src/Sample.Components/RegistrationService.cs",
+          "line": 49,
+          "text": "throw new DuplicateRegistrationException(\"Duplicate registration\", exception);"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationController",
+      "snippet": "DuplicateRegistrationException",
+      "citations": [
+        {
+          "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+          "line": 37,
+          "text": "catch (DuplicateRegistrationException)"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationController",
+      "snippet": "Conflict(",
+      "citations": [
+        {
+          "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+          "line": 39,
+          "text": "return Conflict(new"
+        }
+      ]
+    }
+  ],
+  "missing_evidence": [],
+  "limitations": [
+    "Basenames and snippet assertions are source-authored hints.",
+    "No independent agent quality or completeness score.",
+    "Source configuration does not prove runtime activation, dispatch, delivery or transactions."
+  ]
+}

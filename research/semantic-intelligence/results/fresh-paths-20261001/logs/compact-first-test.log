@@ -1,0 +1,7 @@
+# ./internal/semanticindex
+open /Users/zakkeown/Library/Caches/go-build/15/155b058b6912af7610d17cdcb7c18666811449ab963fecd136c2b5bf1a3552a8-d: operation not permitted
+FAIL	./internal/semanticindex [setup failed]
+# moedex/internal/mcp
+internal/mcp/compiler.go:13:2: open /Users/zakkeown/Library/Caches/go-build/15/155b058b6912af7610d17cdcb7c18666811449ab963fecd136c2b5bf1a3552a8-d: operation not permitted
+FAIL	moedex/internal/mcp [setup failed]
+FAIL

@@ -1,0 +1,34 @@
+{
+  "working_directory": "repository root",
+  "environment": {
+    "MOEDEX_APPLICATION_INDEX": "$PWD/.local/application-impact/run-v3/index",
+    "MOEDEX_APPLICATION_GOLD": "$PWD/research/semantic-intelligence/results/application-outbox-20261001/source-gold-v3.json",
+    "MOEDEX_APPLICATION_SOURCE_ROOT": "$PWD/.local/application-impact/Sample-Outbox",
+    "MOEDEX_APPLICATION_REPORT": "$PWD/research/semantic-intelligence/results/application-outbox-v3-20261001/application-report.json",
+    "MOEDEX_APPLICATION_TASK_REPORT": "$PWD/research/semantic-intelligence/results/application-outbox-v3-20261001/task-report.json"
+  },
+  "normal_argv": [
+    "go",
+    "test",
+    "./internal/app/servecmd",
+    "-run",
+    "Test(PublicApplication|Application)",
+    "-count=1",
+    "-v"
+  ],
+  "race_argv": [
+    "go",
+    "test",
+    "-race",
+    "./internal/app/servecmd",
+    "-run",
+    "Test(PublicApplication|Application)",
+    "-count=1",
+    "-v"
+  ],
+  "race_output_overrides": {
+    "MOEDEX_APPLICATION_REPORT": "race-report.json",
+    "MOEDEX_APPLICATION_TASK_REPORT": "task-race-report.json"
+  },
+  "capture_replay": "capture-commands.json contains exact capture, composition, publication argv; local dependency bundle and SDK provenance preserved in original application-outbox-20261001 evidence."
+}

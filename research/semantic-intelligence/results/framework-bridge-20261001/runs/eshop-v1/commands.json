@@ -1,0 +1,75 @@
+[
+  {
+    "label": "capture",
+    "argv": [
+      "/Users/zakkeown/Code/moedex/.local/framework-bridge/moedex",
+      "semantic",
+      "capture",
+      "--checkout",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop",
+      "--commit",
+      "f2369529433374a01b864b6fa1499ad894756f53",
+      "--origin",
+      "https://github.com/dotnet/eShop.git",
+      "--repo",
+      "eShop",
+      "--project",
+      "src/Webhooks.API/Webhooks.API.csproj",
+      "--framework",
+      "net8.0",
+      "--configuration",
+      "Debug",
+      "--dotnet",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/dotnet",
+      "--sdk-path",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/sdk/8.0.400",
+      "--worker",
+      "/Users/zakkeown/Code/moedex/.local/framework-bridge/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+      "--workspace",
+      "/Users/zakkeown/Code/moedex/.local/framework-bridge/eshop-v1/workspace",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/framework-bridge/eshop-v1/project.semantic",
+      "--dependency-bundle",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/bundle",
+      "--restore-offline",
+      "--timeout",
+      "8m"
+    ],
+    "returncode": 0,
+    "elapsed_seconds": 10.356881856918335
+  },
+  {
+    "label": "clone-publication",
+    "argv": [
+      "git",
+      "clone",
+      "--no-hardlinks",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop",
+      "/Users/zakkeown/Code/moedex/.local/framework-bridge/eshop-v1/corpus/eShop"
+    ],
+    "returncode": 0,
+    "elapsed_seconds": 0.23540806770324707
+  },
+  {
+    "label": "publish",
+    "argv": [
+      "/Users/zakkeown/Code/moedex/.local/framework-bridge/moedex",
+      "index",
+      "snapshot",
+      "build",
+      "--corpus",
+      "/Users/zakkeown/Code/moedex/.local/framework-bridge/eshop-v1/corpus",
+      "--index-dir",
+      "/Users/zakkeown/Code/moedex/.local/framework-bridge/eshop-v1/index",
+      "--id",
+      "independent-project",
+      "--graph=false",
+      "--semantic-artifact",
+      "/Users/zakkeown/Code/moedex/.local/framework-bridge/eshop-v1/project.semantic",
+      "--semantic-workspaces",
+      "/Users/zakkeown/Code/moedex/.local/framework-bridge/eshop-v1/roots.json"
+    ],
+    "returncode": 1,
+    "elapsed_seconds": 0.5592927932739258
+  }
+]

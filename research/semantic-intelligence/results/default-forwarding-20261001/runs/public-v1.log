@@ -1,0 +1,3 @@
+OrderStatusChangedToPaidIntegrationEvent 10 60350
+OrderStatusChangedToShippedIntegrationEvent 9 58001
+ProductPriceChangedIntegrationEvent 8 51082

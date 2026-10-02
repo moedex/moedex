@@ -1,0 +1,16 @@
+=== RUN   TestPublicImplementationDiscovery
+server: token index loaded from cache
+server: symbol index loaded from cache
+2026/10/01 11:58:14 INFO graph artifact absent; preparing source-only serving snapshot
+server: token index loaded from cache
+server: symbol index loaded from cache
+2026/10/01 11:58:14 INFO graph artifact absent; preparing source-only serving snapshot
+server: token index loaded from cache
+server: symbol index loaded from cache
+2026/10/01 11:58:14 INFO graph artifact absent; preparing source-only serving snapshot
+server: token index loaded from cache
+server: symbol index loaded from cache
+2026/10/01 11:58:14 INFO graph artifact absent; preparing source-only serving snapshot
+--- PASS: TestPublicImplementationDiscovery (0.10s)
+PASS
+ok  	moedex/internal/app/servecmd	0.289s

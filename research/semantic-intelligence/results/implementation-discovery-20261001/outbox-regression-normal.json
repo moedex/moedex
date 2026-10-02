@@ -1,0 +1,2218 @@
+[
+  {
+    "case": "controller-wrapper",
+    "negative": false,
+    "contexts": [
+      "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+      "context:435e6db9bd1c530ec49d22bbe16de5c4919ee9ebd06fdf179c259b727e7ffc22"
+    ],
+    "complete_response_bytes": 11924,
+    "structured_content_bytes": 11642,
+    "result": {
+      "status": "ok",
+      "evidence_scope": "compile_time",
+      "path_semantics": "candidate_static",
+      "snapshot_id": "reverse-outbox",
+      "artifact_sha256": "24a95f5ad7307d6f3fdaf151e230b26e5cf72d2fec41971476fc4f7135cdac70",
+      "context_ids": [
+        "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+        "context:435e6db9bd1c530ec49d22bbe16de5c4919ee9ebd06fdf179c259b727e7ffc22"
+      ],
+      "seeds": [
+        {
+          "contract": {
+            "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "matched_roles": [
+            "message"
+          ],
+          "fact": {
+            "kind": "message_publish",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          },
+          "source": {
+            "generated": false,
+            "occurrence_id": "occurrence:6e2cfcb61c568fb37a735bd2dc52cc9bb83b1352c51bd9c47f4059259f61f69f",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+            "source_id": "source:8390a09eb8108466f2d895b15327dfc0bb1dd84e00fddeffad681e4a7646bfc4",
+            "source_snapshot_id": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+            "context_id": "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+            "project": "src/Sample.Components/Sample.Components.csproj",
+            "byte_offset": 931,
+            "byte_length": 7,
+            "symbol": {
+              "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+              "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "6",
+            "domain_facts": [
+              {
+                "kind": "message_publish",
+                "rule": "csharp-framework-v1",
+                "evidence_scope": "compile_time",
+                "targets": [
+                  {
+                    "role": "message",
+                    "symbol": {
+                      "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                      "language": "csharp",
+                      "namespace_kind": "project",
+                      "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                      "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                      "descriptor_kind": "documentation_comment_id"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "owner": {
+            "id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "paths": [
+        {
+          "seed": {
+            "contract": {
+              "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "matched_roles": [
+              "message"
+            ],
+            "fact": {
+              "kind": "message_publish",
+              "rule": "csharp-framework-v1",
+              "evidence_scope": "compile_time",
+              "targets": [
+                {
+                  "role": "message",
+                  "symbol": {
+                    "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                    "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                }
+              ]
+            },
+            "source": {
+              "generated": false,
+              "occurrence_id": "occurrence:6e2cfcb61c568fb37a735bd2dc52cc9bb83b1352c51bd9c47f4059259f61f69f",
+              "binding_status": "resolved",
+              "reference_kind": "invocation",
+              "role": "reference",
+              "repo": "Sample-Outbox",
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+              "source_id": "source:8390a09eb8108466f2d895b15327dfc0bb1dd84e00fddeffad681e4a7646bfc4",
+              "source_snapshot_id": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+              "context_id": "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+              "project": "src/Sample.Components/Sample.Components.csproj",
+              "byte_offset": 931,
+              "byte_length": 7,
+              "symbol": {
+                "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+                "language": "csharp",
+                "namespace_kind": "assembly",
+                "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+                "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              "candidates": [],
+              "enclosing_symbol_id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+              "method": "roslyn-semantic-model",
+              "extractor": "msbuild-roslyn",
+              "extractor_version": "6",
+              "domain_facts": [
+                {
+                  "kind": "message_publish",
+                  "rule": "csharp-framework-v1",
+                  "evidence_scope": "compile_time",
+                  "targets": [
+                    {
+                      "role": "message",
+                      "symbol": {
+                        "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                        "language": "csharp",
+                        "namespace_kind": "project",
+                        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                        "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                        "descriptor_kind": "documentation_comment_id"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "owner": {
+              "id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          },
+          "caller": {
+            "generated": false,
+            "occurrence_id": "occurrence:b818ec101546ffbe3d0f51c4d63621747dcc5f4ca3176ef0cace867fec70b999",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+            "raw_sha256": "57da78434440b2da392bf6cb0a5eb954a1b3bc93f27e786c9c55bf9100fdd4df",
+            "source_id": "source:3503dcbf7ec2bbd62c05edaefa938462ff117ed41d32d88d0928c86333885459",
+            "source_snapshot_id": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+            "context_id": "context:435e6db9bd1c530ec49d22bbe16de5c4919ee9ebd06fdf179c259b727e7ffc22",
+            "project": "src/Sample.Api/Sample.Api.csproj",
+            "byte_offset": 642,
+            "byte_length": 18,
+            "symbol": {
+              "id": "symbol:4776a24c2ed7d962d6c18b6aa1d42ed960ab50dad132f1170fb97d8a22233fad",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.IRegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:f9116f1033b002a05e188321d02088a9f52eaadbe2de24c5a0a0e3b13418c902",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "6"
+          },
+          "caller_owner": {
+            "id": "symbol:f9116f1033b002a05e188321d02088a9f52eaadbe2de24c5a0a0e3b13418c902",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Api/Sample.Api.csproj",
+            "descriptor": "M:Sample.Api.Controllers.RegistrationController.Submit(Sample.Api.RegistrationModel)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "implementation": {
+            "kind": "interface_method_implementation",
+            "rule": "csharp-interface-v1",
+            "evidence_scope": "compile_time",
+            "source": {
+              "generated": false,
+              "occurrence_id": "occurrence:e0811794a631dbb0a5ac99cd6970532e754856a1a425c62886b942418e991228",
+              "binding_status": "resolved",
+              "reference_kind": "declaration",
+              "role": "declaration",
+              "repo": "Sample-Outbox",
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+              "source_id": "source:8390a09eb8108466f2d895b15327dfc0bb1dd84e00fddeffad681e4a7646bfc4",
+              "source_snapshot_id": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+              "context_id": "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+              "project": "src/Sample.Components/Sample.Components.csproj",
+              "byte_offset": 500,
+              "byte_length": 18,
+              "symbol": {
+                "id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              "candidates": [],
+              "method": "roslyn-semantic-model",
+              "extractor": "msbuild-roslyn",
+              "extractor_version": "6",
+              "implementation_facts": [
+                {
+                  "kind": "interface_method_implementation",
+                  "rule": "csharp-interface-v1",
+                  "evidence_scope": "compile_time",
+                  "interface_symbol_id": "symbol:4776a24c2ed7d962d6c18b6aa1d42ed960ab50dad132f1170fb97d8a22233fad",
+                  "implementing_type_symbol_id": "symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1"
+                }
+              ],
+              "implementation_symbols": [
+                {
+                  "id": "symbol:4776a24c2ed7d962d6c18b6aa1d42ed960ab50dad132f1170fb97d8a22233fad",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "M:Sample.Components.IRegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+                  "descriptor_kind": "documentation_comment_id"
+                },
+                {
+                  "id": "symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.RegistrationService",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              ]
+            },
+            "interface_member": {
+              "id": "symbol:4776a24c2ed7d962d6c18b6aa1d42ed960ab50dad132f1170fb97d8a22233fad",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.IRegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "implementing_type": {
+              "id": "symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.RegistrationService",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        }
+      ],
+      "limit": 20,
+      "records": 4,
+      "rows_visited": 5,
+      "work_limit": 10000,
+      "materialization_byte_limit": 2097152,
+      "seeds_truncated": false,
+      "paths_truncated": false,
+      "total_is_exact": true,
+      "limitations": [
+        "One recorded caller step to a direct publisher, optionally through an explicit interface implementation. No runtime dispatch, delivery, activation, or DI selection is established.",
+        "Each hop retains its captured compilation. Selected cross-project contexts do not certify dependency-closure compatibility.",
+        "Only captured exact calls and supported interface implementations are searched. No recursive call traversal or synthetic publisher facts; missing paths are not absence."
+      ]
+    }
+  },
+  {
+    "case": "controller-wrapper",
+    "negative": true,
+    "contexts": [
+      "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+      "context:435e6db9bd1c530ec49d22bbe16de5c4919ee9ebd06fdf179c259b727e7ffc22"
+    ],
+    "complete_response_bytes": 12222,
+    "structured_content_bytes": 11940,
+    "result": {
+      "status": "ok",
+      "evidence_scope": "compile_time",
+      "path_semantics": "candidate_static",
+      "snapshot_id": "reverse-outbox",
+      "artifact_sha256": "24a95f5ad7307d6f3fdaf151e230b26e5cf72d2fec41971476fc4f7135cdac70",
+      "context_ids": [
+        "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+        "context:435e6db9bd1c530ec49d22bbe16de5c4919ee9ebd06fdf179c259b727e7ffc22"
+      ],
+      "seeds": [
+        {
+          "contract": {
+            "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "matched_roles": [
+            "message"
+          ],
+          "fact": {
+            "kind": "message_publish",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          },
+          "source": {
+            "generated": false,
+            "occurrence_id": "occurrence:28f9f0a850330add74e547cd057d9f28ca28738b590c4b48b330e1b968175454",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+            "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20",
+            "source_id": "source:4e11d130a4c284466f0c091251e7af0575608907b3a59c9456d1928e08527d89",
+            "source_snapshot_id": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+            "context_id": "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+            "project": "src/Sample.Components/Sample.Components.csproj",
+            "byte_offset": 474,
+            "byte_length": 7,
+            "symbol": {
+              "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+              "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "6",
+            "domain_facts": [
+              {
+                "kind": "message_publish",
+                "rule": "csharp-framework-v1",
+                "evidence_scope": "compile_time",
+                "targets": [
+                  {
+                    "role": "message",
+                    "symbol": {
+                      "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+                      "language": "csharp",
+                      "namespace_kind": "project",
+                      "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                      "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+                      "descriptor_kind": "documentation_comment_id"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "owner": {
+            "id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.Services.RegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "paths": [
+        {
+          "seed": {
+            "contract": {
+              "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "matched_roles": [
+              "message"
+            ],
+            "fact": {
+              "kind": "message_publish",
+              "rule": "csharp-framework-v1",
+              "evidence_scope": "compile_time",
+              "targets": [
+                {
+                  "role": "message",
+                  "symbol": {
+                    "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                    "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                }
+              ]
+            },
+            "source": {
+              "generated": false,
+              "occurrence_id": "occurrence:28f9f0a850330add74e547cd057d9f28ca28738b590c4b48b330e1b968175454",
+              "binding_status": "resolved",
+              "reference_kind": "invocation",
+              "role": "reference",
+              "repo": "Sample-Outbox",
+              "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+              "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20",
+              "source_id": "source:4e11d130a4c284466f0c091251e7af0575608907b3a59c9456d1928e08527d89",
+              "source_snapshot_id": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+              "context_id": "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+              "project": "src/Sample.Components/Sample.Components.csproj",
+              "byte_offset": 474,
+              "byte_length": 7,
+              "symbol": {
+                "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+                "language": "csharp",
+                "namespace_kind": "assembly",
+                "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+                "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              "candidates": [],
+              "enclosing_symbol_id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+              "method": "roslyn-semantic-model",
+              "extractor": "msbuild-roslyn",
+              "extractor_version": "6",
+              "domain_facts": [
+                {
+                  "kind": "message_publish",
+                  "rule": "csharp-framework-v1",
+                  "evidence_scope": "compile_time",
+                  "targets": [
+                    {
+                      "role": "message",
+                      "symbol": {
+                        "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+                        "language": "csharp",
+                        "namespace_kind": "project",
+                        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                        "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+                        "descriptor_kind": "documentation_comment_id"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "owner": {
+              "id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.Services.RegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          },
+          "caller": {
+            "generated": false,
+            "occurrence_id": "occurrence:6b56c6e3d225a73c70d1ca4afb2555f2bac5f1b004a5673bbb86a34c3abfd14f",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+            "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca",
+            "source_id": "source:c1e13ce4c20a689e05368ea294729ffc286ac7ac11ca88b06a92e5e119e45b94",
+            "source_snapshot_id": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+            "context_id": "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+            "project": "src/Sample.Components/Sample.Components.csproj",
+            "byte_offset": 667,
+            "byte_length": 20,
+            "symbol": {
+              "id": "symbol:9ce6605baa8091eeaba7a7548ff477b6a822eca842c2957abdf82c5260fa08c9",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:8cc299bf54248caa82be7fc005176c3de5c21532ca9a07fe0a50ae8f17b6c865",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "6"
+          },
+          "caller_owner": {
+            "id": "symbol:8cc299bf54248caa82be7fc005176c3de5c21532ca9a07fe0a50ae8f17b6c865",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.Consumers.ValidateRegistrationConsumer.Consume(MassTransit.ConsumeContext{Sample.Components.Contracts.AddEventAttendee})",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "implementation": {
+            "kind": "interface_method_implementation",
+            "rule": "csharp-interface-v1",
+            "evidence_scope": "compile_time",
+            "source": {
+              "generated": false,
+              "occurrence_id": "occurrence:7588ace07a8436950ee3966536887f80717a7a6e09123f8adf980ba66ee42eec",
+              "binding_status": "resolved",
+              "reference_kind": "declaration",
+              "role": "declaration",
+              "repo": "Sample-Outbox",
+              "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+              "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20",
+              "source_id": "source:4e11d130a4c284466f0c091251e7af0575608907b3a59c9456d1928e08527d89",
+              "source_snapshot_id": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+              "context_id": "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+              "project": "src/Sample.Components/Sample.Components.csproj",
+              "byte_offset": 362,
+              "byte_length": 20,
+              "symbol": {
+                "id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                "descriptor": "M:Sample.Components.Services.RegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              "candidates": [],
+              "method": "roslyn-semantic-model",
+              "extractor": "msbuild-roslyn",
+              "extractor_version": "6",
+              "implementation_facts": [
+                {
+                  "kind": "interface_method_implementation",
+                  "rule": "csharp-interface-v1",
+                  "evidence_scope": "compile_time",
+                  "interface_symbol_id": "symbol:9ce6605baa8091eeaba7a7548ff477b6a822eca842c2957abdf82c5260fa08c9",
+                  "implementing_type_symbol_id": "symbol:c6cf6aeec6a0be4bb174922e3583e6bff0112a05bba555ae0d57dcbda1eb6d98"
+                }
+              ],
+              "implementation_symbols": [
+                {
+                  "id": "symbol:9ce6605baa8091eeaba7a7548ff477b6a822eca842c2957abdf82c5260fa08c9",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "M:Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+                  "descriptor_kind": "documentation_comment_id"
+                },
+                {
+                  "id": "symbol:c6cf6aeec6a0be4bb174922e3583e6bff0112a05bba555ae0d57dcbda1eb6d98",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Services.RegistrationValidationService",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              ]
+            },
+            "interface_member": {
+              "id": "symbol:9ce6605baa8091eeaba7a7548ff477b6a822eca842c2957abdf82c5260fa08c9",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "implementing_type": {
+              "id": "symbol:c6cf6aeec6a0be4bb174922e3583e6bff0112a05bba555ae0d57dcbda1eb6d98",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Services.RegistrationValidationService",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        }
+      ],
+      "limit": 20,
+      "records": 4,
+      "rows_visited": 3,
+      "work_limit": 10000,
+      "materialization_byte_limit": 2097152,
+      "seeds_truncated": false,
+      "paths_truncated": false,
+      "total_is_exact": true,
+      "limitations": [
+        "One recorded caller step to a direct publisher, optionally through an explicit interface implementation. No runtime dispatch, delivery, activation, or DI selection is established.",
+        "Each hop retains its captured compilation. Selected cross-project contexts do not certify dependency-closure compatibility.",
+        "Only captured exact calls and supported interface implementations are searched. No recursive call traversal or synthetic publisher facts; missing paths are not absence."
+      ]
+    }
+  },
+  {
+    "case": "controller-wrapper",
+    "negative": false,
+    "contexts": [
+      "context:435e6db9bd1c530ec49d22bbe16de5c4919ee9ebd06fdf179c259b727e7ffc22",
+      "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f"
+    ],
+    "complete_response_bytes": 11924,
+    "structured_content_bytes": 11642,
+    "result": {
+      "status": "ok",
+      "evidence_scope": "compile_time",
+      "path_semantics": "candidate_static",
+      "snapshot_id": "reverse-outbox",
+      "artifact_sha256": "24a95f5ad7307d6f3fdaf151e230b26e5cf72d2fec41971476fc4f7135cdac70",
+      "context_ids": [
+        "context:435e6db9bd1c530ec49d22bbe16de5c4919ee9ebd06fdf179c259b727e7ffc22",
+        "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f"
+      ],
+      "seeds": [
+        {
+          "contract": {
+            "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "matched_roles": [
+            "message"
+          ],
+          "fact": {
+            "kind": "message_publish",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          },
+          "source": {
+            "generated": false,
+            "occurrence_id": "occurrence:612ff91eb6b3366fecc3de59bc75d536eba0de380807b8f30defbf815a95a7f6",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+            "source_id": "source:791ba2b0a3f0ddb48aa45325578e8b76fa237c97104e88affc909ad9da0278df",
+            "source_snapshot_id": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+            "context_id": "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f",
+            "project": "src/Sample.Components/Sample.Components.csproj",
+            "byte_offset": 931,
+            "byte_length": 7,
+            "symbol": {
+              "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+              "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "6",
+            "domain_facts": [
+              {
+                "kind": "message_publish",
+                "rule": "csharp-framework-v1",
+                "evidence_scope": "compile_time",
+                "targets": [
+                  {
+                    "role": "message",
+                    "symbol": {
+                      "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                      "language": "csharp",
+                      "namespace_kind": "project",
+                      "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                      "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                      "descriptor_kind": "documentation_comment_id"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "owner": {
+            "id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "paths": [
+        {
+          "seed": {
+            "contract": {
+              "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "matched_roles": [
+              "message"
+            ],
+            "fact": {
+              "kind": "message_publish",
+              "rule": "csharp-framework-v1",
+              "evidence_scope": "compile_time",
+              "targets": [
+                {
+                  "role": "message",
+                  "symbol": {
+                    "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                    "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                }
+              ]
+            },
+            "source": {
+              "generated": false,
+              "occurrence_id": "occurrence:612ff91eb6b3366fecc3de59bc75d536eba0de380807b8f30defbf815a95a7f6",
+              "binding_status": "resolved",
+              "reference_kind": "invocation",
+              "role": "reference",
+              "repo": "Sample-Outbox",
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+              "source_id": "source:791ba2b0a3f0ddb48aa45325578e8b76fa237c97104e88affc909ad9da0278df",
+              "source_snapshot_id": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+              "context_id": "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f",
+              "project": "src/Sample.Components/Sample.Components.csproj",
+              "byte_offset": 931,
+              "byte_length": 7,
+              "symbol": {
+                "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+                "language": "csharp",
+                "namespace_kind": "assembly",
+                "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+                "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              "candidates": [],
+              "enclosing_symbol_id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+              "method": "roslyn-semantic-model",
+              "extractor": "msbuild-roslyn",
+              "extractor_version": "6",
+              "domain_facts": [
+                {
+                  "kind": "message_publish",
+                  "rule": "csharp-framework-v1",
+                  "evidence_scope": "compile_time",
+                  "targets": [
+                    {
+                      "role": "message",
+                      "symbol": {
+                        "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                        "language": "csharp",
+                        "namespace_kind": "project",
+                        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                        "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                        "descriptor_kind": "documentation_comment_id"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "owner": {
+              "id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          },
+          "caller": {
+            "generated": false,
+            "occurrence_id": "occurrence:b818ec101546ffbe3d0f51c4d63621747dcc5f4ca3176ef0cace867fec70b999",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+            "raw_sha256": "57da78434440b2da392bf6cb0a5eb954a1b3bc93f27e786c9c55bf9100fdd4df",
+            "source_id": "source:3503dcbf7ec2bbd62c05edaefa938462ff117ed41d32d88d0928c86333885459",
+            "source_snapshot_id": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+            "context_id": "context:435e6db9bd1c530ec49d22bbe16de5c4919ee9ebd06fdf179c259b727e7ffc22",
+            "project": "src/Sample.Api/Sample.Api.csproj",
+            "byte_offset": 642,
+            "byte_length": 18,
+            "symbol": {
+              "id": "symbol:4776a24c2ed7d962d6c18b6aa1d42ed960ab50dad132f1170fb97d8a22233fad",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.IRegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:f9116f1033b002a05e188321d02088a9f52eaadbe2de24c5a0a0e3b13418c902",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "6"
+          },
+          "caller_owner": {
+            "id": "symbol:f9116f1033b002a05e188321d02088a9f52eaadbe2de24c5a0a0e3b13418c902",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Api/Sample.Api.csproj",
+            "descriptor": "M:Sample.Api.Controllers.RegistrationController.Submit(Sample.Api.RegistrationModel)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "implementation": {
+            "kind": "interface_method_implementation",
+            "rule": "csharp-interface-v1",
+            "evidence_scope": "compile_time",
+            "source": {
+              "generated": false,
+              "occurrence_id": "occurrence:5b37fd8a8c418fd5b5eee0b9f61139f4df73508709bcabe9316fbdd3690538ef",
+              "binding_status": "resolved",
+              "reference_kind": "declaration",
+              "role": "declaration",
+              "repo": "Sample-Outbox",
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+              "source_id": "source:791ba2b0a3f0ddb48aa45325578e8b76fa237c97104e88affc909ad9da0278df",
+              "source_snapshot_id": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+              "context_id": "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f",
+              "project": "src/Sample.Components/Sample.Components.csproj",
+              "byte_offset": 500,
+              "byte_length": 18,
+              "symbol": {
+                "id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              "candidates": [],
+              "method": "roslyn-semantic-model",
+              "extractor": "msbuild-roslyn",
+              "extractor_version": "6",
+              "implementation_facts": [
+                {
+                  "kind": "interface_method_implementation",
+                  "rule": "csharp-interface-v1",
+                  "evidence_scope": "compile_time",
+                  "interface_symbol_id": "symbol:4776a24c2ed7d962d6c18b6aa1d42ed960ab50dad132f1170fb97d8a22233fad",
+                  "implementing_type_symbol_id": "symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1"
+                }
+              ],
+              "implementation_symbols": [
+                {
+                  "id": "symbol:4776a24c2ed7d962d6c18b6aa1d42ed960ab50dad132f1170fb97d8a22233fad",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "M:Sample.Components.IRegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+                  "descriptor_kind": "documentation_comment_id"
+                },
+                {
+                  "id": "symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.RegistrationService",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              ]
+            },
+            "interface_member": {
+              "id": "symbol:4776a24c2ed7d962d6c18b6aa1d42ed960ab50dad132f1170fb97d8a22233fad",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.IRegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "implementing_type": {
+              "id": "symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.RegistrationService",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        }
+      ],
+      "limit": 20,
+      "records": 4,
+      "rows_visited": 5,
+      "work_limit": 10000,
+      "materialization_byte_limit": 2097152,
+      "seeds_truncated": false,
+      "paths_truncated": false,
+      "total_is_exact": true,
+      "limitations": [
+        "One recorded caller step to a direct publisher, optionally through an explicit interface implementation. No runtime dispatch, delivery, activation, or DI selection is established.",
+        "Each hop retains its captured compilation. Selected cross-project contexts do not certify dependency-closure compatibility.",
+        "Only captured exact calls and supported interface implementations are searched. No recursive call traversal or synthetic publisher facts; missing paths are not absence."
+      ]
+    }
+  },
+  {
+    "case": "controller-wrapper",
+    "negative": true,
+    "contexts": [
+      "context:435e6db9bd1c530ec49d22bbe16de5c4919ee9ebd06fdf179c259b727e7ffc22",
+      "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f"
+    ],
+    "complete_response_bytes": 12222,
+    "structured_content_bytes": 11940,
+    "result": {
+      "status": "ok",
+      "evidence_scope": "compile_time",
+      "path_semantics": "candidate_static",
+      "snapshot_id": "reverse-outbox",
+      "artifact_sha256": "24a95f5ad7307d6f3fdaf151e230b26e5cf72d2fec41971476fc4f7135cdac70",
+      "context_ids": [
+        "context:435e6db9bd1c530ec49d22bbe16de5c4919ee9ebd06fdf179c259b727e7ffc22",
+        "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f"
+      ],
+      "seeds": [
+        {
+          "contract": {
+            "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "matched_roles": [
+            "message"
+          ],
+          "fact": {
+            "kind": "message_publish",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          },
+          "source": {
+            "generated": false,
+            "occurrence_id": "occurrence:2f0bcd70c3b185eb1f48dae0b151843d2e51acb4d2a33ae25f37556f975e06b4",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+            "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20",
+            "source_id": "source:2dd01c232806047ec14dcf5dfc6292e134286b4f2d52e08082ce2d0a81715a84",
+            "source_snapshot_id": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+            "context_id": "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f",
+            "project": "src/Sample.Components/Sample.Components.csproj",
+            "byte_offset": 474,
+            "byte_length": 7,
+            "symbol": {
+              "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+              "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "6",
+            "domain_facts": [
+              {
+                "kind": "message_publish",
+                "rule": "csharp-framework-v1",
+                "evidence_scope": "compile_time",
+                "targets": [
+                  {
+                    "role": "message",
+                    "symbol": {
+                      "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+                      "language": "csharp",
+                      "namespace_kind": "project",
+                      "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                      "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+                      "descriptor_kind": "documentation_comment_id"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "owner": {
+            "id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.Services.RegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "paths": [
+        {
+          "seed": {
+            "contract": {
+              "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "matched_roles": [
+              "message"
+            ],
+            "fact": {
+              "kind": "message_publish",
+              "rule": "csharp-framework-v1",
+              "evidence_scope": "compile_time",
+              "targets": [
+                {
+                  "role": "message",
+                  "symbol": {
+                    "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                    "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                }
+              ]
+            },
+            "source": {
+              "generated": false,
+              "occurrence_id": "occurrence:2f0bcd70c3b185eb1f48dae0b151843d2e51acb4d2a33ae25f37556f975e06b4",
+              "binding_status": "resolved",
+              "reference_kind": "invocation",
+              "role": "reference",
+              "repo": "Sample-Outbox",
+              "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+              "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20",
+              "source_id": "source:2dd01c232806047ec14dcf5dfc6292e134286b4f2d52e08082ce2d0a81715a84",
+              "source_snapshot_id": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+              "context_id": "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f",
+              "project": "src/Sample.Components/Sample.Components.csproj",
+              "byte_offset": 474,
+              "byte_length": 7,
+              "symbol": {
+                "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+                "language": "csharp",
+                "namespace_kind": "assembly",
+                "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+                "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              "candidates": [],
+              "enclosing_symbol_id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+              "method": "roslyn-semantic-model",
+              "extractor": "msbuild-roslyn",
+              "extractor_version": "6",
+              "domain_facts": [
+                {
+                  "kind": "message_publish",
+                  "rule": "csharp-framework-v1",
+                  "evidence_scope": "compile_time",
+                  "targets": [
+                    {
+                      "role": "message",
+                      "symbol": {
+                        "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+                        "language": "csharp",
+                        "namespace_kind": "project",
+                        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                        "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+                        "descriptor_kind": "documentation_comment_id"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "owner": {
+              "id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.Services.RegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          },
+          "caller": {
+            "generated": false,
+            "occurrence_id": "occurrence:c9d8b9dd4089866a203f26a00108e5bf8d987fa10b5b212ec014bb1800615115",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+            "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca",
+            "source_id": "source:d3b3e4a4bb9266e62ae16f0cb39fd08d4c302d877152eb645afb249502f87c73",
+            "source_snapshot_id": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+            "context_id": "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f",
+            "project": "src/Sample.Components/Sample.Components.csproj",
+            "byte_offset": 667,
+            "byte_length": 20,
+            "symbol": {
+              "id": "symbol:9ce6605baa8091eeaba7a7548ff477b6a822eca842c2957abdf82c5260fa08c9",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:8cc299bf54248caa82be7fc005176c3de5c21532ca9a07fe0a50ae8f17b6c865",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "6"
+          },
+          "caller_owner": {
+            "id": "symbol:8cc299bf54248caa82be7fc005176c3de5c21532ca9a07fe0a50ae8f17b6c865",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.Consumers.ValidateRegistrationConsumer.Consume(MassTransit.ConsumeContext{Sample.Components.Contracts.AddEventAttendee})",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "implementation": {
+            "kind": "interface_method_implementation",
+            "rule": "csharp-interface-v1",
+            "evidence_scope": "compile_time",
+            "source": {
+              "generated": false,
+              "occurrence_id": "occurrence:d17ecadd90276a0151089c986b86f0b4f17c49c6fd9c4e6fde989ea6fe0700c7",
+              "binding_status": "resolved",
+              "reference_kind": "declaration",
+              "role": "declaration",
+              "repo": "Sample-Outbox",
+              "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+              "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20",
+              "source_id": "source:2dd01c232806047ec14dcf5dfc6292e134286b4f2d52e08082ce2d0a81715a84",
+              "source_snapshot_id": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+              "context_id": "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f",
+              "project": "src/Sample.Components/Sample.Components.csproj",
+              "byte_offset": 362,
+              "byte_length": 20,
+              "symbol": {
+                "id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                "descriptor": "M:Sample.Components.Services.RegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              "candidates": [],
+              "method": "roslyn-semantic-model",
+              "extractor": "msbuild-roslyn",
+              "extractor_version": "6",
+              "implementation_facts": [
+                {
+                  "kind": "interface_method_implementation",
+                  "rule": "csharp-interface-v1",
+                  "evidence_scope": "compile_time",
+                  "interface_symbol_id": "symbol:9ce6605baa8091eeaba7a7548ff477b6a822eca842c2957abdf82c5260fa08c9",
+                  "implementing_type_symbol_id": "symbol:c6cf6aeec6a0be4bb174922e3583e6bff0112a05bba555ae0d57dcbda1eb6d98"
+                }
+              ],
+              "implementation_symbols": [
+                {
+                  "id": "symbol:9ce6605baa8091eeaba7a7548ff477b6a822eca842c2957abdf82c5260fa08c9",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "M:Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+                  "descriptor_kind": "documentation_comment_id"
+                },
+                {
+                  "id": "symbol:c6cf6aeec6a0be4bb174922e3583e6bff0112a05bba555ae0d57dcbda1eb6d98",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Services.RegistrationValidationService",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              ]
+            },
+            "interface_member": {
+              "id": "symbol:9ce6605baa8091eeaba7a7548ff477b6a822eca842c2957abdf82c5260fa08c9",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "implementing_type": {
+              "id": "symbol:c6cf6aeec6a0be4bb174922e3583e6bff0112a05bba555ae0d57dcbda1eb6d98",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Services.RegistrationValidationService",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        }
+      ],
+      "limit": 20,
+      "records": 4,
+      "rows_visited": 3,
+      "work_limit": 10000,
+      "materialization_byte_limit": 2097152,
+      "seeds_truncated": false,
+      "paths_truncated": false,
+      "total_is_exact": true,
+      "limitations": [
+        "One recorded caller step to a direct publisher, optionally through an explicit interface implementation. No runtime dispatch, delivery, activation, or DI selection is established.",
+        "Each hop retains its captured compilation. Selected cross-project contexts do not certify dependency-closure compatibility.",
+        "Only captured exact calls and supported interface implementations are searched. No recursive call traversal or synthetic publisher facts; missing paths are not absence."
+      ]
+    }
+  },
+  {
+    "case": "validation-wrapper",
+    "negative": false,
+    "contexts": [
+      "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f"
+    ],
+    "complete_response_bytes": 12147,
+    "structured_content_bytes": 11865,
+    "result": {
+      "status": "ok",
+      "evidence_scope": "compile_time",
+      "path_semantics": "candidate_static",
+      "snapshot_id": "reverse-outbox",
+      "artifact_sha256": "24a95f5ad7307d6f3fdaf151e230b26e5cf72d2fec41971476fc4f7135cdac70",
+      "context_ids": [
+        "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f"
+      ],
+      "seeds": [
+        {
+          "contract": {
+            "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "matched_roles": [
+            "message"
+          ],
+          "fact": {
+            "kind": "message_publish",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          },
+          "source": {
+            "generated": false,
+            "occurrence_id": "occurrence:28f9f0a850330add74e547cd057d9f28ca28738b590c4b48b330e1b968175454",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+            "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20",
+            "source_id": "source:4e11d130a4c284466f0c091251e7af0575608907b3a59c9456d1928e08527d89",
+            "source_snapshot_id": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+            "context_id": "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+            "project": "src/Sample.Components/Sample.Components.csproj",
+            "byte_offset": 474,
+            "byte_length": 7,
+            "symbol": {
+              "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+              "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "6",
+            "domain_facts": [
+              {
+                "kind": "message_publish",
+                "rule": "csharp-framework-v1",
+                "evidence_scope": "compile_time",
+                "targets": [
+                  {
+                    "role": "message",
+                    "symbol": {
+                      "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+                      "language": "csharp",
+                      "namespace_kind": "project",
+                      "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                      "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+                      "descriptor_kind": "documentation_comment_id"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "owner": {
+            "id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.Services.RegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "paths": [
+        {
+          "seed": {
+            "contract": {
+              "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "matched_roles": [
+              "message"
+            ],
+            "fact": {
+              "kind": "message_publish",
+              "rule": "csharp-framework-v1",
+              "evidence_scope": "compile_time",
+              "targets": [
+                {
+                  "role": "message",
+                  "symbol": {
+                    "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                    "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                }
+              ]
+            },
+            "source": {
+              "generated": false,
+              "occurrence_id": "occurrence:28f9f0a850330add74e547cd057d9f28ca28738b590c4b48b330e1b968175454",
+              "binding_status": "resolved",
+              "reference_kind": "invocation",
+              "role": "reference",
+              "repo": "Sample-Outbox",
+              "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+              "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20",
+              "source_id": "source:4e11d130a4c284466f0c091251e7af0575608907b3a59c9456d1928e08527d89",
+              "source_snapshot_id": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+              "context_id": "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+              "project": "src/Sample.Components/Sample.Components.csproj",
+              "byte_offset": 474,
+              "byte_length": 7,
+              "symbol": {
+                "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+                "language": "csharp",
+                "namespace_kind": "assembly",
+                "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+                "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              "candidates": [],
+              "enclosing_symbol_id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+              "method": "roslyn-semantic-model",
+              "extractor": "msbuild-roslyn",
+              "extractor_version": "6",
+              "domain_facts": [
+                {
+                  "kind": "message_publish",
+                  "rule": "csharp-framework-v1",
+                  "evidence_scope": "compile_time",
+                  "targets": [
+                    {
+                      "role": "message",
+                      "symbol": {
+                        "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+                        "language": "csharp",
+                        "namespace_kind": "project",
+                        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                        "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+                        "descriptor_kind": "documentation_comment_id"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "owner": {
+              "id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.Services.RegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          },
+          "caller": {
+            "generated": false,
+            "occurrence_id": "occurrence:6b56c6e3d225a73c70d1ca4afb2555f2bac5f1b004a5673bbb86a34c3abfd14f",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+            "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca",
+            "source_id": "source:c1e13ce4c20a689e05368ea294729ffc286ac7ac11ca88b06a92e5e119e45b94",
+            "source_snapshot_id": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+            "context_id": "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+            "project": "src/Sample.Components/Sample.Components.csproj",
+            "byte_offset": 667,
+            "byte_length": 20,
+            "symbol": {
+              "id": "symbol:9ce6605baa8091eeaba7a7548ff477b6a822eca842c2957abdf82c5260fa08c9",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:8cc299bf54248caa82be7fc005176c3de5c21532ca9a07fe0a50ae8f17b6c865",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "6"
+          },
+          "caller_owner": {
+            "id": "symbol:8cc299bf54248caa82be7fc005176c3de5c21532ca9a07fe0a50ae8f17b6c865",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.Consumers.ValidateRegistrationConsumer.Consume(MassTransit.ConsumeContext{Sample.Components.Contracts.AddEventAttendee})",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "implementation": {
+            "kind": "interface_method_implementation",
+            "rule": "csharp-interface-v1",
+            "evidence_scope": "compile_time",
+            "source": {
+              "generated": false,
+              "occurrence_id": "occurrence:7588ace07a8436950ee3966536887f80717a7a6e09123f8adf980ba66ee42eec",
+              "binding_status": "resolved",
+              "reference_kind": "declaration",
+              "role": "declaration",
+              "repo": "Sample-Outbox",
+              "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+              "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20",
+              "source_id": "source:4e11d130a4c284466f0c091251e7af0575608907b3a59c9456d1928e08527d89",
+              "source_snapshot_id": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+              "context_id": "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+              "project": "src/Sample.Components/Sample.Components.csproj",
+              "byte_offset": 362,
+              "byte_length": 20,
+              "symbol": {
+                "id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                "descriptor": "M:Sample.Components.Services.RegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              "candidates": [],
+              "method": "roslyn-semantic-model",
+              "extractor": "msbuild-roslyn",
+              "extractor_version": "6",
+              "implementation_facts": [
+                {
+                  "kind": "interface_method_implementation",
+                  "rule": "csharp-interface-v1",
+                  "evidence_scope": "compile_time",
+                  "interface_symbol_id": "symbol:9ce6605baa8091eeaba7a7548ff477b6a822eca842c2957abdf82c5260fa08c9",
+                  "implementing_type_symbol_id": "symbol:c6cf6aeec6a0be4bb174922e3583e6bff0112a05bba555ae0d57dcbda1eb6d98"
+                }
+              ],
+              "implementation_symbols": [
+                {
+                  "id": "symbol:9ce6605baa8091eeaba7a7548ff477b6a822eca842c2957abdf82c5260fa08c9",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "M:Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+                  "descriptor_kind": "documentation_comment_id"
+                },
+                {
+                  "id": "symbol:c6cf6aeec6a0be4bb174922e3583e6bff0112a05bba555ae0d57dcbda1eb6d98",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Services.RegistrationValidationService",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              ]
+            },
+            "interface_member": {
+              "id": "symbol:9ce6605baa8091eeaba7a7548ff477b6a822eca842c2957abdf82c5260fa08c9",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "implementing_type": {
+              "id": "symbol:c6cf6aeec6a0be4bb174922e3583e6bff0112a05bba555ae0d57dcbda1eb6d98",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Services.RegistrationValidationService",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        }
+      ],
+      "limit": 20,
+      "records": 4,
+      "rows_visited": 3,
+      "work_limit": 10000,
+      "materialization_byte_limit": 2097152,
+      "seeds_truncated": false,
+      "paths_truncated": false,
+      "total_is_exact": true,
+      "limitations": [
+        "One recorded caller step to a direct publisher, optionally through an explicit interface implementation. No runtime dispatch, delivery, activation, or DI selection is established.",
+        "Each hop retains its captured compilation. Selected cross-project contexts do not certify dependency-closure compatibility.",
+        "Only captured exact calls and supported interface implementations are searched. No recursive call traversal or synthetic publisher facts; missing paths are not absence."
+      ]
+    }
+  },
+  {
+    "case": "validation-wrapper",
+    "negative": true,
+    "contexts": [
+      "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f"
+    ],
+    "complete_response_bytes": 4214,
+    "structured_content_bytes": 3932,
+    "result": {
+      "status": "no_recorded_paths",
+      "evidence_scope": "compile_time",
+      "path_semantics": "candidate_static",
+      "snapshot_id": "reverse-outbox",
+      "artifact_sha256": "24a95f5ad7307d6f3fdaf151e230b26e5cf72d2fec41971476fc4f7135cdac70",
+      "context_ids": [
+        "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f"
+      ],
+      "seeds": [
+        {
+          "contract": {
+            "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "matched_roles": [
+            "message"
+          ],
+          "fact": {
+            "kind": "message_publish",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          },
+          "source": {
+            "generated": false,
+            "occurrence_id": "occurrence:6e2cfcb61c568fb37a735bd2dc52cc9bb83b1352c51bd9c47f4059259f61f69f",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+            "source_id": "source:8390a09eb8108466f2d895b15327dfc0bb1dd84e00fddeffad681e4a7646bfc4",
+            "source_snapshot_id": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+            "context_id": "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+            "project": "src/Sample.Components/Sample.Components.csproj",
+            "byte_offset": 931,
+            "byte_length": 7,
+            "symbol": {
+              "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+              "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "6",
+            "domain_facts": [
+              {
+                "kind": "message_publish",
+                "rule": "csharp-framework-v1",
+                "evidence_scope": "compile_time",
+                "targets": [
+                  {
+                    "role": "message",
+                    "symbol": {
+                      "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                      "language": "csharp",
+                      "namespace_kind": "project",
+                      "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                      "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                      "descriptor_kind": "documentation_comment_id"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "owner": {
+            "id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "paths": [],
+      "limit": 20,
+      "records": 1,
+      "rows_visited": 4,
+      "work_limit": 10000,
+      "materialization_byte_limit": 2097152,
+      "seeds_truncated": false,
+      "paths_truncated": false,
+      "total_is_exact": true,
+      "limitations": [
+        "One recorded caller step to a direct publisher, optionally through an explicit interface implementation. No runtime dispatch, delivery, activation, or DI selection is established.",
+        "Each hop retains its captured compilation. Selected cross-project contexts do not certify dependency-closure compatibility.",
+        "Only captured exact calls and supported interface implementations are searched. No recursive call traversal or synthetic publisher facts; missing paths are not absence."
+      ]
+    }
+  },
+  {
+    "case": "validation-wrapper",
+    "negative": false,
+    "contexts": [
+      "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f"
+    ],
+    "complete_response_bytes": 12147,
+    "structured_content_bytes": 11865,
+    "result": {
+      "status": "ok",
+      "evidence_scope": "compile_time",
+      "path_semantics": "candidate_static",
+      "snapshot_id": "reverse-outbox",
+      "artifact_sha256": "24a95f5ad7307d6f3fdaf151e230b26e5cf72d2fec41971476fc4f7135cdac70",
+      "context_ids": [
+        "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f"
+      ],
+      "seeds": [
+        {
+          "contract": {
+            "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "matched_roles": [
+            "message"
+          ],
+          "fact": {
+            "kind": "message_publish",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          },
+          "source": {
+            "generated": false,
+            "occurrence_id": "occurrence:2f0bcd70c3b185eb1f48dae0b151843d2e51acb4d2a33ae25f37556f975e06b4",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+            "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20",
+            "source_id": "source:2dd01c232806047ec14dcf5dfc6292e134286b4f2d52e08082ce2d0a81715a84",
+            "source_snapshot_id": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+            "context_id": "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f",
+            "project": "src/Sample.Components/Sample.Components.csproj",
+            "byte_offset": 474,
+            "byte_length": 7,
+            "symbol": {
+              "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+              "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "6",
+            "domain_facts": [
+              {
+                "kind": "message_publish",
+                "rule": "csharp-framework-v1",
+                "evidence_scope": "compile_time",
+                "targets": [
+                  {
+                    "role": "message",
+                    "symbol": {
+                      "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+                      "language": "csharp",
+                      "namespace_kind": "project",
+                      "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                      "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+                      "descriptor_kind": "documentation_comment_id"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "owner": {
+            "id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.Services.RegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "paths": [
+        {
+          "seed": {
+            "contract": {
+              "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "matched_roles": [
+              "message"
+            ],
+            "fact": {
+              "kind": "message_publish",
+              "rule": "csharp-framework-v1",
+              "evidence_scope": "compile_time",
+              "targets": [
+                {
+                  "role": "message",
+                  "symbol": {
+                    "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                    "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                }
+              ]
+            },
+            "source": {
+              "generated": false,
+              "occurrence_id": "occurrence:2f0bcd70c3b185eb1f48dae0b151843d2e51acb4d2a33ae25f37556f975e06b4",
+              "binding_status": "resolved",
+              "reference_kind": "invocation",
+              "role": "reference",
+              "repo": "Sample-Outbox",
+              "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+              "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20",
+              "source_id": "source:2dd01c232806047ec14dcf5dfc6292e134286b4f2d52e08082ce2d0a81715a84",
+              "source_snapshot_id": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+              "context_id": "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f",
+              "project": "src/Sample.Components/Sample.Components.csproj",
+              "byte_offset": 474,
+              "byte_length": 7,
+              "symbol": {
+                "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+                "language": "csharp",
+                "namespace_kind": "assembly",
+                "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+                "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              "candidates": [],
+              "enclosing_symbol_id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+              "method": "roslyn-semantic-model",
+              "extractor": "msbuild-roslyn",
+              "extractor_version": "6",
+              "domain_facts": [
+                {
+                  "kind": "message_publish",
+                  "rule": "csharp-framework-v1",
+                  "evidence_scope": "compile_time",
+                  "targets": [
+                    {
+                      "role": "message",
+                      "symbol": {
+                        "id": "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf",
+                        "language": "csharp",
+                        "namespace_kind": "project",
+                        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                        "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+                        "descriptor_kind": "documentation_comment_id"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "owner": {
+              "id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.Services.RegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          },
+          "caller": {
+            "generated": false,
+            "occurrence_id": "occurrence:c9d8b9dd4089866a203f26a00108e5bf8d987fa10b5b212ec014bb1800615115",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+            "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca",
+            "source_id": "source:d3b3e4a4bb9266e62ae16f0cb39fd08d4c302d877152eb645afb249502f87c73",
+            "source_snapshot_id": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+            "context_id": "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f",
+            "project": "src/Sample.Components/Sample.Components.csproj",
+            "byte_offset": 667,
+            "byte_length": 20,
+            "symbol": {
+              "id": "symbol:9ce6605baa8091eeaba7a7548ff477b6a822eca842c2957abdf82c5260fa08c9",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:8cc299bf54248caa82be7fc005176c3de5c21532ca9a07fe0a50ae8f17b6c865",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "6"
+          },
+          "caller_owner": {
+            "id": "symbol:8cc299bf54248caa82be7fc005176c3de5c21532ca9a07fe0a50ae8f17b6c865",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.Consumers.ValidateRegistrationConsumer.Consume(MassTransit.ConsumeContext{Sample.Components.Contracts.AddEventAttendee})",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "implementation": {
+            "kind": "interface_method_implementation",
+            "rule": "csharp-interface-v1",
+            "evidence_scope": "compile_time",
+            "source": {
+              "generated": false,
+              "occurrence_id": "occurrence:d17ecadd90276a0151089c986b86f0b4f17c49c6fd9c4e6fde989ea6fe0700c7",
+              "binding_status": "resolved",
+              "reference_kind": "declaration",
+              "role": "declaration",
+              "repo": "Sample-Outbox",
+              "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+              "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20",
+              "source_id": "source:2dd01c232806047ec14dcf5dfc6292e134286b4f2d52e08082ce2d0a81715a84",
+              "source_snapshot_id": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+              "context_id": "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f",
+              "project": "src/Sample.Components/Sample.Components.csproj",
+              "byte_offset": 362,
+              "byte_length": 20,
+              "symbol": {
+                "id": "symbol:e38f65a73a09adb9f54f4c20076b0603b52dc9bb9086d76efe6539181951c3f1",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                "descriptor": "M:Sample.Components.Services.RegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+                "descriptor_kind": "documentation_comment_id"
+              },
+              "candidates": [],
+              "method": "roslyn-semantic-model",
+              "extractor": "msbuild-roslyn",
+              "extractor_version": "6",
+              "implementation_facts": [
+                {
+                  "kind": "interface_method_implementation",
+                  "rule": "csharp-interface-v1",
+                  "evidence_scope": "compile_time",
+                  "interface_symbol_id": "symbol:9ce6605baa8091eeaba7a7548ff477b6a822eca842c2957abdf82c5260fa08c9",
+                  "implementing_type_symbol_id": "symbol:c6cf6aeec6a0be4bb174922e3583e6bff0112a05bba555ae0d57dcbda1eb6d98"
+                }
+              ],
+              "implementation_symbols": [
+                {
+                  "id": "symbol:9ce6605baa8091eeaba7a7548ff477b6a822eca842c2957abdf82c5260fa08c9",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "M:Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+                  "descriptor_kind": "documentation_comment_id"
+                },
+                {
+                  "id": "symbol:c6cf6aeec6a0be4bb174922e3583e6bff0112a05bba555ae0d57dcbda1eb6d98",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Services.RegistrationValidationService",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              ]
+            },
+            "interface_member": {
+              "id": "symbol:9ce6605baa8091eeaba7a7548ff477b6a822eca842c2957abdf82c5260fa08c9",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "M:Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "implementing_type": {
+              "id": "symbol:c6cf6aeec6a0be4bb174922e3583e6bff0112a05bba555ae0d57dcbda1eb6d98",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Services.RegistrationValidationService",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        }
+      ],
+      "limit": 20,
+      "records": 4,
+      "rows_visited": 3,
+      "work_limit": 10000,
+      "materialization_byte_limit": 2097152,
+      "seeds_truncated": false,
+      "paths_truncated": false,
+      "total_is_exact": true,
+      "limitations": [
+        "One recorded caller step to a direct publisher, optionally through an explicit interface implementation. No runtime dispatch, delivery, activation, or DI selection is established.",
+        "Each hop retains its captured compilation. Selected cross-project contexts do not certify dependency-closure compatibility.",
+        "Only captured exact calls and supported interface implementations are searched. No recursive call traversal or synthetic publisher facts; missing paths are not absence."
+      ]
+    }
+  },
+  {
+    "case": "validation-wrapper",
+    "negative": true,
+    "contexts": [
+      "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f"
+    ],
+    "complete_response_bytes": 4214,
+    "structured_content_bytes": 3932,
+    "result": {
+      "status": "no_recorded_paths",
+      "evidence_scope": "compile_time",
+      "path_semantics": "candidate_static",
+      "snapshot_id": "reverse-outbox",
+      "artifact_sha256": "24a95f5ad7307d6f3fdaf151e230b26e5cf72d2fec41971476fc4f7135cdac70",
+      "context_ids": [
+        "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f"
+      ],
+      "seeds": [
+        {
+          "contract": {
+            "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "matched_roles": [
+            "message"
+          ],
+          "fact": {
+            "kind": "message_publish",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          },
+          "source": {
+            "generated": false,
+            "occurrence_id": "occurrence:612ff91eb6b3366fecc3de59bc75d536eba0de380807b8f30defbf815a95a7f6",
+            "binding_status": "resolved",
+            "reference_kind": "invocation",
+            "role": "reference",
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+            "source_id": "source:791ba2b0a3f0ddb48aa45325578e8b76fa237c97104e88affc909ad9da0278df",
+            "source_snapshot_id": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+            "context_id": "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f",
+            "project": "src/Sample.Components/Sample.Components.csproj",
+            "byte_offset": 931,
+            "byte_length": 7,
+            "symbol": {
+              "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+              "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            "candidates": [],
+            "enclosing_symbol_id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "6",
+            "domain_facts": [
+              {
+                "kind": "message_publish",
+                "rule": "csharp-framework-v1",
+                "evidence_scope": "compile_time",
+                "targets": [
+                  {
+                    "role": "message",
+                    "symbol": {
+                      "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                      "language": "csharp",
+                      "namespace_kind": "project",
+                      "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                      "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                      "descriptor_kind": "documentation_comment_id"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "owner": {
+            "id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "paths": [],
+      "limit": 20,
+      "records": 1,
+      "rows_visited": 4,
+      "work_limit": 10000,
+      "materialization_byte_limit": 2097152,
+      "seeds_truncated": false,
+      "paths_truncated": false,
+      "total_is_exact": true,
+      "limitations": [
+        "One recorded caller step to a direct publisher, optionally through an explicit interface implementation. No runtime dispatch, delivery, activation, or DI selection is established.",
+        "Each hop retains its captured compilation. Selected cross-project contexts do not certify dependency-closure compatibility.",
+        "Only captured exact calls and supported interface implementations are searched. No recursive call traversal or synthetic publisher facts; missing paths are not absence."
+      ]
+    }
+  }
+]

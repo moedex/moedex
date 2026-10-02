@@ -1,0 +1,7 @@
+  graph: FULL rebuild (no previous graph): 164310 name(s) swept, 182844081 edge(s), generation 1
+  graph candidate census: 6373019 source record(s), 160696 shared target set(s), 253951 target key(s), 182597545 logical edge(s); 164310 name(s) on 8 worker(s), prepare=42.021s
+  graph source verification: 8898523 source(s), 232754358 candidate pair(s), 182597653 retained pair(s) before content deduplication
+  graph quality: suppressed 50156705 raw Candidate occurrence edge(s)
+  clusters: status=over_cap eligible=651659/2215076 node(s), 80254679/182844081 edge(s), node_cap=250000, edge_cap=1000000, communities=0, build=892ms
+  graph counts: source={occurrence=47394571, symbol=135449510} confidence={Candidate=72157885, Pattern=110465259, Proven=220937} edge={calls=79068126, candidate=58114794, contains_method=220937, extends=20413, implements=5169, imports=1186553, injects=17, publishes=20817, references=27150955, sibling_definition=14027492, uses_type=3028808} enclosing={resolved=135449510, unresolved=47394571}
+  graph resources: elapsed=3m29.769s peak_go_runtime=6.05 GiB

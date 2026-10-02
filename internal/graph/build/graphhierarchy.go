@@ -330,15 +330,15 @@ func resolveAndEmitSuper(
 ) error {
 	report.TypesScanned++
 
-	defs := sweep.merged.Definitions(sup.superName)
+	defs := scopedTypeTargets(sweep, sourceBlobSHA, sup.superName)
 	if len(defs) == 0 {
 		report.UnresolvedSupers++
 		return nil
 	}
 
-	// Emit edge to each definition — content-addressed dedup handles identical
-	// content across shards.
-	for _, def := range defs {
+	// Preserve possible targets, but syntax-only name binding is never Proven.
+	for _, target := range defs {
+		def := target.ref
 		if def.Shard < 0 || def.Shard >= len(sweep.idxs) {
 			continue
 		}
@@ -378,7 +378,7 @@ func resolveAndEmitSuper(
 			typeID:         edgeType,
 			targetBlob:     targetBlob.SHA,
 			targetOffset:   uint64(def.Start),
-			confidence:     uint64(graph.Proven),
+			confidence:     uint64(target.confidence),
 			evidenceBlob:   sourceBlobSHA,
 			evidence:       uint64(sup.superOffset),
 			evidenceLength: evidenceLen,
@@ -392,7 +392,7 @@ func resolveAndEmitSuper(
 			Type:         edgeType,
 			TargetBlob:   targetBlob.SHA,
 			TargetOffset: uint64(def.Start),
-			Confidence:   graph.Proven,
+			Confidence:   target.confidence,
 			Evidence: graph.Evidence{
 				BlobSHA:    sourceBlobSHA,
 				ByteOffset: uint64(sup.superOffset),

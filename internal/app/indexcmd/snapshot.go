@@ -140,9 +140,13 @@ func runSnapshotMigrate(args []string) error {
 	return nil
 }
 
-// runSnapshotBuild writes every required lexical/rank/graph artifact into a
+// runSnapshotBuild writes lexical/rank and requested optional artifacts into a
 // private transaction and publishes only after the complete tree validates.
 func runSnapshotBuild(args []string) error {
+	return runSnapshotBuildContext(context.Background(), args)
+}
+
+func runSnapshotBuildContext(ctx context.Context, args []string) error {
 	fs := newFlagSet("snapshot-build")
 	indexDir := fs.String("index-dir", defaultIndexDir(), "snapshot index root")
 	corpus := fs.String("corpus", os.Getenv("MOEDEX_CORPUS"), "corpus root")
@@ -152,11 +156,21 @@ func runSnapshotBuild(args []string) error {
 	selective := fs.Bool("selective", false, "use the parity-safe selective trigram index")
 	gramMaxDF := fs.Float64("gram-max-df", 0.9, "with -selective: maximum trigram document-frequency fraction")
 	dense := fs.Bool("dense", false, "build the ONNX dense component before publication (requires -tags onnx)")
+	graph := fs.Bool("graph", true, "build the heuristic graph component before publication")
+	semanticArtifact := fs.String("semantic-artifact", "", "attach a complete compiler artifact (including composed captures) after checking recorded inputs")
+	semanticWorkspace := fs.String("semantic-workspace", "", "retained compiler projection for recorded source/configuration revalidation")
+	semanticWorkspaces := fs.String("semantic-workspaces", "", "JSON map of every source snapshot ID to its retained compiler workspace; alternative to semantic-workspace")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if *corpus == "" {
 		return fmt.Errorf("snapshot-build requires -corpus")
+	}
+	if (*semanticWorkspace != "" || *semanticWorkspaces != "") && *semanticArtifact == "" {
+		return fmt.Errorf("snapshot-build: semantic workspace options require semantic-artifact")
+	}
+	if *semanticWorkspace != "" && *semanticWorkspaces != "" {
+		return fmt.Errorf("snapshot-build: semantic-workspace and semantic-workspaces are mutually exclusive")
 	}
 	root, err := filepath.Abs(*corpus)
 	if err != nil {
@@ -183,7 +197,7 @@ func runSnapshotBuild(args []string) error {
 	if *selective {
 		selector = index.FrequencyThresholdSelector{MaxDocFraction: *gramMaxDF}
 	}
-	m, nShards, nFiles, err := buildShards(context.Background(), root, serveDir, *shardBytes, selector, mkLogf(*verbose))
+	m, nShards, nFiles, err := buildShards(ctx, root, serveDir, *shardBytes, selector, mkLogf(*verbose))
 	if err != nil {
 		return err
 	}
@@ -193,10 +207,12 @@ func runSnapshotBuild(args []string) error {
 	if _, _, err := server.BuildSidecars(serveDir); err != nil {
 		return fmt.Errorf("build ranking components: %w", err)
 	}
-	if _, stats, err := buildGraph(serveDir); err != nil {
-		return fmt.Errorf("build graph component: %w", err)
-	} else {
-		printGraphStats(stats)
+	if *graph {
+		if _, stats, err := buildGraph(serveDir); err != nil {
+			return fmt.Errorf("build graph component: %w", err)
+		} else {
+			printGraphStats(stats)
+		}
 	}
 	if *dense {
 		if err := buildSnapshotDense(serveDir); err != nil {
@@ -209,6 +225,14 @@ func runSnapshotBuild(args []string) error {
 	}
 	manifest, err := indexsnapshot.CaptureServingTree(tx, snapshotProducer())
 	if err != nil {
+		return err
+	}
+	if *semanticArtifact != "" {
+		if err := attachSemantic(ctx, *semanticArtifact, tx, manifest, m, *semanticWorkspace, *semanticWorkspaces); err != nil {
+			return fmt.Errorf("attach semantic artifact: %w", err)
+		}
+	}
+	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if err := tx.Commit(manifest); err != nil {

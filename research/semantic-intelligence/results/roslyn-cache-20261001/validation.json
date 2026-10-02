@@ -1,0 +1,35 @@
+{
+  "record_type": "commands and completion results transcribed from tool output; not raw process logs",
+  "results": [
+    {
+      "command": "go test ./...",
+      "result": "passed; internal/blobstore 67.166s, graph/serve 4.001s, symbol 1.600s"
+    },
+    {
+      "command": "go vet ./...",
+      "result": "passed"
+    },
+    {
+      "command": "go build ./...",
+      "result": "passed"
+    },
+    {
+      "command": "go test -race ./internal/graph/serve ./internal/symbol -run 'TestCacheAcceptance|TestCatalogCache|TestGraphSymbolCache|TestSymbolStream' -count=1",
+      "result": "passed; 3.779s / 1.618s"
+    },
+    {
+      "command": "go test ./internal/symbol ./internal/graph/serve -run 'TestSymbolStream|TestGraphSymbol' -count=1",
+      "result": "passed after final test additions; 0.594s / 0.715s"
+    },
+    {
+      "command": "go test -race ./internal/symbol ./internal/graph/serve -run 'TestSymbolStream|TestGraphSymbol' -count=1",
+      "result": "passed after final test additions; 1.192s / 1.591s"
+    },
+    {
+      "command": "go test -tags lsp ./internal/graph/serve ./internal/graph/build -run 'TestCacheAcceptance|LSP|Factored|Finalize' -count=1",
+      "result": "passed; 1.164s / 1.931s"
+    }
+  ],
+  "source_note": "Production behavior frozen before cold trial; final binary adds final tests and explanatory comments only.",
+  "review": "Independent integration/race tests and cache/report review found no acceptance blocker."
+}

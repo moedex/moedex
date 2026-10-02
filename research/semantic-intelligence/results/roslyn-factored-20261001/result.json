@@ -1,0 +1,304 @@
+{
+  "date_local": "2026-09-30",
+  "status": "passed compact publication, persisted anchors, MCP wire, unchanged refresh; clustering over_cap; latency gate open",
+  "source": {
+    "source_snapshot": "20260930T230839Z-1",
+    "source_commit": "36d26c5466e4d25940657ccb8d5b9557ccaf7be1",
+    "shards": [
+      {
+        "name": "shard-0000.idx",
+        "bytes": 426353753,
+        "sha256": "c7c1941da48b15d33902954a7733e7d2f83cae01d70f701febe3f353510e7320"
+      },
+      {
+        "name": "shard-0001.idx",
+        "bytes": 418489359,
+        "sha256": "41fb5b8ceb6d875e656142355cfbce3bf17f1ce3054e897e889ecc761a6c5676"
+      },
+      {
+        "name": "shard-0002.idx",
+        "bytes": 368739716,
+        "sha256": "c67034c72fcd3fe28cfb05299dcd974181fc6aeb06165e5ed58c2019c971c603"
+      }
+    ]
+  },
+  "graph": {
+    "bytes": 763241278,
+    "sha256": "fcc77570f2f18640264f216d29a54c68cd5253490d34270d5e0fb436efa8d002",
+    "logical_edges": 182844081,
+    "physical_records": 6619555,
+    "target_sets": 69394,
+    "nodes": 2215076,
+    "generation": 1,
+    "unchanged_refresh_byte_identical": true
+  },
+  "cluster": {
+    "version": 3,
+    "generation": 1,
+    "status": "over_cap",
+    "observed_nodes": 2215076,
+    "observed_edges": 182844081,
+    "eligible_nodes": 651659,
+    "eligible_edges": 80254679,
+    "cap": 250000,
+    "edge_cap": 1000000,
+    "build_millis": 598,
+    "clusters": []
+  },
+  "runs": {
+    "build": {
+      "command": [
+        "/private/tmp/moedex-roslyn-factored-20261001/moedex",
+        "graph",
+        "build",
+        "--shard-dir",
+        "/private/tmp/moedex-roslyn-factored-20261001/shards"
+      ],
+      "cwd": "/Users/zakkeown/Code/moedex",
+      "environment": {
+        "PATH": "/usr/bin:/bin",
+        "HOME": "/private/tmp/moedex-roslyn-factored-20261001/home",
+        "TMPDIR": "/private/tmp/moedex-roslyn-factored-20261001/tmp",
+        "GOMAXPROCS": "8",
+        "GOMEMLIMIT": "6GiB"
+      },
+      "started_utc": "2026-10-01T00:31:32.591937+00:00",
+      "elapsed_seconds": 355.377725499995,
+      "exit_code": 0,
+      "stop_reasons": [],
+      "timeout_seconds": 600,
+      "max_log_bytes": 16777216,
+      "memory_metric": "macos_physical_footprint",
+      "max_memory_bytes": 8589934592,
+      "sampled_peak_memory_bytes": 6400088256,
+      "memory_samples": 1391,
+      "sample_interval_seconds": 0.25,
+      "memory_scope": "direct child only",
+      "runner_sha256": "65eedda0b780ec22cf4a948f83c16f05953b176d7bdd0eec8abe20bc242a6e18"
+    },
+    "anchors": {
+      "command": [
+        "/usr/bin/env",
+        "MOEDEX_ROSLYN_SOURCE=/private/tmp/moedex-public-oracle/corpus/roslyn",
+        "MOEDEX_ROSLYN_GRAPH=/private/tmp/moedex-roslyn-factored-20261001/shards/corpus-graph.graph",
+        "/private/tmp/moedex-roslyn-factored-20261001/build.test",
+        "-test.run",
+        "^TestPinnedRoslynGraphLiteralDefinitions$",
+        "-test.v"
+      ],
+      "cwd": "/Users/zakkeown/Code/moedex",
+      "environment": {
+        "PATH": "/usr/bin:/bin",
+        "HOME": "/private/tmp/moedex-roslyn-factored-20261001/home",
+        "TMPDIR": "/private/tmp/moedex-roslyn-factored-20261001/tmp",
+        "GOMAXPROCS": "8",
+        "GOMEMLIMIT": "6GiB"
+      },
+      "started_utc": "2026-10-01T00:38:08.140975+00:00",
+      "elapsed_seconds": 1.8208322080026846,
+      "exit_code": 1,
+      "stop_reasons": [],
+      "timeout_seconds": 600,
+      "max_log_bytes": 16777216,
+      "memory_metric": "macos_physical_footprint",
+      "max_memory_bytes": 8589934592,
+      "sampled_peak_memory_bytes": 59622624,
+      "memory_samples": 7,
+      "sample_interval_seconds": 0.25,
+      "memory_scope": "direct child only",
+      "runner_sha256": "65eedda0b780ec22cf4a948f83c16f05953b176d7bdd0eec8abe20bc242a6e18"
+    },
+    "anchors-indexed": {
+      "command": [
+        "/usr/bin/env",
+        "MOEDEX_ROSLYN_SOURCE=/private/tmp/moedex-public-oracle/corpus/roslyn",
+        "MOEDEX_ROSLYN_GRAPH=/private/tmp/moedex-roslyn-factored-20261001/shards/corpus-graph.graph",
+        "/private/tmp/moedex-roslyn-factored-20261001/build.test",
+        "-test.run",
+        "^TestPinnedRoslynGraphLiteralDefinitions$",
+        "-test.v"
+      ],
+      "cwd": "/Users/zakkeown/Code/moedex",
+      "environment": {
+        "PATH": "/usr/bin:/bin",
+        "HOME": "/private/tmp/moedex-roslyn-factored-20261001/home",
+        "TMPDIR": "/private/tmp/moedex-roslyn-factored-20261001/tmp",
+        "GOMAXPROCS": "8",
+        "GOMEMLIMIT": "6GiB"
+      },
+      "started_utc": "2026-10-01T00:40:12.527191+00:00",
+      "elapsed_seconds": 1.2982076250045793,
+      "exit_code": 0,
+      "stop_reasons": [],
+      "timeout_seconds": 600,
+      "max_log_bytes": 16777216,
+      "memory_metric": "macos_physical_footprint",
+      "max_memory_bytes": 8589934592,
+      "sampled_peak_memory_bytes": 68224224,
+      "memory_samples": 5,
+      "sample_interval_seconds": 0.25,
+      "memory_scope": "direct child only",
+      "runner_sha256": "65eedda0b780ec22cf4a948f83c16f05953b176d7bdd0eec8abe20bc242a6e18"
+    },
+    "mcp": {
+      "command": [
+        "/usr/bin/env",
+        "MOEDEX_ROSLYN_GRAPH_DIR=/private/tmp/moedex-roslyn-factored-20261001/shards",
+        "/private/tmp/moedex-roslyn-factored-20261001/serve.test",
+        "-test.run",
+        "^TestPinnedRoslynFactoredGraphMCP$",
+        "-test.v"
+      ],
+      "cwd": "/Users/zakkeown/Code/moedex",
+      "environment": {
+        "PATH": "/usr/bin:/bin",
+        "HOME": "/private/tmp/moedex-roslyn-factored-20261001/home",
+        "TMPDIR": "/private/tmp/moedex-roslyn-factored-20261001/tmp",
+        "GOMAXPROCS": "8",
+        "GOMEMLIMIT": "6GiB"
+      },
+      "started_utc": "2026-10-01T00:38:26.539947+00:00",
+      "elapsed_seconds": 138.91679908399965,
+      "exit_code": 1,
+      "stop_reasons": [],
+      "timeout_seconds": 600,
+      "max_log_bytes": 16777216,
+      "memory_metric": "macos_physical_footprint",
+      "max_memory_bytes": 8589934592,
+      "sampled_peak_memory_bytes": 2784726112,
+      "memory_samples": 540,
+      "sample_interval_seconds": 0.25,
+      "memory_scope": "direct child only",
+      "runner_sha256": "65eedda0b780ec22cf4a948f83c16f05953b176d7bdd0eec8abe20bc242a6e18"
+    },
+    "mcp-wire": {
+      "command": [
+        "/usr/bin/env",
+        "MOEDEX_ROSLYN_GRAPH_DIR=/private/tmp/moedex-roslyn-factored-20261001/shards",
+        "/private/tmp/moedex-roslyn-factored-20261001/serve.test",
+        "-test.run",
+        "^TestPinnedRoslynFactoredGraphMCP$",
+        "-test.v"
+      ],
+      "cwd": "/Users/zakkeown/Code/moedex",
+      "environment": {
+        "PATH": "/usr/bin:/bin",
+        "HOME": "/private/tmp/moedex-roslyn-factored-20261001/home",
+        "TMPDIR": "/private/tmp/moedex-roslyn-factored-20261001/tmp",
+        "GOMAXPROCS": "8",
+        "GOMEMLIMIT": "6GiB"
+      },
+      "started_utc": "2026-10-01T00:41:22.083274+00:00",
+      "elapsed_seconds": 214.2329962090007,
+      "exit_code": 0,
+      "stop_reasons": [],
+      "timeout_seconds": 600,
+      "max_log_bytes": 16777216,
+      "memory_metric": "macos_physical_footprint",
+      "max_memory_bytes": 8589934592,
+      "sampled_peak_memory_bytes": 3538013880,
+      "memory_samples": 839,
+      "sample_interval_seconds": 0.25,
+      "memory_scope": "direct child only",
+      "runner_sha256": "65eedda0b780ec22cf4a948f83c16f05953b176d7bdd0eec8abe20bc242a6e18"
+    },
+    "refresh": {
+      "command": [
+        "/private/tmp/moedex-roslyn-factored-20261001/moedex",
+        "graph",
+        "build",
+        "--shard-dir",
+        "/private/tmp/moedex-roslyn-factored-20261001/shards"
+      ],
+      "cwd": "/Users/zakkeown/Code/moedex",
+      "environment": {
+        "PATH": "/usr/bin:/bin",
+        "HOME": "/private/tmp/moedex-roslyn-factored-20261001/home",
+        "TMPDIR": "/private/tmp/moedex-roslyn-factored-20261001/tmp",
+        "GOMAXPROCS": "8",
+        "GOMEMLIMIT": "6GiB"
+      },
+      "started_utc": "2026-10-01T00:45:04.727267+00:00",
+      "elapsed_seconds": 243.78447045900248,
+      "exit_code": 0,
+      "stop_reasons": [],
+      "timeout_seconds": 600,
+      "max_log_bytes": 16777216,
+      "memory_metric": "macos_physical_footprint",
+      "max_memory_bytes": 8589934592,
+      "sampled_peak_memory_bytes": 3475724096,
+      "memory_samples": 955,
+      "sample_interval_seconds": 0.25,
+      "memory_scope": "direct child only",
+      "runner_sha256": "65eedda0b780ec22cf4a948f83c16f05953b176d7bdd0eec8abe20bc242a6e18"
+    }
+  },
+  "binary_sha256": {
+    "moedex": "0dfc30ee9407b0bfe28f411a08a70e6ab8b727fc564f922a47edf8435b9e1e87",
+    "build.test": "17fe1272fab785e50092d593d1970b4a9b1ad8e5476dc96333426815cae10e75",
+    "serve.test": "8b6cb0b5d660de2e5aa5984e02c0f215fd650412bd71f263eac6603a251fb8f7"
+  },
+  "validation": {
+    "go_test_all": "passed on frozen production code; corpus tests require explicit environment",
+    "go_vet_all": "passed",
+    "executable_build": "passed",
+    "expanded_publication_oracle": "24 deterministic seeds passed",
+    "focused_race": "diskgraph, graph build/serve/cluster and MCP passed",
+    "tagged_lsp": "focused reconciliation/build/refresh suite passed",
+    "runner_tests": "4 passed",
+    "persisted_anchors": "passed after test raw-to-indexed BOM offset correction",
+    "mcp_wire": "passed after independent public confidence decoder correction",
+    "unchanged_refresh": "exit 0, generation 1, identical complete graph SHA256"
+  },
+  "mcp_observations": {
+    "open_seconds": 156.518141958,
+    "trace_calls_Main_seconds": 1.601514167,
+    "trace_calls_Create_seconds": 36.965307541,
+    "impact_analysis_Create_seconds": 17.234470792,
+    "all_queries_truncated": true,
+    "all_queries_total_is_exact": false,
+    "expansion_limit": 10000
+  },
+  "scope": [
+    "single pinned public repository, default pure-Go syntax graph",
+    "not compiler precision/recall or competitive-quality evidence",
+    "clustering unavailable above configured limits",
+    "query and startup timings do not establish interactive readiness",
+    "sampled direct-child memory guard; not OS allocation limit",
+    "two one-second native samples during build; test/anchor work overlapped MCP startup",
+    "optional persisted call-audit remains exhaustive; overlapping repository contexts unmeasured"
+  ],
+  "corrections": [
+    "anchors first attempt used raw offsets471/1101; ingest strips3-byteBOM while retaining rawGitidentity; corrected indexed468/1098 passed",
+    "MCP first attempt decoded public string tier into output-only internal numeric enum; independent wire decoder passed; no production code or graph rebuilt"
+  ],
+  "evidence_sha256": {
+    "after-refresh.json": "6d6a61e55b2a6b157ba6814b97d48b27870876e6c677ecd836128fe46887845d",
+    "anchors-indexed.json": "6aab80a6ba489bf5246acf5a5acc90c85d3a69f5f85bd081745df9894133feac",
+    "anchors-indexed.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "anchors-indexed.stdout": "1c14f033e79ca06295d59d55be108a3647a7ebaab6ebaed76dcbf42a72554c79",
+    "anchors.json": "fa0a428fa748c78b91ca3ed6a01235766d44248cb0ac0703056ef961911215d4",
+    "anchors.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "anchors.stdout": "73cfb86702233c689aab8ebdc3be77f812f3a474a4558cf7da69d84d7afcf156",
+    "before-refresh.json": "6d6a61e55b2a6b157ba6814b97d48b27870876e6c677ecd836128fe46887845d",
+    "binary-sha256.json": "976c08a526a9037a02d6e6692ee740baf86cc46dc154f8242d6ac49c1b259855",
+    "build-counts.sample.txt": "9389222c044a5074e90392a59b7224b8d5dafca7d9091c421875a94cbe80dfd8",
+    "build.json": "6e8c5111fe26f34c0954ce10d78d96cfee373f6ec582958cc3a15772e1b55683",
+    "build.sample.txt": "854a3aef5f5f9c10e12b00b6865e4542ec313d511ef8083188d5a37b93301211",
+    "build.stderr": "62504e4d05d7ffc205cc54929db681124d2fbab5eaf666f3ad8bdd5b478a7825",
+    "build.stdout": "7a55ef981ad9f5f929b6acd1abada020ec24ef14d12e2212d27a89caced4c24b",
+    "clusters.json": "50f3fe071b20ba264424d81e7665b0ad26eaaa2c84ad2f159323ad80c78bac56",
+    "implementation-sha256.json": "a3af70710574856e835e3eabae95598c158bad5e4817b4e65c335ca3ef0d8559",
+    "inputs.json": "70e925115d306bd14f01035cfeb6dae1ef54d85677fca75bcaf66e4a46fba2ee",
+    "mcp-wire.json": "3691cde8b92ee0c84fa7da473ac2c2718649a355d24dfa9cc941607e56eb1ab3",
+    "mcp-wire.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "mcp-wire.stdout": "2bc0c6b0aeaee3e6adf3773df6d50e880b2006095a8fa4fcc0aad8a00563fee5",
+    "mcp.json": "e0ee31e0ba4c60f48de46bc7a95d444b0fc2d6ade6ee91927586c36c97f1d643",
+    "mcp.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "mcp.stdout": "72a1f9914b54d45767e6cef6d2b941e97fd1e80ac9b15999e4a60762f640d7f6",
+    "refresh.json": "649b17acb068f041b4e4e6f35143825a00f59e7468666ee5a031d6650b6a72b5",
+    "refresh.stderr": "247352fcb97e64f09c36981fedbbb8cd417e7f4820f71bb3252fbb7b202b157b",
+    "refresh.stdout": "4a78942d251febeb5259855a5b361bf1fb1f11994bdbe24e44a8ea2156cf50ef",
+    "runner.py": "65eedda0b780ec22cf4a948f83c16f05953b176d7bdd0eec8abe20bc242a6e18"
+  }
+}

@@ -1109,11 +1109,25 @@ func probeAngularBucket(bucket []int, source, table, limit int, visit func(int))
 // Search embeds query via e and returns the topK most similar chunks, best
 // first. Ties break stably by chunk index (lower index first).
 func (s *Store) Search(ctx context.Context, e Embedder, query string, topK int) ([]Hit, error) {
+	return s.SearchFiltered(ctx, e, query, topK, nil)
+}
+
+// SearchFiltered performs exact top-K retrieval over accepted blob IDs. The
+// predicate runs before vector scoring and worker-local top-K selection, so
+// excluded chunks cannot displace eligible hits. It must be concurrency-safe;
+// nil preserves Search behavior.
+func (s *Store) SearchFiltered(ctx context.Context, e Embedder, query string, topK int, acceptBlob func(uint64) bool) ([]Hit, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if topK <= 0 || len(s.chunks) == 0 {
 		return nil, nil
 	}
 	vecs, err := e.Embed(ctx, []string{query})
 	if err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 	if len(vecs) != 1 {
@@ -1127,19 +1141,23 @@ func (s *Store) Search(ctx context.Context, e Embedder, query string, topK int) 
 	// entries by construction, so a mixed-dimension store cannot be represented.
 	// The old check walked all 953,451 vectors on EVERY query to find nothing.
 
-	// Score every chunk by cosine (vectors are unit-normalized, so dot == cosine).
-	// The scan is O(chunks*dim) and dominates query latency at corpus scale, so the
-	// dot products run in parallel across GOMAXPROCS shards (disjoint index ranges,
-	// no synchronization needed — each goroutine writes its own slice region).
+	// Exact cosine search with worker-local top-K heaps. Only a worker's top K
+	// can enter the global top K, so this preserves ranking without allocating
+	// one score per corpus chunk. The process-wide worker budget also covers old
+	// and new stores during reload. Waiting and scanning both honor cancellation.
 	n := s.Len()
-	scores := make([]float32, n)
-	workers := runtime.GOMAXPROCS(0)
-	if workers > n {
-		workers = n
+	if topK > n {
+		topK = n
 	}
-	if workers < 1 {
-		workers = 1
+	workers, release, err := searchWorkers.acquire(ctx, min(runtime.GOMAXPROCS(0), n))
+	if err != nil {
+		return nil, err
 	}
+	defer release()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	partials := make([]scoreHeap, workers)
 	var wg sync.WaitGroup
 	step := (n + workers - 1) / workers
 	for w := 0; w < workers; w++ {
@@ -1152,30 +1170,38 @@ func (s *Store) Search(ctx context.Context, e Embedder, query string, topK int) 
 			hi = n
 		}
 		wg.Add(1)
-		go func(lo, hi int) {
+		go func(w, lo, hi int) {
 			defer wg.Done()
+			h := make(scoreHeap, 0, min(topK, hi-lo))
 			for i := lo; i < hi; i++ {
-				scores[i] = s.scoreAgainst(q, i)
+				if (i-lo)%256 == 0 && ctx.Err() != nil {
+					return
+				}
+				if acceptBlob != nil && !acceptBlob(s.chunks[i].Blob) {
+					continue
+				}
+				keepScore(&h, scored{idx: i, score: s.scoreAgainst(q, i)}, topK)
 			}
-		}(lo, hi)
+			partials[w] = h
+		}(w, lo, hi)
 	}
 	wg.Wait()
-
-	if topK > n {
-		topK = n
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 	// Bounded top-K selection: a min-heap of size topK whose root is the weakest kept
 	// element (lowest score; higher index breaks ties). A candidate that betterThan the
 	// root replaces it. This is O(n log topK) instead of sorting all n, and yields the
 	// exact same top-K (and order) as a stable score-desc/index-asc sort.
 	h := make(scoreHeap, 0, topK)
-	for i := 0; i < n; i++ {
-		sc := scored{idx: i, score: scores[i]}
-		if len(h) < topK {
-			heap.Push(&h, sc)
-		} else if betterThan(sc, h[0]) {
-			h[0] = sc
-			heap.Fix(&h, 0)
+	for _, partial := range partials {
+		for i, sc := range partial {
+			if i%256 == 0 {
+				if err := ctx.Err(); err != nil {
+					return nil, err
+				}
+			}
+			keepScore(&h, sc, topK)
 		}
 	}
 	out := []scored(h)
@@ -1184,7 +1210,19 @@ func (s *Store) Search(ctx context.Context, e Embedder, query string, topK int) 
 	for i, sc := range out {
 		hits[i] = Hit{Chunk: s.chunks[sc.idx], Score: sc.score}
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	return hits, nil
+}
+
+func keepScore(h *scoreHeap, sc scored, limit int) {
+	if len(*h) < limit {
+		heap.Push(h, sc)
+	} else if betterThan(sc, (*h)[0]) {
+		(*h)[0] = sc
+		heap.Fix(h, 0)
+	}
 }
 
 // scored is one chunk's cosine score, kept with its index for tie-breaking.

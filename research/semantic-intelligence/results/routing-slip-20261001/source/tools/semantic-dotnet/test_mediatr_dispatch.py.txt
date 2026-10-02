@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+"""Direct MediatR request construction and faithful response identities."""
+import argparse
+import json
+import os
+from pathlib import Path
+import subprocess
+
+p = argparse.ArgumentParser(description=__doc__)
+for key in ('dotnet', 'sdk', 'worker', 'packages', 'output'):
+    p.add_argument('--' + key, required=True, type=Path)
+p.add_argument('--expected-worker-version', choices=['13','14','15','16','17','18'], default='18')
+a = p.parse_args()
+a.output.mkdir(parents=True, exist_ok=False)
+source = '''using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using MediatR;
+namespace One { class Reply {} }
+namespace Two { class Reply {} }
+class Detail : IRequest<One.Reply> { public int Value {get;set;} }
+class Orders : IRequest<IEnumerable<One.Reply>> {}
+class OtherOrders : IRequest<IEnumerable<Two.Reply>> {}
+class DictionaryRequest : IRequest<Dictionary<string,One.Reply>> {}
+class Inherited : Detail {}
+class Nested : IRequest<List<List<One.Reply>>> {}
+class ArrayRequest : IRequest<One.Reply[]> {}
+class TupleRequest : IRequest<(int,string)> {}
+class GenericRequest<T> : IRequest<One.Reply> {}
+class NoResponse : IRequest {}
+class BaseReply {}
+class DerivedReply : BaseReply {}
+class Covariant : IRequest<DerivedReply> {}
+class Nine<A,B,C,D,E,F,G,H,I> {}
+class TooWide : IRequest<Nine<int,int,int,int,int,int,int,int,int>> {}
+class Fake { public Task<T> Send<T>(IRequest<T> request) => Task.FromResult(default(T)); }
+class Calls {
+ static Detail Factory() => new Detail();
+ async Task Run(ISender sender, IMediator mediator, Mediator concrete, bool enabled) {
+  await sender./*simple*/Send(new Detail());
+  await mediator./*collection*/Send(new Orders());
+  await sender./*other-collection*/Send(new OtherOrders());
+  await sender./*dictionary*/Send(new DictionaryRequest());
+  await sender./*named*/Send(cancellationToken:default, request:new Detail { Value=1 });
+  await sender./*inherited*/Send(new Inherited());
+  if(enabled) await sender./*conditional*/Send(new Detail());
+  Detail variable=new Detail();await sender./*variable*/Send(variable);
+  IRequest<One.Reply> erased=new Detail();await sender./*erased*/Send(erased);
+  await sender./*factory*/Send(Factory());
+  await sender./*cast*/Send((IRequest<One.Reply>)new Detail());
+  await sender./*object*/Send((object)new Detail());
+  await sender./*void*/Send(new NoResponse());
+  await sender./*nested*/Send(new Nested());
+  await sender./*array*/Send(new ArrayRequest());
+  await sender./*tuple*/Send(new TupleRequest());
+  await sender./*generic-request*/Send(new GenericRequest<int>());
+  await sender./*covariant*/Send<BaseReply>(new Covariant());
+  await sender./*wide*/Send(new TooWide());
+  await new Fake()./*lookalike*/Send(new Detail());
+  await concrete./*concrete-api*/Send(new Detail());
+  await sender./*conditional-value*/Send(enabled ? new Detail() : variable);
+ }
+ async Task Open<T>(ISender sender) {await sender./*open*/Send(new GenericRequest<T>());}
+}
+'''
+(a.output/'Fixture.cs').write_text(source)
+(a.output/'global.json').write_text(json.dumps({'sdk': {'version': a.sdk.name, 'rollForward': 'disable'}}))
+(a.output/'Fixture.csproj').write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup><ItemGroup><FrameworkReference Include="Microsoft.AspNetCore.App"/><PackageReference Include="MediatR" Version="12.0.1"/></ItemGroup></Project>')
+(a.output/'NuGet.Config').write_text('<configuration><packageSources><clear /></packageSources></configuration>')
+env = dict(os.environ, NUGET_PACKAGES=str(a.packages.resolve()), DOTNET_NOLOGO='1', DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_PROCESSOR_COUNT='2')
+subprocess.run([str(a.dotnet),str(a.sdk/'MSBuild.dll'),'-target:Restore',str(a.output/'Fixture.csproj'),'-p:NuGetAudit=false'], env=env, cwd=a.output, check=True, timeout=120)
+command = [str(a.dotnet),str(a.worker),'--repo','fixture','--root',str(a.output),'--project','Fixture.csproj','--framework','net8.0','--sdk-path',str(a.sdk)]
+result = subprocess.run(command,env=env,capture_output=True,timeout=120)
+(a.output/'capture.jsonl').write_bytes(result.stdout)
+(a.output/'capture.stderr').write_bytes(result.stderr)
+assert result.returncode == 0, (result.returncode,result.stderr)
+rows = list(map(json.loads,result.stdout.splitlines()))
+assert all(r['extractor_version']==a.expected_worker_version and r['compilation_status']=='complete' for r in rows if r['record_type']=='project')
+def at(label):
+    offset=source.index('/*'+label+'*/')+len(label)+4
+    hits=[r for r in rows if r.get('source_path')=='Fixture.cs' and r.get('span',{}).get('byte_offset')==offset and r['record_type']=='reference']
+    assert len(hits)==1,(label,hits)
+    return hits[0]
+expected={
+ 'simple':('Detail','One.Reply'),
+ 'collection':('Orders','IEnumerable:One.Reply'),
+ 'other-collection':('OtherOrders','IEnumerable:Two.Reply'),
+ 'dictionary':('DictionaryRequest','Dictionary:System.String,One.Reply'),
+ 'named':('Detail','One.Reply'),
+ 'inherited':('Inherited','One.Reply'),
+ 'conditional':('Detail','One.Reply'),
+}
+for label,(request,response) in expected.items():
+    facts=at(label).get('domain_facts',[]);assert len(facts)==1,(label,facts)
+    f=facts[0];assert f['kind']=='mediator_send_configuration' and f['rule']=='csharp-mediatr-v1' and f['evidence_scope']=='compile_time',f
+    assert [t['role'] for t in f['targets']]==['request','response']
+    assert f['targets'][0]['symbol']['descriptor']=='T:'+request
+    target=f['targets'][1]['symbol']
+    if ':' not in response:assert target['descriptor']=='T:'+response and target['descriptor_kind']=='documentation_comment_id'
+    else:
+        definition,args=response.split(':');args=args.split(',');value=json.loads(target['descriptor'])
+        assert target['descriptor_kind']=='constructed_named_type_v1' and value['definition']=='T:System.Collections.Generic.'+definition+'`'+str(len(args))
+        assert [t['descriptor'] for t in value['arguments']]==['T:'+t for t in args]
+        assert all(t['namespace_kind']=='project' and t['namespace']=='fixture/Fixture.csproj' for t in value['arguments'] if t['descriptor'].startswith(('T:One.','T:Two.')))
+negatives=['variable','erased','factory','cast','object','void','nested','array','tuple','generic-request','covariant','wide','lookalike','concrete-api','conditional-value','open']
+for label in negatives:assert not at(label).get('domain_facts'),(label,at(label))
+(a.output/'expected.json').write_text(json.dumps({'positive':expected,'negative':negatives},indent=2)+'\n')
+(a.output/'Fixture.cs').write_text(source+'\nclass Broken { MissingType value; }')
+broken=subprocess.run(command,env=env,capture_output=True,timeout=120)
+(a.output/'incomplete.jsonl').write_bytes(broken.stdout)
+assert broken.returncode==2
+assert not any(r.get('domain_facts') or r.get('implementation_facts') for r in map(json.loads,broken.stdout.splitlines()))
+(a.output/'Fixture.cs').write_text(source)
+print('PASS: seven MediatR configurations, sixteen exclusions, qualified generic responses, incomplete suppression')

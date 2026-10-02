@@ -1,12 +1,15 @@
 package servecmd
 
 import (
+	"context"
 	"expvar"
 	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
 	"sync"
+
+	server "moedex/internal/serve"
 )
 
 // Observability is stdlib-only by design: expvar for monotone counters and a
@@ -169,14 +172,22 @@ func metricsHandler(holder *corpusHolder, m *metrics) http.HandlerFunc {
 // daemon: the same request/panic/reload families as the retrieval daemon, plus
 // ranked-corpus gauges (blobs, BM25 docs, symbol blobs, dense chunks) read live
 // through the rankHolder so they reflect the current generation across a hot swap.
-func rankMetricsHandler(holder *rankHolder, m *metrics) http.HandlerFunc {
+type rankMetricsSource interface {
+	acquireRank(context.Context) (*server.RankCorpus, func(), error)
+}
+
+func rankMetricsHandler(holder rankMetricsSource, m *metrics) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		snap := holder.acquire()
-		defer snap.release()
-		blobs := snap.rc.NumBlobs()
-		docs := snap.rc.NumDocs()
-		symBlobs := snap.rc.NumSymbolBlobs()
-		dense := snap.rc.DenseChunks()
+		rank, release, err := holder.acquireRank(r.Context())
+		if err != nil {
+			http.Error(w, "serving snapshot unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		defer release()
+		blobs := rank.NumBlobs()
+		docs := rank.NumDocs()
+		symBlobs := rank.NumSymbolBlobs()
+		dense := rank.DenseChunks()
 
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 		w.WriteHeader(http.StatusOK)

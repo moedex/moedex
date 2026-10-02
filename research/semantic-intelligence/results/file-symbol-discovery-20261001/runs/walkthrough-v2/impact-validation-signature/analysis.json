@@ -1,0 +1,51 @@
+{
+  "classification": "root_authored_development_analysis_not_independent_solver_answer",
+  "answer": "Review IRegistrationValidationService, RegistrationValidationService, and the ValidateRegistrationConsumer call. Review worker AddScoped wiring for compatibility; configuration is not itself a call to the changed method. Compiler declaration correspondence and live dispatch remain different claims.",
+  "evidence": [
+    {
+      "subject": "IRegistrationValidationService",
+      "snippet": "ValidateRegistration(",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+          "line": 5,
+          "text": "Task ValidateRegistration(string eventId, string memberId, Guid registrationId);"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationValidationService",
+      "snippet": "ValidateRegistration(",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+          "line": 17,
+          "text": "public async Task ValidateRegistration(string eventId, string memberId, Guid registrationId)"
+        }
+      ]
+    },
+    {
+      "subject": "ValidateRegistrationConsumer",
+      "snippet": "ValidateRegistration(",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+          "line": 23,
+          "text": "await _validationService.ValidateRegistration(context.Message.EventId, context.Message.MemberId, context.Message.RegistrationId);"
+        }
+      ]
+    },
+    {
+      "subject": "Program",
+      "snippet": "AddScoped<IRegistrationValidationService, RegistrationValidationService>",
+      "citations": [
+        {
+          "path": "src/Sample.Worker/Program.cs",
+          "line": 62,
+          "text": "services.AddScoped<IRegistrationValidationService, RegistrationValidationService>();"
+        }
+      ]
+    }
+  ],
+  "review_note": "Root has prior source-gold knowledge; assertions and analysis are not blind quality scores."
+}

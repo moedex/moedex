@@ -1,0 +1,4 @@
+> build      started
+2026/09/30 17:42:36 server: graph schedule prepared 164310 names as 167371 bounded batches on 8 workers; heaviest="Create" sources=25559 definitions=852 upper_bound=21776268 batches=673 prepare=5m50.393s
+2026/09/30 17:42:36 server: graph source verification complete: sources=8898523 candidate_pairs=232754358 retained_pair_upper_bound=182606218 (before repository filtering and dedup)
+2026/09/30 17:42:54 server: graph fanout verified 8898523 sources; 232754358 candidate pairs, 182606218 retained before dedup

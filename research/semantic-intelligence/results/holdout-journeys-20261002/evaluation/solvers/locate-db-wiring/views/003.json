@@ -1,0 +1,17 @@
+{
+  "ordinal": 3,
+  "argv": [
+    "call",
+    "--name",
+    "search_context",
+    "--arguments",
+    "{\"query\":\"IApplicationDbContext\",\"top_k\":6,\"token_budget\":4000,\"graph_depth\":0}"
+  ],
+  "started_monotonic": 77367.350614583,
+  "finished_monotonic": 77367.494136083,
+  "returncode": 0,
+  "stdout_bytes": 8192,
+  "stdout_sha256": "aad289ac4c4d9b69b52c1d5467ea4c325fc3d2ccb31ca301ec2fbba21a94909f",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

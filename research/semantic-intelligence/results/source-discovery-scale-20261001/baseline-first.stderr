@@ -1,0 +1,6 @@
+moedex-serve: dense arm disabled; ranking lexical+symbol
+server: token index loaded from cache
+server: symbol index loaded from cache
+moedex-serve: corpus ranker ready — 31998 blobs, 31998 docs, 17591 symbol blobs, 0 dense chunks (none) in 1.543s
+2026/10/01 12:43:27 INFO graph artifact absent; preparing source-only serving snapshot
+2026/10/01 12:43:32 server: graph symbol cache hits=0 misses=3 write_errors=0

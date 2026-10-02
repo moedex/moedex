@@ -1,0 +1,507 @@
+{
+  "task": {
+    "id": "impact-done-semantics",
+    "prompt": "If the semantics of TodoItem.Done change, which endpoint, request handler, event trigger, and notification consumers should be reviewed along the update/completion path? Explain why static declarations alone cannot establish successful delivery. Cite precise checked-in source ranges and separate configuration from observed runtime behavior.",
+    "atoms": [
+      {
+        "id": "impact-done-semantics.1",
+        "requirement": "TodoItems maps the authorized PUT update endpoint, rejects mismatched URL/payload IDs and sends the update command.",
+        "evidence": [
+          {
+            "path": "src/Web/Endpoints/TodoItems.cs",
+            "start_line": 11,
+            "end_line": 18,
+            "raw_sha256": "3b87bb21953a54b5933c8b13efb508dbf9b67b108405cce0acb27b7d5915ef4b",
+            "excerpt": "    public static void Map(RouteGroupBuilder groupBuilder)\n    {\n        groupBuilder.RequireAuthorization();\n\n        groupBuilder.MapPost(CreateTodoItem);\n        groupBuilder.MapPut(UpdateTodoItem, \"{id}\");\n        groupBuilder.MapPatch(UpdateTodoItemDetail, \"UpdateDetail/{id}\");\n        groupBuilder.MapDelete(DeleteTodoItem, \"{id}\");"
+          },
+          {
+            "path": "src/Web/Endpoints/TodoItems.cs",
+            "start_line": 32,
+            "end_line": 39,
+            "raw_sha256": "3b87bb21953a54b5933c8b13efb508dbf9b67b108405cce0acb27b7d5915ef4b",
+            "excerpt": "    public static async Task<Results<NoContent, BadRequest>> UpdateTodoItem(ISender sender, int id, UpdateTodoItemCommand command)\n    {\n        if (id != command.Id)\n            return TypedResults.BadRequest();\n\n        await sender.Send(command);\n\n        return TypedResults.NoContent();"
+          }
+        ]
+      },
+      {
+        "id": "impact-done-semantics.2",
+        "requirement": "UpdateTodoItemCommand has Done and its handler copies it into entity.Done before SaveChangesAsync.",
+        "evidence": [
+          {
+            "path": "src/Application/TodoItems/Commands/UpdateTodoItem/UpdateTodoItem.cs",
+            "start_line": 5,
+            "end_line": 11,
+            "raw_sha256": "a0a8174c7874e653de8a3c89b19a299cbada3548b46f20c25265dcb016132403",
+            "excerpt": "public record UpdateTodoItemCommand : IRequest\n{\n    public int Id { get; init; }\n\n    public string? Title { get; init; }\n\n    public bool Done { get; init; }"
+          },
+          {
+            "path": "src/Application/TodoItems/Commands/UpdateTodoItem/UpdateTodoItem.cs",
+            "start_line": 23,
+            "end_line": 33,
+            "raw_sha256": "a0a8174c7874e653de8a3c89b19a299cbada3548b46f20c25265dcb016132403",
+            "excerpt": "    public async Task Handle(UpdateTodoItemCommand request, CancellationToken cancellationToken)\n    {\n        var entity = await _context.TodoItems\n            .FindAsync([request.Id], cancellationToken);\n\n        Guard.Against.NotFound(request.Id, entity);\n\n        entity.Title = request.Title;\n        entity.Done = request.Done;\n\n        await _context.SaveChangesAsync(cancellationToken);"
+          }
+        ]
+      },
+      {
+        "id": "impact-done-semantics.3",
+        "requirement": "Review false-to-true emission in entity.Done and the event item payload.",
+        "evidence": [
+          {
+            "path": "src/Domain/Entities/TodoItem.cs",
+            "start_line": 13,
+            "end_line": 25,
+            "raw_sha256": "90655b6cd79bcc53716b4eb5846188457a1730416ce39256810ef44bf2dc6a32",
+            "excerpt": "    private bool _done;\n    public bool Done\n    {\n        get => _done;\n        set\n        {\n            if (value && !_done)\n            {\n                AddDomainEvent(new TodoItemCompletedEvent(this));\n            }\n\n            _done = value;\n        }"
+          },
+          {
+            "path": "src/Domain/Events/TodoItemCompletedEvent.cs",
+            "start_line": 3,
+            "end_line": 10,
+            "raw_sha256": "ad1945f366055ecfbe4de974ab4de851ea5d08c832fa02676ef0fb870b0beb62",
+            "excerpt": "public class TodoItemCompletedEvent : BaseEvent\n{\n    public TodoItemCompletedEvent(TodoItem item)\n    {\n        Item = item;\n    }\n\n    public TodoItem Item { get; }"
+          }
+        ]
+      },
+      {
+        "id": "impact-done-semantics.4",
+        "requirement": "Review tracked-event clearing/publication and declared LogTodoItemCompleted notification handler.",
+        "evidence": [
+          {
+            "path": "src/Infrastructure/Data/Interceptors/DispatchDomainEventsInterceptor.cs",
+            "start_line": 36,
+            "end_line": 48,
+            "raw_sha256": "01da9ed4cebd02e26035a2cb871274c75e27283a965025ec3340bf50470055bb",
+            "excerpt": "        var entities = context.ChangeTracker\n            .Entries<BaseEntity>()\n            .Where(e => e.Entity.DomainEvents.Any())\n            .Select(e => e.Entity);\n\n        var domainEvents = entities\n            .SelectMany(e => e.DomainEvents)\n            .ToList();\n\n        entities.ToList().ForEach(e => e.ClearDomainEvents());\n\n        foreach (var domainEvent in domainEvents)\n            await _mediator.Publish(domainEvent);"
+          },
+          {
+            "path": "src/Application/TodoItems/EventHandlers/LogTodoItemCompleted.cs",
+            "start_line": 6,
+            "end_line": 19,
+            "raw_sha256": "9b1e2b4a6a6c9bc08c90cb61a1cc9ddc699a49d51b9a7dd5db58758898581165",
+            "excerpt": "public class LogTodoItemCompleted : INotificationHandler<TodoItemCompletedEvent>\n{\n    private readonly ILogger<LogTodoItemCompleted> _logger;\n\n    public LogTodoItemCompleted(ILogger<LogTodoItemCompleted> logger)\n    {\n        _logger = logger;\n    }\n\n    public Task Handle(TodoItemCompletedEvent notification, CancellationToken cancellationToken)\n    {\n        _logger.LogInformation(\"CleanArchitecture Domain Event: {DomainEvent}\", notification.GetType().Name);\n\n        return Task.CompletedTask;"
+          },
+          {
+            "path": "src/Domain/Common/BaseEntity.cs",
+            "start_line": 26,
+            "end_line": 29,
+            "raw_sha256": "b933f85dfb3eca48ba7c3559a1d2f9fbaf94b5cc96ee0a5de998b81d93e156ad",
+            "excerpt": "    public void ClearDomainEvents()\n    {\n        _domainEvents.Clear();\n    }"
+          }
+        ]
+      },
+      {
+        "id": "impact-done-semantics.5",
+        "requirement": "Assembly scan and save interceptor wiring establish configured paths, not actual delivery or a successful commit.",
+        "evidence": [
+          {
+            "path": "src/Application/DependencyInjection.cs",
+            "start_line": 16,
+            "end_line": 23,
+            "raw_sha256": "55deb255ce0c1f774d42964b1362c1d7b6aeaf7e93d7f78e95b96eb936b396da",
+            "excerpt": "        builder.Services.AddMediatR(cfg => {\n            cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());\n            cfg.AddOpenRequestPreProcessor(typeof(LoggingBehaviour<>));\n            cfg.AddOpenBehavior(typeof(UnhandledExceptionBehaviour<,>));\n            cfg.AddOpenBehavior(typeof(AuthorizationBehaviour<,>));\n            cfg.AddOpenBehavior(typeof(ValidationBehaviour<,>));\n            cfg.AddOpenBehavior(typeof(PerformanceBehaviour<,>));\n        });"
+          },
+          {
+            "path": "src/Infrastructure/DependencyInjection.cs",
+            "start_line": 20,
+            "end_line": 25,
+            "raw_sha256": "2a552c701fb860cae6dc6f04e57b87c538a80b70f1757c3f56ce5908a56b84ea",
+            "excerpt": "        builder.Services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();\n        builder.Services.AddScoped<ISaveChangesInterceptor, DispatchDomainEventsInterceptor>();\n\n        builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>\n        {\n            options.AddInterceptors(sp.GetServices<ISaveChangesInterceptor>());"
+          },
+          {
+            "path": "src/Infrastructure/Data/Interceptors/DispatchDomainEventsInterceptor.cs",
+            "start_line": 17,
+            "end_line": 29,
+            "raw_sha256": "01da9ed4cebd02e26035a2cb871274c75e27283a965025ec3340bf50470055bb",
+            "excerpt": "    public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)\n    {\n        DispatchDomainEvents(eventData.Context).GetAwaiter().GetResult();\n\n        return base.SavingChanges(eventData, result);\n\n    }\n\n    public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)\n    {\n        await DispatchDomainEvents(eventData.Context);\n\n        return await base.SavingChangesAsync(eventData, result, cancellationToken);"
+          }
+        ]
+      }
+    ]
+  },
+  "scoring": {
+    "correctness": "1: all material clauses correctly explicit, no material contradiction; 0.5: at least one material clause correct and another omitted, no material contradiction; 0: absent or materially wrong",
+    "evidence": "1: precise inspected ranges jointly support every material clause; 0.5: genuine but broad or incomplete support; 0: none or contradictory. Equivalent precise citations and reuse across atoms accepted; evidence can support an omitted clause without automatically double-penalizing correctness omission.",
+    "strict": "all atom scores 1; no material unsupported claim; runtime distinction maintained",
+    "runtime": "A clear answer-wide source/configuration-versus-runtime distinction suffices; do not require repeated disclaimers per atom. Material runtime overclaims fail strict success."
+  },
+  "scope_guards": [
+    "impact-title-uniqueness compares the two named file roles; update-validator discussion is optional, not required",
+    "impact-done-semantics covers selected update/completion path, not exhaustive DTO/client changes; complete URL claims need route-prefix support",
+    "No product facts or detector behavior were used to amend the oracle"
+  ],
+  "answer_path": "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/evaluation/solvers/impact-done-semantics/answer.md",
+  "answer_sha256": "e77b3155e15dfebb3aa6ba4ee145355f36d482e9eff551c6290864235428c8cc",
+  "views_directory": "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/evaluation/solvers/impact-done-semantics/views",
+  "display_coverage": [
+    {
+      "response_ordinal": 1,
+      "pointer": "",
+      "selected_value_fully_displayed": false,
+      "total_characters": 15607,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 7451,
+          "view": "003.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 1,
+      "pointer": "/result/structuredContent/blocks/3",
+      "selected_value_fully_displayed": true,
+      "total_characters": 1048,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 1048,
+          "view": "004.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 2,
+      "pointer": "",
+      "selected_value_fully_displayed": false,
+      "total_characters": 45339,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 7456,
+          "view": "006.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 2,
+      "pointer": "/result/structuredContent/blocks/5",
+      "selected_value_fully_displayed": true,
+      "total_characters": 1681,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 1681,
+          "view": "007.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 3,
+      "pointer": "",
+      "selected_value_fully_displayed": false,
+      "total_characters": 9253,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 7336,
+          "view": "008.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 4,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 1084,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 1084,
+          "view": "010.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 5,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 2372,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 2372,
+          "view": "011.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 6,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 2577,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 2577,
+          "view": "012.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 7,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 7346,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 7346,
+          "view": "013.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 8,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 2754,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 2754,
+          "view": "014.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 9,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 3505,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 3505,
+          "view": "015.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 10,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 3253,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 3253,
+          "view": "016.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 11,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 2517,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 2517,
+          "view": "017.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 12,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 1231,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 1231,
+          "view": "018.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 13,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 1795,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 1795,
+          "view": "019.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 14,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 865,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 865,
+          "view": "020.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 15,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 3241,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 3241,
+          "view": "021.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 16,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 561,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 561,
+          "view": "022.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 17,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 2384,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 2384,
+          "view": "023.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 18,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 869,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 869,
+          "view": "024.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 19,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 465,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 465,
+          "view": "026.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 20,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 1127,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 1127,
+          "view": "027.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 21,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 1329,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 1329,
+          "view": "028.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 22,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 3255,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 3255,
+          "view": "029.stdout"
+        }
+      ]
+    },
+    {
+      "response_ordinal": 23,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 3237,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 3237,
+          "view": "030.stdout"
+        }
+      ]
+    }
+  ],
+  "source_root": "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/capture-input/CleanArchitecture",
+  "build_variant": "Debug/net10.0, no custom DefineConstants",
+  "run_accounting": {
+    "version": 1,
+    "endpoint": "http://127.0.0.1:19461/mcp",
+    "started_monotonic": 78596.381342416,
+    "started_utc": "2026-10-02T13:49:15Z",
+    "calls": 23,
+    "response_bytes": 118626,
+    "pending": null,
+    "stopped": null,
+    "limits": {
+      "calls": 24,
+      "response_bytes": 131072,
+      "wall_seconds": 600,
+      "transport_response_cap": 8388608
+    },
+    "prompt_sha256": "a2ea52691a5a07b508ca7fc6273672ac0f709b0a2c121b547e0c64bcc09be9b7",
+    "catalog_sha256": "b96e4a0e347d9b1fb1105967efdd735feddd6ea138d658daa78efbc1412ff837",
+    "client_sha256": "6e2934d7f16a8f87ba961d716899a8f298c8abf9feea367cce2b9e2fc00c36a1",
+    "initial_catalog_charged": false,
+    "token_usage": "unknown",
+    "filesystem_isolation": "not enforced; solver can access host workspace",
+    "accounting": "Each attempted MCP list/call is charged, including native errors. Local CLI syntax errors are separate events, not MCP calls. Complete response bytes include the JSON-RPC envelope. First crossing response is retained and returned, then calls stop. Timer starts at first interaction; coordinator separately records solver spawn and answer times and enforces the full solver deadline."
+  },
+  "execution_record": {
+    "task": "impact-done-semantics",
+    "assigned_utc": "2026-10-02T13:48:17.097991+00:00",
+    "assigned_monotonic": 78538.463493125,
+    "deadline_monotonic": 79138.463493125,
+    "agent": "/root/holdout_solver_05",
+    "completion_observed_utc": "2026-10-02T13:55:59.951951+00:00",
+    "completion_observed_monotonic": 79001.310235291,
+    "elapsed_upper_bound_seconds": 462.8467421660025,
+    "within_deadline": true,
+    "accounting": {
+      "calls": 23,
+      "response_bytes": 118626,
+      "stopped": null,
+      "pending": null
+    },
+    "answer_sha256": "e77b3155e15dfebb3aa6ba4ee145355f36d482e9eff551c6290864235428c8cc"
+  },
+  "instructions": "Read exact answer and logged displayed evidence. Independently assess each atom against source. Do not equate retained raw response with inspected evidence. Distinguish material unsupported claims from minor citation imprecision. Preserve correct partial credit. Do not inspect product implementation, other reviews, other solver runs or query products."
+}

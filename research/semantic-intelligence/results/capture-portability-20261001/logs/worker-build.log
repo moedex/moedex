@@ -1,0 +1,15 @@
+  Determining projects to restore...
+/Users/zakkeown/Code/moedex/.local/capture-portability/worker/Moedex.SemanticWorker.csproj : error NU1100: Unable to resolve 'Microsoft.CodeAnalysis.CSharp.Workspaces (>= 4.11.0)' for 'net10.0'.
+/Users/zakkeown/Code/moedex/.local/capture-portability/worker/Moedex.SemanticWorker.csproj : error NU1100: Unable to resolve 'Microsoft.CodeAnalysis.Workspaces.MSBuild (>= 4.11.0)' for 'net10.0'.
+/Users/zakkeown/Code/moedex/.local/capture-portability/worker/Moedex.SemanticWorker.csproj : error NU1100: Unable to resolve 'Microsoft.Build.Locator (>= 1.7.8)' for 'net10.0'.
+  Failed to restore /Users/zakkeown/Code/moedex/.local/capture-portability/worker/Moedex.SemanticWorker.csproj (in 39 ms).
+
+Build FAILED.
+
+/Users/zakkeown/Code/moedex/.local/capture-portability/worker/Moedex.SemanticWorker.csproj : error NU1100: Unable to resolve 'Microsoft.CodeAnalysis.CSharp.Workspaces (>= 4.11.0)' for 'net10.0'.
+/Users/zakkeown/Code/moedex/.local/capture-portability/worker/Moedex.SemanticWorker.csproj : error NU1100: Unable to resolve 'Microsoft.CodeAnalysis.Workspaces.MSBuild (>= 4.11.0)' for 'net10.0'.
+/Users/zakkeown/Code/moedex/.local/capture-portability/worker/Moedex.SemanticWorker.csproj : error NU1100: Unable to resolve 'Microsoft.Build.Locator (>= 1.7.8)' for 'net10.0'.
+    0 Warning(s)
+    3 Error(s)
+
+Time Elapsed 00:00:00.37

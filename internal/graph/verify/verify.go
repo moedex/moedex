@@ -11,6 +11,7 @@
 package verify
 
 import (
+	"bytes"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -98,13 +99,31 @@ type regionKey struct {
 // carry their evidence blob with them; a hand-built candidate without evidence
 // is retained at Candidate confidence.
 func Verify(input []candidates.Edge) []Edge {
+	return NewSession(nil).Verify(input)
+}
+
+const maxSessionPatterns = 128
+
+// Session reuses bounded compiled patterns across verification batches for one
+// name. It is not concurrency-safe; independently prepared names use separate
+// sessions and may share the concurrency-safe corpus RegionCache.
+type Session struct {
+	regions  *RegionCache
+	patterns map[patternKey]patternSet
+}
+
+func NewSession(regions *RegionCache) *Session {
+	return &Session{regions: regions, patterns: make(map[patternKey]patternSet)}
+}
+
+// Verify preserves Verify's ordering and one-result-per-input contract.
+func (s *Session) Verify(input []candidates.Edge) []Edge {
 	if len(input) == 0 {
 		return nil
 	}
 
 	out := make([]Edge, len(input))
 	regions := make(map[regionKey][]region)
-	patterns := make(map[patternKey]patternSet)
 	for i, candidate := range input {
 		out[i] = Edge{
 			Edge: candidate,
@@ -120,10 +139,15 @@ func Verify(input []candidates.Edge) []Edge {
 			key := regionKey{blob: blob, lang: lang}
 			mask, ok := regions[key]
 			if !ok {
-				mask = classifyRegions(blob.Content, lang)
+				mask = s.regions.regions(blob, lang)
 				regions[key] = mask
 			}
-			kind := verifyOne(candidate, blob.Content, lang, mask, patterns)
+			if len(s.patterns) >= maxSessionPatterns {
+				if _, cached := s.patterns[patternKey{lang: lang, name: candidate.Name}]; !cached {
+					clear(s.patterns)
+				}
+			}
+			kind := verifyOne(candidate, blob.Content, lang, mask, s.patterns)
 			if kind == Unverified {
 				continue
 			}
@@ -243,10 +267,19 @@ func csharpUsingAt(content []byte, mask []region, start, end int) bool {
 	if mask[start] != regionCode {
 		return false
 	}
-	for _, match := range csUsingRE.FindAllIndex(content, -1) {
-		if match[0] < len(mask) && mask[match[0]] == regionCode && start >= match[0] && end <= match[1] {
-			return true
-		}
+	// The using pattern is anchored at a line start and permits no LF inside
+	// a match. Only the LF-delimited line containing this occurrence can match.
+	// Do not split at CR: regexp's multiline ^ does not treat bare CR as a
+	// line boundary, and sourceLine's CR handling would change the result.
+	lineStart := bytes.LastIndexByte(content[:start], '\n') + 1
+	lineEnd := len(content)
+	if next := bytes.IndexByte(content[start:], '\n'); next >= 0 {
+		lineEnd = start + next
 	}
-	return false
+	if end > lineEnd {
+		return false
+	}
+	match := csUsingRE.FindIndex(content[lineStart:lineEnd])
+	return match != nil && mask[lineStart+match[0]] == regionCode &&
+		start >= lineStart+match[0] && end <= lineStart+match[1]
 }

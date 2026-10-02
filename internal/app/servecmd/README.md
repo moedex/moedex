@@ -439,6 +439,18 @@ terminating the process.
 
 ## The dense arm
 
+At query time, an unavailable dense backend preserves lexical, symbol and path
+context. MCP returns `summary.warnings: ["dense_unavailable"]` and a fixed text
+notice, and marks that answer non-cacheable. Backend details are not included.
+Cancellation and deadline errors still fail the request. A disabled or
+query-gated dense arm is normal operation and emits no outage warning.
+
+Exact dense scoring uses worker-local top-K heaps instead of an array sized to
+the whole chunk corpus. A process-wide scoring budget, set to `GOMAXPROCS` on
+first dense search, bounds workers across concurrent requests and overlapping
+serving generations. Waiting and scoring honor cancellation. This budget does
+not include embedding generation or offline similarity construction.
+
 The dense (embedding) arm is **`-mcp` only** and **optional**. When it is off,
 ranking is pure lexical (BM25) + symbol arm with zero external dependencies. The
 `-embed` flag selects the embedder:
@@ -540,6 +552,15 @@ rebuilt region is reassigned per build — treat shard IDs as opaque, not stable
 across rebuilds.
 
 ### Hot reload (SIGHUP)
+
+Rank and graph readers acquire independently. When graph-enriched context sees
+different source corpus fingerprints, MCP returns the non-cacheable tool error
+`snapshot_unavailable` without the mixed evidence. Retry after publication or
+use `graph_depth=0` for source-only retrieval. A graph-only rebuild over the same
+source corpus remains compatible. This check applies to fingerprint-bearing
+adapters; legacy/custom adapters without fingerprints cannot provide that
+guarantee. Atomic combined acquisition and cross-call snapshot pinning remain
+planned in the semantic intelligence program.
 
 The daemon reloads its shards live, without dropping a request or restarting.
 Send it `SIGHUP`:

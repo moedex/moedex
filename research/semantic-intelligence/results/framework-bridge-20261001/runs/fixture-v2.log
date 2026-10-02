@@ -1,0 +1,3 @@
+  Determining projects to restore...
+  Restored /Users/zakkeown/Code/moedex/.local/framework-bridge/fixture-v2/Fixture.csproj (in 24 ms).
+PASS: two distinct closed handlers/calls, one default template, four keyed configurations, nine exclusions, incomplete suppression

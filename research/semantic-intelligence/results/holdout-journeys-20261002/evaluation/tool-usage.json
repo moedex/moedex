@@ -1,0 +1,40 @@
+{
+  "scope": "attempted requests, including first transport-blocked search; not a controlled comparison",
+  "tools": {
+    "read_source": 52,
+    "search_context": 30,
+    "list_repos": 1,
+    "file_tree": 4,
+    "trace_consumers": 1
+  },
+  "source_format_requests": [
+    {
+      "tool": "read_source",
+      "format": "default",
+      "calls": 39
+    },
+    {
+      "tool": "read_source",
+      "format": "structured",
+      "calls": 1
+    },
+    {
+      "tool": "read_source",
+      "format": "text",
+      "calls": 12
+    },
+    {
+      "tool": "search_context",
+      "format": "default",
+      "calls": 27
+    },
+    {
+      "tool": "search_context",
+      "format": "structured",
+      "calls": 3
+    }
+  ],
+  "compact_structured_source_requests": 4,
+  "source_requests_total": 82,
+  "onboarding": "catalog and wrapper instructions only; no MCP initialize server instructions"
+}

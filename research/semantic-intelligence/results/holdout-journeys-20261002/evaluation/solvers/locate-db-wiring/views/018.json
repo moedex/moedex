@@ -1,0 +1,17 @@
+{
+  "ordinal": 18,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"repo\":\"CleanArchitecture\",\"path\":\"src/Web/appsettings.SQLServer.json\",\"start_line\":1,\"end_line\":4}"
+  ],
+  "started_monotonic": 77545.69236425,
+  "finished_monotonic": 77545.748880208,
+  "returncode": 0,
+  "stdout_bytes": 1558,
+  "stdout_sha256": "b4a524a07d6aa12f6b44067fa024561d943ac2aa7fab804dcc12b4378cbfc6a0",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":14,"method":"tools/call","params":{"name":"trace_renders","arguments":{"symbol":"RegistrationService"}}}

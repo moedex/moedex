@@ -1,0 +1,11 @@
+{
+  "before_holdout_output_inspection": true,
+  "at_utc": "2026-10-01T17:26:53.016698+00:00",
+  "gold_sha256": "8d703f654a091d8c803b173612d3af4401b7e1034a1eb2ba20d34d3f00ac4f62",
+  "files": {
+    "research/semantic-intelligence/score-webhooks-holdout.py": "eefa25feef5c49da2bfc9af7f06e1cbf3cb72e90a641b4187c0d570eb7bf0e3c",
+    "research/semantic-intelligence/test_score_webhooks_holdout.py": "3116575e42fa4d7bcaf9408e67d648419037eafa0211928624776c72afd33d91",
+    "research/semantic-intelligence/score-moedex-component.py": "3d8e6179cf73469a5391e94a63cb5d368c52b1c529939c918d4b7b53afe205ed"
+  },
+  "tests_passed": 3
+}

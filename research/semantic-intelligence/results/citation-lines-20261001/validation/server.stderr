@@ -1,0 +1,16 @@
+> serve      started
+moedex-serve: snapshot application-real -> .local/journey-readiness/capture-sdk10/index/snapshots/application-real/serve
+moedex-serve: dense arm disabled; ranking lexical+symbol
+server: token index loaded from cache
+server: symbol index loaded from cache
+moedex-serve: corpus ranker ready — 40 blobs, 40 docs, 24 symbol blobs, 0 dense chunks (none) in 1ms
+{"time":"2026-10-01T20:55:13.038728-06:00","level":"INFO","msg":"graph artifact absent; preparing source-only serving snapshot"}
+{"time":"2026-10-01T20:55:13.038929-06:00","level":"INFO","msg":"server: graph symbol cache hits=1 misses=0 write_errors=0"}
+{"time":"2026-10-01T20:55:13.043009-06:00","level":"INFO","msg":"boot","mode":"mcp-http","blobs":40,"symbol_blobs":24,"dense_chunks":0,"requested_addr":"127.0.0.1:19458","effective_addr":"127.0.0.1:19458","tls":false}
+{"time":"2026-10-01T20:55:13.043019-06:00","level":"WARN","msg":"no auth token configured; /mcp is open (loopback bind)"}
+{"time":"2026-10-01T20:55:13.045598-06:00","level":"INFO","msg":"listening","addr":"127.0.0.1:19458","endpoint":"/mcp","tls":false,"auth":false}
+{"time":"2026-10-01T20:55:23.771694-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":2457,"dur_ms":0.772,"remote":"127.0.0.1:63829"}
+{"time":"2026-10-01T20:55:23.772686-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":13891,"dur_ms":0.345,"remote":"127.0.0.1:63830"}
+{"time":"2026-10-01T20:55:23.773354-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":4111,"dur_ms":0.122,"remote":"127.0.0.1:63831"}
+{"time":"2026-10-01T20:55:58.168559-06:00","level":"INFO","msg":"shutting down"}
+> serve      completed

@@ -1,0 +1,7 @@
+{
+  "task": "locate-db-wiring",
+  "assigned_utc": "2026-10-02T13:27:57.559697+00:00",
+  "assigned_monotonic": 77318.933994958,
+  "deadline_monotonic": 77918.933994958,
+  "agent": "/root/holdout_solver_02"
+}

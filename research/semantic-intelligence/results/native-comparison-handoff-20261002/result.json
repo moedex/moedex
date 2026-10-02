@@ -1,0 +1,155 @@
+{
+  "classification": "portable offline native-comparison handoff; destination setup and paired execution remain unexecuted",
+  "packet": {
+    "path": ".local/codegraph-native-provenance/native-comparison-handoff.zip",
+    "bytes": 234577,
+    "sha256": "6631648f0a5812fbfa55625d5c1ebc3b6453582dcc27609a9561486b3da3941c",
+    "files": 42
+  },
+  "validation": {
+    "bundle_hashes": 41,
+    "journey_tests": 35,
+    "fingerprint_tests": 3,
+    "reference_files": 1027,
+    "offline_probe_build": true,
+    "probe_controls": 5
+  },
+  "prior_archive_verified": {
+    "path": "research/semantic-intelligence/results/codegraph-native-preflight-20261002/result.json",
+    "sha256": "73274e4797458f78c07526038b99da27ca54837b18c6de7b984e6b91f8b98136",
+    "files": 23
+  },
+  "user_constraint": "Private dependencies require another machine.",
+  "files": [
+    {
+      "path": "evidence/fingerprint-tests-final.log",
+      "bytes": 101,
+      "sha256": "edb4e2159c923ea45a32656078835cdf531c3d7b414c670dd786978875cb0678"
+    },
+    {
+      "path": "evidence/handoff-result.json",
+      "bytes": 185,
+      "sha256": "21537a5eeaccc6a52fe956bec18e28ae8ccd881aff4b782281ddc37935883bd1"
+    },
+    {
+      "path": "evidence/handoff-source-verify.json",
+      "bytes": 121,
+      "sha256": "1be697baa88c0030e78a3fc093d663707384cef5a3659e9fe2a867913d3cbb02"
+    },
+    {
+      "path": "evidence/handoff-tests.log",
+      "bytes": 235,
+      "sha256": "f35b66e791a9b233e902b81bbba891463d0250aa2ec274ed6fbe36d33f5a8e98"
+    },
+    {
+      "path": "evidence/handoff-verify.log",
+      "bytes": 82,
+      "sha256": "42449fb516c0627b4a88a5a56e55790d87126c7056f653d3452673e25c1f84bb"
+    },
+    {
+      "path": "evidence/pack_handoff.py",
+      "bytes": 2358,
+      "sha256": "2142cfa220b205576d5c9beb346d1b316dc64b034022d1ee34598a44420c843e"
+    },
+    {
+      "path": "evidence/reference-fingerprint.json",
+      "bytes": 200878,
+      "sha256": "d472eca756dc90fd28f788023ebc078ec20a2868ea67437dd29c8ba15d59448b"
+    },
+    {
+      "path": "evidence/transport-build.log",
+      "bytes": 361,
+      "sha256": "f017b0d688106d5114dcc45fa5f84798d2a59c0d5bef369198afcf4d149fa3f4"
+    },
+    {
+      "path": "evidence/transport-controls/changed-source.json",
+      "bytes": 2567,
+      "sha256": "dc8b9e39c06950c90adfc30cc88c87a9582586b65109a27a2343f5c3768b3c16"
+    },
+    {
+      "path": "evidence/transport-controls/matched.json",
+      "bytes": 2564,
+      "sha256": "bbd2f7cfe682fc1431d81bd405ec32cfe4719a5e8cd5953306872f47ca7ab1f7"
+    },
+    {
+      "path": "evidence/transport-controls/missing-pdb.json",
+      "bytes": 792,
+      "sha256": "116487b62b540e3958497bf574b120b6e63c08e083cd49c5d19e82faba43f28c"
+    },
+    {
+      "path": "evidence/transport-controls/missing-source.json",
+      "bytes": 2504,
+      "sha256": "40335a85ac3b8962d4104a1cfa8174a20a61cb254ca0af058e00105952c1a4d6"
+    },
+    {
+      "path": "evidence/transport-controls/unrelated-pdb.json",
+      "bytes": 1698,
+      "sha256": "f24b1a030e3d23cd2e142f4cfe1c50cef1bf4fb4629479324ba32ff60a688a0e"
+    },
+    {
+      "path": "evidence/transport-controls.log",
+      "bytes": 83,
+      "sha256": "077d389f9a426c3efa72807e009152e5ea39e8dbcfd08d05286facb381c21b96"
+    },
+    {
+      "path": "native-comparison-handoff.zip",
+      "bytes": 234577,
+      "sha256": "6631648f0a5812fbfa55625d5c1ebc3b6453582dcc27609a9561486b3da3941c"
+    },
+    {
+      "path": "source/docs/plans/semantic-intelligence/DELIVERY.md",
+      "bytes": 81592,
+      "sha256": "6b3cb1b725ca86d7a46f35da074202297c48a31734928f9308c2185326e5cdaa"
+    },
+    {
+      "path": "source/docs/plans/semantic-intelligence/PROGRAM.md",
+      "bytes": 39930,
+      "sha256": "29888b11b58eb964285b0b20f2bf41f9e5aab6c360d496d39fc6af2354c04609"
+    },
+    {
+      "path": "source/research/semantic-intelligence/NATIVE-COMPARISON-HANDOFF.md",
+      "bytes": 2408,
+      "sha256": "9817eabd7b60fa003fe557ec6f302f3e0783b67cfd7e6c6b11a75bc82ee2a223"
+    },
+    {
+      "path": "source/research/semantic-intelligence/codegraph-native/MACHINE-HANDOFF.md",
+      "bytes": 5846,
+      "sha256": "881ff523e1f9397624cd57de35f81fe4048924ef9204f63571b65ec955513400"
+    },
+    {
+      "path": "source/research/semantic-intelligence/codegraph-native/Program.cs",
+      "bytes": 3798,
+      "sha256": "d96d0a1ca425cef38d117610a0b2f67dec431e474584815ec86088bdd4090852"
+    },
+    {
+      "path": "source/research/semantic-intelligence/codegraph-native/Provenance.csproj",
+      "bytes": 215,
+      "sha256": "cf74028182661816f30c04dbf341d3487b3209b5673fcf41aef2c3538e149adc"
+    },
+    {
+      "path": "source/research/semantic-intelligence/codegraph-native/README.md",
+      "bytes": 3054,
+      "sha256": "3bcbe0df1ef5083accf635faa6b46ffc89657d4376cacce9ab68539a61349330"
+    },
+    {
+      "path": "source/research/semantic-intelligence/codegraph-native/audit.py",
+      "bytes": 3960,
+      "sha256": "5f8e85e09be03dd2efa39222d2d31377a611240eac79583311ab20ec3dff6b42"
+    },
+    {
+      "path": "source/research/semantic-intelligence/codegraph-native/fingerprint.py",
+      "bytes": 2687,
+      "sha256": "c878b3e6f9206b66e68ab3960afd5b21b0cddfefe986ac68c89570efc3590ca7"
+    },
+    {
+      "path": "source/research/semantic-intelligence/codegraph-native/test_fingerprint.py",
+      "bytes": 1367,
+      "sha256": "84d978ba7427a30bbb7850629998fb373c35b889bc2a58ec666ef3b38aca297e"
+    },
+    {
+      "path": "source/research/semantic-intelligence/codegraph-native/test_probe.py",
+      "bytes": 1951,
+      "sha256": "66bcb44c0379cee39a86e609658ee4a504d2eab138bc806a716b415bb8f8032f"
+    }
+  ]
+}

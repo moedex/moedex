@@ -1,0 +1,54 @@
+{
+  "task": "flow-notification",
+  "reviewer": "review18_05 (independent source reviewer)",
+  "answer_sha256": "937a1fc221e1578ee791ec48e5aa01030a002aebf4d87fc16f809752f583d55a",
+  "atoms": [
+    {
+      "id": "flow-notification.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicit HTTP POST/body model call with EventId, MemberId and Payment. Answer cites RegistrationController.cs:7-43 and raw call [642,660); 009.response.raw returns full controller, and 007.response.raw binds the call to IRegistrationService.SubmitRegistration. Pinned source :19-27 agrees."
+    },
+    {
+      "id": "flow-notification.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicit implementation relationship and scoped DI mapping. Answer cites RegistrationService.cs:21/[500,518) (007.response.raw interface_method_implementation) and API Program.cs:30 (008.response.raw block :1-45). Pinned RegistrationService.cs:9-21 and IRegistrationService.cs:3-5 confirm the interface."
+    },
+    {
+      "id": "flow-notification.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicit direct Publish(new RegistrationSubmitted) with payload. Answer cites RegistrationService.cs:34-41 and [931,938); source appears in 002.response.raw and exact message_publish fact/API binding in 005 and 007.response.raw. Pinned source agrees."
+    },
+    {
+      "id": "flow-notification.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicit IConsumer<RegistrationSubmitted>, Consume logging member/event/date, and completed task. Answer cites NotifyRegistrationConsumer.cs:8-9/[160,169) and :18-23; 002/008.response.raw provide source and 005.response.raw provides message_consumer fact. Pinned source agrees."
+    },
+    {
+      "id": "flow-notification.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicit worker registration and RabbitMQ endpoint configuration. Answer cites Worker/Program.cs:72-87, which includes AddConsumer at :74 and UsingRabbitMq/ConfigureEndpoints at :85-87, returned in 008.response.raw :1-89. Pinned source agrees; closing brace :88 is not needed to support this claim."
+    },
+    {
+      "id": "flow-notification.6",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer repeatedly distinguishes candidate_static interface dispatch and configured DI from observed activation, and matching publisher/consumer contract from runtime delivery. 007.response.raw supplies candidate_static path and explicit runtime/compilation limitations; 005.response.raw supplies compile_time facts, and cited Worker/Program.cs:72-87 supplies configuration. The answer acknowledges truncated declaration discovery (003) without claiming absence or complete inventory."
+    }
+  ],
+  "correctness_total": 6,
+  "evidence_total": 6,
+  "possible": 6,
+  "unsupported_claims": [],
+  "strict_success": true,
+  "limitations": [
+    "Reviewed assigned answer, all 10 logged requests/responses, retained transcript, and relevant source only; all six distinct packet-pinned source hashes matched and transcript file hashes verified.",
+    "Runtime dispatch, DI selection, persistence and broker delivery remain unobserved. Source and recorded compiler facts substantiate the static flow only.",
+    "003.response.raw declaration results were truncated; 005 contract facts and 007 candidate paths were untruncated. Answer accurately acknowledges these limits.",
+    "The isolation note describes process outside the public request/response trace; no contrary evidence is present, but that trace alone cannot independently establish all local-access assertions."
+  ]
+}

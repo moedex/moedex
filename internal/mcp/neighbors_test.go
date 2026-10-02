@@ -274,3 +274,19 @@ func TestSortAndTrimNeighborsAreDeterministic(t *testing.T) {
 		t.Fatalf("proximity sort = %v, want same repo then deepest shared directory", got)
 	}
 }
+
+func TestRenderNeighborTraversalLimitUsesLowerBounds(t *testing.T) {
+	n := NewBlockNeighbors()
+	n.TotalIsExact = false
+	n.Truncated = true
+	n.ExpansionLimit = 10000
+	if got := renderNeighbors(&n); !strings.Contains(got, "lower bounds") {
+		t.Fatalf("empty limited annotation hides cutoff: %q", got)
+	}
+	n.Callees = []Neighbor{{Symbol: "Callee"}}
+	n.BucketTotals["callees"] = 50
+	got := renderNeighbors(&n)
+	if !strings.Contains(got, "at least") || !strings.Contains(got, "lower bounds") || strings.Contains(got, "50 total") {
+		t.Fatalf("misleading exact total: %q", got)
+	}
+}

@@ -1,0 +1,19 @@
+{
+  "positive": [
+    "orders",
+    "second",
+    "other",
+    "simple"
+  ],
+  "negative": [
+    "overload",
+    "nested",
+    "array",
+    "tuple",
+    "open",
+    "generic",
+    "lookalike",
+    "wide",
+    "explicit"
+  ]
+}

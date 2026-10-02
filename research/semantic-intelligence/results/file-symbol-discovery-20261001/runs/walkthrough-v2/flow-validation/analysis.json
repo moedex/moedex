@@ -1,0 +1,73 @@
+{
+  "classification": "root_authored_development_analysis_not_independent_solver_answer",
+  "answer": "ValidateRegistrationConsumer declares IConsumer<AddEventAttendee> and calls injected IRegistrationValidationService.ValidateRegistration. The worker registers RegistrationValidationService with scoped lifetime. Its implementation publishes RegistrationValidated using the registration identifier. This establishes source configuration and an implementation candidate, not execution or delivery.",
+  "evidence": [
+    {
+      "subject": "ValidateRegistrationConsumer",
+      "snippet": "IConsumer<AddEventAttendee>",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+          "line": 10,
+          "text": "IConsumer<AddEventAttendee>"
+        }
+      ]
+    },
+    {
+      "subject": "ValidateRegistrationConsumer",
+      "snippet": "ValidateRegistration(",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+          "line": 23,
+          "text": "await _validationService.ValidateRegistration(context.Message.EventId, context.Message.MemberId, context.Message.RegistrationId);"
+        }
+      ]
+    },
+    {
+      "subject": "IRegistrationValidationService",
+      "snippet": "ValidateRegistration(",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+          "line": 5,
+          "text": "Task ValidateRegistration(string eventId, string memberId, Guid registrationId);"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationValidationService",
+      "snippet": "IRegistrationValidationService",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+          "line": 8,
+          "text": "IRegistrationValidationService"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationValidationService",
+      "snippet": "Publish(new RegistrationValidated",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+          "line": 19,
+          "text": "await _publishEndpoint.Publish(new RegistrationValidated { RegistrationId = registrationId });"
+        }
+      ]
+    },
+    {
+      "subject": "Program",
+      "snippet": "AddScoped<IRegistrationValidationService, RegistrationValidationService>",
+      "citations": [
+        {
+          "path": "src/Sample.Worker/Program.cs",
+          "line": 62,
+          "text": "services.AddScoped<IRegistrationValidationService, RegistrationValidationService>();"
+        }
+      ]
+    }
+  ],
+  "review_note": "Root has prior source-gold knowledge; assertions and analysis are not blind quality scores."
+}

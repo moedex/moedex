@@ -1,0 +1,17 @@
+{
+  "ordinal": 5,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"path\":\"src/Domain/Entities/TodoItem.cs\",\"start_line\":1,\"end_line\":29}"
+  ],
+  "started_monotonic": 77861.7101555,
+  "finished_monotonic": 77861.775114291,
+  "returncode": 0,
+  "stdout_bytes": 2523,
+  "stdout_sha256": "762f0a1b61c1c18ad4462a811d49012fdbf039f585557e779ed6ad6350694cab",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

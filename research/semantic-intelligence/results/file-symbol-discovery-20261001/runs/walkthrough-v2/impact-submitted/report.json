@@ -1,0 +1,70 @@
+{
+  "task": "impact-submitted",
+  "classification": "source_authored_public_tool_walkthrough",
+  "calls": 8,
+  "response_bytes": 73632,
+  "stopped": null,
+  "evidence": [
+    {
+      "subject": "RegistrationSubmitted",
+      "snippet": "RegistrationId",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+          "line": 5,
+          "text": "public Guid RegistrationId { get; init; }"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationService",
+      "snippet": "RegistrationId = registration.RegistrationId",
+      "citations": [
+        {
+          "path": "src/Sample.Components/RegistrationService.cs",
+          "line": 36,
+          "text": "RegistrationId = registration.RegistrationId,"
+        }
+      ]
+    },
+    {
+      "subject": "NotifyRegistrationConsumer",
+      "snippet": "IConsumer<RegistrationSubmitted>",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+          "line": 9,
+          "text": "IConsumer<RegistrationSubmitted>"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationStateMachine",
+      "snippet": "CorrelateById",
+      "citations": [
+        {
+          "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+          "line": 14,
+          "text": "Event(() => RegistrationSubmitted, x => x.CorrelateById(m => m.Message.RegistrationId));"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationStateMachine",
+      "snippet": "Message.RegistrationId",
+      "citations": [
+        {
+          "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+          "line": 14,
+          "text": "Event(() => RegistrationSubmitted, x => x.CorrelateById(m => m.Message.RegistrationId));"
+        }
+      ]
+    }
+  ],
+  "missing_evidence": [],
+  "limitations": [
+    "Basenames and snippet assertions are source-authored hints.",
+    "No independent agent quality or completeness score.",
+    "Source configuration does not prove runtime activation, dispatch, delivery or transactions."
+  ]
+}

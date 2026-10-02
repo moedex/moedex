@@ -1,0 +1,535 @@
+{
+  "status": "coordinator-authored source oracle; independent review pending; frozen before product queries",
+  "tasks": [
+    {
+      "id": "locate-title-validation",
+      "prompt": "Where is validation of a new todo-list title defined, what rules does it enforce, and how are its validators and validation pipeline registered? Cite precise checked-in source ranges and separate configuration from observed runtime behavior.",
+      "atoms": [
+        {
+          "id": "locate-title-validation.1",
+          "requirement": "CreateTodoListCommandValidator validates CreateTodoListCommand and depends on IApplicationDbContext.",
+          "evidence": [
+            {
+              "path": "src/Application/TodoLists/Commands/CreateTodoList/CreateTodoListCommandValidator.cs",
+              "start_line": 5,
+              "end_line": 11,
+              "raw_sha256": "05660428247c4b96daa8fa5f1af10ff99d6d3d87c4d6373c86f87ee6eeb927c9",
+              "excerpt": "public class CreateTodoListCommandValidator : AbstractValidator<CreateTodoListCommand>\n{\n    private readonly IApplicationDbContext _context;\n\n    public CreateTodoListCommandValidator(IApplicationDbContext context)\n    {\n        _context = context;"
+            }
+          ]
+        },
+        {
+          "id": "locate-title-validation.2",
+          "requirement": "Title is nonempty and has maximum length 200.",
+          "evidence": [
+            {
+              "path": "src/Application/TodoLists/Commands/CreateTodoList/CreateTodoListCommandValidator.cs",
+              "start_line": 13,
+              "end_line": 15,
+              "raw_sha256": "05660428247c4b96daa8fa5f1af10ff99d6d3d87c4d6373c86f87ee6eeb927c9",
+              "excerpt": "        RuleFor(v => v.Title)\n            .NotEmpty()\n            .MaximumLength(200)"
+            }
+          ]
+        },
+        {
+          "id": "locate-title-validation.3",
+          "requirement": "Async uniqueness rejects an existing equal title, uses cancellation, and supplies Unique error code.",
+          "evidence": [
+            {
+              "path": "src/Application/TodoLists/Commands/CreateTodoList/CreateTodoListCommandValidator.cs",
+              "start_line": 16,
+              "end_line": 24,
+              "raw_sha256": "05660428247c4b96daa8fa5f1af10ff99d6d3d87c4d6373c86f87ee6eeb927c9",
+              "excerpt": "            .MustAsync(BeUniqueTitle)\n                .WithMessage(\"'{PropertyName}' must be unique.\")\n                .WithErrorCode(\"Unique\");\n    }\n\n    public async Task<bool> BeUniqueTitle(string title, CancellationToken cancellationToken)\n    {\n        return !await _context.TodoLists\n            .AnyAsync(l => l.Title == title, cancellationToken);"
+            }
+          ]
+        },
+        {
+          "id": "locate-title-validation.4",
+          "requirement": "Application services scan the executing assembly for validators and register ValidationBehaviour as an open MediatR behavior.",
+          "evidence": [
+            {
+              "path": "src/Application/DependencyInjection.cs",
+              "start_line": 14,
+              "end_line": 22,
+              "raw_sha256": "55deb255ce0c1f774d42964b1362c1d7b6aeaf7e93d7f78e95b96eb936b396da",
+              "excerpt": "        builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());\n\n        builder.Services.AddMediatR(cfg => {\n            cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());\n            cfg.AddOpenRequestPreProcessor(typeof(LoggingBehaviour<>));\n            cfg.AddOpenBehavior(typeof(UnhandledExceptionBehaviour<,>));\n            cfg.AddOpenBehavior(typeof(AuthorizationBehaviour<,>));\n            cfg.AddOpenBehavior(typeof(ValidationBehaviour<,>));\n            cfg.AddOpenBehavior(typeof(PerformanceBehaviour<,>));"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "locate-db-wiring",
+      "prompt": "How are the application database abstraction and save-change interceptors wired, and which database provider alternatives appear in the checked-in configuration? Cite precise checked-in source ranges and separate configuration from observed runtime behavior.",
+      "atoms": [
+        {
+          "id": "locate-db-wiring.1",
+          "requirement": "Two scoped ISaveChangesInterceptor registrations: AuditableEntityInterceptor and DispatchDomainEventsInterceptor.",
+          "evidence": [
+            {
+              "path": "src/Infrastructure/DependencyInjection.cs",
+              "start_line": 20,
+              "end_line": 21,
+              "raw_sha256": "2a552c701fb860cae6dc6f04e57b87c538a80b70f1757c3f56ce5908a56b84ea",
+              "excerpt": "        builder.Services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();\n        builder.Services.AddScoped<ISaveChangesInterceptor, DispatchDomainEventsInterceptor>();"
+            }
+          ]
+        },
+        {
+          "id": "locate-db-wiring.2",
+          "requirement": "ApplicationDbContext options resolve and attach all ISaveChangesInterceptor services.",
+          "evidence": [
+            {
+              "path": "src/Infrastructure/DependencyInjection.cs",
+              "start_line": 23,
+              "end_line": 25,
+              "raw_sha256": "2a552c701fb860cae6dc6f04e57b87c538a80b70f1757c3f56ce5908a56b84ea",
+              "excerpt": "        builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>\n        {\n            options.AddInterceptors(sp.GetServices<ISaveChangesInterceptor>());"
+            }
+          ]
+        },
+        {
+          "id": "locate-db-wiring.3",
+          "requirement": "IApplicationDbContext is scoped and resolves the registered ApplicationDbContext through a factory.",
+          "evidence": [
+            {
+              "path": "src/Infrastructure/DependencyInjection.cs",
+              "start_line": 42,
+              "end_line": 42,
+              "raw_sha256": "2a552c701fb860cae6dc6f04e57b87c538a80b70f1757c3f56ce5908a56b84ea",
+              "excerpt": "        builder.Services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());"
+            }
+          ]
+        },
+        {
+          "id": "locate-db-wiring.4",
+          "requirement": "Provider alternatives are PostgreSQL when UsePostgreSQL, SQL Server when UseSqlServer, otherwise SQLite; do not infer deployed selection.",
+          "evidence": [
+            {
+              "path": "src/Infrastructure/DependencyInjection.cs",
+              "start_line": 26,
+              "end_line": 32,
+              "raw_sha256": "2a552c701fb860cae6dc6f04e57b87c538a80b70f1757c3f56ce5908a56b84ea",
+              "excerpt": "#if (UsePostgreSQL)\n            options.UseNpgsql(connectionString);\n#elif (UseSqlServer)\n            options.UseSqlServer(connectionString);\n#else\n            options.UseSqlite(connectionString);\n#endif"
+            }
+          ]
+        },
+        {
+          "id": "locate-db-wiring.5",
+          "requirement": "Web startup calls application, infrastructure, and web registration methods; source configuration is not runtime execution proof.",
+          "evidence": [
+            {
+              "path": "src/Web/Program.cs",
+              "start_line": 10,
+              "end_line": 14,
+              "raw_sha256": "a2374af31194bdd866e30cacbdc7c4a0ea7ed485eddd28a757b5e60206681a2e",
+              "excerpt": "builder.AddApplicationServices();\nbuilder.AddInfrastructureServices();\nbuilder.AddWebServices();\n\nvar app = builder.Build();"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "flow-completion-event",
+      "prompt": "Trace how changing a todo item to done can produce and dispatch a completion notification. Include the trigger condition, event storage, save interception, clearing, and declared notification handler. Does this prove a notification ran after a successful database commit? Cite precise checked-in source ranges and separate configuration from observed runtime behavior.",
+      "atoms": [
+        {
+          "id": "flow-completion-event.1",
+          "requirement": "Done emits only on false-to-true transition and then assigns its backing field.",
+          "evidence": [
+            {
+              "path": "src/Domain/Entities/TodoItem.cs",
+              "start_line": 13,
+              "end_line": 25,
+              "raw_sha256": "90655b6cd79bcc53716b4eb5846188457a1730416ce39256810ef44bf2dc6a32",
+              "excerpt": "    private bool _done;\n    public bool Done\n    {\n        get => _done;\n        set\n        {\n            if (value && !_done)\n            {\n                AddDomainEvent(new TodoItemCompletedEvent(this));\n            }\n\n            _done = value;\n        }"
+            }
+          ]
+        },
+        {
+          "id": "flow-completion-event.2",
+          "requirement": "TodoItemCompletedEvent holds the item, derives from BaseEvent, whose INotification contract makes it a MediatR notification.",
+          "evidence": [
+            {
+              "path": "src/Domain/Events/TodoItemCompletedEvent.cs",
+              "start_line": 3,
+              "end_line": 10,
+              "raw_sha256": "ad1945f366055ecfbe4de974ab4de851ea5d08c832fa02676ef0fb870b0beb62",
+              "excerpt": "public class TodoItemCompletedEvent : BaseEvent\n{\n    public TodoItemCompletedEvent(TodoItem item)\n    {\n        Item = item;\n    }\n\n    public TodoItem Item { get; }"
+            },
+            {
+              "path": "src/Domain/Common/BaseEvent.cs",
+              "start_line": 5,
+              "end_line": 7,
+              "raw_sha256": "d66fdc1486212dd1d18c8c71736d4e9100f9f8ffa5b138cb12b3cb172c767156",
+              "excerpt": "public abstract class BaseEvent : INotification\n{\n}"
+            }
+          ]
+        },
+        {
+          "id": "flow-completion-event.3",
+          "requirement": "BaseEntity keeps domain events in a nonmapped read-only exposed collection and AddDomainEvent appends.",
+          "evidence": [
+            {
+              "path": "src/Domain/Common/BaseEntity.cs",
+              "start_line": 11,
+              "end_line": 19,
+              "raw_sha256": "b933f85dfb3eca48ba7c3559a1d2f9fbaf94b5cc96ee0a5de998b81d93e156ad",
+              "excerpt": "    private readonly List<BaseEvent> _domainEvents = new();\n\n    [NotMapped]\n    public IReadOnlyCollection<BaseEvent> DomainEvents => _domainEvents.AsReadOnly();\n\n    public void AddDomainEvent(BaseEvent domainEvent)\n    {\n        _domainEvents.Add(domainEvent);\n    }"
+            }
+          ]
+        },
+        {
+          "id": "flow-completion-event.4",
+          "requirement": "Update command handler sets Done and then awaits SaveChangesAsync.",
+          "evidence": [
+            {
+              "path": "src/Application/TodoItems/Commands/UpdateTodoItem/UpdateTodoItem.cs",
+              "start_line": 23,
+              "end_line": 33,
+              "raw_sha256": "a0a8174c7874e653de8a3c89b19a299cbada3548b46f20c25265dcb016132403",
+              "excerpt": "    public async Task Handle(UpdateTodoItemCommand request, CancellationToken cancellationToken)\n    {\n        var entity = await _context.TodoItems\n            .FindAsync([request.Id], cancellationToken);\n\n        Guard.Against.NotFound(request.Id, entity);\n\n        entity.Title = request.Title;\n        entity.Done = request.Done;\n\n        await _context.SaveChangesAsync(cancellationToken);"
+            }
+          ]
+        },
+        {
+          "id": "flow-completion-event.5",
+          "requirement": "SavingChanges and SavingChangesAsync dispatch before base saving callbacks; this is not evidence of post-successful-commit execution.",
+          "evidence": [
+            {
+              "path": "src/Infrastructure/Data/Interceptors/DispatchDomainEventsInterceptor.cs",
+              "start_line": 17,
+              "end_line": 29,
+              "raw_sha256": "01da9ed4cebd02e26035a2cb871274c75e27283a965025ec3340bf50470055bb",
+              "excerpt": "    public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)\n    {\n        DispatchDomainEvents(eventData.Context).GetAwaiter().GetResult();\n\n        return base.SavingChanges(eventData, result);\n\n    }\n\n    public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)\n    {\n        await DispatchDomainEvents(eventData.Context);\n\n        return await base.SavingChangesAsync(eventData, result, cancellationToken);"
+            }
+          ]
+        },
+        {
+          "id": "flow-completion-event.6",
+          "requirement": "Dispatcher reads tracked BaseEntity events, materializes them, clears entity collections before awaiting Publish for each.",
+          "evidence": [
+            {
+              "path": "src/Infrastructure/Data/Interceptors/DispatchDomainEventsInterceptor.cs",
+              "start_line": 32,
+              "end_line": 48,
+              "raw_sha256": "01da9ed4cebd02e26035a2cb871274c75e27283a965025ec3340bf50470055bb",
+              "excerpt": "    public async Task DispatchDomainEvents(DbContext? context)\n    {\n        if (context == null) return;\n\n        var entities = context.ChangeTracker\n            .Entries<BaseEntity>()\n            .Where(e => e.Entity.DomainEvents.Any())\n            .Select(e => e.Entity);\n\n        var domainEvents = entities\n            .SelectMany(e => e.DomainEvents)\n            .ToList();\n\n        entities.ToList().ForEach(e => e.ClearDomainEvents());\n\n        foreach (var domainEvent in domainEvents)\n            await _mediator.Publish(domainEvent);"
+            }
+          ]
+        },
+        {
+          "id": "flow-completion-event.7",
+          "requirement": "LogTodoItemCompleted declares INotificationHandler<TodoItemCompletedEvent> and logs its event type; application registers assembly scanning. This does not prove runtime activation.",
+          "evidence": [
+            {
+              "path": "src/Application/TodoItems/EventHandlers/LogTodoItemCompleted.cs",
+              "start_line": 6,
+              "end_line": 19,
+              "raw_sha256": "9b1e2b4a6a6c9bc08c90cb61a1cc9ddc699a49d51b9a7dd5db58758898581165",
+              "excerpt": "public class LogTodoItemCompleted : INotificationHandler<TodoItemCompletedEvent>\n{\n    private readonly ILogger<LogTodoItemCompleted> _logger;\n\n    public LogTodoItemCompleted(ILogger<LogTodoItemCompleted> logger)\n    {\n        _logger = logger;\n    }\n\n    public Task Handle(TodoItemCompletedEvent notification, CancellationToken cancellationToken)\n    {\n        _logger.LogInformation(\"CleanArchitecture Domain Event: {DomainEvent}\", notification.GetType().Name);\n\n        return Task.CompletedTask;"
+            },
+            {
+              "path": "src/Application/DependencyInjection.cs",
+              "start_line": 16,
+              "end_line": 23,
+              "raw_sha256": "55deb255ce0c1f774d42964b1362c1d7b6aeaf7e93d7f78e95b96eb936b396da",
+              "excerpt": "        builder.Services.AddMediatR(cfg => {\n            cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());\n            cfg.AddOpenRequestPreProcessor(typeof(LoggingBehaviour<>));\n            cfg.AddOpenBehavior(typeof(UnhandledExceptionBehaviour<,>));\n            cfg.AddOpenBehavior(typeof(AuthorizationBehaviour<,>));\n            cfg.AddOpenBehavior(typeof(ValidationBehaviour<,>));\n            cfg.AddOpenBehavior(typeof(PerformanceBehaviour<,>));\n        });"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "flow-validation-error",
+      "prompt": "Trace request validation failures through the application pipeline to the configured HTTP error response. What happens before the next handler is called, and what evidence connects the web exception handler? Cite precise checked-in source ranges and separate configuration from observed runtime behavior.",
+      "atoms": [
+        {
+          "id": "flow-validation-error.1",
+          "requirement": "ValidationBehaviour receives IEnumerable<IValidator<TRequest>> and runs async validators with the cancellation token.",
+          "evidence": [
+            {
+              "path": "src/Application/Common/Behaviours/ValidationBehaviour.cs",
+              "start_line": 8,
+              "end_line": 21,
+              "raw_sha256": "1b93f144bfb1b432578d73d8cb49a4157a5d69631210c28bcaab00a9b47004f3",
+              "excerpt": "    private readonly IEnumerable<IValidator<TRequest>> _validators;\n\n    public ValidationBehaviour(IEnumerable<IValidator<TRequest>> validators)\n    {\n        _validators = validators;\n    }\n\n    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)\n    {\n        if (_validators.Any())\n        {\n            var validationResults = await Task.WhenAll(\n                _validators.Select(v =>\n                    v.ValidateAsync(new ValidationContext<TRequest>(request), cancellationToken)));"
+            }
+          ]
+        },
+        {
+          "id": "flow-validation-error.2",
+          "requirement": "It aggregates errors, throws the application ValidationException when failures exist, and only otherwise invokes next.",
+          "evidence": [
+            {
+              "path": "src/Application/Common/Behaviours/ValidationBehaviour.cs",
+              "start_line": 23,
+              "end_line": 32,
+              "raw_sha256": "1b93f144bfb1b432578d73d8cb49a4157a5d69631210c28bcaab00a9b47004f3",
+              "excerpt": "            var failures = validationResults\n                .Where(r => r.Errors.Any())\n                .SelectMany(r => r.Errors)\n                .ToList();\n\n            if (failures.Count != 0)\n                throw new ValidationException(failures);\n        }\n\n        return await next();"
+            }
+          ]
+        },
+        {
+          "id": "flow-validation-error.3",
+          "requirement": "ValidationException groups messages by property name into Errors.",
+          "evidence": [
+            {
+              "path": "src/Application/Common/Exceptions/ValidationException.cs",
+              "start_line": 13,
+              "end_line": 21,
+              "raw_sha256": "fe225cf01db9b9e99cb50814b99c855fb963c4428cd3a1c4a50b4337185241c7",
+              "excerpt": "    public ValidationException(IEnumerable<ValidationFailure> failures)\n        : this()\n    {\n        Errors = failures\n            .GroupBy(e => e.PropertyName, e => e.ErrorMessage)\n            .ToDictionary(failureGroup => failureGroup.Key, failureGroup => failureGroup.ToArray());\n    }\n\n    public IDictionary<string, string[]> Errors { get; }"
+            }
+          ]
+        },
+        {
+          "id": "flow-validation-error.4",
+          "requirement": "ProblemDetailsExceptionHandler maps that exception to HTTP400 ValidationProblemDetails and writes the response.",
+          "evidence": [
+            {
+              "path": "src/Web/Infrastructure/ProblemDetailsExceptionHandler.cs",
+              "start_line": 17,
+              "end_line": 23,
+              "raw_sha256": "7b9ed673cd416d1b0c17088883ee1764fa22efc018fb6b2691cc2a51e8c9c925",
+              "excerpt": "        var (statusCode, problemDetails) = exception switch\n        {\n            ValidationException ve => (StatusCodes.Status400BadRequest, (ProblemDetails)new ValidationProblemDetails(ve.Errors)\n            {\n                Status = StatusCodes.Status400BadRequest,\n                Type = \"https://tools.ietf.org/html/rfc9110#section-15.5.1\"\n            }),"
+            },
+            {
+              "path": "src/Web/Infrastructure/ProblemDetailsExceptionHandler.cs",
+              "start_line": 46,
+              "end_line": 50,
+              "raw_sha256": "7b9ed673cd416d1b0c17088883ee1764fa22efc018fb6b2691cc2a51e8c9c925",
+              "excerpt": "        if (problemDetails is null) return false;\n\n        httpContext.Response.StatusCode = statusCode;\n        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);\n        return true;"
+            }
+          ]
+        },
+        {
+          "id": "flow-validation-error.5",
+          "requirement": "Web DI registers the exception handler, startup invokes Web services and enables exception middleware; application registers validation behavior.",
+          "evidence": [
+            {
+              "path": "src/Web/DependencyInjection.cs",
+              "start_line": 19,
+              "end_line": 19,
+              "raw_sha256": "5108eedecf1ec69b0d5f9a9431c64ea5e743b50cd0577ef9766ecdc909672968",
+              "excerpt": "        builder.Services.AddExceptionHandler<ProblemDetailsExceptionHandler>();"
+            },
+            {
+              "path": "src/Web/Program.cs",
+              "start_line": 10,
+              "end_line": 12,
+              "raw_sha256": "a2374af31194bdd866e30cacbdc7c4a0ea7ed485eddd28a757b5e60206681a2e",
+              "excerpt": "builder.AddApplicationServices();\nbuilder.AddInfrastructureServices();\nbuilder.AddWebServices();"
+            },
+            {
+              "path": "src/Web/Program.cs",
+              "start_line": 38,
+              "end_line": 38,
+              "raw_sha256": "a2374af31194bdd866e30cacbdc7c4a0ea7ed485eddd28a757b5e60206681a2e",
+              "excerpt": "app.UseExceptionHandler(options => { });"
+            },
+            {
+              "path": "src/Application/DependencyInjection.cs",
+              "start_line": 21,
+              "end_line": 21,
+              "raw_sha256": "55deb255ce0c1f774d42964b1362c1d7b6aeaf7e93d7f78e95b96eb936b396da",
+              "excerpt": "            cfg.AddOpenBehavior(typeof(ValidationBehaviour<,>));"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "impact-done-semantics",
+      "prompt": "If the semantics of TodoItem.Done change, which endpoint, request handler, event trigger, and notification consumers should be reviewed along the update/completion path? Explain why static declarations alone cannot establish successful delivery. Cite precise checked-in source ranges and separate configuration from observed runtime behavior.",
+      "atoms": [
+        {
+          "id": "impact-done-semantics.1",
+          "requirement": "TodoItems maps the authorized PUT update endpoint, rejects mismatched URL/payload IDs and sends the update command.",
+          "evidence": [
+            {
+              "path": "src/Web/Endpoints/TodoItems.cs",
+              "start_line": 11,
+              "end_line": 18,
+              "raw_sha256": "3b87bb21953a54b5933c8b13efb508dbf9b67b108405cce0acb27b7d5915ef4b",
+              "excerpt": "    public static void Map(RouteGroupBuilder groupBuilder)\n    {\n        groupBuilder.RequireAuthorization();\n\n        groupBuilder.MapPost(CreateTodoItem);\n        groupBuilder.MapPut(UpdateTodoItem, \"{id}\");\n        groupBuilder.MapPatch(UpdateTodoItemDetail, \"UpdateDetail/{id}\");\n        groupBuilder.MapDelete(DeleteTodoItem, \"{id}\");"
+            },
+            {
+              "path": "src/Web/Endpoints/TodoItems.cs",
+              "start_line": 32,
+              "end_line": 39,
+              "raw_sha256": "3b87bb21953a54b5933c8b13efb508dbf9b67b108405cce0acb27b7d5915ef4b",
+              "excerpt": "    public static async Task<Results<NoContent, BadRequest>> UpdateTodoItem(ISender sender, int id, UpdateTodoItemCommand command)\n    {\n        if (id != command.Id)\n            return TypedResults.BadRequest();\n\n        await sender.Send(command);\n\n        return TypedResults.NoContent();"
+            }
+          ]
+        },
+        {
+          "id": "impact-done-semantics.2",
+          "requirement": "UpdateTodoItemCommand has Done and its handler copies it into entity.Done before SaveChangesAsync.",
+          "evidence": [
+            {
+              "path": "src/Application/TodoItems/Commands/UpdateTodoItem/UpdateTodoItem.cs",
+              "start_line": 5,
+              "end_line": 11,
+              "raw_sha256": "a0a8174c7874e653de8a3c89b19a299cbada3548b46f20c25265dcb016132403",
+              "excerpt": "public record UpdateTodoItemCommand : IRequest\n{\n    public int Id { get; init; }\n\n    public string? Title { get; init; }\n\n    public bool Done { get; init; }"
+            },
+            {
+              "path": "src/Application/TodoItems/Commands/UpdateTodoItem/UpdateTodoItem.cs",
+              "start_line": 23,
+              "end_line": 33,
+              "raw_sha256": "a0a8174c7874e653de8a3c89b19a299cbada3548b46f20c25265dcb016132403",
+              "excerpt": "    public async Task Handle(UpdateTodoItemCommand request, CancellationToken cancellationToken)\n    {\n        var entity = await _context.TodoItems\n            .FindAsync([request.Id], cancellationToken);\n\n        Guard.Against.NotFound(request.Id, entity);\n\n        entity.Title = request.Title;\n        entity.Done = request.Done;\n\n        await _context.SaveChangesAsync(cancellationToken);"
+            }
+          ]
+        },
+        {
+          "id": "impact-done-semantics.3",
+          "requirement": "Review false-to-true emission in entity.Done and the event item payload.",
+          "evidence": [
+            {
+              "path": "src/Domain/Entities/TodoItem.cs",
+              "start_line": 13,
+              "end_line": 25,
+              "raw_sha256": "90655b6cd79bcc53716b4eb5846188457a1730416ce39256810ef44bf2dc6a32",
+              "excerpt": "    private bool _done;\n    public bool Done\n    {\n        get => _done;\n        set\n        {\n            if (value && !_done)\n            {\n                AddDomainEvent(new TodoItemCompletedEvent(this));\n            }\n\n            _done = value;\n        }"
+            },
+            {
+              "path": "src/Domain/Events/TodoItemCompletedEvent.cs",
+              "start_line": 3,
+              "end_line": 10,
+              "raw_sha256": "ad1945f366055ecfbe4de974ab4de851ea5d08c832fa02676ef0fb870b0beb62",
+              "excerpt": "public class TodoItemCompletedEvent : BaseEvent\n{\n    public TodoItemCompletedEvent(TodoItem item)\n    {\n        Item = item;\n    }\n\n    public TodoItem Item { get; }"
+            }
+          ]
+        },
+        {
+          "id": "impact-done-semantics.4",
+          "requirement": "Review tracked-event clearing/publication and declared LogTodoItemCompleted notification handler.",
+          "evidence": [
+            {
+              "path": "src/Infrastructure/Data/Interceptors/DispatchDomainEventsInterceptor.cs",
+              "start_line": 36,
+              "end_line": 48,
+              "raw_sha256": "01da9ed4cebd02e26035a2cb871274c75e27283a965025ec3340bf50470055bb",
+              "excerpt": "        var entities = context.ChangeTracker\n            .Entries<BaseEntity>()\n            .Where(e => e.Entity.DomainEvents.Any())\n            .Select(e => e.Entity);\n\n        var domainEvents = entities\n            .SelectMany(e => e.DomainEvents)\n            .ToList();\n\n        entities.ToList().ForEach(e => e.ClearDomainEvents());\n\n        foreach (var domainEvent in domainEvents)\n            await _mediator.Publish(domainEvent);"
+            },
+            {
+              "path": "src/Application/TodoItems/EventHandlers/LogTodoItemCompleted.cs",
+              "start_line": 6,
+              "end_line": 19,
+              "raw_sha256": "9b1e2b4a6a6c9bc08c90cb61a1cc9ddc699a49d51b9a7dd5db58758898581165",
+              "excerpt": "public class LogTodoItemCompleted : INotificationHandler<TodoItemCompletedEvent>\n{\n    private readonly ILogger<LogTodoItemCompleted> _logger;\n\n    public LogTodoItemCompleted(ILogger<LogTodoItemCompleted> logger)\n    {\n        _logger = logger;\n    }\n\n    public Task Handle(TodoItemCompletedEvent notification, CancellationToken cancellationToken)\n    {\n        _logger.LogInformation(\"CleanArchitecture Domain Event: {DomainEvent}\", notification.GetType().Name);\n\n        return Task.CompletedTask;"
+            }
+          ]
+        },
+        {
+          "id": "impact-done-semantics.5",
+          "requirement": "Assembly scan and save interceptor wiring establish configured paths, not actual delivery or a successful commit.",
+          "evidence": [
+            {
+              "path": "src/Application/DependencyInjection.cs",
+              "start_line": 16,
+              "end_line": 23,
+              "raw_sha256": "55deb255ce0c1f774d42964b1362c1d7b6aeaf7e93d7f78e95b96eb936b396da",
+              "excerpt": "        builder.Services.AddMediatR(cfg => {\n            cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());\n            cfg.AddOpenRequestPreProcessor(typeof(LoggingBehaviour<>));\n            cfg.AddOpenBehavior(typeof(UnhandledExceptionBehaviour<,>));\n            cfg.AddOpenBehavior(typeof(AuthorizationBehaviour<,>));\n            cfg.AddOpenBehavior(typeof(ValidationBehaviour<,>));\n            cfg.AddOpenBehavior(typeof(PerformanceBehaviour<,>));\n        });"
+            },
+            {
+              "path": "src/Infrastructure/DependencyInjection.cs",
+              "start_line": 20,
+              "end_line": 25,
+              "raw_sha256": "2a552c701fb860cae6dc6f04e57b87c538a80b70f1757c3f56ce5908a56b84ea",
+              "excerpt": "        builder.Services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();\n        builder.Services.AddScoped<ISaveChangesInterceptor, DispatchDomainEventsInterceptor>();\n\n        builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>\n        {\n            options.AddInterceptors(sp.GetServices<ISaveChangesInterceptor>());"
+            },
+            {
+              "path": "src/Infrastructure/Data/Interceptors/DispatchDomainEventsInterceptor.cs",
+              "start_line": 17,
+              "end_line": 29,
+              "raw_sha256": "01da9ed4cebd02e26035a2cb871274c75e27283a965025ec3340bf50470055bb",
+              "excerpt": "    public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)\n    {\n        DispatchDomainEvents(eventData.Context).GetAwaiter().GetResult();\n\n        return base.SavingChanges(eventData, result);\n\n    }\n\n    public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)\n    {\n        await DispatchDomainEvents(eventData.Context);\n\n        return await base.SavingChangesAsync(eventData, result, cancellationToken);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "impact-title-uniqueness",
+      "prompt": "Review a proposed change to todo-list title uniqueness and length. Compare the create-command validator with the TodoList entity configuration: what needs coordination, and do those two files establish database-enforced uniqueness or protection against concurrent duplicate creation? Cite precise checked-in source ranges and separate configuration from observed runtime behavior.",
+      "atoms": [
+        {
+          "id": "impact-title-uniqueness.1",
+          "requirement": "Create validator enforces nonempty title and maximum200; entity configuration also requires title with maximum200, so changes must coordinate.",
+          "evidence": [
+            {
+              "path": "src/Application/TodoLists/Commands/CreateTodoList/CreateTodoListCommandValidator.cs",
+              "start_line": 13,
+              "end_line": 18,
+              "raw_sha256": "05660428247c4b96daa8fa5f1af10ff99d6d3d87c4d6373c86f87ee6eeb927c9",
+              "excerpt": "        RuleFor(v => v.Title)\n            .NotEmpty()\n            .MaximumLength(200)\n            .MustAsync(BeUniqueTitle)\n                .WithMessage(\"'{PropertyName}' must be unique.\")\n                .WithErrorCode(\"Unique\");"
+            },
+            {
+              "path": "src/Infrastructure/Data/Configurations/TodoListConfiguration.cs",
+              "start_line": 9,
+              "end_line": 16,
+              "raw_sha256": "338744038ac024d07bd615db2b22b7a2f20dcad836ac44a01593feeaac369112",
+              "excerpt": "    public void Configure(EntityTypeBuilder<TodoList> builder)\n    {\n        builder.Property(t => t.Title)\n            .HasMaxLength(200)\n            .IsRequired();\n\n        builder\n            .OwnsOne(b => b.Colour);"
+            }
+          ]
+        },
+        {
+          "id": "impact-title-uniqueness.2",
+          "requirement": "Uniqueness currently uses an async AnyAsync equality lookup through IApplicationDbContext, not a database constraint declaration.",
+          "evidence": [
+            {
+              "path": "src/Application/TodoLists/Commands/CreateTodoList/CreateTodoListCommandValidator.cs",
+              "start_line": 21,
+              "end_line": 24,
+              "raw_sha256": "05660428247c4b96daa8fa5f1af10ff99d6d3d87c4d6373c86f87ee6eeb927c9",
+              "excerpt": "    public async Task<bool> BeUniqueTitle(string title, CancellationToken cancellationToken)\n    {\n        return !await _context.TodoLists\n            .AnyAsync(l => l.Title == title, cancellationToken);"
+            }
+          ]
+        },
+        {
+          "id": "impact-title-uniqueness.3",
+          "requirement": "Complete TodoListConfiguration defines title constraints and owned Colour, with no unique index configured in that class.",
+          "evidence": [
+            {
+              "path": "src/Infrastructure/Data/Configurations/TodoListConfiguration.cs",
+              "start_line": 7,
+              "end_line": 18,
+              "raw_sha256": "338744038ac024d07bd615db2b22b7a2f20dcad836ac44a01593feeaac369112",
+              "excerpt": "public class TodoListConfiguration : IEntityTypeConfiguration<TodoList>\n{\n    public void Configure(EntityTypeBuilder<TodoList> builder)\n    {\n        builder.Property(t => t.Title)\n            .HasMaxLength(200)\n            .IsRequired();\n\n        builder\n            .OwnsOne(b => b.Colour);\n    }\n}"
+            }
+          ]
+        },
+        {
+          "id": "impact-title-uniqueness.4",
+          "requirement": "These two files do not establish database-enforced uniqueness or concurrent-creation protection; a lookup alone cannot guarantee it. Do not broaden absence to all migrations or a deployed database.",
+          "evidence": [
+            {
+              "path": "src/Application/TodoLists/Commands/CreateTodoList/CreateTodoListCommandValidator.cs",
+              "start_line": 21,
+              "end_line": 24,
+              "raw_sha256": "05660428247c4b96daa8fa5f1af10ff99d6d3d87c4d6373c86f87ee6eeb927c9",
+              "excerpt": "    public async Task<bool> BeUniqueTitle(string title, CancellationToken cancellationToken)\n    {\n        return !await _context.TodoLists\n            .AnyAsync(l => l.Title == title, cancellationToken);"
+            },
+            {
+              "path": "src/Infrastructure/Data/Configurations/TodoListConfiguration.cs",
+              "start_line": 7,
+              "end_line": 18,
+              "raw_sha256": "338744038ac024d07bd615db2b22b7a2f20dcad836ac44a01593feeaac369112",
+              "excerpt": "public class TodoListConfiguration : IEntityTypeConfiguration<TodoList>\n{\n    public void Configure(EntityTypeBuilder<TodoList> builder)\n    {\n        builder.Property(t => t.Title)\n            .HasMaxLength(200)\n            .IsRequired();\n\n        builder\n            .OwnsOne(b => b.Colour);\n    }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "scoring": {
+    "correctness": "1 explicit correct; 0.5 materially incomplete; 0 absent/wrong",
+    "evidence": "1 precise complete source support; 0.5 broad/incomplete; 0 absent/contradictory",
+    "strict": "all atom scores 1; no material unsupported claim; runtime distinction maintained"
+  },
+  "scope": "Selected paths, not exhaustive repository impact. Equivalent precise source citations accepted. No product output used."
+}

@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "id": "application-real",
+  "sequence": 1,
+  "created_at": "2026-10-01T16:31:11.02446Z",
+  "producer": {
+    "version": "dev",
+    "commit": "unknown",
+    "go_version": "go1.27.1"
+  },
+  "corpus_fingerprint": "c73323652c06c76a6ffc25d723a88d1e3fce8be7b223966fb1c39ade09495ba4",
+  "serving_root": "serve",
+  "capabilities": [
+    "rank_symbols",
+    "rank_tokens",
+    "search"
+  ],
+  "components": {
+    "legacy_serving_tree": {
+      "format": "moedex-shard-directory",
+      "version": 1,
+      "artifacts": [
+        {
+          "path": "serve/corpus-symbols.sym",
+          "size": 2965,
+          "sha256": "1a36bda3c9c747388eb1577875a56098c840b291f11961075e0bea633c6dfdd2"
+        },
+        {
+          "path": "serve/corpus-symbols.sym.meta",
+          "size": 112,
+          "sha256": "ab416ecf83feb83e804af5c89ecf7e9695fa61fbaf6ca4ef09ef6efa8506100d"
+        },
+        {
+          "path": "serve/corpus-tokens.tki",
+          "size": 41356,
+          "sha256": "df6aaeeff3912367bf5489753b2155acbbcedb71cbc0d9cd14b6185436c078b2"
+        },
+        {
+          "path": "serve/corpus-tokens.tki.meta",
+          "size": 97,
+          "sha256": "48b0c77929ef344370378573e9c2349514dcaca22f3df3a87399945adcbb772c"
+        },
+        {
+          "path": "serve/manifest.json",
+          "size": 910,
+          "sha256": "dce44e33c9ae77c55171051873012409d81aaa59e653874b6693265fdef4840f"
+        },
+        {
+          "path": "serve/shard-0000.idx",
+          "size": 164515,
+          "sha256": "1b09c8c6e55de3609acb4f220ac7c3cabe029a366a171292caa67f6e287b3e67"
+        }
+      ]
+    },
+    "semantic": {
+      "format": "moedex.semantic",
+      "version": 1,
+      "input_fingerprint": "c73323652c06c76a6ffc25d723a88d1e3fce8be7b223966fb1c39ade09495ba4",
+      "metadata": {
+        "coverage": "explicit-project-subset",
+        "privacy_fingerprint": "852910217573b64788e49ae71e94b9fc4973184350fd2cf8b5a31ff5be1da7be",
+        "usage": "offline-only"
+      },
+      "artifacts": [
+        {
+          "path": "semantic/artifact.json",
+          "size": 2928349,
+          "sha256": "67589d1f7e65b1b656eede8f54dc8b5dbfc003b4576fa5ab59e585d453263eeb"
+        }
+      ]
+    },
+    "semantic_index": {
+      "format": "moedex.semantic-index",
+      "version": 3,
+      "input_fingerprint": "c73323652c06c76a6ffc25d723a88d1e3fce8be7b223966fb1c39ade09495ba4",
+      "metadata": {
+        "query_scope": "recorded-compiler-context",
+        "source_artifact_sha256": "67589d1f7e65b1b656eede8f54dc8b5dbfc003b4576fa5ab59e585d453263eeb"
+      },
+      "artifacts": [
+        {
+          "path": "semantic/index.msi",
+          "size": 778802,
+          "sha256": "0f805e1f2dcd88ad422d2af3a6fdcaf9a66d780e1e9ddc8621a508f3f014bea5"
+        }
+      ]
+    }
+  }
+}

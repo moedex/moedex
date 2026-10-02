@@ -1,0 +1,33 @@
+{
+  "argv": [
+    "go",
+    "test",
+    "./internal/semanticimport",
+    "-run",
+    "TestPublic",
+    "-count=1"
+  ],
+  "returncode": 0,
+  "native_environment": {
+    "MOEDEX_FORWARD_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/forwarding/capture.jsonl",
+    "MOEDEX_FORWARD_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/forwarding",
+    "MOEDEX_DEFAULT_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/selection/capture.jsonl",
+    "MOEDEX_DEFAULT_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/selection",
+    "MOEDEX_BRIDGE_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/bridge/capture.jsonl",
+    "MOEDEX_BRIDGE_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/bridge",
+    "MOEDEX_RESPONSE_DI_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/response-di/capture.jsonl",
+    "MOEDEX_RESPONSE_DI_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/response-di",
+    "MOEDEX_REQUEST_RESPONSE_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/request-response/capture.jsonl",
+    "MOEDEX_REQUEST_RESPONSE_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/request-response",
+    "MOEDEX_ENDPOINT_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/endpoint/capture.jsonl",
+    "MOEDEX_ENDPOINT_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/endpoint",
+    "MOEDEX_MEDIATR_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/mediatr/capture.jsonl",
+    "MOEDEX_MEDIATR_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/mediatr",
+    "MOEDEX_GENERIC_HANDLER_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/generic-handler/capture.jsonl",
+    "MOEDEX_GENERIC_HANDLER_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/generic-handler",
+    "MOEDEX_OPEN_DI_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/open-di/capture.jsonl",
+    "MOEDEX_OPEN_DI_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/open-di",
+    "MOEDEX_MEDIATR_SCAN_STREAM": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/native/capture.jsonl",
+    "MOEDEX_MEDIATR_SCAN_ROOT": "/Users/zakkeown/Code/moedex/.local/mediatr-scan/native"
+  }
+}

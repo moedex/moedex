@@ -1,0 +1,25 @@
+
+Welcome to .NET 8.0!
+---------------------
+SDK Version: 8.0.400
+
+----------------
+Installed an ASP.NET Core HTTPS development certificate.
+To trust the certificate, run 'dotnet dev-certs https --trust'
+Learn about HTTPS: https://aka.ms/dotnet-https
+
+----------------
+Write your first app: https://aka.ms/dotnet-hello-world
+Find out what's new: https://aka.ms/dotnet-whats-new
+Explore documentation: https://aka.ms/dotnet-docs
+Report issues and find source on GitHub: https://github.com/dotnet/core
+Use 'dotnet --help' to see available commands or visit: https://aka.ms/dotnet-cli
+--------------------------------------------------------------------------------------
+  Determining projects to restore...
+  Restored /Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/EventBus/EventBus.csproj (in 1.76 sec).
+  Restored /Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/IntegrationEventLogEF/IntegrationEventLogEF.csproj (in 2.37 sec).
+  Restored /Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/EventBusRabbitMQ/EventBusRabbitMQ.csproj (in 3.1 sec).
+/Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/eShop.ServiceDefaults/eShop.ServiceDefaults.csproj : error NU1902: Warning As Error: Package 'OpenTelemetry.Exporter.OpenTelemetryProtocol' 1.9.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-4625-4j76-fww9 [/Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/Webhooks.API/Webhooks.API.csproj]
+/Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/Webhooks.API/Webhooks.API.csproj : error NU1902: Warning As Error: Package 'OpenTelemetry.Exporter.OpenTelemetryProtocol' 1.9.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-4625-4j76-fww9
+  Failed to restore /Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/eShop.ServiceDefaults/eShop.ServiceDefaults.csproj (in 5.96 sec).
+  Failed to restore /Users/zakkeown/Code/moedex/.local/application-impact/independent/eShop/src/Webhooks.API/Webhooks.API.csproj (in 5.99 sec).

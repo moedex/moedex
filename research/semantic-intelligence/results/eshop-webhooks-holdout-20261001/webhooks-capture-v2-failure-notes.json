@@ -1,0 +1,10 @@
+{
+  "outcome": "failed",
+  "phase": "worker",
+  "worker_exit": 2,
+  "restore": "completed",
+  "limitations": [
+    "Production semanticrun deletes failed workspace and only forwards worker stderr on nonzero exit; stdout diagnostics not retained by production CLI.",
+    "Outer DOTNET_PROCESSOR_COUNT=2 is not forwarded through semanticrun explicit subprocess environment."
+  ]
+}

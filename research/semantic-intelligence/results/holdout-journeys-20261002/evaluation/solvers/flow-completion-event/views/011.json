@@ -1,0 +1,17 @@
+{
+  "ordinal": 11,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"path\":\"src/Domain/Events/TodoItemCompletedEvent.cs\",\"start_line\":1,\"end_line\":11}"
+  ],
+  "started_monotonic": 77939.983320916,
+  "finished_monotonic": 77940.047894666,
+  "returncode": 0,
+  "stdout_bytes": 1663,
+  "stdout_sha256": "bce1dbe9f8df01b807b268fa6802d83c9670a5ad079d447df798068822787698",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

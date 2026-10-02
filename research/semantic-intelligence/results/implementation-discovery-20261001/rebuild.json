@@ -1,0 +1,52 @@
+[
+  {
+    "repo": "eShop",
+    "argv": [
+      "/Users/zakkeown/Code/moedex/.local/application-impact/moe-reverse-v1",
+      "index",
+      "snapshot",
+      "build",
+      "--corpus",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/webhooks-capture-v3/corpus",
+      "--index-dir",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/reverse-v1/webhooks/index",
+      "--id",
+      "reverse-webhooks",
+      "--graph=false",
+      "--semantic-artifact",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/webhooks-capture-v3/project.semantic",
+      "--semantic-workspaces",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/webhooks-capture-v3/roots.json"
+    ],
+    "moe_sha256": "f7b31d93e7a5eb5ec9ce493eac777703551383f604aebade97fb1019b274b95f",
+    "artifact_sha256": "0690938d31c51740216d456cdaa6ce079f2133c08323988bef78ff52b0cf76bf",
+    "workspaces_sha256": "355e6103e20457117c87118fc910aec29637da22741deb49211b461b99c66673",
+    "returncode": 0,
+    "elapsed_seconds": 0.9226372920002177
+  },
+  {
+    "repo": "Sample-Outbox",
+    "argv": [
+      "/Users/zakkeown/Code/moedex/.local/application-impact/moe-reverse-v1",
+      "index",
+      "snapshot",
+      "build",
+      "--corpus",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/run-wrapper-v1/corpus",
+      "--index-dir",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/reverse-v1/outbox/index",
+      "--id",
+      "reverse-outbox",
+      "--graph=false",
+      "--semantic-artifact",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/run-wrapper-v1/composed.semantic",
+      "--semantic-workspaces",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/run-wrapper-v1/roots.json"
+    ],
+    "moe_sha256": "f7b31d93e7a5eb5ec9ce493eac777703551383f604aebade97fb1019b274b95f",
+    "artifact_sha256": "24a95f5ad7307d6f3fdaf151e230b26e5cf72d2fec41971476fc4f7135cdac70",
+    "workspaces_sha256": "292e3383f24bf1bdc273620bcc5eeb2de8479ef3f9bfbcdc90886e40a561d1a9",
+    "returncode": 0,
+    "elapsed_seconds": 0.2335144999997283
+  }
+]

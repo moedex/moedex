@@ -1,0 +1,52 @@
+{
+  "task": "flow-completion-event",
+  "answer_sha256": "1f3ddd393d70be5643aaf58e8dd7d025ab4f0e01b1e23c90f5764f7c792e2421",
+  "classification": "coordinator provisional scoring independent of subsequent reviewer",
+  "atoms": [
+    {
+      "id": "flow-completion-event.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Required trigger, event storage/contract, update-save link, configured interceptor, clear-before-publish, and logging-handler/scanning clauses are explicit with precise source citations."
+    },
+    {
+      "id": "flow-completion-event.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Required trigger, event storage/contract, update-save link, configured interceptor, clear-before-publish, and logging-handler/scanning clauses are explicit with precise source citations."
+    },
+    {
+      "id": "flow-completion-event.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Required trigger, event storage/contract, update-save link, configured interceptor, clear-before-publish, and logging-handler/scanning clauses are explicit with precise source citations."
+    },
+    {
+      "id": "flow-completion-event.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Required trigger, event storage/contract, update-save link, configured interceptor, clear-before-publish, and logging-handler/scanning clauses are explicit with precise source citations."
+    },
+    {
+      "id": "flow-completion-event.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Required trigger, event storage/contract, update-save link, configured interceptor, clear-before-publish, and logging-handler/scanning clauses are explicit with precise source citations."
+    },
+    {
+      "id": "flow-completion-event.6",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Required trigger, event storage/contract, update-save link, configured interceptor, clear-before-publish, and logging-handler/scanning clauses are explicit with precise source citations."
+    },
+    {
+      "id": "flow-completion-event.7",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Required trigger, event storage/contract, update-save link, configured interceptor, clear-before-publish, and logging-handler/scanning clauses are explicit with precise source citations."
+    }
+  ],
+  "material_unsupported_claims": [],
+  "runtime_distinction_preserved": true,
+  "strict_success": true
+}

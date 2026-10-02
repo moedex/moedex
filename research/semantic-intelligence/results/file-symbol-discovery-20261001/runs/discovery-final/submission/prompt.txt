@@ -1,0 +1,1 @@
+Discover IRegistrationService.SubmitRegistration and recorded implementation alternatives.

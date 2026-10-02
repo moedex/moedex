@@ -1,0 +1,27 @@
+[
+  {
+    "path": "masstransit.abstractions/8.3.6/masstransit.abstractions.8.3.6.nupkg",
+    "bytes": 1524146,
+    "sha256": "cba19459f33a4bb22f08e9224a4900c610179a590f84145c01587187678e5464"
+  },
+  {
+    "path": "microsoft.entityframeworkcore/10.0.0/microsoft.entityframeworkcore.10.0.0.nupkg",
+    "bytes": 1424942,
+    "sha256": "c5f82b97186d3a443017943b8fc8129b8d54449887f08b89fd3fc387cf3efa11"
+  },
+  {
+    "path": "microsoft.entityframeworkcore.abstractions/10.0.0/microsoft.entityframeworkcore.abstractions.10.0.0.nupkg",
+    "bytes": 53787,
+    "sha256": "5038196d141c18f68ab04e77107e9bbc98aff90e0a4b101b9ec5614d51461b84"
+  },
+  {
+    "path": "microsoft.entityframeworkcore.analyzers/10.0.0/microsoft.entityframeworkcore.analyzers.10.0.0.nupkg",
+    "bytes": 51790,
+    "sha256": "ed0d236093b9d1ca8623ebba80ba68a2d6c1f0666f82c82d83417d1592358e28"
+  },
+  {
+    "path": "microsoft.entityframeworkcore.relational/10.0.0/microsoft.entityframeworkcore.relational.10.0.0.nupkg",
+    "bytes": 1041527,
+    "sha256": "bce3f6084e58039e75065a5b3ae232e91b8088010f1290954b5704137dffccde"
+  }
+]

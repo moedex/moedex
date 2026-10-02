@@ -1,0 +1,121 @@
+{
+  "task": {
+    "id": "flow-validation",
+    "journey": "explain_cross_service",
+    "prompt": "Trace AddEventAttendee consumption through validation to RegistrationValidated publication. Cite the interface/implementation step and state what execution is not proven.",
+    "requirements": [
+      {
+        "claim": "ValidateRegistrationConsumer declares IConsumer<AddEventAttendee>.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+            "start_line": 9,
+            "end_line": 10,
+            "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+          }
+        ],
+        "id": "flow-validation.1",
+        "weight": 1
+      },
+      {
+        "claim": "Worker registers this consumer with ValidateRegistrationConsumerDefinition.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Worker/Program.cs",
+            "start_line": 77,
+            "end_line": 77,
+            "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+          }
+        ],
+        "id": "flow-validation.2",
+        "weight": 1
+      },
+      {
+        "claim": "Consume passes EventId, MemberId and RegistrationId to injected IRegistrationValidationService.ValidateRegistration.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+            "start_line": 13,
+            "end_line": 23,
+            "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+          }
+        ],
+        "id": "flow-validation.3",
+        "weight": 1
+      },
+      {
+        "claim": "RegistrationValidationService implements that interface; worker registers it scoped.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+            "start_line": 7,
+            "end_line": 17,
+            "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20"
+          },
+          {
+            "path": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+            "start_line": 3,
+            "end_line": 5,
+            "raw_sha256": "094614ab8d70256ca3accc40e20d4d358d1170031938fa03a68fbcd2be99a97a"
+          },
+          {
+            "path": "src/Sample.Worker/Program.cs",
+            "start_line": 62,
+            "end_line": 62,
+            "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+          }
+        ],
+        "id": "flow-validation.4",
+        "weight": 1
+      },
+      {
+        "claim": "Implementation publishes RegistrationValidated with RegistrationId set from the argument.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+            "start_line": 17,
+            "end_line": 19,
+            "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20"
+          }
+        ],
+        "id": "flow-validation.5",
+        "weight": 1
+      },
+      {
+        "claim": "This static chain does not prove runtime DI selection, consumer activation, publication delivery, or substantive validation of event/member.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+            "start_line": 23,
+            "end_line": 23,
+            "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+          },
+          {
+            "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+            "start_line": 17,
+            "end_line": 19,
+            "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20"
+          }
+        ],
+        "id": "flow-validation.6",
+        "weight": 1
+      }
+    ],
+    "permissible_unknowns": [
+      "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+      "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+    ]
+  },
+  "scoring": {
+    "atomic_correctness": "Each atom scores 1 if correct and explicit, 0.5 if correct but materially incomplete, 0 if absent/incorrect. Report raw numerator/denominator and per-atom verdicts.",
+    "evidence": "Independently score each atom 1 for precise retrievable citation supporting the whole claim, 0.5 for a relevant but incomplete/broad citation, 0 for absent or contradictory evidence. Line-number equivalents and exact tool source spans are acceptable.",
+    "unsupported_claims": "Inventory false or unsupported claims separately with severity. Unsupported runtime certainty or invented source facts prevents a fully-correct task label even if positive atoms are present.",
+    "abstention": "Explicit unknowns avoid false-claim penalties but do not earn missing source-fact credit. Missing tool capability is incomplete evidence, not itself a false claim.",
+    "task_success": "All atoms receive correctness=1 and evidence=1, no material unsupported claims, and applicable configuration/runtime distinction is stated. Report graded scores as well as this strict success label.",
+    "review": "Two independent source reviewers adjudicate using source, rubric and retained solver transcript; disagreements retained and resolved explicitly. No tool output creates new gold after execution.",
+    "runtime_unknown_atoms": "Citations support the visible source limits, not proof that no unseen runtime evidence could exist."
+  },
+  "source_root": "/Users/zakkeown/Code/moedex/.local/application-impact/Sample-Outbox",
+  "run_directory": "/Users/zakkeown/Code/moedex/.local/journey-readiness/solvers/flow-validation",
+  "rubric_source": "research/semantic-intelligence/results/agent-journeys-20261001/source-rubric.json"
+}

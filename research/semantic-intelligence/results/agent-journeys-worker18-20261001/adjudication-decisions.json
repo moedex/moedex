@@ -1,0 +1,23 @@
+{
+  "locate-validation-service.material_unsupported_claims": [],
+  "locate-validation-service.claim_adjudication": "Reviewer flags the second off-by-one Worker registration citation as minor. The registration exists at line 77 in the retained response; this is citation imprecision, not an invented fact or unsupported runtime certainty. Main registration citation already receives partial evidence credit.",
+  "flow-validation.2": {
+    "correctness": 1,
+    "evidence": 0.5,
+    "reason": "The reviewer accepts the entire returned Worker Program.cs:26-89 span as an exact tool source span. It covers 64 lines including unrelated database/tracing setup for a registration at line 77. Apply the frozen 0.5 rule for a relevant but broad citation, consistent with the original baseline adjudication of this same 26-89 span for the scoped registration. The precise compiler implementation span does not locate Worker registration. Preserve reviewer full-credit judgment and root partial-credit judgment unchanged.",
+    "precedent": "research/semantic-intelligence/results/agent-journeys-20261001/adjudication.json"
+  },
+  "flow-validation.4": {
+    "correctness": 1,
+    "evidence": 0.5,
+    "reason": "The reviewer accepts the entire returned Worker Program.cs:26-89 span as an exact tool source span. It covers 64 lines including unrelated database/tracing setup for a registration at line 62. Apply the frozen 0.5 rule for a relevant but broad citation, consistent with the original baseline adjudication of this same 26-89 span for the scoped registration. The precise compiler implementation span does not locate Worker registration. Preserve reviewer full-credit judgment and root partial-credit judgment unchanged.",
+    "precedent": "research/semantic-intelligence/results/agent-journeys-20261001/adjudication.json"
+  },
+  "impact-validation-signature.material_unsupported_claims": [],
+  "impact-validation-signature.claim_adjudication": "Both reviewers treat the incorrect line 78 pointer as a citation defect (actual consumer pairing at line 77 is present in retained response 005). Atom 5 already receives evidence 0.5. Preserve the minor reviewer flag; it is not invented wiring or unsupported runtime certainty.",
+  "impact-entity-uniqueness.3": {
+    "correctness": 0.5,
+    "evidence": 1,
+    "reason": "Accept the independent reviewer evidence score. The answer omits the explicit negative statement (correctness remains partial), but its precise full-mapping citation and complete response 005 support both property mapping and absence of a RegistrationId unique index. Evidence is graded independently of answer completeness; the original root 0.5 evidence score double-penalized the omission. Both initial scores are preserved."
+  }
+}

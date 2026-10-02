@@ -1,0 +1,310 @@
+{
+  "status": "passed",
+  "scope": "Compiler-bound framework observations via recorded compiler tools; no runtime-flow or competitive-quality claim",
+  "worker": {
+    "status": "passed",
+    "worker_sha256": "373308a0630f2510fd3840bdd8e5a79ac92ba09ea2956f703004e268efd70b56",
+    "source_sha256": {
+      "Domain.cs": "19c02a4d100d4e1663092cff6b74166282828a92957d4fbe3b11a9e9f9892c31",
+      "Incomplete/Incomplete.cs": "064016677ee49cef1e9706ec55584712e7eff7dfed787b8045a88398462789b0"
+    },
+    "gold_sha256": "28daece6cbd66de1e2b6e20e0139b9ac8cca6654ae068d9f31fae25cbe437810",
+    "reports": {
+      "complete": {
+        "cases": [
+          {
+            "id": "di-singleton",
+            "offset": 516,
+            "facts": 1,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "di-scoped",
+            "offset": 586,
+            "facts": 1,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "di-self",
+            "offset": 651,
+            "facts": 1,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "di-factory",
+            "offset": 712,
+            "facts": 0,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "di-open",
+            "offset": 790,
+            "facts": 0,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "di-instance",
+            "offset": 864,
+            "facts": 0,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "di-lookalike",
+            "offset": 946,
+            "facts": 0,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "publish-explicit",
+            "offset": 1126,
+            "facts": 1,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "publish-inferred",
+            "offset": 1205,
+            "facts": 1,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "publish-alias",
+            "offset": 1273,
+            "facts": 1,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "publish-open-target",
+            "offset": 1361,
+            "facts": 0,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "publish-lookalike",
+            "offset": 1476,
+            "facts": 0,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "publish-dynamic",
+            "offset": 1581,
+            "facts": 0,
+            "binding_status": "unresolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "consumes",
+            "offset": 1661,
+            "facts": 1,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "consumes-generic",
+            "offset": 1825,
+            "facts": 0,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "dbset",
+            "offset": 2012,
+            "facts": 1,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "dbset-generic",
+            "offset": 2085,
+            "facts": 0,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "table-literal",
+            "offset": 2277,
+            "facts": 1,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "table-constant-schema",
+            "offset": 2402,
+            "facts": 1,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "table-dynamic",
+            "offset": 2480,
+            "facts": 0,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "table-lookalike",
+            "offset": 3813,
+            "facts": 0,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "table-whitespace",
+            "offset": 2558,
+            "facts": 0,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "table-nul-schema",
+            "offset": 2630,
+            "facts": 0,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          },
+          {
+            "id": "table-long",
+            "offset": 2714,
+            "facts": 0,
+            "binding_status": "resolved",
+            "context": "cec077328ec99d1ef87060584a20c79a86b667980c84fdd839f6cd5e04f5b85b"
+          }
+        ],
+        "positive_facts": 10,
+        "project_count": 1
+      },
+      "incomplete": {
+        "cases": [
+          {
+            "id": "incomplete-resolved-di",
+            "offset": 299,
+            "facts": 0,
+            "binding_status": "resolved",
+            "context": "26b7968e2eba6e34442ee8d0b1b0919ac564e0fe7ce009b543055861e8f56e11"
+          },
+          {
+            "id": "unresolved-publish",
+            "offset": 382,
+            "facts": 0,
+            "binding_status": "unresolved",
+            "context": "26b7968e2eba6e34442ee8d0b1b0919ac564e0fe7ce009b543055861e8f56e11"
+          }
+        ],
+        "positive_facts": 0,
+        "project_count": 1
+      }
+    }
+  },
+  "source_to_tool": {
+    "complete_anchors": 24,
+    "positive_facts": 10,
+    "complete_exclusions": 14,
+    "incomplete_exclusions": 2,
+    "target_definitions": 3,
+    "forged_capture_rejections": 4,
+    "race_passed": true,
+    "response_log_records": [
+      "di-singleton offset=516 facts=1 structured_sha256=a0732d0d34f203ee687c7bcb87d23439a1fe169febf075b362fbbb7b4c9a672c",
+      "di-scoped offset=586 facts=1 structured_sha256=2c666eee6b57f175c69bd86fe93453bfa28464ba09f23e34ab175873347f29f6",
+      "di-self offset=651 facts=1 structured_sha256=f3adf7354fbff30cc573c2f29b324dea0475bd158c7782a4b6021215c4d1a991",
+      "di-factory offset=712 facts=0 structured_sha256=625471908ab53380f39271c94edbb4245d9882da66058b34f2630714722d224a",
+      "di-open offset=790 facts=0 structured_sha256=5c5ec8faf3c05619bfc3ea4c665605dfbb5b323b2380f1306242e2a19dd32b04",
+      "di-instance offset=864 facts=0 structured_sha256=3ffafdcf1c1d05608ab3c6918ef1b52297d78acd4cadf0399a746d189c747b8d",
+      "di-lookalike offset=946 facts=0 structured_sha256=745f1708ea457f0da29cacec38a70d82371432cee5f00fccfe9bf883638ab862",
+      "publish-explicit offset=1126 facts=1 structured_sha256=5bafa5f4264ee442f26182f70825e5c688c24de46796283847760d351163285f",
+      "publish-inferred offset=1205 facts=1 structured_sha256=6cde42fed594c256ed6708eb67ef4162f8d49913dde3d4000428bc3dda67b621",
+      "publish-alias offset=1273 facts=1 structured_sha256=b2552c1acb413e873b61014aebaf44b37a176093601eabcc6f913dfb721583be",
+      "publish-open-target offset=1361 facts=0 structured_sha256=641c279abe09d1320961f4fdff02675f40b75419094073f3f2e15d9bc44c2348",
+      "publish-lookalike offset=1476 facts=0 structured_sha256=cbd9f63b77b29aae4ef92174d3be0f6d657d13890491f998614882ab9ad59e59",
+      "publish-dynamic offset=1581 facts=0 structured_sha256=5ae3e5d5f772860544e149dcae6c87cfbe37679a6f8e92548fad7e571ec257ca",
+      "consumes offset=1661 facts=1 structured_sha256=1c263f4545f27390e2720b3f751113d386458be479a3adefc6abdc4c86cd26dc",
+      "consumes-generic offset=1825 facts=0 structured_sha256=19316de5798bd462532a194e593b28ea709ffc04d710595228b2e0a234954cd1",
+      "dbset offset=2012 facts=1 structured_sha256=7919df256479cd6ca13247d184ae3bb8cb09ab30083b3778417d16a4cde9cc43",
+      "dbset-generic offset=2085 facts=0 structured_sha256=09d3cf4ba69bbb3ac688f5c35936f72ecda2318d1198f17f5af58debc3d0011e",
+      "table-literal offset=2277 facts=1 structured_sha256=c5850659ba3ff684f344923626bde12b1adf0778cd318a7f1abb15bbaddff8f0",
+      "table-constant-schema offset=2402 facts=1 structured_sha256=4bd0ae40dd34a2dd8c4e02f0daa2de59fd7fa8ba2b72da320713ddecf2c7ab62",
+      "table-dynamic offset=2480 facts=0 structured_sha256=eab173510ab7afe9422ea3391d5d868d010026608327f4a886b1a2e6f186e911",
+      "table-lookalike offset=3813 facts=0 structured_sha256=f24900f517f742a02a2d69e3592bff545473ecf76ba81374d52ed2b2f0d8ff97",
+      "table-whitespace offset=2558 facts=0 structured_sha256=3d5fd0d2875ceebbc659309e5bf6735d35ac266655bf7c4870b54f057323683f",
+      "table-nul-schema offset=2630 facts=0 structured_sha256=419e7ecdade269720f1d8e344d1dfaebe2642821da0cbb2f37443320c2be3d7b",
+      "table-long offset=2714 facts=0 structured_sha256=0689139eaa1e69edf171f6a9acf4f45eb3fbbb65cd6d4894da95ada837cf9065",
+      "T:DomainGold.Notice offset=260 structured_sha256=fcb1e9e99d187c8ef4dec2658a7331a229af92b02be9cd74325eef4baa6327ee",
+      "T:DomainGold.IService offset=184 structured_sha256=741a0ebe6355cc3beafbb0c2f687e54dac2872150dad7316a1c3d4e157faee3d",
+      "T:DomainGold.Service offset=217 structured_sha256=bb73988ef26be8ee8b27d91913847a7c52e97d3bc0d86ac2c8c04fae54703ee3"
+    ]
+  },
+  "packages": [
+    {
+      "path": "masstransit.abstractions/8.3.6/masstransit.abstractions.8.3.6.nupkg",
+      "bytes": 1524146,
+      "sha256": "cba19459f33a4bb22f08e9224a4900c610179a590f84145c01587187678e5464"
+    },
+    {
+      "path": "microsoft.entityframeworkcore/10.0.0/microsoft.entityframeworkcore.10.0.0.nupkg",
+      "bytes": 1424942,
+      "sha256": "c5f82b97186d3a443017943b8fc8129b8d54449887f08b89fd3fc387cf3efa11"
+    },
+    {
+      "path": "microsoft.entityframeworkcore.abstractions/10.0.0/microsoft.entityframeworkcore.abstractions.10.0.0.nupkg",
+      "bytes": 53787,
+      "sha256": "5038196d141c18f68ab04e77107e9bbc98aff90e0a4b101b9ec5614d51461b84"
+    },
+    {
+      "path": "microsoft.entityframeworkcore.analyzers/10.0.0/microsoft.entityframeworkcore.analyzers.10.0.0.nupkg",
+      "bytes": 51790,
+      "sha256": "ed0d236093b9d1ca8623ebba80ba68a2d6c1f0666f82c82d83417d1592358e28"
+    },
+    {
+      "path": "microsoft.entityframeworkcore.relational/10.0.0/microsoft.entityframeworkcore.relational.10.0.0.nupkg",
+      "bytes": 1041527,
+      "sha256": "bce3f6084e58039e75065a5b3ae232e91b8088010f1290954b5704137dffccde"
+    }
+  ],
+  "compatibility": {
+    "worker_schema": "moedex.semantic-worker.v1",
+    "extractor_version": "2",
+    "rule": "csharp-framework-v1",
+    "artifact_version": 1,
+    "index_write_version": 2,
+    "index_read_versions": [
+      1,
+      2
+    ],
+    "syntax_graph_modified": false
+  },
+  "limitations": [
+    "Generated fixture source with real pinned metadata, not held-out application quality",
+    "Compile-time observations only; no runtime DI, delivery, storage or cross-service path proof",
+    "Factory/instance DI, open/constructed generics, private wrappers and dynamic table names excluded",
+    "Test session provider invokes real MCP handler; no deployed daemon or new full snapshot publication trial",
+    "Existing Roslyn lexical/graph gates not rerun; affected compiler pipeline validated",
+    "No commits possible in copied workspace without .git"
+  ],
+  "evidence_sha256": {
+    "complete-restore.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "complete-restore.stdout": "40d104602671164ab3958225da3e1c8cabd55f0251d6df6bc911d9d5a24f44ce",
+    "complete.jsonl": "9b4014432900f281ea0b37a5a8f5c1e31456b9a7605bda32ee068ca10f7d5bfd",
+    "complete.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "incomplete-restore.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "incomplete-restore.stdout": "40d104602671164ab3958225da3e1c8cabd55f0251d6df6bc911d9d5a24f44ce",
+    "incomplete.jsonl": "514cea334ef6352be59c6defc94a41bb26f0c479a42a20ec0c131fe54d575a82",
+    "incomplete.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "packages.json": "659227b9efcb8154b649eb50756a020bfd7690ac91fe867c6d4c0f3918493b20",
+    "source-sha256.json": "f9fd9663a6afd521a8c47146252636ead5d5dfa5966d24896884fb8b171815bf",
+    "source-to-mcp-race.stdout": "40d08a0b1fe7dee701f29e8c4908c0bede1f78698fd77b1968ca1a2ef4706dd7",
+    "source-to-mcp.stdout": "4ff17b89c0ea38bbce68ce9c078a2e3e87773ccae52b8415d24cad92bf1c98b6",
+    "validation.json": "9800a5d21035569935a7843f23f95f2adaabfe89a451385f67f18fbb3107ea61",
+    "worker-gold.json": "eb30d2c3e13b9cc4a3d9fbe297263079a4dfc997927d40e55ac5b2c70b0c01ea"
+  }
+}

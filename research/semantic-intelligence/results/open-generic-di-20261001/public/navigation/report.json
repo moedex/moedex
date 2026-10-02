@@ -1,0 +1,35 @@
+{
+  "classification": "positional_open_registration_template_not_closed_runtime_resolution",
+  "calls": [
+    {
+      "role": "service_template",
+      "tool": "compiler_definitions",
+      "passed": true
+    },
+    {
+      "role": "service_template",
+      "tool": "compiler_contract_impact",
+      "passed": true
+    },
+    {
+      "role": "service_template",
+      "tool": "compiler_contract_context",
+      "passed": true
+    },
+    {
+      "role": "implementation_template",
+      "tool": "compiler_definitions",
+      "passed": true
+    },
+    {
+      "role": "implementation_template",
+      "tool": "compiler_contract_impact",
+      "passed": true
+    },
+    {
+      "role": "implementation_template",
+      "tool": "compiler_contract_context",
+      "passed": true
+    }
+  ]
+}

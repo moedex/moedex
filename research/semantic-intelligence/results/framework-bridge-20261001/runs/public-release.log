@@ -1,0 +1,4 @@
+OrderStatusChangedToPaidIntegrationEvent 14 62697
+OrderStatusChangedToShippedIntegrationEvent 13 60321
+ProductPriceChangedIntegrationEvent 12 60736
+default-template 6 31494

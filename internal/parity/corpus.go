@@ -263,17 +263,20 @@ func Build(cfg Config) (*Built, error) {
 			if err := writeMirror(mirrorDir, id, f.Content); err != nil {
 				return nil, fmt.Errorf("mirror %s: %w", f.AbsPath, err)
 			}
+			// Flush before the next file would exceed the target. A single
+			// oversized file is allowed alone; repository boundaries are not
+			// shard boundaries.
+			if anyInShard && int64(len(f.Content)) > cfg.ShardBytes-shardBytes {
+				if err := flushShard(); err != nil {
+					return nil, err
+				}
+			}
 			sb.AddFile(f.Repo, f.RelPath, f.AbsPath, f.SHA, f.Content)
 			b.Pool.observe(f.Content)
 			b.ContentBytes += int64(len(f.Content))
 			shardBytes += int64(len(f.Content))
 			mb.noteBlob(repo, int64(len(f.Content)))
 			anyInShard = true
-		}
-		if shardBytes >= cfg.ShardBytes {
-			if err := flushShard(); err != nil {
-				return nil, err
-			}
 		}
 	}
 	if err := flushShard(); err != nil {
@@ -283,6 +286,7 @@ func Build(cfg Config) (*Built, error) {
 	// Emit the freshness manifest alongside the shards. Non-fatal on write
 	// error: the index itself is already persisted and usable.
 	manifest := mb.finalize(b.Shards, time.Now())
+	manifest.ShardBytes = cfg.ShardBytes
 	if err := WriteManifest(filepath.Join(shardDir, ManifestName), manifest); err != nil {
 		cfg.logf("WARNING: failed to write freshness manifest: %v", err)
 	}

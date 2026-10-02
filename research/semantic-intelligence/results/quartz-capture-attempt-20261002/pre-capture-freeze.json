@@ -1,0 +1,9 @@
+{
+  "source-gold-reviewed.json": "0b6018a5fa3ed73d524439797ab0cd4bd10bcf14b1659f2a164b73ae92bccb8b",
+  "protocol-reviewed.json": "a89001791eb93c3ae1ae7f57f53cec2dbb4e444ddb5bcb8492483e0fe47bedf1",
+  "oracle-amendments.json": "018e1893af81c96912d212274dae6d89b847fbfe94921423ad29b742fc31ef81",
+  "oracle-review.json": "3582aaeef0b29faab9d1846a21e65960cdb482b34d5664d7b55bf46c1715aad7",
+  "authorization.json": "bc7a3305c2d293f1d0728dc11b86cb89a71d6f6f56657a4d0f407da6c49e519d",
+  "capture.py": "191fd116b82dcd01a4c9dda17a43dc846110439c6d205386c403d478908aee4c",
+  "manage.py": "379ff5cc14164414d56b357749b46c0a948bab0094ff0e87d523e6d7cc8de51a"
+}

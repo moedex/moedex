@@ -1,0 +1,10 @@
+  Determining projects to restore...
+CSSM_ModuleLoad(): One or more parameters passed to a function were not valid.
+  Restored /Users/zakkeown/Code/moedex/.local/workspace-diagnostics/probe-worker/Moedex.SemanticWorker.csproj (in 63 ms).
+  Moedex.SemanticWorker -> /Users/zakkeown/Code/moedex/.local/workspace-diagnostics/probe-worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:04.23

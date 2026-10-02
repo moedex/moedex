@@ -1,0 +1,47 @@
+{
+  "schema": "codegraph-portable-pdb-audit-v1",
+  "checkout": "/Users/zakkeown/Code/moedex/.local/codegraph-native-provenance/controls",
+  "binary_directory": "/Users/zakkeown/Code/moedex/.local/codegraph-native-provenance/controls/src/Fixture/bin/Debug/net10.0",
+  "assemblies": [
+    {
+      "assembly": "TC.CodeGraphFixture.dll",
+      "sha256": "29154188f2c2292dd3de9d0a407cfd5c54e32fbde43bcb4ed366272c881c3eb2",
+      "pdb_sha256": "0208503d0c98101b547bf193f8115640689d5336192a53ed52666e82226f14fb",
+      "pdb_linked": true,
+      "documents": [
+        {
+          "document": "/Users/zakkeown/Code/moedex/.local/codegraph-native-provenance/controls/src/Fixture/Class.cs",
+          "relative": "src/Fixture/Class.cs",
+          "generated": false,
+          "algorithm": "8829d00f-11b8-4213-878b-770e8597ac16",
+          "expected": "ab191f5c8055c5306b782b4d546bb93a8730a9153be296e9300135b827aa68e3",
+          "actual": null,
+          "status": "missing"
+        },
+        {
+          "document": "/Users/zakkeown/Code/moedex/.local/codegraph-native-provenance/controls/src/Fixture/obj/Debug/net10.0/.NETCoreApp,Version=v10.0.AssemblyAttributes.cs",
+          "relative": "src/Fixture/obj/Debug/net10.0/.NETCoreApp,Version=v10.0.AssemblyAttributes.cs",
+          "generated": true,
+          "algorithm": "8829d00f-11b8-4213-878b-770e8597ac16",
+          "expected": "f79c1ad9a9fc76110b3655f5bfb5ff4e3168e9addceff05b937c0796f0ec34eb",
+          "actual": "f79c1ad9a9fc76110b3655f5bfb5ff4e3168e9addceff05b937c0796f0ec34eb",
+          "status": "match"
+        },
+        {
+          "document": "/Users/zakkeown/Code/moedex/.local/codegraph-native-provenance/controls/src/Fixture/obj/Debug/net10.0/Fixture.AssemblyInfo.cs",
+          "relative": "src/Fixture/obj/Debug/net10.0/Fixture.AssemblyInfo.cs",
+          "generated": true,
+          "algorithm": "8829d00f-11b8-4213-878b-770e8597ac16",
+          "expected": "507d5f41d2de63f8cef36bf341b5127d7fa346ba0bb3eebff6f8510379024747",
+          "actual": "507d5f41d2de63f8cef36bf341b5127d7fa346ba0bb3eebff6f8510379024747",
+          "status": "match"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "PDB identity linkage and document hashes are consistency evidence, not trusted build attestation.",
+    "No host execution, runtime closure, private dependency provenance or service readiness is established.",
+    "Documents absent from a PDB require separate source-roster review."
+  ]
+}

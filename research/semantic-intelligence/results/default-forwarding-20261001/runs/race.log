@@ -1,0 +1,5 @@
+ok  	moedex/internal/semantic	1.538s
+ok  	moedex/internal/semanticimport	3.697s
+ok  	moedex/internal/semanticindex	16.375s
+ok  	moedex/internal/mcp	7.886s
+ok  	moedex/internal/app/servecmd	13.393s

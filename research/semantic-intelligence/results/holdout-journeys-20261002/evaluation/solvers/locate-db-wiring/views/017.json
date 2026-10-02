@@ -1,0 +1,17 @@
+{
+  "ordinal": 17,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"repo\":\"CleanArchitecture\",\"path\":\"src/Web/appsettings.SQLite.json\",\"start_line\":1,\"end_line\":4}"
+  ],
+  "started_monotonic": 77531.837816041,
+  "finished_monotonic": 77531.893881083,
+  "returncode": 0,
+  "stdout_bytes": 1402,
+  "stdout_sha256": "9a1274ea1664cecfbd50f85e37b5e8d9469e3402ab0a99a3a940dc943e6f32c9",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

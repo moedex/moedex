@@ -1,0 +1,288 @@
+{
+  "date": "2026-10-01",
+  "status": "passed",
+  "scope": "Pinned external application; independently source-frozen MassTransit configuration observations and successor internal API tasks. No runtime delivery, activation, interprocedural wrapper, or CodeGraph competitiveness claim.",
+  "repo": "https://github.com/MassTransit/Sample-Outbox",
+  "commit": "1ab8e66ebf96e5733e68c2f4d2201276f38ed9c5",
+  "gold_sha256": "35744683f93f9ae7fb83ef17455b11da7d38a067951feb26acf0ad415e1d8586",
+  "gold_path": "../application-outbox-20261001/source-gold-v4.json",
+  "task_gold_sha256": "04ae12b87c1819548380387b0f46202dba1a1dc6e8890d42efe680cd082b7f13",
+  "task_gold_path": "../application-outbox-20261001/impact-task-gold-v2.json",
+  "predecessor_preserved": "../application-outbox-v3-20261001/result.json",
+  "metrics": {
+    "supported_expected": 15,
+    "true_positive": 15,
+    "false_negative": 0,
+    "false_positive": 0,
+    "context_expected": 26,
+    "context_observed": 26,
+    "context_missed": 0,
+    "audit_facts": 26,
+    "served_facts": 26,
+    "negative_cases": 2,
+    "negative_violations": 0,
+    "unsupported_patterns": 2
+  },
+  "normal_race_reports_equal": true,
+  "paired_tasks": {
+    "source_authored_tasks": 4,
+    "selected_context_variants": 8,
+    "all_equivalent": true,
+    "selected_context_execution": {
+      "baseline": {
+        "calls": 32,
+        "complete_response_bytes": 83798,
+        "structured_content_bytes": 75342
+      },
+      "candidate": {
+        "calls": 8,
+        "complete_response_bytes": 59960,
+        "structured_content_bytes": 57128
+      }
+    },
+    "discovery_separately": {
+      "baseline": {
+        "calls": 4,
+        "complete_response_bytes": 6236,
+        "structured_content_bytes": 4984
+      },
+      "candidate": {
+        "calls": 4,
+        "complete_response_bytes": 9422,
+        "structured_content_bytes": 8006
+      }
+    },
+    "discovery_inclusive_amortized_once_per_contract": {
+      "baseline": {
+        "calls": 36,
+        "complete_response_bytes": 90034,
+        "structured_content_bytes": 80326
+      },
+      "candidate": {
+        "calls": 12,
+        "complete_response_bytes": 69382,
+        "structured_content_bytes": 65134
+      }
+    },
+    "discovery_definition_only_contexts": {
+      "registration-service": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ]
+    },
+    "limitations": [
+      "Successor task expectations add configured saga event and typed publish activity before capture; original taskgold unchanged.",
+      "Exact selected context IDs identical in both arms; discovery measured separately, amortized once per contract over two variants.",
+      "Byte totals describe serialized complete tool returns and structuredContent, not transport framing, token counts, latency, or answer quality.",
+      "Two application wrapper gaps remain unsupported; configured actions are not evidence of runtime execution."
+    ]
+  },
+  "artifacts": {
+    "Api.semantic": {
+      "sha256": "4132f5df6345feaf3c7941202fd0e3b1471791fc05e3fdc6f39c6f931888c449",
+      "bytes": 1680465
+    },
+    "composed.semantic": {
+      "sha256": "67589d1f7e65b1b656eede8f54dc8b5dbfc003b4576fa5ab59e585d453263eeb",
+      "bytes": 2928349
+    },
+    "Worker.semantic": {
+      "sha256": "8add0712563351af75d2528d37162666d08750ff32e6934c3e378f8675b4bc56",
+      "bytes": 1404477
+    }
+  },
+  "checks": [
+    {
+      "command": "go test ./internal/app/servecmd -run 'Test(PublicApplication|Application)' -count=1 -v",
+      "status": "passed",
+      "log": "normal.log"
+    },
+    {
+      "command": "go test -race ./internal/app/servecmd -run 'Test(PublicApplication|Application)' -count=1 -v",
+      "status": "passed",
+      "log": "race.log"
+    },
+    {
+      "command": "go test ./...",
+      "status": "passed",
+      "log": "v4-full-test.log"
+    },
+    {
+      "command": "go vet ./...",
+      "status": "passed",
+      "log": "v4-vet.log"
+    },
+    {
+      "command": "go build ./...",
+      "status": "passed",
+      "log": "v4-build.log"
+    },
+    {
+      "check": "Domain/index/import/MCP normal and race checks",
+      "status": "passed",
+      "evidence": "Reviewing agent/root reported exit0."
+    },
+    {
+      "check": "Worker state-machine rule gate",
+      "status": "passed6positive8complete exclusions2unresolved",
+      "log": "domain-v4-confirmed-test.log"
+    },
+    {
+      "check": "Prior EF entity gate underworker5",
+      "status": "passed2positive8excluded",
+      "log": "domain-v2-worker5-test.log"
+    },
+    {
+      "check": "Prior EF registration gate underworker5",
+      "status": "passed7positive10excluded",
+      "log": "domain-v3-worker5-confirmed-test.log"
+    },
+    {
+      "check": "Full worker suite",
+      "status": "passed19labels",
+      "log": "worker-v5-tests.log"
+    }
+  ],
+  "fixture_corrections": [
+    "Intentionally incomplete unresolved fixture exits2; harness corrected to expect2 rather than check=True.",
+    "Old EF registration fixture worker-version assertion generalized with explicit --expected-worker-version5; default4 preserved."
+  ],
+  "independent_api_sources": [
+    "https://github.com/MassTransit/MassTransit/blob/v8.2.4/src/MassTransit/SagaStateMachine/PublishExtensions.cs",
+    "https://github.com/MassTransit/MassTransit/blob/v8.2.4/src/MassTransit/SagaStateMachine/MassTransitStateMachine.cs"
+  ],
+  "files": {
+    "application-report.json": {
+      "sha256": "3a2108c588ef96d5fc1fa4855320e98f546a38cf57d13470ab2eefb94d1bef79",
+      "bytes": 56555
+    },
+    "capture-capture-Api.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "capture-capture-Api.stdout": {
+      "sha256": "757ada722142be9dc28825014aa4d1b610f5953c10c9455bd0f19454adfd130f",
+      "bytes": 625
+    },
+    "capture-capture-Worker.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "capture-capture-Worker.stdout": {
+      "sha256": "d2cd4c16aacfbd6e634b3b9fe2a9997a8ff244de23e965e03961794177027851",
+      "bytes": 629
+    },
+    "capture-clone-publication.stderr": {
+      "sha256": "4eb9d2f266cd499abd42b36f56d5eca6ce039f05161ba666e0b6336e6baec0ad",
+      "bytes": 106
+    },
+    "capture-clone-publication.stdout": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "capture-commands.json": {
+      "sha256": "e8d070285a7b82837a3b578dbabdc88f42abff3f081f6a4b62ab14a32383c114",
+      "bytes": 3984
+    },
+    "capture-compose.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "capture-compose.stdout": {
+      "sha256": "7d49eb748b52184d57f23350c65b498d6924cf1df7dc3b888eee4b9407288beb",
+      "bytes": 1020
+    },
+    "capture-inputs.json": {
+      "sha256": "d00f848e6f89cd2f3e3f94c9fe19735723f9b44c1792320a98dc53293e965023",
+      "bytes": 5221
+    },
+    "capture-publish.stderr": {
+      "sha256": "e6e2ca017a9e4ba96a0e8a666e26cb1ea42e89bce36e7c30aec3db1e0d3ffa96",
+      "bytes": 211
+    },
+    "capture-publish.stdout": {
+      "sha256": "5ce667f2d48ee84eeaee9c946c6797723c7d5786a16e05d3a5c01d91837efe33",
+      "bytes": 100
+    },
+    "capture-roots.json": {
+      "sha256": "50ba4a8faaba2cde6b8bed0fdbf95eabd4ff81355b5abc8f591232b71712e7bf",
+      "bytes": 404
+    },
+    "domain-v2-worker5-test.log": {
+      "sha256": "f7fb79867de298f4102d545f746768a33be4cfd1d6de94d531650a6176e1ca14",
+      "bytes": 228
+    },
+    "domain-v3-worker5-confirmed-test.log": {
+      "sha256": "b23221255049f4042849a3021ab33382fb7770b55a2b6498f22340de48723d05",
+      "bytes": 267
+    },
+    "domain-v4-confirmed-test.log": {
+      "sha256": "1fdb7300cfabcac3085d4f2fc07021fce7f82f859515e7feebf93aca1f47c998",
+      "bytes": 276
+    },
+    "evaluation-commands.json": {
+      "sha256": "426afe186eed06920d65adae1d3cb4d2beea691e0b183d38f1dfc8a99cd9dea7",
+      "bytes": 1348
+    },
+    "normal.log": {
+      "sha256": "24355e077cc9723326e8591272105de777de8e666c638fc47440a33cfa32c9b4",
+      "bytes": 7268
+    },
+    "published-snapshot.json": {
+      "sha256": "9f1429f69a5d85838eddf4d9b0d66d7699e4a2e975b2df70af5c354ce7e11484",
+      "bytes": 2777
+    },
+    "race-report.json": {
+      "sha256": "3a2108c588ef96d5fc1fa4855320e98f546a38cf57d13470ab2eefb94d1bef79",
+      "bytes": 56555
+    },
+    "race.log": {
+      "sha256": "3f5d24672b4bdd590c99554fc1c9dece447bd9fd53bc21f525cbb510235a6046",
+      "bytes": 7268
+    },
+    "sources.json": {
+      "sha256": "1d06fd9a8532f487e34637d60816a81001ddac881fa2acefd8350a4bf2f2910e",
+      "bytes": 6576
+    },
+    "task-race-report.json": {
+      "sha256": "71377d141a903c9b9277781a165d0136fb0c007149387c131ce275d66538aa18",
+      "bytes": 232027
+    },
+    "task-race-report.json.discovery.json": {
+      "sha256": "3ff7275aeff07542cbf29603afd752d0da71ea52b7a9e9dcc93439dd4419bf42",
+      "bytes": 8520
+    },
+    "task-report.json": {
+      "sha256": "71377d141a903c9b9277781a165d0136fb0c007149387c131ce275d66538aa18",
+      "bytes": 232027
+    },
+    "task-report.json.discovery.json": {
+      "sha256": "3ff7275aeff07542cbf29603afd752d0da71ea52b7a9e9dcc93439dd4419bf42",
+      "bytes": 8520
+    },
+    "v4-build.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "v4-full-test.log": {
+      "sha256": "df49b2298c9d622e0c833faeec0fea8ec858cd50895021795245bebe7f5622db",
+      "bytes": 2674
+    },
+    "v4-vet.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "worker-v5-build.log": {
+      "sha256": "06e49305ca158fb9af8c57fbf3ecc7e269c5af2f264438a95806a049734b23fb",
+      "bytes": 457
+    },
+    "worker-v5-inputs.json": {
+      "sha256": "f7714c51ff963d57ad1f9aa96c2e3a8aa4598281badec5575d7696c2d03182e3",
+      "bytes": 694
+    },
+    "worker-v5-tests.log": {
+      "sha256": "4e3ad60ee983d2fbd388cb0e8a5de2cacb53654cfc5bee7f429adcd64d15470d",
+      "bytes": 400
+    }
+  }
+}

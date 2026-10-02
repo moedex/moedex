@@ -68,6 +68,31 @@ func TestMergeSnapshotIdentitiesPreservesDistinctGraphCorpus(t *testing.T) {
 	if !reflect.DeepEqual(got.BlobSHAs, []string{"graph-sha", "rank-sha"}) {
 		t.Fatalf("blob_shas=%v", got.BlobSHAs)
 	}
+	if got.Cacheable {
+		t.Fatal("conflicting corpus generations must not be cacheable")
+	}
+}
+
+func TestSnapshotIdentityCorpusCompatibility(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		graphCorpus string
+		conflict    bool
+	}{
+		{"same source", "source", false},
+		{"legacy missing fingerprint", "", false},
+		{"different source", "other", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			identity := SnapshotIdentity{Cacheable: true, CorpusFingerprint: "source", GraphCorpusFingerprint: tc.graphCorpus, GraphGeneration: 99, GraphBuildID: "new-build"}
+			if identity.HasCorpusConflict() != tc.conflict {
+				t.Fatalf("unexpected compatibility: %+v", identity)
+			}
+			if got := identity.Normalize(); got.Cacheable == tc.conflict {
+				t.Fatalf("unexpected cacheability: %+v", got)
+			}
+		})
+	}
 }
 
 func TestStructuredErrorsAreNeverCacheableAndIdentifyServer(t *testing.T) {

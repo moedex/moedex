@@ -1,0 +1,17 @@
+{
+  "ordinal": 11,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"repo\":\"CleanArchitecture\",\"path\":\"src/Infrastructure/Data/Interceptors/DispatchDomainEventsInterceptor.cs\",\"format\":\"structured\"}"
+  ],
+  "started_monotonic": 78688.831833125,
+  "finished_monotonic": 78688.890629708,
+  "returncode": 0,
+  "stdout_bytes": 2947,
+  "stdout_sha256": "76687cbb267f184df2c7e69aef5a02b0e68fe3caf00b56a2d925a6f4851ded0f",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

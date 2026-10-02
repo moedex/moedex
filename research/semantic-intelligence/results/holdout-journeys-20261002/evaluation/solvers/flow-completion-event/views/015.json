@@ -1,0 +1,17 @@
+{
+  "ordinal": 15,
+  "argv": [
+    "call",
+    "--name",
+    "search_context",
+    "--arguments",
+    "{\"query\":\"AddMediatR RegisterServicesFromAssembly\",\"repo\":\"CleanArchitecture\",\"top_k\":1,\"token_budget\":1400,\"graph_depth\":0}"
+  ],
+  "started_monotonic": 78002.628509166,
+  "finished_monotonic": 78002.692132041,
+  "returncode": 0,
+  "stdout_bytes": 3756,
+  "stdout_sha256": "f9a9796c4d00bce03ff93d7170426c7bdbf90ba57d7436cd202ba5c77773046f",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

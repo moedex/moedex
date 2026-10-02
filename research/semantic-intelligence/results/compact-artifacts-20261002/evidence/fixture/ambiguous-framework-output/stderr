@@ -1,0 +1,6 @@
+          
+   ERROR  
+          
+  Semantic capture: worker: semanticrun: process failed: exit status 1: semantic worker failed: InvalidDataException: 
+  project framework identity is missing or ambiguous: App/App.csproj.                                                 
+

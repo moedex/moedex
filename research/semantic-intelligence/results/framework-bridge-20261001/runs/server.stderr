@@ -1,0 +1,69 @@
+> serve      started
+moedex-serve: snapshot independent-project -> .local/framework-bridge/eshop-final/index/snapshots/independent-project/serve
+moedex-serve: dense arm disabled; ranking lexical+symbol
+server: token index loaded from cache
+server: symbol index loaded from cache
+moedex-serve: corpus ranker ready — 802 blobs, 802 docs, 494 symbol blobs, 0 dense chunks (none) in 20ms
+{"time":"2026-10-01T13:34:47.45937-06:00","level":"INFO","msg":"graph artifact absent; preparing source-only serving snapshot"}
+{"time":"2026-10-01T13:34:47.524055-06:00","level":"INFO","msg":"server: graph symbol cache hits=0 misses=1 write_errors=0"}
+{"time":"2026-10-01T13:34:47.537992-06:00","level":"INFO","msg":"boot","mode":"mcp-http","blobs":802,"symbol_blobs":494,"dense_chunks":0,"requested_addr":"127.0.0.1:19383","effective_addr":"127.0.0.1:19383","tls":false}
+{"time":"2026-10-01T13:34:47.538037-06:00","level":"WARN","msg":"no auth token configured; /mcp is open (loopback bind)"}
+{"time":"2026-10-01T13:34:47.54048-06:00","level":"INFO","msg":"listening","addr":"127.0.0.1:19383","endpoint":"/mcp","tls":false,"auth":false}
+{"time":"2026-10-01T13:35:58.204058-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":81609,"dur_ms":2.111,"remote":"127.0.0.1:59585"}
+{"time":"2026-10-01T13:35:58.210608-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":11756,"dur_ms":1.399,"remote":"127.0.0.1:59586"}
+{"time":"2026-10-01T13:36:49.571413-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":81609,"dur_ms":2.15,"remote":"127.0.0.1:59623"}
+{"time":"2026-10-01T13:36:49.579062-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":11756,"dur_ms":1.855,"remote":"127.0.0.1:59624"}
+{"time":"2026-10-01T13:36:49.581157-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":700,"dur_ms":0.25,"remote":"127.0.0.1:59625"}
+{"time":"2026-10-01T13:36:49.582676-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":700,"dur_ms":0.164,"remote":"127.0.0.1:59626"}
+{"time":"2026-10-01T13:36:49.58427-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":3590,"dur_ms":0.245,"remote":"127.0.0.1:59627"}
+{"time":"2026-10-01T13:36:49.585649-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":1664,"dur_ms":0.178,"remote":"127.0.0.1:59628"}
+{"time":"2026-10-01T13:36:49.587441-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":4351,"dur_ms":0.293,"remote":"127.0.0.1:59629"}
+{"time":"2026-10-01T13:36:49.590648-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":11756,"dur_ms":1.315,"remote":"127.0.0.1:59630"}
+{"time":"2026-10-01T13:37:24.959502-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":81609,"dur_ms":0.63,"remote":"127.0.0.1:59656"}
+{"time":"2026-10-01T13:37:24.963513-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":11756,"dur_ms":0.9,"remote":"127.0.0.1:59657"}
+{"time":"2026-10-01T13:37:24.964747-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":700,"dur_ms":0.129,"remote":"127.0.0.1:59658"}
+{"time":"2026-10-01T13:37:24.965743-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":700,"dur_ms":0.108,"remote":"127.0.0.1:59659"}
+{"time":"2026-10-01T13:37:24.966823-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":3590,"dur_ms":0.174,"remote":"127.0.0.1:59660"}
+{"time":"2026-10-01T13:37:24.967894-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":1664,"dur_ms":0.116,"remote":"127.0.0.1:59661"}
+{"time":"2026-10-01T13:37:24.969043-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":4351,"dur_ms":0.161,"remote":"127.0.0.1:59662"}
+{"time":"2026-10-01T13:37:24.970328-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":18951,"dur_ms":0.334,"remote":"127.0.0.1:59663"}
+{"time":"2026-10-01T13:37:24.971475-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":795,"dur_ms":0.155,"remote":"127.0.0.1:59664"}
+{"time":"2026-10-01T13:37:24.972754-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":2968,"dur_ms":0.32,"remote":"127.0.0.1:59665"}
+{"time":"2026-10-01T13:37:24.973993-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":3490,"dur_ms":0.27,"remote":"127.0.0.1:59666"}
+{"time":"2026-10-01T13:37:24.975037-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":1677,"dur_ms":0.112,"remote":"127.0.0.1:59667"}
+{"time":"2026-10-01T13:37:24.975961-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":4178,"dur_ms":0.112,"remote":"127.0.0.1:59668"}
+{"time":"2026-10-01T13:37:24.976948-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":1328,"dur_ms":0.129,"remote":"127.0.0.1:59669"}
+{"time":"2026-10-01T13:37:24.97797-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":6529,"dur_ms":0.146,"remote":"127.0.0.1:59670"}
+{"time":"2026-10-01T13:37:24.981138-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":10009,"dur_ms":1.469,"remote":"127.0.0.1:59671"}
+{"time":"2026-10-01T13:37:24.982258-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":700,"dur_ms":0.106,"remote":"127.0.0.1:59672"}
+{"time":"2026-10-01T13:37:24.983227-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":3608,"dur_ms":0.12,"remote":"127.0.0.1:59673"}
+{"time":"2026-10-01T13:37:24.984186-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":1670,"dur_ms":0.103,"remote":"127.0.0.1:59674"}
+{"time":"2026-10-01T13:37:24.9853-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":4372,"dur_ms":0.145,"remote":"127.0.0.1:59675"}
+{"time":"2026-10-01T13:37:24.986441-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":18951,"dur_ms":0.293,"remote":"127.0.0.1:59676"}
+{"time":"2026-10-01T13:37:24.987359-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":795,"dur_ms":0.093,"remote":"127.0.0.1:59677"}
+{"time":"2026-10-01T13:37:24.988212-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":2968,"dur_ms":0.076,"remote":"127.0.0.1:59678"}
+{"time":"2026-10-01T13:37:24.989162-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":3495,"dur_ms":0.098,"remote":"127.0.0.1:59679"}
+{"time":"2026-10-01T13:37:24.990068-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":1677,"dur_ms":0.075,"remote":"127.0.0.1:59680"}
+{"time":"2026-10-01T13:37:24.990983-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":4178,"dur_ms":0.092,"remote":"127.0.0.1:59681"}
+{"time":"2026-10-01T13:37:24.991841-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":1331,"dur_ms":0.087,"remote":"127.0.0.1:59682"}
+{"time":"2026-10-01T13:37:24.992742-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":6547,"dur_ms":0.115,"remote":"127.0.0.1:59683"}
+{"time":"2026-10-01T13:37:24.995496-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":11317,"dur_ms":0.711,"remote":"127.0.0.1:59684"}
+{"time":"2026-10-01T13:37:24.996942-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":3560,"dur_ms":0.189,"remote":"127.0.0.1:59685"}
+{"time":"2026-10-01T13:37:24.998037-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":1654,"dur_ms":0.129,"remote":"127.0.0.1:59686"}
+{"time":"2026-10-01T13:37:24.999046-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":4316,"dur_ms":0.164,"remote":"127.0.0.1:59687"}
+{"time":"2026-10-01T13:37:25.000233-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":18951,"dur_ms":0.308,"remote":"127.0.0.1:59688"}
+{"time":"2026-10-01T13:37:25.001241-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":795,"dur_ms":0.095,"remote":"127.0.0.1:59689"}
+{"time":"2026-10-01T13:37:25.002154-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":2968,"dur_ms":0.09,"remote":"127.0.0.1:59690"}
+{"time":"2026-10-01T13:37:25.003034-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":3479,"dur_ms":0.119,"remote":"127.0.0.1:59691"}
+{"time":"2026-10-01T13:37:25.003978-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":1676,"dur_ms":0.091,"remote":"127.0.0.1:59692"}
+{"time":"2026-10-01T13:37:25.004929-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":4178,"dur_ms":0.105,"remote":"127.0.0.1:59693"}
+{"time":"2026-10-01T13:37:25.006001-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":1323,"dur_ms":0.098,"remote":"127.0.0.1:59694"}
+{"time":"2026-10-01T13:37:25.007245-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":6499,"dur_ms":0.225,"remote":"127.0.0.1:59695"}
+{"time":"2026-10-01T13:37:25.00982-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":12388,"dur_ms":0.649,"remote":"127.0.0.1:59696"}
+{"time":"2026-10-01T13:37:25.010953-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":1436,"dur_ms":0.228,"remote":"127.0.0.1:59697"}
+{"time":"2026-10-01T13:37:25.012201-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":10964,"dur_ms":0.341,"remote":"127.0.0.1:59698"}
+{"time":"2026-10-01T13:37:25.013283-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":1342,"dur_ms":0.086,"remote":"127.0.0.1:59699"}
+{"time":"2026-10-01T13:37:25.014371-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":3664,"dur_ms":0.115,"remote":"127.0.0.1:59700"}
+{"time":"2026-10-01T13:37:25.015744-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":1690,"dur_ms":0.097,"remote":"127.0.0.1:59701"}
+{"time":"2026-10-01T13:44:35.682358-06:00","level":"INFO","msg":"shutting down"}
+> serve      completed

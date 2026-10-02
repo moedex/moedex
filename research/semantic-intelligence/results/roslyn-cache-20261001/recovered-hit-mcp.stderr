@@ -1,0 +1,2 @@
+2026/10/01 07:51:39 server: graph symbol cache hits=3 misses=0 write_errors=0
+2026/10/01 07:51:45 server: graph open validation=5.155s symbols=1.343s identity=529ms catalog=5.914s catalog_cached=true total=12.942s nodes=2225451 records=6619555 logical_edges=182844081

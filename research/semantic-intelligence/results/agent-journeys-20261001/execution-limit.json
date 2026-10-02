@@ -1,0 +1,13 @@
+{
+  "recorded_utc": "2026-10-01T18:20:08.899766+00:00",
+  "event": "collaboration.spawn_agent rejected journey_v2_02: agent thread limit reached",
+  "effect": "Cannot create remaining fresh independent solvers in this root thread. Active fresh journey_v2_01 continues. Reuse journey_02 and journey_03 only for SAME original task; these saw no repository output before infrastructure abort. Their prior context contains only same instructions and failed access, disclosed rather than claiming fresh solver. Other nine tasks pending fresh-thread capacity; no contaminated cross-task reuse.",
+  "unchanged": [
+    "rubric",
+    "prompts",
+    "budgets",
+    "native product",
+    "new run counters"
+  ],
+  "no_quality_output_viewed_at_amendment": true
+}

@@ -1,0 +1,54 @@
+{
+  "task": "flow-validation",
+  "reviewer": "/root/review18_07",
+  "answer_sha256": "72c7eceb1dfc18c301c08e038beed98f1b123f2c10e7bb2f6901683115a6dfa8",
+  "atoms": [
+    {
+      "id": "flow-validation.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicit IConsumer<AddEventAttendee> declaration, cited Consumers/ValidateRegistrationConsumer.cs:9-24; returned in 002.response.raw (9-25) and 003.response.raw (1-25), confirmed at pinned source lines 9-10."
+    },
+    {
+      "id": "flow-validation.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Worker configuration explicitly registers the validation consumer with its definition; following sentence identifies ValidateRegistrationConsumerDefinition. Citation Worker/Program.cs:26-89 is the exact source span returned in 002.response.raw and contains AddConsumer<ValidateRegistrationConsumer, ValidateRegistrationConsumerDefinition>() at pinned line 77. Exact tool source spans are acceptable under the frozen rubric."
+    },
+    {
+      "id": "flow-validation.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Constructor injection and awaited call with EventId, MemberId, RegistrationId are explicit and cited Consumers/ValidateRegistrationConsumer.cs:9-24; 002/003.response.raw and pinned lines 13-23 support the full claim."
+    },
+    {
+      "id": "flow-validation.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer names the interface method, implementation correspondence, and AddScoped registration. Services/IRegistrationValidationService.cs:3-6 and RegistrationValidationService.cs:7-21 are precisely cited; Worker/Program.cs:26-89 is the exact returned 002 source span containing scoped interface/implementation registration at line 62. 004/006.response.raw independently record the interface implementation at implementation byte span [362,382)."
+    },
+    {
+      "id": "flow-validation.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly quotes publication with RegistrationId = registrationId and cites Services/RegistrationValidationService.cs:7-21; pinned lines 17-19 and 002.response.raw confirm it. 006.response.raw records the compile-time RegistrationValidated publication at [474,481)."
+    },
+    {
+      "id": "flow-validation.6",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly distinguishes configuration/static candidate path from execution and disclaims runtime DI resolution, dispatch/activation, publish completion and broker delivery. The cited complete implementation body (Services/RegistrationValidationService.cs:7-21; 002.response.raw) supports its statement that no event/member checks occur; 006.response.raw limitations expressly disclaim runtime dispatch, delivery, activation and DI selection."
+    }
+  ],
+  "correctness_total": 6,
+  "evidence_total": 6,
+  "possible": 6,
+  "unsupported_claims": [],
+  "strict_success": true,
+  "limitations": [
+    "Reviewed only assigned packet, assigned run artifacts and relevant source. All four rubric-pinned source hashes matched. All request/response hashes match transcript records.",
+    "All six responses are complete. Search responses 002/003 have truncated=false and clipped=false; compiler results 004/005 have truncated=false; 006 has seeds_truncated=false and paths_truncated=false. These establish only returned compile-time/static evidence, not runtime behavior or exhaustive application paths.",
+    "Worker citation spans 64 lines but reproduces the exact returned tool source span, which the frozen rubric explicitly accepts.",
+    "Isolation self-report and initial catalog-display truncation cannot be independently established from the retained MCP-only transcript; no contradictory logged activity appears. This does not affect source-fact scores."
+  ]
+}

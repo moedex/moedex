@@ -1,0 +1,8 @@
+{
+  "user_response": "Yes",
+  "approved_request": "One oracle reviewer, six solvers, six answer reviewers, one agent at a time",
+  "source_packet": "research/semantic-intelligence/results/holdout-quartz-20261002/result.json",
+  "source_packet_sha256": "b6281d4f9406b7f32743fe669d8ed6d0ecab2f31190ca21fc4e6cad1de56f830",
+  "active_oracle_reviewer": "/root/quartz_oracle_review",
+  "product_queries_before_oracle_review": 0
+}

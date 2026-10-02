@@ -1,0 +1,133 @@
+{
+  "task": {
+    "id": "locate-title-validation",
+    "prompt": "Where is validation of a new todo-list title defined, what rules does it enforce, and how are its validators and validation pipeline registered? Cite precise checked-in source ranges and separate configuration from observed runtime behavior.",
+    "atoms": [
+      {
+        "id": "locate-title-validation.1",
+        "requirement": "CreateTodoListCommandValidator validates CreateTodoListCommand and depends on IApplicationDbContext.",
+        "evidence": [
+          {
+            "path": "src/Application/TodoLists/Commands/CreateTodoList/CreateTodoListCommandValidator.cs",
+            "start_line": 5,
+            "end_line": 11,
+            "raw_sha256": "05660428247c4b96daa8fa5f1af10ff99d6d3d87c4d6373c86f87ee6eeb927c9",
+            "excerpt": "public class CreateTodoListCommandValidator : AbstractValidator<CreateTodoListCommand>\n{\n    private readonly IApplicationDbContext _context;\n\n    public CreateTodoListCommandValidator(IApplicationDbContext context)\n    {\n        _context = context;"
+          }
+        ]
+      },
+      {
+        "id": "locate-title-validation.2",
+        "requirement": "Title is nonempty and has maximum length 200.",
+        "evidence": [
+          {
+            "path": "src/Application/TodoLists/Commands/CreateTodoList/CreateTodoListCommandValidator.cs",
+            "start_line": 13,
+            "end_line": 15,
+            "raw_sha256": "05660428247c4b96daa8fa5f1af10ff99d6d3d87c4d6373c86f87ee6eeb927c9",
+            "excerpt": "        RuleFor(v => v.Title)\n            .NotEmpty()\n            .MaximumLength(200)"
+          }
+        ]
+      },
+      {
+        "id": "locate-title-validation.3",
+        "requirement": "Async uniqueness rejects an existing equal title, uses cancellation, and supplies Unique error code.",
+        "evidence": [
+          {
+            "path": "src/Application/TodoLists/Commands/CreateTodoList/CreateTodoListCommandValidator.cs",
+            "start_line": 16,
+            "end_line": 24,
+            "raw_sha256": "05660428247c4b96daa8fa5f1af10ff99d6d3d87c4d6373c86f87ee6eeb927c9",
+            "excerpt": "            .MustAsync(BeUniqueTitle)\n                .WithMessage(\"'{PropertyName}' must be unique.\")\n                .WithErrorCode(\"Unique\");\n    }\n\n    public async Task<bool> BeUniqueTitle(string title, CancellationToken cancellationToken)\n    {\n        return !await _context.TodoLists\n            .AnyAsync(l => l.Title == title, cancellationToken);"
+          }
+        ]
+      },
+      {
+        "id": "locate-title-validation.4",
+        "requirement": "Application services scan the executing assembly for validators and register ValidationBehaviour as an open MediatR behavior.",
+        "evidence": [
+          {
+            "path": "src/Application/DependencyInjection.cs",
+            "start_line": 14,
+            "end_line": 22,
+            "raw_sha256": "55deb255ce0c1f774d42964b1362c1d7b6aeaf7e93d7f78e95b96eb936b396da",
+            "excerpt": "        builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());\n\n        builder.Services.AddMediatR(cfg => {\n            cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());\n            cfg.AddOpenRequestPreProcessor(typeof(LoggingBehaviour<>));\n            cfg.AddOpenBehavior(typeof(UnhandledExceptionBehaviour<,>));\n            cfg.AddOpenBehavior(typeof(AuthorizationBehaviour<,>));\n            cfg.AddOpenBehavior(typeof(ValidationBehaviour<,>));\n            cfg.AddOpenBehavior(typeof(PerformanceBehaviour<,>));"
+          }
+        ]
+      }
+    ]
+  },
+  "scoring": {
+    "correctness": "1: all material clauses correctly explicit, no material contradiction; 0.5: at least one material clause correct and another omitted, no material contradiction; 0: absent or materially wrong",
+    "evidence": "1: precise inspected ranges jointly support every material clause; 0.5: genuine but broad or incomplete support; 0: none or contradictory. Equivalent precise citations and reuse across atoms accepted; evidence can support an omitted clause without automatically double-penalizing correctness omission.",
+    "strict": "all atom scores 1; no material unsupported claim; runtime distinction maintained",
+    "runtime": "A clear answer-wide source/configuration-versus-runtime distinction suffices; do not require repeated disclaimers per atom. Material runtime overclaims fail strict success."
+  },
+  "scope_guards": [
+    "impact-title-uniqueness compares the two named file roles; update-validator discussion is optional, not required",
+    "impact-done-semantics covers selected update/completion path, not exhaustive DTO/client changes; complete URL claims need route-prefix support",
+    "No product facts or detector behavior were used to amend the oracle"
+  ],
+  "answer_path": "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/evaluation/solvers/locate-title-validation/answer.md",
+  "answer_sha256": "1ad2372ff025bf6ab235bb4e286ab19152f0ec0232d9dc80273382ba38046e85",
+  "views_directory": "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/evaluation/solvers/locate-title-validation/views",
+  "display_coverage": [
+    {
+      "response_ordinal": 1,
+      "pointer": "",
+      "selected_value_fully_displayed": true,
+      "total_characters": 93,
+      "pages": [
+        {
+          "start": 0,
+          "end_exclusive": 93,
+          "view": "003.stdout"
+        }
+      ]
+    }
+  ],
+  "source_root": "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/capture-input/CleanArchitecture",
+  "build_variant": "Debug/net10.0, no custom DefineConstants",
+  "run_accounting": {
+    "version": 1,
+    "endpoint": "http://127.0.0.1:19461/mcp",
+    "started_monotonic": 77225.2662445,
+    "started_utc": "2026-10-02T13:26:23Z",
+    "calls": 1,
+    "response_bytes": 0,
+    "pending": null,
+    "stopped": "transport failure; response accounting unknown",
+    "limits": {
+      "calls": 24,
+      "response_bytes": 131072,
+      "wall_seconds": 600,
+      "transport_response_cap": 8388608
+    },
+    "prompt_sha256": "4156e8147100a1cca400eff65e25964b0077e647b9df192f5fb962d1aafc94fd",
+    "catalog_sha256": "b96e4a0e347d9b1fb1105967efdd735feddd6ea138d658daa78efbc1412ff837",
+    "client_sha256": "6e2934d7f16a8f87ba961d716899a8f298c8abf9feea367cce2b9e2fc00c36a1",
+    "initial_catalog_charged": false,
+    "token_usage": "unknown",
+    "filesystem_isolation": "not enforced; solver can access host workspace",
+    "accounting": "Each attempted MCP list/call is charged, including native errors. Local CLI syntax errors are separate events, not MCP calls. Complete response bytes include the JSON-RPC envelope. First crossing response is retained and returned, then calls stop. Timer starts at first interaction; coordinator separately records solver spawn and answer times and enforces the full solver deadline."
+  },
+  "execution_record": {
+    "task": "locate-title-validation",
+    "assigned_utc": "2026-10-02T13:25:47.257350+00:00",
+    "assigned_monotonic": 77188.631328333,
+    "deadline_monotonic": 77788.631328333,
+    "agent": "/root/holdout_solver_01",
+    "completion_observed_utc": "2026-10-02T13:27:57.515254+00:00",
+    "completion_observed_monotonic": 77318.889664,
+    "elapsed_upper_bound_seconds": 130.2583356670075,
+    "within_deadline": true,
+    "accounting": {
+      "calls": 1,
+      "response_bytes": 0,
+      "stopped": "transport failure; response accounting unknown",
+      "pending": null
+    },
+    "answer_sha256": "1ad2372ff025bf6ab235bb4e286ab19152f0ec0232d9dc80273382ba38046e85"
+  },
+  "instructions": "Read exact answer and logged displayed evidence. Independently assess each atom against source. Do not equate retained raw response with inspected evidence. Distinguish material unsupported claims from minor citation imprecision. Preserve correct partial credit. Do not inspect product implementation, other reviews, other solver runs or query products."
+}

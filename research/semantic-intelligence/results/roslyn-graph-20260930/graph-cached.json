@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/private/tmp/moedex-roslyn-graph-20260930/moedex-cached",
+    "graph",
+    "build",
+    "--shard-dir",
+    "/private/tmp/moedex-roslyn-graph-20260930/cached-shards"
+  ],
+  "cwd": "/Users/zakkeown/Code/moedex",
+  "environment": {
+    "PATH": "/usr/bin:/bin",
+    "HOME": "/private/tmp/moedex-roslyn-graph-20260930/home",
+    "TMPDIR": "/private/tmp/moedex-roslyn-graph-20260930/tmp",
+    "GOMAXPROCS": "8"
+  },
+  "timeout_seconds": 600,
+  "log_cap_bytes": 16777216,
+  "exit_code": -15,
+  "timed_out": false,
+  "log_overflow": [],
+  "elapsed_seconds": 468.2242996250061
+}

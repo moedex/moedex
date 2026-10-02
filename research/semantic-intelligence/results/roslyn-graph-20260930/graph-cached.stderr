@@ -1,0 +1,6 @@
+> build      started
+2026/09/30 17:49:33 server: graph schedule prepared 164310 names as 167371 bounded batches on 8 workers; heaviest="Create" sources=25559 definitions=852 upper_bound=21776268 batches=673 prepare=2m3.621s
+2026/09/30 17:49:33 server: graph source verification complete: sources=8898523 candidate_pairs=232754358 retained_pair_upper_bound=182606218 (before repository filtering and dedup)
+2026/09/30 17:49:33 server: graph region cache hits=1053710 misses=31619 waits=48 evictions=0 entries=31619 bytes=440274445 budget=536870912
+2026/09/30 17:50:03 server: graph schedule progress 5226/167371 batches complete; active=["Create sources[20558:20596]" "Create sources[20330:20368]" "Create sources[20596:20634]" "Create sources[20520:20558]" "Create sources[20444:20482]" "Create sources[20368:20406]"]
+2026/09/30 17:50:27 server: graph fanout verified 8898523 sources; 232754358 candidate pairs, 182606218 retained before dedup

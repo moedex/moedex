@@ -1,0 +1,547 @@
+{
+  "version": 1,
+  "frozen_at_utc": "2026-10-01T17:17:39.896054+00:00",
+  "classification": "independent_selected_closure_capability_holdout",
+  "upstream": "https://github.com/dotnet/eShop",
+  "repo": "eShop",
+  "commit": "f2369529433374a01b864b6fa1499ad894756f53",
+  "root_project": "src/Webhooks.API/Webhooks.API.csproj",
+  "configuration": "Debug",
+  "framework": "net8.0",
+  "reviewed_closure": {
+    "projects": [
+      "src/EventBus/EventBus.csproj",
+      "src/EventBusRabbitMQ/EventBusRabbitMQ.csproj",
+      "src/IntegrationEventLogEF/IntegrationEventLogEF.csproj",
+      "src/Webhooks.API/Webhooks.API.csproj",
+      "src/eShop.ServiceDefaults/eShop.ServiceDefaults.csproj"
+    ],
+    "source_sha256": {
+      "src/EventBus/Abstractions/EventBusSubscriptionInfo.cs": "82c8a9e62637ad95ced93a918427b20d1f447f93b711f0fe9168122b5ddd514b",
+      "src/EventBus/Abstractions/IEventBus.cs": "2ff9509664299150b51db763ecad2db091a353fa756626ce6b3d4714abd1135a",
+      "src/EventBus/Abstractions/IEventBusBuilder.cs": "c4cce27fe666e7ba9f8c61d4f33712987a0381c992a33ba8a070707ffe4bb183",
+      "src/EventBus/Abstractions/IIntegrationEventHandler.cs": "0f44de6ed21466c4a9c4c4df2891b88c7b763a8a3be77f5869666d1e873c699e",
+      "src/EventBus/Events/IntegrationEvent.cs": "31138820fd34d920d8824fffa73d15bc6eccec76ac080f7a8e505ba4e5ab9f9c",
+      "src/EventBus/Extensions/EventBusBuilderExtensions.cs": "99bb3f570d572ac5101804b1cdd936d98697cdcf9ed9c1c7c89faf1a63313f6a",
+      "src/EventBus/Extensions/GenericTypeExtensions.cs": "5afbd36ec75751e5d83bfb0117ce5986b03958cfedb74b5b13fd48e3b980b134",
+      "src/EventBus/GlobalUsings.cs": "86cd4b5db8a040d651bbc579a3c12e4af272393af355367154eec35b51b4656a",
+      "src/EventBusRabbitMQ/EventBusOptions.cs": "c8159f21f481a2370b999c3a1dcd67b75b9da4b93a8222599c32676fe4b6516f",
+      "src/EventBusRabbitMQ/GlobalUsings.cs": "ce56445b6b31cddbd2b54c21ea8a1ffbb164fd1b9f9986dce86d3fefefd10e82",
+      "src/EventBusRabbitMQ/RabbitMQEventBus.cs": "2b8148e25522d8f33569c1c82ab53116473e90b778554db2d8ce1283e5951a09",
+      "src/EventBusRabbitMQ/RabbitMQTelemetry.cs": "9e1dbbeee988ab9177766b66f8d3f8acfd34502d2a66cfc427d3fdf4a8299f2f",
+      "src/EventBusRabbitMQ/RabbitMqDependencyInjectionExtensions.cs": "174ba85fe969ca91d308977b5224086f8d22b22b06574c487b6c20ffffc6742a",
+      "src/IntegrationEventLogEF/EventStateEnum.cs": "64e315a378b6fb180fab4864f4bb5f6ebd9d9051a62155829413356562e0d98f",
+      "src/IntegrationEventLogEF/GlobalUsings.cs": "5bd6498c5f1cbaa27fa9889e7662a80b797329ac2626a9a69ee54ae42fc419f4",
+      "src/IntegrationEventLogEF/IntegrationEventLogEntry.cs": "283f143f94a128fe144600facae5fba0192dcbc354522772d4186ba37573309e",
+      "src/IntegrationEventLogEF/IntegrationLogExtensions.cs": "51fbc66b4b26d2b9e77cfaa85f00c8c5ccc438ac2b2b38a188105e933f502194",
+      "src/IntegrationEventLogEF/Services/IIntegrationEventLogService.cs": "e30dc6007464a231a0c9fc07b07cdb731e9b49763aecf6e3eb6cb6d8447f87c9",
+      "src/IntegrationEventLogEF/Services/IntegrationEventLogService.cs": "c1c77ea267325988009a43449715ccdbd3e7ef5b056ff09f8eb64687a67f6f25",
+      "src/IntegrationEventLogEF/Utilities/ResilientTransaction.cs": "be4bf930bc8e962fbf47afd4d77ae27c7f46d90963927b5da447bb9c897555db",
+      "src/Shared/ActivityExtensions.cs": "6622f7aaed06c23744a6e56eb8c2dcf5016af9f048da316d3d4d4e04fc5fb7a6",
+      "src/Shared/MigrateDbContextExtensions.cs": "045133acd46effcf5e473722351cebd7f79b4da1b4204c7790a58c38c493e2bc",
+      "src/Webhooks.API/Apis/WebHooksApi.cs": "68fdae9b30dea7eb2654c3ea1325ae20da094b66af1dd5d68741fd9e7a83fe7a",
+      "src/Webhooks.API/Exceptions/WebhooksDomainException.cs": "fd81b6de8d08537d4a4bf90cac00a77d20b1201ac638e019eff0cb274f493959",
+      "src/Webhooks.API/Extensions/Extensions.cs": "978b4e1bbd0146ed43f9db92dda29c599a8685e0f4efcec4102e713c0ac7faeb",
+      "src/Webhooks.API/Extensions/RouteHandlerBuilderExtensions.cs": "e4932acb9cb5a1cd560ae815eeea0ce45154e33e5c7a4ab525178a6cb655162b",
+      "src/Webhooks.API/GlobalUsings.cs": "04807ea54479c4aa8a25e42816a3e8d83063020bfeda1ca03d3688b7ab55ae77",
+      "src/Webhooks.API/Infrastructure/WebhooksContext.cs": "f4da59e48395371bc20d9b47f9061c3c6e8aa3167782c0bfbf1141e089159cce",
+      "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToPaidIntegrationEvent.cs": "df82210cab1b26d03948432d5c09c77f6b7e559158fdaa2c31389017ea347775",
+      "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToPaidIntegrationEventHandler.cs": "38d724d35f0a05e29d995dea3137b7a0c8f4a9cabe2ce23f87dd2dbaa4370abd",
+      "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToShippedIntegrationEvent.cs": "ffed11d57bc234ecb0c18b93a55a2e91d10ca5830dbc8bc1f04bcbfdf0d0bb79",
+      "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToShippedIntegrationEventHandler.cs": "4681e880deb3cdb5c8639c6fa630d808bf602c765feed42c5c1a10b11da0db98",
+      "src/Webhooks.API/IntegrationEvents/OrderStockItem.cs": "110afc1bde0e350ea0980a7e4f65ab87737fb63ac79138018b28e9486149f88f",
+      "src/Webhooks.API/IntegrationEvents/ProductPriceChangedIntegrationEvent.cs": "d2f37cdb807a6e575203d07cab6cfa54000172198e8413ec89a20c5dd22f164b",
+      "src/Webhooks.API/IntegrationEvents/ProductPriceChangedIntegrationEventHandler.cs": "036a9666fc43c56e9a6c353bb83598225883243a13235992430362d7ba136c4b",
+      "src/Webhooks.API/Migrations/20230925222606_Initial.Designer.cs": "a9b58aee800552772c15667920d0a438fd6eceeef3171e639837efca3d64d07c",
+      "src/Webhooks.API/Migrations/20230925222606_Initial.cs": "d5718c2276870743ee364af2856381e26b5b65fdc5959ac1dad558bdeac7c1e6",
+      "src/Webhooks.API/Migrations/WebhooksContextModelSnapshot.cs": "bb278566bc58a77ddf0b15eeb4f79f63ada54160aa9e32b35ce4788a1a92e265",
+      "src/Webhooks.API/Model/WebhookData.cs": "51d0fb8669554fc83b49ffc75e89ceee4b90b56c69a0f88620c049230f7bffd5",
+      "src/Webhooks.API/Model/WebhookSubscription.cs": "2f93328eea289271cd60695fb21ff2309dff63030ce76ba84023ef57a17e0112",
+      "src/Webhooks.API/Model/WebhookSubscriptionRequest.cs": "6525776208ad5aec77ba6a2622d9d5c098b9af1df9d7d79d95fff5e65f621f09",
+      "src/Webhooks.API/Model/WebhookType.cs": "7235be1b2517db7337844323e9d7ee8819205c76f792bcb9c029e5bb0d5ce8be",
+      "src/Webhooks.API/Program.cs": "4b510d9e8ece56f18214735bab2f496433d3535161cdaa282f337a09e328a066",
+      "src/Webhooks.API/Services/GrantUrlTesterService.cs": "615dc34c619eea7119010b072b04378571328e83c4a9eb0619509ef359520c55",
+      "src/Webhooks.API/Services/IGrantUrlTesterService.cs": "3463a6e737933d2ebf5111957395c48c328549254509f4796e46962c27fd38db",
+      "src/Webhooks.API/Services/IWebhooksRetriever.cs": "0ebb99ca34bfd7dc84cd2d9b44a175393eb240063dae633ea5b5566bba34de2f",
+      "src/Webhooks.API/Services/IWebhooksSender.cs": "4f8b1568c6f74c39c48b06d994e950273510c914d46373d28999153b7fc719d3",
+      "src/Webhooks.API/Services/WebhooksRetriever.cs": "4009336a5da589eb1065d832043f545857e3f0655cf24bb73ff7d815436515fb",
+      "src/Webhooks.API/Services/WebhooksSender.cs": "bab05a210020d2ac9b9f83d4d81671d74e0132f05983d15c86b81f26bd06e17b",
+      "src/eShop.ServiceDefaults/AuthenticationExtensions.cs": "6d62900b37789ae59e88086c90e2db31e75a2368c6ac1787c157b7102fd5e959",
+      "src/eShop.ServiceDefaults/ClaimsPrincipalExtensions.cs": "326ea61247462c6244dc882c0beff899ff8277bef426fd2ca0a3273d06b4efbe",
+      "src/eShop.ServiceDefaults/ConfigurationExtensions.cs": "6ced748a339dc935d99096164204e10b0d9cf8320fe2ffad784a5a26df1e5f06",
+      "src/eShop.ServiceDefaults/ConfigureSwaggerOptions.cs": "42edd99baa4f860601cca04f480f4dae0e4339f4d6029dca61e0872fbc9f0d71",
+      "src/eShop.ServiceDefaults/Extensions.cs": "690fa77f6153f8b4e7eba32510e17ae140e737e3d3586ace271d5dfd5e58b912",
+      "src/eShop.ServiceDefaults/HttpClientExtensions.cs": "b5c0457d11c6af4ddd8829d177677de21878d0f216c9ea6a9e9f2763c01b6a4f",
+      "src/eShop.ServiceDefaults/OpenApi.Extensions.cs": "e51c13f0e21b1621aa6f3ce939ba4e37fcd148d7b2b00422edf667e842a36a7f",
+      "src/eShop.ServiceDefaults/OpenApiDefaultValues.cs": "187811f46a05d46bb36a493659af6064c018191e51bcb16072acb8568615104a"
+    }
+  },
+  "cases": [
+    {
+      "id": "di-IGrantUrlTesterService",
+      "classification": "supported",
+      "family": "domain",
+      "kind": "di_registration",
+      "rule": "csharp-framework-v1",
+      "source": {
+        "project": "src/Webhooks.API/Webhooks.API.csproj",
+        "path": "src/Webhooks.API/Extensions/Extensions.cs",
+        "byte_offset": 418,
+        "byte_length": 12,
+        "source_sha256": "978b4e1bbd0146ed43f9db92dda29c599a8685e0f4efcec4102e713c0ac7faeb",
+        "anchor": "AddTransient<IGrantUrlTesterService, GrantUrlTesterService>",
+        "token": "AddTransient"
+      },
+      "targets": [
+        {
+          "role": "service",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+            "descriptor": "T:Webhooks.API.Services.IGrantUrlTesterService",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        },
+        {
+          "role": "implementation",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+            "descriptor": "T:Webhooks.API.Services.GrantUrlTesterService",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "lifetime": "transient",
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "M:Extensions.AddApplicationServices(Microsoft.Extensions.Hosting.IHostApplicationBuilder)",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "di-IWebhooksRetriever",
+      "classification": "supported",
+      "family": "domain",
+      "kind": "di_registration",
+      "rule": "csharp-framework-v1",
+      "source": {
+        "project": "src/Webhooks.API/Webhooks.API.csproj",
+        "path": "src/Webhooks.API/Extensions/Extensions.cs",
+        "byte_offset": 506,
+        "byte_length": 12,
+        "source_sha256": "978b4e1bbd0146ed43f9db92dda29c599a8685e0f4efcec4102e713c0ac7faeb",
+        "anchor": "AddTransient<IWebhooksRetriever, WebhooksRetriever>",
+        "token": "AddTransient"
+      },
+      "targets": [
+        {
+          "role": "service",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+            "descriptor": "T:Webhooks.API.Services.IWebhooksRetriever",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        },
+        {
+          "role": "implementation",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+            "descriptor": "T:Webhooks.API.Services.WebhooksRetriever",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "lifetime": "transient",
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "M:Extensions.AddApplicationServices(Microsoft.Extensions.Hosting.IHostApplicationBuilder)",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "di-IWebhooksSender",
+      "classification": "supported",
+      "family": "domain",
+      "kind": "di_registration",
+      "rule": "csharp-framework-v1",
+      "source": {
+        "project": "src/Webhooks.API/Webhooks.API.csproj",
+        "path": "src/Webhooks.API/Extensions/Extensions.cs",
+        "byte_offset": 586,
+        "byte_length": 12,
+        "source_sha256": "978b4e1bbd0146ed43f9db92dda29c599a8685e0f4efcec4102e713c0ac7faeb",
+        "anchor": "AddTransient<IWebhooksSender, WebhooksSender>",
+        "token": "AddTransient"
+      },
+      "targets": [
+        {
+          "role": "service",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+            "descriptor": "T:Webhooks.API.Services.IWebhooksSender",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        },
+        {
+          "role": "implementation",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+            "descriptor": "T:Webhooks.API.Services.WebhooksSender",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "lifetime": "transient",
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "M:Extensions.AddApplicationServices(Microsoft.Extensions.Hosting.IHostApplicationBuilder)",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "subscriptions-entity",
+      "classification": "supported",
+      "family": "domain",
+      "kind": "storage_entity",
+      "rule": "csharp-framework-v1",
+      "source": {
+        "project": "src/Webhooks.API/Webhooks.API.csproj",
+        "path": "src/Webhooks.API/Infrastructure/WebhooksContext.cs",
+        "byte_offset": 320,
+        "byte_length": 5,
+        "source_sha256": "f4da59e48395371bc20d9b47f9061c3c6e8aa3167782c0bfbf1141e089159cce",
+        "anchor": "DbSet<WebhookSubscription> Subscriptions",
+        "token": "DbSet"
+      },
+      "targets": [
+        {
+          "role": "entity",
+          "symbol": {
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+            "descriptor": "T:Webhooks.API.Model.WebhookSubscription",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "P:Webhooks.API.Infrastructure.WebhooksContext.Subscriptions",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "implementation-WebhooksSender",
+      "classification": "supported",
+      "family": "implementation",
+      "kind": "interface_method_implementation",
+      "rule": "csharp-interface-v1",
+      "source": {
+        "project": "src/Webhooks.API/Webhooks.API.csproj",
+        "path": "src/Webhooks.API/Services/WebhooksSender.cs",
+        "byte_offset": 177,
+        "byte_length": 7,
+        "source_sha256": "bab05a210020d2ac9b9f83d4d81671d74e0132f05983d15c86b81f26bd06e17b",
+        "anchor": "public async Task SendAll(",
+        "token": "SendAll"
+      },
+      "interface_member": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "M:Webhooks.API.Services.IWebhooksSender.SendAll(System.Collections.Generic.IEnumerable{Webhooks.API.Model.WebhookSubscription},Webhooks.API.Model.WebhookData)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "implementation_method": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "M:Webhooks.API.Services.WebhooksSender.SendAll(System.Collections.Generic.IEnumerable{Webhooks.API.Model.WebhookSubscription},Webhooks.API.Model.WebhookData)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "implementing_type": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "T:Webhooks.API.Services.WebhooksSender",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "implementation-WebhooksRetriever",
+      "classification": "supported",
+      "family": "implementation",
+      "kind": "interface_method_implementation",
+      "rule": "csharp-interface-v1",
+      "source": {
+        "project": "src/Webhooks.API/Webhooks.API.csproj",
+        "path": "src/Webhooks.API/Services/WebhooksRetriever.cs",
+        "byte_offset": 167,
+        "byte_length": 22,
+        "source_sha256": "4009336a5da589eb1065d832043f545857e3f0655cf24bb73ff7d815436515fb",
+        "anchor": "public async Task<IEnumerable<WebhookSubscription>> GetSubscriptionsOfType(",
+        "token": "GetSubscriptionsOfType"
+      },
+      "interface_member": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "M:Webhooks.API.Services.IWebhooksRetriever.GetSubscriptionsOfType(Webhooks.API.Model.WebhookType)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "implementation_method": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "M:Webhooks.API.Services.WebhooksRetriever.GetSubscriptionsOfType(Webhooks.API.Model.WebhookType)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "implementing_type": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "T:Webhooks.API.Services.WebhooksRetriever",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "implementation-GrantUrlTesterService",
+      "classification": "supported",
+      "family": "implementation",
+      "kind": "interface_method_implementation",
+      "rule": "csharp-interface-v1",
+      "source": {
+        "project": "src/Webhooks.API/Webhooks.API.csproj",
+        "path": "src/Webhooks.API/Services/GrantUrlTesterService.cs",
+        "byte_offset": 188,
+        "byte_length": 12,
+        "source_sha256": "615dc34c619eea7119010b072b04378571328e83c4a9eb0619509ef359520c55",
+        "anchor": "public async Task<bool> TestGrantUrl(",
+        "token": "TestGrantUrl"
+      },
+      "interface_member": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "M:Webhooks.API.Services.IGrantUrlTesterService.TestGrantUrl(System.String,System.String,System.String)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "implementation_method": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "M:Webhooks.API.Services.GrantUrlTesterService.TestGrantUrl(System.String,System.String,System.String)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "implementing_type": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "T:Webhooks.API.Services.GrantUrlTesterService",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "call-OrderStatusChangedToPaid-sender",
+      "classification": "supported",
+      "family": "resolved_call",
+      "source": {
+        "project": "src/Webhooks.API/Webhooks.API.csproj",
+        "path": "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToPaidIntegrationEventHandler.cs",
+        "byte_offset": 746,
+        "byte_length": 7,
+        "source_sha256": "38d724d35f0a05e29d995dea3137b7a0c8f4a9cabe2ce23f87dd2dbaa4370abd",
+        "anchor": "sender.SendAll(subscriptions, whook)",
+        "token": "SendAll"
+      },
+      "target": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "M:Webhooks.API.Services.IWebhooksSender.SendAll(System.Collections.Generic.IEnumerable{Webhooks.API.Model.WebhookSubscription},Webhooks.API.Model.WebhookData)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "M:Webhooks.API.IntegrationEvents.OrderStatusChangedToPaidIntegrationEventHandler.Handle(Webhooks.API.IntegrationEvents.OrderStatusChangedToPaidIntegrationEvent)",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "call-OrderStatusChangedToShipped-sender",
+      "classification": "supported",
+      "family": "resolved_call",
+      "source": {
+        "project": "src/Webhooks.API/Webhooks.API.csproj",
+        "path": "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToShippedIntegrationEventHandler.cs",
+        "byte_offset": 758,
+        "byte_length": 7,
+        "source_sha256": "4681e880deb3cdb5c8639c6fa630d808bf602c765feed42c5c1a10b11da0db98",
+        "anchor": "sender.SendAll(subscriptions, whook)",
+        "token": "SendAll"
+      },
+      "target": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "M:Webhooks.API.Services.IWebhooksSender.SendAll(System.Collections.Generic.IEnumerable{Webhooks.API.Model.WebhookSubscription},Webhooks.API.Model.WebhookData)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+        "descriptor": "M:Webhooks.API.IntegrationEvents.OrderStatusChangedToShippedIntegrationEventHandler.Handle(Webhooks.API.IntegrationEvents.OrderStatusChangedToShippedIntegrationEvent)",
+        "descriptor_kind": "documentation_comment_id"
+      }
+    },
+    {
+      "id": "custom-handler-OrderStatusChangedToPaid",
+      "classification": "unsupported",
+      "family": "domain",
+      "source": {
+        "project": "src/Webhooks.API/Webhooks.API.csproj",
+        "path": "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToPaidIntegrationEventHandler.cs",
+        "byte_offset": 246,
+        "byte_length": 24,
+        "source_sha256": "38d724d35f0a05e29d995dea3137b7a0c8f4a9cabe2ce23f87dd2dbaa4370abd",
+        "anchor": "IIntegrationEventHandler<OrderStatusChangedToPaidIntegrationEvent>",
+        "token": "IIntegrationEventHandler"
+      },
+      "desired_relationship": "custom integration-event handler declaration",
+      "reason": "Custom eShop.EventBus interface is outside supported MassTransit consumer rules; do not relabel as IConsumer."
+    },
+    {
+      "id": "custom-handler-OrderStatusChangedToShipped",
+      "classification": "unsupported",
+      "family": "domain",
+      "source": {
+        "project": "src/Webhooks.API/Webhooks.API.csproj",
+        "path": "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToShippedIntegrationEventHandler.cs",
+        "byte_offset": 247,
+        "byte_length": 24,
+        "source_sha256": "4681e880deb3cdb5c8639c6fa630d808bf602c765feed42c5c1a10b11da0db98",
+        "anchor": "IIntegrationEventHandler<OrderStatusChangedToShippedIntegrationEvent>",
+        "token": "IIntegrationEventHandler"
+      },
+      "desired_relationship": "custom integration-event handler declaration",
+      "reason": "Custom eShop.EventBus interface is outside supported MassTransit consumer rules; do not relabel as IConsumer."
+    },
+    {
+      "id": "custom-handler-ProductPriceChanged",
+      "classification": "unsupported",
+      "family": "domain",
+      "source": {
+        "project": "src/Webhooks.API/Webhooks.API.csproj",
+        "path": "src/Webhooks.API/IntegrationEvents/ProductPriceChangedIntegrationEventHandler.cs",
+        "byte_offset": 104,
+        "byte_length": 24,
+        "source_sha256": "036a9666fc43c56e9a6c353bb83598225883243a13235992430362d7ba136c4b",
+        "anchor": "IIntegrationEventHandler<ProductPriceChangedIntegrationEvent>",
+        "token": "IIntegrationEventHandler"
+      },
+      "desired_relationship": "custom integration-event handler declaration",
+      "reason": "Custom eShop.EventBus interface is outside supported MassTransit consumer rules; do not relabel as IConsumer."
+    },
+    {
+      "id": "callback-entity-mapping",
+      "classification": "unsupported",
+      "family": "domain",
+      "source": {
+        "project": "src/Webhooks.API/Webhooks.API.csproj",
+        "path": "src/Webhooks.API/Infrastructure/WebhooksContext.cs",
+        "byte_offset": 474,
+        "byte_length": 6,
+        "source_sha256": "f4da59e48395371bc20d9b47f9061c3c6e8aa3167782c0bfbf1141e089159cce",
+        "anchor": "Entity<WebhookSubscription>(eb =>",
+        "token": "Entity"
+      },
+      "desired_relationship": "entity mapping configuration",
+      "reason": "Callback Entity<T> overload is outside zero-argument mapping rule."
+    },
+    {
+      "id": "aspire-dbcontext-registration",
+      "classification": "unsupported",
+      "family": "domain",
+      "source": {
+        "project": "src/Webhooks.API/Webhooks.API.csproj",
+        "path": "src/Webhooks.API/Extensions/Extensions.cs",
+        "byte_offset": 282,
+        "byte_length": 18,
+        "source_sha256": "978b4e1bbd0146ed43f9db92dda29c599a8685e0f4efcec4102e713c0ac7faeb",
+        "anchor": "AddNpgsqlDbContext<WebhooksContext>(\"webhooksdb\")",
+        "token": "AddNpgsqlDbContext"
+      },
+      "desired_relationship": "Aspire DbContext registration",
+      "reason": "Aspire adapter is outside exact EF AddDbContext overload; no lifetime guessed."
+    },
+    {
+      "id": "http-not-message-WebhooksSender",
+      "classification": "negative",
+      "family": "domain",
+      "source": {
+        "project": "src/Webhooks.API/Webhooks.API.csproj",
+        "path": "src/Webhooks.API/Services/WebhooksSender.cs",
+        "byte_offset": 1151,
+        "byte_length": 9,
+        "source_sha256": "bab05a210020d2ac9b9f83d4d81671d74e0132f05983d15c86b81f26bd06e17b",
+        "anchor": "client.SendAsync(request)",
+        "token": "SendAsync"
+      },
+      "forbidden_kinds": [
+        "message_publish",
+        "message_publish_configuration"
+      ],
+      "reason": "HTTP request dispatch is not a supported message-bus publisher. Broader HTTP paths remain a distinct unsupported capability."
+    },
+    {
+      "id": "http-not-message-GrantUrlTesterService",
+      "classification": "negative",
+      "family": "domain",
+      "source": {
+        "project": "src/Webhooks.API/Webhooks.API.csproj",
+        "path": "src/Webhooks.API/Services/GrantUrlTesterService.cs",
+        "byte_offset": 819,
+        "byte_length": 9,
+        "source_sha256": "615dc34c619eea7119010b072b04378571328e83c4a9eb0619509ef359520c55",
+        "anchor": "client.SendAsync(msg)",
+        "token": "SendAsync"
+      },
+      "forbidden_kinds": [
+        "message_publish",
+        "message_publish_configuration"
+      ],
+      "reason": "HTTP request dispatch is not a supported message-bus publisher. Broader HTTP paths remain a distinct unsupported capability."
+    }
+  ],
+  "policy": [
+    "Source-authored before any semantic capture/output on this checkout. No detector changes permitted after freeze before scoring.",
+    "Selected 57 authored C# files across five project closure; SDK/generated input files must be tracked separately, not silently added to reviewed recall denominator.",
+    "Nine supported assertions:4domain,3methodimplementation,2resolvedcall;5unsupporteddomain patterns;2negative HTTP controls. Unsupported observations remain coverage gaps, not successful negatives.",
+    "No supported publisher seeds are expected for HTTP SendAsync; missing HTTP wrapper paths must not be scored as a resolved messaging path.",
+    "Evaluate exact project/context/source/token/qualified identities; ordinary unresolved diagnostics/incomplete captures distinct from false binding.",
+    "This is a capability-stratified officialsample holdout, not18frozenagenttasks or wholeeShop productiongeneralization. Tuning after results retires this dataset from holdout status."
+  ]
+}

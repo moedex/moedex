@@ -1,0 +1,181 @@
+[
+  {
+    "task": "flow-email",
+    "calls": 3,
+    "response_bytes": 30675,
+    "errors": [],
+    "tools": {
+      "list_repos": 1,
+      "search_context": 2
+    },
+    "ledger_hashes_verified": true,
+    "all_responses_complete": true,
+    "local_validation_events": []
+  },
+  {
+    "task": "flow-notification",
+    "calls": 10,
+    "response_bytes": 83015,
+    "errors": [],
+    "tools": {
+      "list_repos": 1,
+      "search_context": 2,
+      "compiler_symbols": 2,
+      "compiler_contract_context": 2,
+      "compiler_contract_paths": 1,
+      "read_source": 2
+    },
+    "ledger_hashes_verified": true,
+    "all_responses_complete": true,
+    "local_validation_events": []
+  },
+  {
+    "task": "flow-runtime-proof",
+    "calls": 12,
+    "response_bytes": 42681,
+    "errors": [],
+    "tools": {
+      "list_repos": 1,
+      "file_tree": 1,
+      "read_source": 10
+    },
+    "ledger_hashes_verified": true,
+    "all_responses_complete": true,
+    "local_validation_events": []
+  },
+  {
+    "task": "flow-validation",
+    "calls": 6,
+    "response_bytes": 54603,
+    "errors": [],
+    "tools": {
+      "list_repos": 1,
+      "search_context": 2,
+      "compiler_symbols": 2,
+      "compiler_contract_paths": 1
+    },
+    "ledger_hashes_verified": true,
+    "all_responses_complete": true,
+    "local_validation_events": []
+  },
+  {
+    "task": "impact-attendee",
+    "calls": 11,
+    "response_bytes": 79167,
+    "errors": [],
+    "tools": {
+      "list_repos": 1,
+      "search_context": 1,
+      "compiler_symbols": 1,
+      "compiler_contract_context": 2,
+      "read_source": 5,
+      "file_tree": 1
+    },
+    "ledger_hashes_verified": true,
+    "all_responses_complete": true,
+    "local_validation_events": []
+  },
+  {
+    "task": "impact-entity-uniqueness",
+    "calls": 5,
+    "response_bytes": 33709,
+    "errors": [],
+    "tools": {
+      "list_repos": 1,
+      "search_context": 1,
+      "file_tree": 1,
+      "read_source": 2
+    },
+    "ledger_hashes_verified": true,
+    "all_responses_complete": true,
+    "local_validation_events": []
+  },
+  {
+    "task": "impact-submitted",
+    "calls": 11,
+    "response_bytes": 89052,
+    "errors": [],
+    "tools": {
+      "list_repos": 1,
+      "search_context": 2,
+      "compiler_symbols": 1,
+      "compiler_contract_context": 2,
+      "read_source": 3,
+      "compiler_binding_at": 2
+    },
+    "ledger_hashes_verified": true,
+    "all_responses_complete": true,
+    "local_validation_events": []
+  },
+  {
+    "task": "impact-validation-signature",
+    "calls": 5,
+    "response_bytes": 83405,
+    "errors": [
+      3
+    ],
+    "tools": {
+      "list_repos": 1,
+      "search_context": 2,
+      "trace_calls": 1,
+      "read_source": 1
+    },
+    "ledger_hashes_verified": true,
+    "all_responses_complete": true,
+    "local_validation_events": []
+  },
+  {
+    "task": "locate-duplicate",
+    "calls": 3,
+    "response_bytes": 28898,
+    "errors": [],
+    "tools": {
+      "list_repos": 1,
+      "search_context": 1,
+      "read_source": 1
+    },
+    "ledger_hashes_verified": true,
+    "all_responses_complete": true,
+    "local_validation_events": []
+  },
+  {
+    "task": "locate-persistence",
+    "calls": 3,
+    "response_bytes": 28550,
+    "errors": [],
+    "tools": {
+      "list_repos": 1,
+      "search_context": 1,
+      "read_source": 1
+    },
+    "ledger_hashes_verified": true,
+    "all_responses_complete": true,
+    "local_validation_events": []
+  },
+  {
+    "task": "locate-retry",
+    "calls": 3,
+    "response_bytes": 20958,
+    "errors": [],
+    "tools": {
+      "list_repos": 1,
+      "search_context": 2
+    },
+    "ledger_hashes_verified": true,
+    "all_responses_complete": true,
+    "local_validation_events": []
+  },
+  {
+    "task": "locate-validation-service",
+    "calls": 2,
+    "response_bytes": 30307,
+    "errors": [],
+    "tools": {
+      "list_repos": 1,
+      "search_context": 1
+    },
+    "ledger_hashes_verified": true,
+    "all_responses_complete": true,
+    "local_validation_events": []
+  }
+]

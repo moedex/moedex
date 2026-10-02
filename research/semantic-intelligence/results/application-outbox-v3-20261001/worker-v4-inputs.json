@@ -1,0 +1,10 @@
+{
+  "worker_version": "4",
+  "new_rule": "csharp-framework-v3",
+  "sha256": {
+    "tools/semantic-dotnet/DomainFacts.cs": "7d201413db8a160322bd98d71829e7ad9384e553be317e59051c310bbabbce72",
+    "tools/semantic-dotnet/Worker.cs": "448a2700646ad29da41b73072c8aca5ff9082a0d5b11b3b9a0d46e1ee91764b6",
+    "tools/semantic-dotnet/test_domain_v3.py": "804c437bf3c70efbf4007e40eace9f3d88914c1899abd99e502b29169ac50482",
+    ".local/application-impact/worker-v4-source/bin/Debug/net10.0/Moedex.SemanticWorker.dll": "c8202c238c05230dd7e346406da8034412ae99ffda32c669d35265ded53c284a"
+  }
+}

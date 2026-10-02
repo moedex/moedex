@@ -1,0 +1,103 @@
+package semantic
+
+import (
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func namespaceScanArtifact(version string) *Artifact {
+	a := domainFixture()
+	a.Symbols[0].Key.Descriptor = "T:Example.Marker"
+	a.Symbols[0].ID = a.Symbols[0].ComputeID()
+	api := &a.Symbols[1]
+	api.Key.Namespace = "MassTransit, Version=8.2.1.0"
+	api.Key.Descriptor = "M:MassTransit.RegistrationExtensions.AddConsumersFromNamespaceContaining``1(MassTransit.IRegistrationConfigurator,System.Func{System.Type,System.Boolean})"
+	api.ID = api.ComputeID()
+	c := &a.Contexts[0]
+	c.ExtractorVersion = version
+	c.ID = c.ComputeID()
+	o := &a.Occurrences[0]
+	o.ContextID = c.ID
+	o.ID = o.ComputeID()
+	b := &a.Bindings[0]
+	b.ExtractorVersion = version
+	b.OccurrenceID = o.ID
+	b.SymbolID = api.ID
+	b.DomainFacts = []DomainFact{{Kind: "consumer_namespace_scan_configuration", Rule: "csharp-masstransit-scan-v1", EvidenceScope: "compile_time", Targets: []DomainTarget{{Role: "namespace_marker", SymbolID: a.Symbols[0].ID}}}}
+	b.ID = b.ComputeID()
+	return a
+}
+
+func TestMassTransitScanArtifactAndBounds(t *testing.T) {
+	for _, version := range []string{"16", "17", "18", "19", "20", "21", "22"} {
+		a := namespaceScanArtifact(version)
+		if err := a.Validate(); (err == nil) != (version == "17" || (version == "18" || (version == "19" || (version == "20" || version == "21")))) {
+			t.Fatalf("worker %s: %v", version, err)
+		}
+	}
+	a := namespaceScanArtifact("17")
+	path := filepath.Join(t.TempDir(), "artifact")
+	if err := Write(path, a); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Read(path, Limits{}); err != nil {
+		t.Fatal(err)
+	}
+	for name, change := range map[string]func(*Artifact){
+		"generic-marker": func(a *Artifact) {
+			a.Symbols[0].Key.Descriptor = "T:Marker`1"
+			a.Symbols[0].ID = a.Symbols[0].ComputeID()
+			a.Bindings[0].DomainFacts[0].Targets[0].SymbolID = a.Symbols[0].ID
+		},
+		"array-marker": func(a *Artifact) {
+			a.Symbols[0].Key.Descriptor = "T:Marker[]"
+			a.Symbols[0].ID = a.Symbols[0].ComputeID()
+			a.Bindings[0].DomainFacts[0].Targets[0].SymbolID = a.Symbols[0].ID
+		},
+		"role":     func(a *Artifact) { a.Bindings[0].DomainFacts[0].Targets[0].Role = "handler" },
+		"rule":     func(a *Artifact) { a.Bindings[0].DomainFacts[0].Rule = "csharp-mediatr-scan-v1" },
+		"scope":    func(a *Artifact) { a.Bindings[0].DomainFacts[0].EvidenceScope = "runtime" },
+		"lifetime": func(a *Artifact) { a.Bindings[0].DomainFacts[0].Lifetime = "singleton" },
+		"route":    func(a *Artifact) { a.Bindings[0].DomainFacts[0].RoutePattern = "/scan" },
+		"extra-target": func(a *Artifact) {
+			a.Bindings[0].DomainFacts[0].Targets = append(a.Bindings[0].DomainFacts[0].Targets, a.Bindings[0].DomainFacts[0].Targets[0])
+		},
+		"api-owner": func(a *Artifact) {
+			a.Symbols[1].Key.NamespaceKind = "project"
+			a.Symbols[1].ID = a.Symbols[1].ComputeID()
+			a.Bindings[0].SymbolID = a.Symbols[1].ID
+		},
+		"api-overload": func(a *Artifact) {
+			a.Symbols[1].Key.Descriptor = strings.ReplaceAll(a.Symbols[1].Key.Descriptor, "AddConsumers", "AddActivities")
+			a.Symbols[1].ID = a.Symbols[1].ComputeID()
+			a.Bindings[0].SymbolID = a.Symbols[1].ID
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			bad := namespaceScanArtifact("17")
+			change(bad)
+			bad.Bindings[0].ID = bad.Bindings[0].ComputeID()
+			if bad.Validate() == nil {
+				t.Fatal("invalid scan evidence accepted")
+			}
+		})
+	}
+}
+
+func TestActivityNamespaceScanKindMatchesAPI(t *testing.T) {
+	a := namespaceScanArtifact("17")
+	a.Symbols[1].Key.Descriptor = strings.ReplaceAll(a.Symbols[1].Key.Descriptor, "AddConsumers", "AddActivities")
+	a.Symbols[1].ID = a.Symbols[1].ComputeID()
+	a.Bindings[0].SymbolID = a.Symbols[1].ID
+	a.Bindings[0].DomainFacts[0].Kind = "activity_namespace_scan_configuration"
+	a.Bindings[0].ID = a.Bindings[0].ComputeID()
+	if err := a.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	a.Bindings[0].DomainFacts[0].Kind = "consumer_namespace_scan_configuration"
+	a.Bindings[0].ID = a.Bindings[0].ComputeID()
+	if a.Validate() == nil {
+		t.Fatal("scan category confused")
+	}
+}

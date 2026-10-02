@@ -1,0 +1,59 @@
+{
+  "task": "impact-validation-signature",
+  "classification": "source_authored_public_tool_walkthrough",
+  "calls": 9,
+  "response_bytes": 69111,
+  "stopped": null,
+  "evidence": [
+    {
+      "subject": "IRegistrationValidationService",
+      "snippet": "ValidateRegistration(",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+          "line": 5,
+          "text": "Task ValidateRegistration(string eventId, string memberId, Guid registrationId);"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationValidationService",
+      "snippet": "ValidateRegistration(",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+          "line": 17,
+          "text": "public async Task ValidateRegistration(string eventId, string memberId, Guid registrationId)"
+        }
+      ]
+    },
+    {
+      "subject": "ValidateRegistrationConsumer",
+      "snippet": "ValidateRegistration(",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+          "line": 23,
+          "text": "await _validationService.ValidateRegistration(context.Message.EventId, context.Message.MemberId, context.Message.RegistrationId);"
+        }
+      ]
+    },
+    {
+      "subject": "Program",
+      "snippet": "AddScoped<IRegistrationValidationService, RegistrationValidationService>",
+      "citations": [
+        {
+          "path": "src/Sample.Worker/Program.cs",
+          "line": 62,
+          "text": "services.AddScoped<IRegistrationValidationService, RegistrationValidationService>();"
+        }
+      ]
+    }
+  ],
+  "missing_evidence": [],
+  "limitations": [
+    "Basenames and snippet assertions are source-authored hints.",
+    "No independent agent quality or completeness score.",
+    "Source configuration does not prove runtime activation, dispatch, delivery or transactions."
+  ]
+}

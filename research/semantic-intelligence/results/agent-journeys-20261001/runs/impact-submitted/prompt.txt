@@ -1,0 +1,1 @@
+Assess the source impact of changing RegistrationSubmitted.RegistrationId. Identify producer, consumer, and saga-correlation references, separating compile-time references from runtime routing.

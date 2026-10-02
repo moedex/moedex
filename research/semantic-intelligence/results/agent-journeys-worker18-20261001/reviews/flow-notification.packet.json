@@ -1,0 +1,127 @@
+{
+  "task": {
+    "id": "flow-notification",
+    "journey": "explain_cross_service",
+    "prompt": "Trace a submitted registration from the HTTP action to the recorded RegistrationSubmitted publisher and notification consumer. Explain where interface dispatch remains a static candidate.",
+    "requirements": [
+      {
+        "claim": "HTTP POST Submit invokes IRegistrationService.SubmitRegistration with model values.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+            "start_line": 19,
+            "end_line": 27,
+            "raw_sha256": "57da78434440b2da392bf6cb0a5eb954a1b3bc93f27e786c9c55bf9100fdd4df"
+          }
+        ],
+        "id": "flow-notification.1",
+        "weight": 1
+      },
+      {
+        "claim": "RegistrationService implements that interface; API configures it scoped.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "start_line": 9,
+            "end_line": 21,
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+          },
+          {
+            "path": "src/Sample.Components/IRegistrationService.cs",
+            "start_line": 3,
+            "end_line": 5,
+            "raw_sha256": "c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71"
+          },
+          {
+            "path": "src/Sample.Api/Program.cs",
+            "start_line": 30,
+            "end_line": 30,
+            "raw_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53"
+          }
+        ],
+        "id": "flow-notification.2",
+        "weight": 1
+      },
+      {
+        "claim": "RegistrationService.SubmitRegistration directly publishes RegistrationSubmitted.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "start_line": 34,
+            "end_line": 41,
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+          }
+        ],
+        "id": "flow-notification.3",
+        "weight": 1
+      },
+      {
+        "claim": "NotifyRegistrationConsumer declares IConsumer<RegistrationSubmitted> and its Consume logs member/event/date.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+            "start_line": 8,
+            "end_line": 23,
+            "raw_sha256": "5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81"
+          }
+        ],
+        "id": "flow-notification.4",
+        "weight": 1
+      },
+      {
+        "claim": "Worker registers NotifyRegistrationConsumer and configures RabbitMQ endpoints.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Worker/Program.cs",
+            "start_line": 74,
+            "end_line": 74,
+            "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+          },
+          {
+            "path": "src/Sample.Worker/Program.cs",
+            "start_line": 85,
+            "end_line": 88,
+            "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+          }
+        ],
+        "id": "flow-notification.5",
+        "weight": 1
+      },
+      {
+        "claim": "The interface-to-implementation hop and publisher-to-consumer relationship are static candidates/configuration, not observed dispatch or delivery.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+            "start_line": 27,
+            "end_line": 27,
+            "raw_sha256": "57da78434440b2da392bf6cb0a5eb954a1b3bc93f27e786c9c55bf9100fdd4df"
+          },
+          {
+            "path": "src/Sample.Worker/Program.cs",
+            "start_line": 74,
+            "end_line": 88,
+            "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+          }
+        ],
+        "id": "flow-notification.6",
+        "weight": 1
+      }
+    ],
+    "permissible_unknowns": [
+      "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+      "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+    ]
+  },
+  "scoring": {
+    "atomic_correctness": "Each atom scores 1 if correct and explicit, 0.5 if correct but materially incomplete, 0 if absent/incorrect. Report raw numerator/denominator and per-atom verdicts.",
+    "evidence": "Independently score each atom 1 for precise retrievable citation supporting the whole claim, 0.5 for a relevant but incomplete/broad citation, 0 for absent or contradictory evidence. Line-number equivalents and exact tool source spans are acceptable.",
+    "unsupported_claims": "Inventory false or unsupported claims separately with severity. Unsupported runtime certainty or invented source facts prevents a fully-correct task label even if positive atoms are present.",
+    "abstention": "Explicit unknowns avoid false-claim penalties but do not earn missing source-fact credit. Missing tool capability is incomplete evidence, not itself a false claim.",
+    "task_success": "All atoms receive correctness=1 and evidence=1, no material unsupported claims, and applicable configuration/runtime distinction is stated. Report graded scores as well as this strict success label.",
+    "review": "Two independent source reviewers adjudicate using source, rubric and retained solver transcript; disagreements retained and resolved explicitly. No tool output creates new gold after execution.",
+    "runtime_unknown_atoms": "Citations support the visible source limits, not proof that no unseen runtime evidence could exist."
+  },
+  "source_root": "/Users/zakkeown/Code/moedex/.local/application-impact/Sample-Outbox",
+  "run_directory": "/Users/zakkeown/Code/moedex/.local/journey-readiness/solvers/flow-notification",
+  "rubric_source": "research/semantic-intelligence/results/agent-journeys-20261001/source-rubric.json"
+}

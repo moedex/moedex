@@ -1,0 +1,26 @@
+[
+  {
+    "case": "validation",
+    "offset_calls": 11,
+    "discovery_calls": 6,
+    "offset_bytes": 45929,
+    "discovery_bytes": 40822,
+    "evidence_identical": true
+  },
+  {
+    "case": "submission",
+    "offset_calls": 11,
+    "discovery_calls": 6,
+    "offset_bytes": 41413,
+    "discovery_bytes": 36401,
+    "evidence_identical": true
+  },
+  {
+    "case": "bom",
+    "offset_calls": 8,
+    "discovery_calls": 3,
+    "offset_bytes": 47161,
+    "discovery_bytes": 39397,
+    "evidence_identical": true
+  }
+]

@@ -143,6 +143,7 @@ func newRoot() (*cobra.Command, func()) {
 		newSearchCommand(),
 		newIndexCommand(),
 		newGraphCommand(),
+		newSemanticCommand(),
 		newCorpusCommand(),
 		legacyCommand("serve", "Serve warm HTTP or MCP endpoints", "moedex-serve", servecmd.Main),
 		newMCPCommand(),

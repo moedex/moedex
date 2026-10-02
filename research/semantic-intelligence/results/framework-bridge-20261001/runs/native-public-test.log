@@ -1,0 +1,8 @@
+ok  	moedex/internal/semantic	0.240s
+--- FAIL: TestPublicFrameworkBridge (0.03s)
+    framework_bridge_public_test.go:88: compiler implementations returned inconsistent interface identity
+FAIL
+FAIL	moedex/internal/semanticimport	0.223s
+ok  	moedex/internal/semanticindex	1.185s
+ok  	moedex/internal/mcp	(cached)
+FAIL

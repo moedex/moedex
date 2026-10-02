@@ -1,0 +1,222 @@
+{
+  "date": "2026-09-30",
+  "source": {
+    "source_snapshot": "20260930T230839Z-1",
+    "source_commit": "36d26c5466e4d25940657ccb8d5b9557ccaf7be1",
+    "shards": [
+      {
+        "name": "shard-0000.idx",
+        "bytes": 426353753,
+        "sha256": "c7c1941da48b15d33902954a7733e7d2f83cae01d70f701febe3f353510e7320"
+      },
+      {
+        "name": "shard-0001.idx",
+        "bytes": 418489359,
+        "sha256": "41fb5b8ceb6d875e656142355cfbce3bf17f1ce3054e897e889ecc761a6c5676"
+      },
+      {
+        "name": "shard-0002.idx",
+        "bytes": 368739716,
+        "sha256": "c67034c72fcd3fe28cfb05299dcd974181fc6aeb06165e5ed58c2019c971c603"
+      }
+    ]
+  },
+  "run": {
+    "status": "failed scale acceptance: interrupted for memory growth after candidate expansion",
+    "timeout_seconds": 600,
+    "go_workers": 8,
+    "name": "graph-indexed",
+    "graph_persisted": false,
+    "persisted_anchor_gate": "not run: no complete graph"
+  },
+  "binary_sha256": "42d562edc63c1675c072f4e3eb57b61b74102d3deb30e2e35f8b56990ca08fc8",
+  "runner_sha256": "1e3b17a788f27c3df6e166292154db0a250b5908addcd083c459d56081d85902",
+  "extractors_version": 3,
+  "changes": [
+    "C# literal-aware method declarations and references",
+    "required-gram occurrence driver",
+    "source verification and enclosing lookup before target expansion",
+    "extractor-version graph refresh invalidation",
+    "bounded immutable mmap scalar count cache",
+    "LF-line C# using verification",
+    "bounded sweep-owned immutable region cache (512 MiB / 32768 entries)",
+    "per-name bounded compiled-pattern sessions (128 sets)",
+    "delimiter-length-aware C# raw verification and scoped-bindings-v2 refresh invalidation",
+    "one-pass immutable text occurrence table (512 MiB accounted payload, 262144 names, exact fallback)"
+  ],
+  "validation": {
+    "default_go_suite": "passed after one-pass integration",
+    "vet": "passed after one-pass integration",
+    "pinned_roslyn_source_anchors": "2/2 passed",
+    "candidate_package_race": "passed",
+    "source_first_differential_and_migration_race": "passed",
+    "csharp_typescript_race": "passed",
+    "review": "independent source-first and posting/literal review; malformed raw recovery corrected; independent bounded cache/session lifecycle review passed; independent one-pass boundary/ownership/budget review passed",
+    "mmap_count_cache_race": "passed",
+    "using_verifier_differential_race": "passed",
+    "region_session_cache_race": "passed",
+    "raw_verifier_race": "passed",
+    "raw_verifier_policy_migration": "passed",
+    "one_pass_occurrence_race": "passed",
+    "one_pass_graph_differential_and_lifecycle_race": "passed",
+    "persisted_roslyn_graph_anchors": "not run: no complete graph"
+  },
+  "scope": "Graph scale and selected source-correctness regression; not a compiler precision/recall estimate or competitive comparison.",
+  "first_trial": {
+    "command": [
+      "/private/tmp/moedex-roslyn-graph-20260930/moedex",
+      "graph",
+      "build",
+      "--shard-dir",
+      "/private/tmp/moedex-roslyn-graph-20260930/shards"
+    ],
+    "cwd": "/Users/zakkeown/Code/moedex",
+    "environment": {
+      "PATH": "/usr/bin:/bin",
+      "HOME": "/private/tmp/moedex-roslyn-graph-20260930/home",
+      "TMPDIR": "/private/tmp/moedex-roslyn-graph-20260930/tmp",
+      "GOMAXPROCS": "8"
+    },
+    "timeout_seconds": 600,
+    "log_cap_bytes": 16777216,
+    "exit_code": -9,
+    "timed_out": true,
+    "log_overflow": [],
+    "elapsed_seconds": 600.1004716660027,
+    "binary_sha256": "fc43697f009c548875979e583e6dfda01b5c1b73c649061f8d087d44e3f07a91",
+    "preparation_sample_sha256": "00575bc2b916ebcee6243283c72a9d6ca2dad97efa07eb7ac13c3a25369a047c"
+  },
+  "second_trial": {
+    "command": [
+      "/private/tmp/moedex-roslyn-graph-20260930/moedex-final",
+      "graph",
+      "build",
+      "--shard-dir",
+      "/private/tmp/moedex-roslyn-graph-20260930/final-shards"
+    ],
+    "cwd": "/Users/zakkeown/Code/moedex",
+    "environment": {
+      "PATH": "/usr/bin:/bin",
+      "HOME": "/private/tmp/moedex-roslyn-graph-20260930/home",
+      "TMPDIR": "/private/tmp/moedex-roslyn-graph-20260930/tmp",
+      "GOMAXPROCS": "8"
+    },
+    "timeout_seconds": 600,
+    "log_cap_bytes": 16777216,
+    "exit_code": -9,
+    "timed_out": true,
+    "log_overflow": [],
+    "elapsed_seconds": 604.3541809579983,
+    "binary_sha256": "dd53cb33b8a0a8d06103ee3f6f5f6b2e79cac59cff29e9a9c60595386dc9d886",
+    "preparation_sample_sha256": "2bd674ad7d157e233821008c263a8e90429c71ab7524f9296c7c49e43cfedc97",
+    "phase_evidence": "Logs show preparation completed in350.393s and candidate expansion completed; deadline occurred later. Earlier live interpretation as preparation timeout was incorrect because the capture log file was buffered."
+  },
+  "third_trial": {
+    "command": [
+      "/private/tmp/moedex-roslyn-graph-20260930/moedex-cached",
+      "graph",
+      "build",
+      "--shard-dir",
+      "/private/tmp/moedex-roslyn-graph-20260930/cached-shards"
+    ],
+    "cwd": "/Users/zakkeown/Code/moedex",
+    "environment": {
+      "PATH": "/usr/bin:/bin",
+      "HOME": "/private/tmp/moedex-roslyn-graph-20260930/home",
+      "TMPDIR": "/private/tmp/moedex-roslyn-graph-20260930/tmp",
+      "GOMAXPROCS": "8"
+    },
+    "timeout_seconds": 600,
+    "log_cap_bytes": 16777216,
+    "exit_code": -15,
+    "timed_out": false,
+    "log_overflow": [],
+    "elapsed_seconds": 468.2242996250061,
+    "binary_sha256": "3016f6da39b2ed69277ab9a7db67885e23cab0b15d6262fedc94a3b85501b3a3",
+    "stop_reason": "Operator stopped disposable trial to incorporate verified raw-literal correctness fix. Completed logs show preparation123.621s and candidate expansion completed. Not a deadline result.",
+    "preparation_sample_sha256": "6eb135f413229624fe510160985a144cc0e4f906cd15585039ff74baca8ec3ba"
+  },
+  "graph_binding_policy": "scoped-bindings-v2",
+  "implementation_file_sha256": {
+    "internal/symbol/extract_cs.go": "ebb9a0ecaa66ce79bc20219ca6aa744b44d8964ba3f955bf58eddef85a3f6201",
+    "internal/symbol/scan.go": "eb77b94785a356527df932995f6b17b4ff6bb699862730c54ba14c3a598bd572",
+    "internal/symbol/extract.go": "88cc60e30d33c1b7b1d8a52753f34a1e57ab59438fb4db80d08ecdb5faf20dd9",
+    "internal/graph/candidates/candidates.go": "a174ba092396d6cb0156648df2dd3dab6976b5f6a54d00e58c8a015395c772bf",
+    "internal/graph/candidates/occurrences.go": "7bf06114db4c736bac9654c4d0867b9bee71d6161416c9823e9c318af12afa32",
+    "internal/graph/candidates/textindex.go": "5dc8318fb397cacdf77d935595a72a8e674f6af63478c50e9ee83e13abac1f7f",
+    "internal/graph/verify/verify.go": "87e11f5c6b2e5d323276c301e8b337d1b658194606d9ab52abb3151de946d1f4",
+    "internal/graph/verify/cache.go": "743f003b3044294270b3ba8de696df5cec76d4b3c38c3953c4ca21b9337c4de8",
+    "internal/graph/verify/regions.go": "f5080a28d7c88fb92e071321dd45e14df62e891db009168eb8ce280b11b09cdc",
+    "internal/graph/build/graphbuild.go": "284dd03622ae03b8f64ec70960239168b47d34ac45011fea11bea976a6ff636c",
+    "internal/graph/build/graphrefresh.go": "794531d2481f7ced2e5dd866f1dabad019d83d823a4ad3f463e144f48db8a4bb",
+    "internal/diskstore/diskstore.go": "76df5461d369669999df53e9e4e1f90f2255c3b65555f42d6bc78931072c9fe9",
+    "internal/app/indexcmd/main.go": "aa44eefb8f56504a13d2751482eaab8748a23457c2a653f4afc9a8696c012e67"
+  },
+  "final_trial": {
+    "command": [
+      "/private/tmp/moedex-roslyn-graph-20260930/moedex-indexed",
+      "graph",
+      "build",
+      "--shard-dir",
+      "/private/tmp/moedex-roslyn-graph-20260930/verified-shards"
+    ],
+    "cwd": "/Users/zakkeown/Code/moedex",
+    "environment": {
+      "PATH": "/usr/bin:/bin",
+      "HOME": "/private/tmp/moedex-roslyn-graph-20260930/home",
+      "TMPDIR": "/private/tmp/moedex-roslyn-graph-20260930/tmp",
+      "GOMAXPROCS": "8"
+    },
+    "timeout_seconds": 600,
+    "log_cap_bytes": 16777216,
+    "exit_code": -15,
+    "timed_out": false,
+    "log_overflow": [],
+    "elapsed_seconds": 184.35804116699728,
+    "stop_reason": "Operator stopped disposable process after sample reported 66.8 GB physical footprint. Exact sampled instruction maps to final batch-to-name aggregation copy in graphrefresh.go:630.",
+    "measurements": {
+      "names": 164310,
+      "batches": 167371,
+      "text_scan_seconds": 3.194,
+      "text_occurrences": 9409508,
+      "text_content_bytes": 440573723,
+      "text_blobs": 31998,
+      "text_accounted_retained_bytes": 361420356,
+      "preparation_seconds_including_text_scan": 19.009,
+      "sources_verified": 8898523,
+      "candidate_pairs": 232754358,
+      "retained_pairs_before_dedup": 182597653,
+      "suppressed_pairs": 50156705,
+      "expansion_elapsed_seconds_approx_from_log_timestamps": 21,
+      "heaviest_name": "Create",
+      "heaviest_name_sources": 25559,
+      "heaviest_name_definitions": 852,
+      "heaviest_name_pair_upper_bound": 21776268,
+      "region_cache_hits": 1053636,
+      "region_cache_misses": 31619,
+      "region_cache_waits": 122,
+      "region_cache_evictions": 0,
+      "region_cache_entries": 31619,
+      "region_cache_retained_bytes": 440274445,
+      "sample_physical_footprint": "66.8G"
+    }
+  },
+  "capture_caveat": "Python log-file buffering delayed visibility during runs. Completed logs are authoritative; initial live phase guesses were corrected. CLI diagnostics were not suppressed.",
+  "next_priority": "Bound materialization before expansion; stream or factorize candidate relations while preserving ambiguity, confidence, ordering/evidence, and persisted-query parity. Removing finalcopy alone does not bound underlying182.6M pair output.",
+  "artifact_sha256": {
+    "graph-cached.json": "0484a834fe0d8edaa2fe047bc50599bb22b5010af54ce2a11a0e2ed5e8852955",
+    "graph-cached.stderr": "031a735b4beb937c2337252b6c25ff72e56da313d0303ab8b67d86f559daaba3",
+    "graph-cached.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "graph-final.json": "4bb57f8841449776243b6baa69564bb9252147810a5acb3fcb639d3cea037daa",
+    "graph-final.stderr": "565816360d4d6f3fe9648d40166d2099b0f45171b84dbd02f5429bbb9df736a8",
+    "graph-final.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "graph-indexed.json": "89638e4f4e19de7ef3f739d114cb61bdaaa72e81f00c6b8001a2bc945d0f7e57",
+    "graph-indexed.sample.txt": "b85acddde0eb3e4fabccb656fae1a720d3697bf0281a824c1e5b89456ec643ca",
+    "graph-indexed.stderr": "bcbeeb304ef1e1d9a364ceeca72c5a8e66295e843769bbd0cd8e4a03db1a729f",
+    "graph-indexed.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "graph-run.json": "92315a70c53e569c0f89aaee716b44c99f6314ab9ecf54267830cde77aea4435",
+    "graph-run.stderr": "e665f62fd1b76c2519543a8a4bbfd1a5580bb1cf8ee036487072fd12d19ce2db",
+    "graph-run.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "runner.py": "1e3b17a788f27c3df6e166292154db0a250b5908addcd083c459d56081d85902"
+  }
+}

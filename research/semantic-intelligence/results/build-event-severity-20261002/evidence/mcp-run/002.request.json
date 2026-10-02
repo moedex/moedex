@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"compiler_definitions","arguments":{"symbol_id":"symbol:89ee7bda52b000b6052f958560003058f719c05eb36e37a4fe30067a996ec4ec","context_id":"context:09c057eb3d4807f0cf69f9a123bbd764f4421e2c505096d7c426bb4c15b3b748","repo":"CleanArchitecture"}}}

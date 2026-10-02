@@ -1,0 +1,134 @@
+{
+  "task": {
+    "id": "impact-attendee",
+    "journey": "contract_impact",
+    "prompt": "Which checked-in classes and state-machine actions should be reviewed if AddEventAttendee changes? Distinguish consumer declarations, configured consumers, configured publication, and runtime activation.",
+    "requirements": [
+      {
+        "claim": "Review AddEventAttendee contract RegistrationId, MemberId and EventId.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/Contracts/AddEventAttendee.cs",
+            "start_line": 3,
+            "end_line": 8,
+            "raw_sha256": "bd97b1816fc8732ebba2f7cbb5b97cb29e8d878b13330ddf7fa94e55dea987cb"
+          }
+        ],
+        "id": "impact-attendee.1",
+        "weight": 1
+      },
+      {
+        "claim": "AddEventAttendeeConsumer declares IConsumer<AddEventAttendee>; its body logs MemberId/EventId.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+            "start_line": 8,
+            "end_line": 20,
+            "raw_sha256": "f7ae50324fc1b3c8fa3fec399e233b6e6e977b9458d348b834e5ced0f5fc6184"
+          }
+        ],
+        "id": "impact-attendee.2",
+        "weight": 1
+      },
+      {
+        "claim": "ValidateRegistrationConsumer also declares IConsumer<AddEventAttendee>; it reads all three properties for validation.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+            "start_line": 9,
+            "end_line": 23,
+            "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+          }
+        ],
+        "id": "impact-attendee.3",
+        "weight": 1
+      },
+      {
+        "claim": "Worker configures both consumers; validation uses its consumer definition.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Worker/Program.cs",
+            "start_line": 76,
+            "end_line": 77,
+            "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+          }
+        ],
+        "id": "impact-attendee.4",
+        "weight": 1
+      },
+      {
+        "claim": "Saga fluent Publish configures AddEventAttendee from CorrelationId/EventId/MemberId after the conditional failure step.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "start_line": 33,
+            "end_line": 40,
+            "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+          }
+        ],
+        "id": "impact-attendee.5",
+        "weight": 1
+      },
+      {
+        "claim": "Review validation interface/implementation when changed fields alter forwarded arguments; registrationId is propagated to RegistrationValidated.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+            "start_line": 23,
+            "end_line": 23,
+            "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+          },
+          {
+            "path": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+            "start_line": 5,
+            "end_line": 5,
+            "raw_sha256": "094614ab8d70256ca3accc40e20d4d358d1170031938fa03a68fbcd2be99a97a"
+          },
+          {
+            "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+            "start_line": 17,
+            "end_line": 19,
+            "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20"
+          }
+        ],
+        "id": "impact-attendee.6",
+        "weight": 1
+      },
+      {
+        "claim": "Declarations, registrations and configured publication do not establish runtime consumer activation or delivery.",
+        "source_evidence": [
+          {
+            "path": "src/Sample.Worker/Program.cs",
+            "start_line": 76,
+            "end_line": 88,
+            "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+          },
+          {
+            "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+            "start_line": 35,
+            "end_line": 40,
+            "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+          }
+        ],
+        "id": "impact-attendee.7",
+        "weight": 1
+      }
+    ],
+    "permissible_unknowns": [
+      "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+      "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+    ]
+  },
+  "scoring": {
+    "atomic_correctness": "Each atom scores 1 if correct and explicit, 0.5 if correct but materially incomplete, 0 if absent/incorrect. Report raw numerator/denominator and per-atom verdicts.",
+    "evidence": "Independently score each atom 1 for precise retrievable citation supporting the whole claim, 0.5 for a relevant but incomplete/broad citation, 0 for absent or contradictory evidence. Line-number equivalents and exact tool source spans are acceptable.",
+    "unsupported_claims": "Inventory false or unsupported claims separately with severity. Unsupported runtime certainty or invented source facts prevents a fully-correct task label even if positive atoms are present.",
+    "abstention": "Explicit unknowns avoid false-claim penalties but do not earn missing source-fact credit. Missing tool capability is incomplete evidence, not itself a false claim.",
+    "task_success": "All atoms receive correctness=1 and evidence=1, no material unsupported claims, and applicable configuration/runtime distinction is stated. Report graded scores as well as this strict success label.",
+    "review": "Two independent source reviewers adjudicate using source, rubric and retained solver transcript; disagreements retained and resolved explicitly. No tool output creates new gold after execution.",
+    "runtime_unknown_atoms": "Citations support the visible source limits, not proof that no unseen runtime evidence could exist."
+  },
+  "source_root": "/Users/zakkeown/Code/moedex/.local/application-impact/Sample-Outbox",
+  "run_directory": "/Users/zakkeown/Code/moedex/.local/journey-readiness/solvers/impact-attendee",
+  "rubric_source": "research/semantic-intelligence/results/agent-journeys-20261001/source-rubric.json"
+}

@@ -1,0 +1,1 @@
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup><Target Name="ProbeDiagnostic" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' == 'true'"></Target></Project>

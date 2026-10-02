@@ -1,0 +1,50 @@
+using System;
+using System.Collections.Generic;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+interface IRepo<T> {}
+interface IPair<A,B> {}
+class Repo<T> : IRepo<T> where T:class {}
+class Child<T> : Repo<T> where T:class {}
+class Pair<T,U> : IPair<T,U> {}
+class Swap<T,U> : IPair<U,T> {}
+class Repeat<T,U> : IPair<T,T> {}
+class Nested<T> : IRepo<List<T>> {}
+class Unrelated<T> {}
+abstract class Abstract<T> : IRepo<T> {}
+class Private<T> : IRepo<T> { private Private() {} }
+interface IWide<A,B,C,D,E,F,G,H,I> {}
+class Wide<A,B,C,D,E,F,G,H,I> : IWide<A,B,C,D,E,F,G,H,I> {}
+class Outer { public class Inner<T> : IRepo<T> {} }
+class Fake {public void AddScoped(Type serviceType,Type implementationType) {}}
+class Calls {
+ void Run(IServiceCollection services,bool enabled) {
+  services./*singleton*/AddSingleton(typeof(IRepo<>),typeof(Repo<>));
+  services./*scoped*/AddScoped(typeof(IRepo<>),typeof(Repo<>));
+  services./*transient*/AddTransient(typeof(IRepo<>),typeof(Repo<>));
+  services./*pair*/AddScoped(typeof(IPair<,>),typeof(Pair<,>));
+  services./*inherited*/AddScoped(typeof(IRepo<>),typeof(Child<>));
+  services./*named*/AddScoped(implementationType:typeof(Repo<>),serviceType:typeof(IRepo<>));
+  ServiceCollectionServiceExtensions./*static*/AddScoped(services,typeof(IRepo<>),typeof(Repo<>));
+  if(enabled) services./*branch*/AddScoped(typeof(IRepo<>),typeof(Repo<>));
+  services./*private-ctor*/AddScoped(typeof(IRepo<>),typeof(Private<>));
+  services./*swapped*/AddScoped(typeof(IPair<,>),typeof(Swap<,>));
+  services./*repeated*/AddScoped(typeof(IPair<,>),typeof(Repeat<,>));
+  services./*nested-argument*/AddScoped(typeof(IRepo<>),typeof(Nested<>));
+  services./*unrelated*/AddScoped(typeof(IRepo<>),typeof(Unrelated<>));
+  services./*abstract*/AddScoped(typeof(IRepo<>),typeof(Abstract<>));
+  services./*implementation-interface*/AddScoped(typeof(IRepo<>),typeof(IRepo<>));
+  services./*class-service*/AddScoped(typeof(Repo<>),typeof(Child<>));
+  services./*arity*/AddScoped(typeof(IRepo<>),typeof(Pair<,>));
+  services./*wide*/AddScoped(typeof(IWide<,,,,,,,,>),typeof(Wide<,,,,,,,,>));
+  services./*nested-owner*/AddScoped(typeof(IRepo<>),typeof(Outer.Inner<>));
+  Type variable=typeof(IRepo<>);services./*variable*/AddScoped(variable,typeof(Repo<>));
+  services./*conditional*/AddScoped(enabled?typeof(IRepo<>):variable,typeof(Repo<>));
+  services./*closed*/AddScoped(typeof(IRepo<string>),typeof(Repo<string>));
+  services./*cast*/AddScoped((Type)typeof(IRepo<>),typeof(Repo<>));
+  services./*if-absent*/TryAddScoped(typeof(IRepo<>),typeof(Repo<>));
+  services./*factory*/AddScoped(typeof(IRepo<>),sp=>new Repo<string>());
+  new Fake()./*fake*/AddScoped(typeof(IRepo<>),typeof(Repo<>));
+ }
+ void Open<T>(IServiceCollection services) {services./*type-parameter*/AddScoped(typeof(T),typeof(Repo<>));}
+}

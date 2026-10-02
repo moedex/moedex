@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": 18,
+  "method": "tools/call",
+  "params": {
+    "name": "compiler_binding_at",
+    "arguments": {
+      "repo": "Sample-ForkJoint",
+      "path": "src/ForkJoint.Api/OrderRoutes.cs",
+      "byte_offset": 448,
+      "raw_sha256": "2c7345b54fc91c7dce711e10c741ba7a1dc948b254893b5ba809f9a393c090c0",
+      "context_id": "context:c48656f2c6d88cf39f75027123b0cdb666ed833bc48d02c1eb8b14a47ee52cde"
+    }
+  }
+}

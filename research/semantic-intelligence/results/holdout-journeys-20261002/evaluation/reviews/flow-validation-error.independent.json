@@ -1,0 +1,92 @@
+{
+  "task": "flow-validation-error",
+  "answer_sha256": "3e2f28693fd89f4dcb7a7d9a4bf30ab66bc2e355f5c4ae253e3650d1ce119c94",
+  "atoms": [
+    {
+      "id": "flow-validation-error.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Receives the validator enumerable and explicitly describes per-validator ValidateAsync with request context, cancellation token, and Task.WhenAll.",
+      "answer_citations": [
+        "src/Application/Common/Behaviours/ValidationBehaviour.cs:5-13",
+        "src/Application/Common/Behaviours/ValidationBehaviour.cs:15-26"
+      ],
+      "inspected_evidence": [
+        "007.stdout: ValidationBehaviour.cs:1-34"
+      ]
+    },
+    {
+      "id": "flow-validation-error.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Correctly describes flattening failures, the application exception alias, failure short-circuit, and reaching next only when validation permits it.",
+      "answer_citations": [
+        "src/Application/Common/Behaviours/ValidationBehaviour.cs:1-5",
+        "src/Application/Common/Behaviours/ValidationBehaviour.cs:17-32"
+      ],
+      "inspected_evidence": [
+        "007.stdout: ValidationBehaviour.cs:1-34"
+      ]
+    },
+    {
+      "id": "flow-validation-error.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly describes grouping PropertyName to arrays of ErrorMessage in Errors.",
+      "answer_citations": [
+        "src/Application/Common/Exceptions/ValidationException.cs:5-21"
+      ],
+      "inspected_evidence": [
+        "010.stdout: ValidationException.cs:1-22"
+      ]
+    },
+    {
+      "id": "flow-validation-error.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly identifies the application exception import, HTTP 400 ValidationProblemDetails carrying Errors, response status assignment, JSON writing, and handled return.",
+      "answer_citations": [
+        "src/Web/Infrastructure/ProblemDetailsExceptionHandler.cs:1-15",
+        "src/Web/Infrastructure/ProblemDetailsExceptionHandler.cs:17-23",
+        "src/Web/Infrastructure/ProblemDetailsExceptionHandler.cs:43-50"
+      ],
+      "inspected_evidence": [
+        "014.stdout: ProblemDetailsExceptionHandler.cs:1-52"
+      ]
+    },
+    {
+      "id": "flow-validation-error.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "All configuration connections are explicit: application behavior registration, web handler registration, startup service calls and exception middleware.",
+      "answer_citations": [
+        "src/Application/DependencyInjection.cs:14-23",
+        "src/Web/DependencyInjection.cs:11-23",
+        "src/Web/Program.cs:9-14",
+        "src/Web/Program.cs:38-45"
+      ],
+      "inspected_evidence": [
+        "011.stdout: Application/DependencyInjection.cs:1-25",
+        "012.stdout: Web/DependencyInjection.cs:1-37",
+        "013.stdout: Web/Program.cs:1-52"
+      ]
+    }
+  ],
+  "material_unsupported_claims": [],
+  "minor_issues": [],
+  "runtime_distinction_preserved": true,
+  "budget_compliance": {
+    "compliant": true,
+    "calls": 16,
+    "response_bytes": 83703,
+    "elapsed_upper_bound_seconds": 342.54609833299764,
+    "limits": {
+      "calls": 24,
+      "response_bytes": 131072,
+      "wall_seconds": 600
+    }
+  },
+  "strict_success": true,
+  "display_verification": "All cited substantive source ranges appear in complete read_source views 007, 010-014, 016, 018 and 020. Compared these displayed fields with pinned source; differences are only BOM/newline representation. Partial search views do not remove the later complete relevant source evidence. No retained undisplayed raw response was treated as inspected evidence. Optional entrypoint, validator example, and unhandled-exception discussion are also supported.",
+  "independence_attestation": "Reviewed only the assigned prompt, packet, answer, specified displayed view records, and relevant pinned source. Verified answer SHA-256 and pinned oracle source hashes. No product queries, product implementation, coordinator scores, other reviews, other tasks, or delegation. Solver attestation and view/accounting records support instruction-based compliance; they do not establish OS-enforced isolation or model attention. The packet explicitly reports filesystem isolation was not enforced."
+}

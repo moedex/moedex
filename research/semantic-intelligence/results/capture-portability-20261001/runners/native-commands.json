@@ -1,0 +1,53 @@
+[
+  {
+    "argv": [
+      "python3",
+      "/Users/zakkeown/Code/moedex/tools/semantic-dotnet/test_default_forwarding.py",
+      "--dotnet",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/dotnet",
+      "--sdk",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/sdk/8.0.400",
+      "--worker",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+      "--packages",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/packages",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/forwarding"
+    ],
+    "returncode": 0
+  },
+  {
+    "argv": [
+      "python3",
+      "/Users/zakkeown/Code/moedex/tools/semantic-dotnet/test_default_selection.py",
+      "--dotnet",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/dotnet",
+      "--sdk",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/sdk/8.0.400",
+      "--worker",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+      "--packages",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/packages",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/selection"
+    ],
+    "returncode": 0
+  },
+  {
+    "argv": [
+      "python3",
+      "/Users/zakkeown/Code/moedex/tools/semantic-dotnet/test_framework_bridge.py",
+      "--dotnet",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/dotnet",
+      "--sdk",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/sdk/8.0.400",
+      "--worker",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+      "--packages",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/packages",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/bridge"
+    ],
+    "returncode": 0
+  }
+]

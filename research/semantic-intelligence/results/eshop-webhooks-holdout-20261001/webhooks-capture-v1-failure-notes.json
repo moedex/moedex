@@ -1,0 +1,8 @@
+{
+  "outcome": "failed",
+  "phase": "offline_restore",
+  "intervention": "Owned restore PID32409 received SIGTERM after sandbox execution stalled without output; fresh escalated retry used v2.",
+  "limitations": [
+    "Production semanticrun deletes failed workspace; retained CLI stdout/stderr and invocation only."
+  ]
+}

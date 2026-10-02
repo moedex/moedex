@@ -1,0 +1,60 @@
+using System;
+using MassTransit;
+class GlobalMarker {}
+namespace Models.One {class Marker {}}
+namespace Models.Two {class Marker {}}
+namespace Models {
+ class Outer {public class Inner {}}
+ class Generic<T> {}
+ class GenericOuter<T> {public class Inner {}}
+ class Fake {
+  public void AddConsumersFromNamespaceContaining<T>() {}
+  public void AddActivitiesFromNamespaceContaining<T>() {}
+ }
+ class Calls {
+  static bool Filter(Type t)=>true;
+  static Func<Type,bool> Factory()=>Filter;
+  void Run(IRegistrationConfigurator cfg,bool enabled,Func<Type,bool> predicate) {
+   cfg./*consumer-default*/AddConsumersFromNamespaceContaining<Models.One.Marker>();
+   cfg./*consumer-null*/AddConsumersFromNamespaceContaining<Models.One.Marker>(null);
+   cfg./*consumer-named*/AddConsumersFromNamespaceContaining<Models.One.Marker>(filter:null);
+   RegistrationExtensions./*consumer-static*/AddConsumersFromNamespaceContaining<Models.One.Marker>(cfg);
+   if(enabled) cfg./*consumer-branch*/AddConsumersFromNamespaceContaining<Models.One.Marker>();
+   cfg./*consumer-metadata*/AddConsumersFromNamespaceContaining<string>();
+   cfg./*consumer-nested-simple*/AddConsumersFromNamespaceContaining<Outer.Inner>();
+   cfg./*consumer-lambda*/AddConsumersFromNamespaceContaining<Models.One.Marker>(t=>true);
+   cfg./*consumer-variable*/AddConsumersFromNamespaceContaining<Models.One.Marker>(predicate);
+   cfg./*consumer-method*/AddConsumersFromNamespaceContaining<Models.One.Marker>(Filter);
+   cfg./*consumer-factory*/AddConsumersFromNamespaceContaining<Models.One.Marker>(Factory());
+   cfg./*consumer-conditional*/AddConsumersFromNamespaceContaining<Models.One.Marker>(enabled?null:predicate);
+   cfg./*consumer-generic*/AddConsumersFromNamespaceContaining<Generic<int>>();
+   cfg./*consumer-generic-owner*/AddConsumersFromNamespaceContaining<GenericOuter<int>.Inner>();
+   cfg./*consumer-array*/AddConsumersFromNamespaceContaining<Models.One.Marker[]>();
+   cfg./*consumer-global*/AddConsumersFromNamespaceContaining<GlobalMarker>();
+   cfg./*consumer-type-overload*/AddConsumersFromNamespaceContaining(typeof(Models.One.Marker));
+   new Fake()./*consumer-fake*/AddConsumersFromNamespaceContaining<Models.One.Marker>();
+   cfg./*activity-default*/AddActivitiesFromNamespaceContaining<Models.Two.Marker>();
+   cfg./*activity-null*/AddActivitiesFromNamespaceContaining<Models.Two.Marker>(null);
+   cfg./*activity-named*/AddActivitiesFromNamespaceContaining<Models.Two.Marker>(filter:null);
+   RegistrationExtensions./*activity-static*/AddActivitiesFromNamespaceContaining<Models.Two.Marker>(cfg);
+   if(enabled) cfg./*activity-branch*/AddActivitiesFromNamespaceContaining<Models.Two.Marker>();
+   cfg./*activity-metadata*/AddActivitiesFromNamespaceContaining<string>();
+   cfg./*activity-nested-simple*/AddActivitiesFromNamespaceContaining<Outer.Inner>();
+   cfg./*activity-lambda*/AddActivitiesFromNamespaceContaining<Models.Two.Marker>(t=>true);
+   cfg./*activity-variable*/AddActivitiesFromNamespaceContaining<Models.Two.Marker>(predicate);
+   cfg./*activity-method*/AddActivitiesFromNamespaceContaining<Models.Two.Marker>(Filter);
+   cfg./*activity-factory*/AddActivitiesFromNamespaceContaining<Models.Two.Marker>(Factory());
+   cfg./*activity-conditional*/AddActivitiesFromNamespaceContaining<Models.Two.Marker>(enabled?null:predicate);
+   cfg./*activity-generic*/AddActivitiesFromNamespaceContaining<Generic<int>>();
+   cfg./*activity-generic-owner*/AddActivitiesFromNamespaceContaining<GenericOuter<int>.Inner>();
+   cfg./*activity-array*/AddActivitiesFromNamespaceContaining<Models.One.Marker[]>();
+   cfg./*activity-global*/AddActivitiesFromNamespaceContaining<GlobalMarker>();
+   cfg./*activity-type-overload*/AddActivitiesFromNamespaceContaining(typeof(Models.Two.Marker));
+   new Fake()./*activity-fake*/AddActivitiesFromNamespaceContaining<Models.Two.Marker>();
+  }
+  void Open<T>(IRegistrationConfigurator cfg) where T:class {
+   cfg./*consumer-open*/AddConsumersFromNamespaceContaining<T>();
+   cfg./*activity-open*/AddActivitiesFromNamespaceContaining<T>();
+  }
+ }
+}

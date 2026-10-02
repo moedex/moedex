@@ -1,0 +1,35 @@
+{
+  "classification": "declared_namespace_scopes_not_discovered_registrations",
+  "calls": [
+    {
+      "anchor": "consumer-scan",
+      "tool": "compiler_definitions",
+      "passed": true
+    },
+    {
+      "anchor": "consumer-scan",
+      "tool": "compiler_contract_impact",
+      "passed": true
+    },
+    {
+      "anchor": "consumer-scan",
+      "tool": "compiler_contract_context",
+      "passed": true
+    },
+    {
+      "anchor": "activity-scan",
+      "tool": "compiler_definitions",
+      "passed": true
+    },
+    {
+      "anchor": "activity-scan",
+      "tool": "compiler_contract_impact",
+      "passed": true
+    },
+    {
+      "anchor": "activity-scan",
+      "tool": "compiler_contract_context",
+      "passed": true
+    }
+  ]
+}

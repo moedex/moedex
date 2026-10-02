@@ -1,0 +1,7 @@
+--- FAIL: TestCapturePinsRestoreSDK (0.23s)
+    run_bundle_test.go:90: semantic capture: offline restore: semanticrun: process failed: exit status 8: wrong-sdk
+FAIL
+FAIL	moedex/internal/semanticrun	7.326s
+ok  	moedex/internal/app/semanticcmd	0.294s
+ok  	moedex/internal/cli	0.283s
+FAIL

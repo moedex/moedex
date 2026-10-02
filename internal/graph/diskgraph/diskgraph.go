@@ -219,10 +219,14 @@ func (e Edge) MarshalJSON() ([]byte, error) {
 // node; nodes (including zero-degree nodes), blob SHAs, and names are sorted
 // when saved for reproducible lookup.
 type Builder struct {
-	adjacency  map[Key][]Edge
-	edges      uint64
-	generation uint64
-	corpus     map[string]struct{}
+	targetSets    [][]Key
+	targetSetIDs  map[[32]byte]TargetSetID
+	factored      map[Key]map[int]factoredRef
+	factoredExtra uint64
+	adjacency     map[Key][]Edge
+	edges         uint64
+	generation    uint64
+	corpus        map[string]struct{}
 }
 
 // NewBuilder returns an empty offline graph builder stamped with
@@ -298,7 +302,7 @@ func (b *Builder) AddEdge(key Key, edge Edge) error {
 	if err := validateEdge(edge); err != nil {
 		return err
 	}
-	if b.edges == ^uint64(0) {
+	if b.NumEdges() == ^uint64(0) {
 		return fmt.Errorf("diskgraph: too many edges")
 	}
 	b.adjacency[key] = append(b.adjacency[key], edge)
@@ -319,6 +323,13 @@ func (b *Builder) AddOrUpgradeEdge(key Key, edge Edge) (bool, error) {
 		return false, err
 	}
 	for i := range b.adjacency[key] {
+		if ref, ok := b.factored[key][i]; ok {
+			matched, err := b.upgradeFactored(key, i, ref, edge)
+			if err != nil || matched {
+				return false, err
+			}
+			continue
+		}
 		existing := &b.adjacency[key][i]
 		if !sameRelationship(*existing, edge) {
 			continue
@@ -328,7 +339,7 @@ func (b *Builder) AddOrUpgradeEdge(key Key, edge Edge) (bool, error) {
 		}
 		return false, nil
 	}
-	if b.edges == ^uint64(0) {
+	if b.NumEdges() == ^uint64(0) {
 		return false, fmt.Errorf("diskgraph: too many edges")
 	}
 	b.adjacency[key] = append(b.adjacency[key], edge)
@@ -383,7 +394,7 @@ func (b *Builder) NumEdges() uint64 {
 	if b == nil {
 		return 0
 	}
-	return b.edges
+	return b.edges + b.factoredExtra
 }
 
 // Save writes the builder to path.
@@ -391,6 +402,13 @@ func (b *Builder) Save(path string) error { return Save(b, path) }
 
 // Save writes b atomically to path in the diskgraph format.
 func Save(b *Builder, path string) error {
+	if b != nil && b.hasFactored() {
+		return saveFactored(b, path)
+	}
+	return saveLegacy(b, path)
+}
+
+func saveLegacy(b *Builder, path string) error {
 	if b == nil {
 		return fmt.Errorf("diskgraph: nil builder")
 	}
@@ -427,6 +445,11 @@ func Save(b *Builder, path string) error {
 		edgeCount += uint64(len(edges))
 	}
 
+	for _, targets := range b.targetSets {
+		for _, target := range targets {
+			blobSet[target.BlobSHA] = struct{}{}
+		}
+	}
 	blobs, blobIDs, blobBytes, err := internTable(blobSet, "blob SHA")
 	if err != nil {
 		return err
@@ -608,6 +631,8 @@ func writeStringTable(w *bufio.Writer, table []string) error {
 
 // Graph is a read-only mmap-backed graph. Close must not race with lookups.
 type Graph struct {
+	mapping     []byte
+	compact     *compactGraph
 	data        []byte
 	blobIDs     map[string]uint32
 	blobs       []string
@@ -658,6 +683,13 @@ func Open(path string) (*Graph, error) {
 func Load(path string) (*Graph, error) { return Open(path) }
 
 func parse(data []byte) (*Graph, error) {
+	if len(data) >= 12 && binary.LittleEndian.Uint32(data[8:12]) == compactVersion {
+		return parseFactored(data)
+	}
+	return parseLegacy(data)
+}
+
+func parseLegacy(data []byte) (*Graph, error) {
 	if len(data) < headerSize {
 		return nil, fmt.Errorf("diskgraph: file too small")
 	}
@@ -875,6 +907,9 @@ func (g *Graph) Load(blobSHA string, symbolOffset uint64) []Edge {
 
 // Edges returns the outgoing edges for key, preserving their build order.
 func (g *Graph) Edges(key Key) []Edge {
+	if g != nil && g.compact != nil {
+		return g.compactEdges(key)
+	}
 	if g == nil || g.data == nil {
 		return nil
 	}
@@ -947,7 +982,11 @@ func (g *Graph) BuildID() string {
 	if g == nil || g.data == nil {
 		return ""
 	}
-	sum := sha256.Sum256(g.data)
+	data := g.data
+	if g.mapping != nil {
+		data = g.mapping
+	}
+	sum := sha256.Sum256(data)
 	return fmt.Sprintf("%x", sum[:])
 }
 
@@ -1002,6 +1041,16 @@ func (g *Graph) CorpusEntrySet() map[string]struct{} {
 // NodeAt returns the i'th node's key and the half-open range of edge records it
 // owns, or ok=false for an out-of-range index.
 func (g *Graph) NodeAt(i int) (key Key, firstEdge, count int, ok bool) {
+	key, firstEdge, count, ok = g.physicalNodeAt(i)
+	if ok && g.compact != nil {
+		end := g.logicalIndex(firstEdge + count)
+		firstEdge = g.logicalIndex(firstEdge)
+		count = end - firstEdge
+	}
+	return
+}
+
+func (g *Graph) physicalNodeAt(i int) (key Key, firstEdge, count int, ok bool) {
 	if g == nil || g.data == nil || i < 0 || i >= g.nodeCount {
 		return Key{}, 0, 0, false
 	}
@@ -1014,6 +1063,9 @@ func (g *Graph) NodeAt(i int) (key Key, firstEdge, count int, ok bool) {
 
 // EdgeAt decodes the i'th edge record, or ok=false for an out-of-range index.
 func (g *Graph) EdgeAt(i int) (Edge, bool) {
+	if g != nil && g.compact != nil {
+		return g.compactEdgeAt(i)
+	}
 	if g == nil || g.data == nil || i < 0 || i >= g.edgeCount {
 		return Edge{}, false
 	}
@@ -1023,6 +1075,10 @@ func (g *Graph) EdgeAt(i int) (Edge, bool) {
 // EdgeName returns just the name of the i'th edge record without decoding the
 // rest of it. An out-of-range index returns "".
 func (g *Graph) EdgeName(i int) string {
+	if g != nil && g.compact != nil {
+		edge, _ := g.compactEdgeAt(i)
+		return edge.Name
+	}
 	if g == nil || g.data == nil || i < 0 || i >= g.edgeCount {
 		return ""
 	}
@@ -1036,20 +1092,12 @@ func (g *Graph) EdgeName(i int) string {
 // EachEdge visits every persisted edge in on-disk order, passing the source node
 // it belongs to. Returning false stops the walk.
 func (g *Graph) EachEdge(fn func(source Key, edge Edge) bool) {
-	if g == nil || g.data == nil || fn == nil {
+	if fn == nil {
 		return
 	}
-	for i := 0; i < g.nodeCount; i++ {
-		key, first, count, ok := g.NodeAt(i)
-		if !ok {
-			return
-		}
-		for j := 0; j < count; j++ {
-			if !fn(key, g.decodeEdge(first+j)) {
-				return
-			}
-		}
-	}
+	g.EachRecord(func(record PhysicalRecord) bool {
+		return g.visitRecord(record, nil, func(edge Edge) bool { return fn(record.Source, edge) })
+	})
 }
 
 // Keys returns all source nodes in on-disk order.
@@ -1081,6 +1129,9 @@ func (g *Graph) NumEdges() int {
 	if g == nil {
 		return 0
 	}
+	if g.compact != nil {
+		return g.compact.logicalEdges
+	}
 	return g.edgeCount
 }
 
@@ -1090,8 +1141,14 @@ func (g *Graph) Close() error {
 	if g == nil || g.data == nil {
 		return nil
 	}
-	err := syscall.Munmap(g.data)
+	data := g.data
+	if g.mapping != nil {
+		data = g.mapping
+	}
+	err := syscall.Munmap(data)
 	g.data = nil
+	g.mapping = nil
+	g.compact = nil
 	return err
 }
 

@@ -1,0 +1,54 @@
+{
+  "task": "flow-email",
+  "reviewer": "review18_06",
+  "answer_sha256": "0fc0627b0ae8091be02e62911dfd20c506b55977a6c22950b4429171a517db7d",
+  "atoms": [
+    {
+      "id": "flow-email.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer bullet 2 explicitly identifies RegistrationSubmitted correlation by RegistrationId and its event configuration. Cited RegistrationStateMachine.cs:10-34 includes Event declaration/configuration at :14 with m.Message.RegistrationId; 002.response.raw additionally returns the typed event property at :47. Pinned source agrees."
+    },
+    {
+      "id": "flow-email.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer bullet 2 states Initially/When, all four copied fields, and transition to Registered. Its citation RegistrationStateMachine.cs:10-34 contains the exact operations at :16-25, fully returned in 002.response.raw."
+    },
+    {
+      "id": "flow-email.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer bullet 2 explicitly treats Publish as configuration and identifies CorrelationId plus saga date/event/member mappings. RegistrationStateMachine.cs:26-32 lies within cited :10-34 and is fully returned in 002.response.raw; contract citation :3-9 agrees."
+    },
+    {
+      "id": "flow-email.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer bullet 4 gives IConsumer<SendRegistrationEmail> and worker registration. Cited SendRegistrationEmailConsumer.cs:8-25 and Program.cs:70-87 precisely cover interface :8-9 and registration :75; both are returned in 002.response.raw and match pinned source."
+    },
+    {
+      "id": "flow-email.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer bullet 4 says Consume only logs the notification fields and returns Task.CompletedTask, with no actual email send. Cited SendRegistrationEmailConsumer.cs:8-25 includes the entire method at :18-24; 002.response.raw and pinned source support the full claim."
+    },
+    {
+      "id": "flow-email.6",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer opening, bullet 2, bullet 4, and evidence limitation explicitly distinguish source configuration from observed publishing, consumer execution, broker/outbox completion, and delivery. Cited RegistrationStateMachine.cs:10-34 and SendRegistrationEmailConsumer.cs:8-25, returned in 002.response.raw, support the visible source limits; no runtime certainty is asserted."
+    }
+  ],
+  "correctness_total": 6,
+  "evidence_total": 6,
+  "possible": 6,
+  "unsupported_claims": [],
+  "strict_success": true,
+  "limitations": [
+    "All three logged request/response pairs and transcript were read. Responses 002 and 003 report truncated=false and clipped=false; transcript marks every response complete. No runtime delivery evidence is returned.",
+    "All packet-pinned source hashes match. Additional answer-cited controller, service, email contract, and saga definition sources were inspected and agree with returned snippets.",
+    "Minor extra-claim citation imprecision: bullet 3 cites RegistrationStateMachine.cs:35-42 for a sentence also describing the retry-zero/payment exception, which is actually :33-34. Those lines are nevertheless included in the immediately preceding bullet citation :10-34 and in the complete 002.response.raw block :7-48; no frozen atom loses support.",
+    "The retained request/response transcript does not independently establish the solver isolation self-report or initial catalog display history. These process notes do not establish or alter application behavior; answer appropriately notes that returned metadata did not verify the requested Git pin."
+  ]
+}

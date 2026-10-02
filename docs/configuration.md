@@ -67,6 +67,7 @@ auth token and TLS key are always redacted.
 | `MOEDEX_GRAPH_LSP_CONCURRENCY` | integer, `32` | graph, index | Concurrent graph LSP requests |
 | `MOEDEX_GRAPH_LSP_REQUESTS_PER_SECOND` | float, `100` | graph, index | Graph LSP request start rate |
 | `MOEDEX_GRAPH_CLUSTER_MAX_NODES` | integer, `250000` | graph, doctor | Maximum nodes considered for clustering |
+| `MOEDEX_GRAPH_CLUSTER_MAX_EDGES` | integer, `1000000` | graph, doctor | Maximum eligible logical edges expanded for clustering; larger graphs report `over_edge_cap` without partial communities |
 | `MOEDEX_VERIFY_CONTENT` | boolean, `true` | serve, index | Verify content hashes while loading |
 | `MOEDEX_LSP_DEBUG` | boolean, `false` | nav, serve, graph | Enable LSP protocol debugging |
 | `MOEDEX_LSP_WORKSPACE_DIR` | string | nav, serve, graph, index | Writable isolated workspace cache for managed-corpus language servers; defaults beneath `MOEDEX_INDEX_DIR` or `~/.moedex-state` |

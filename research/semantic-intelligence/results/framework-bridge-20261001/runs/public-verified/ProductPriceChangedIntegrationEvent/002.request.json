@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"compiler_symbols","arguments":{"repo":"eShop","path":"src/Webhooks.API/IntegrationEvents/ProductPriceChangedIntegrationEventHandler.cs","query":".Handle("}}}

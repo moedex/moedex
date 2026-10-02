@@ -1,0 +1,7 @@
+--- FAIL: TestToolchainViewSelectsOneSDKAndCopiesHost (0.16s)
+    toolchain_test.go:43: /private/var/folders/49/8xvghw494cj7xhbdv5jqmk5w0000gn/T/TestToolchainViewSelectsOneSDKAndCopiesHost579775667/002/sdk/10.0.100 <nil>
+FAIL
+FAIL	moedex/internal/semanticrun	10.118s
+ok  	moedex/internal/app/semanticcmd	1.339s
+ok  	moedex/internal/cli	1.609s
+FAIL

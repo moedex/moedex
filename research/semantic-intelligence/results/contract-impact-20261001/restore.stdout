@@ -1,0 +1,7 @@
+  Determining projects to restore...
+  Restored /private/tmp/moedex-contract-gold-20261001/fixture/Contracts/Contracts.csproj (in 30 ms).
+  Restored /private/tmp/moedex-contract-gold-20261001/fixture/Distractor/Distractor.csproj (in 771 ms).
+  Restored /private/tmp/moedex-contract-gold-20261001/fixture/Publisher/Publisher.csproj (in 771 ms).
+  Restored /private/tmp/moedex-contract-gold-20261001/fixture/Consumer/Consumer.csproj (in 771 ms).
+  Restored /private/tmp/moedex-contract-gold-20261001/fixture/Storage/Storage.csproj (in 1.33 sec).
+  Restored /private/tmp/moedex-contract-gold-20261001/fixture/Aggregate/Aggregate.csproj (in 1.33 sec).

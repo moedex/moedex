@@ -1,0 +1,14 @@
+[
+  {
+    "file": "graph-catalog.cache",
+    "operation": "xor final byte with 0x40, preserving header, declared sizes and all authoritative inputs",
+    "original_sha256": "81ffc1e880b2a0eea92b1a70110393620337b8fc971ca5585e5087c8b51f0bac",
+    "corrupt_sha256": "ecb7a4c9fed854d3ac65c3f7ab254934d184b9166e386d63160c21f23de8fcc1"
+  },
+  {
+    "file": "shard-0000.idx.graph-symbols",
+    "operation": "xor final byte with 0x40, preserving header, declared sizes and all authoritative inputs",
+    "original_sha256": "95310a06ddf0e48ba6ad57620851e498eac08941ddba7f80e3db92e95e761d54",
+    "corrupt_sha256": "207276447680269572962cd9f5d14fb05fe4da1d3cac2ba8566f6f7956aaa47b"
+  }
+]

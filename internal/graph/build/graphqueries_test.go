@@ -41,6 +41,62 @@ func TestDbSetPropertyExtraction(t *testing.T) {
 	}
 }
 
+func TestQueryBindingConfidenceFromSource(t *testing.T) {
+	const caller = "namespace App;\npublic class Queries { public void Load() { context.Set<Cart>().ToList(); } }\n"
+	const entity = "namespace App;\npublic class Cart { }\n"
+	for _, tc := range []struct {
+		name  string
+		files []graphFile
+		want  int
+		tier  graph.ConfidenceTier
+	}{
+		{name: "explicit Set without property registry", files: []graphFile{
+			{repo: "app", path: "Queries.cs", content: caller},
+			{repo: "app", path: "Cart.cs", content: entity},
+		}, want: 1, tier: graph.Pattern},
+		{name: "explicit namespace mismatch", files: []graphFile{
+			{repo: "app", path: "Queries.cs", content: strings.Replace(caller, "Set<Cart>", "Set<Other.Cart>", 1)},
+			{repo: "app", path: "Cart.cs", content: entity},
+		}, want: 0},
+		{name: "foreign language target", files: []graphFile{
+			{repo: "app", path: "Queries.cs", content: caller},
+			{repo: "app", path: "Cart.ts", content: "export class Cart {}\n"},
+		}, want: 0},
+		{name: "shared caller context", files: []graphFile{
+			{repo: "app", path: "Queries.cs", content: caller},
+			{repo: "other", path: "Queries.cs", content: caller},
+			{repo: "app", path: "Cart.cs", content: entity},
+		}, want: 1, tier: graph.Candidate},
+		{name: "shared entity context", files: []graphFile{
+			{repo: "app", path: "Queries.cs", content: caller},
+			{repo: "app", path: "Cart.cs", content: entity},
+			{repo: "other", path: "Cart.cs", content: entity},
+		}, want: 1, tier: graph.Candidate},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			writeGraphShards(t, dir, tc.files, 1)
+			path, _, err := BuildGraph(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			count := 0
+			for _, record := range readGraph(t, path) {
+				if record.edge.Type != diskgraph.EdgeQueries {
+					continue
+				}
+				count++
+				if record.edge.Confidence != tc.tier || !record.edge.Evidence.Valid() {
+					t.Errorf("query edge = %+v, want %s with evidence", record.edge, tc.tier)
+				}
+			}
+			if count != tc.want {
+				t.Fatalf("query edges = %d, want %d", count, tc.want)
+			}
+		})
+	}
+}
+
 func TestContextAccessExtraction(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -261,8 +317,8 @@ public class Repository {
 	if len(queries) != 1 {
 		t.Fatalf("query target fan-out = %#v, want one imported entity type", queries)
 	}
-	if queries[0].TargetBlob != entitySHA || queries[0].Confidence != graph.Verified {
-		t.Fatalf("query target = %#v, want App.Entities.Cart Verified", queries[0])
+	if queries[0].TargetBlob != entitySHA || queries[0].Confidence != graph.Pattern {
+		t.Fatalf("query target = %#v, want App.Entities.Cart Pattern", queries[0])
 	}
 	if queries[0].TargetBlob == modelSHA || queries[0].TargetBlob == externalSHA {
 		t.Fatalf("query bound to namespace/repository distractor: %#v", queries[0])

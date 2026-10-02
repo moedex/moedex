@@ -1,0 +1,54 @@
+{
+  "task": "locate-persistence",
+  "reviewer": "review18_04 (independent)",
+  "answer_sha256": "cf5d3273b88aa0dfa2bdab8b10160edfcd18fe8e82166a11d1e6647ffa1a9226",
+  "atoms": [
+    {
+      "id": "locate-persistence.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer step 1 explicitly lists construction, NewId.NextGuid(), DateTime.UtcNow, member, event and payment and cites RegistrationService.cs:23\u201330; complete 003.response.raw content and pinned source match."
+    },
+    {
+      "id": "locate-persistence.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer step 2 quotes awaited Set<Registration>().AddAsync(registration) and precisely cites RegistrationService.cs:32; supported by 003.response.raw and pinned source."
+    },
+    {
+      "id": "locate-persistence.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer step 3 explicitly gives awaited Publish(new RegistrationSubmitted), copied registration fields and payment argument, citing RegistrationService.cs:34\u201341; supported by 003.response.raw and pinned source."
+    },
+    {
+      "id": "locate-persistence.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Ordered steps place SaveChangesAsync after Publish; step 4 explains the database-update/unique-violation exception translation and cites RegistrationService.cs:45,47\u201350 within the opening 21\u201353 span. The try/catch containing save is fully visible in 003.response.raw and pinned source:43\u201350."
+    },
+    {
+      "id": "locate-persistence.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer step 4 says the method then returns the registration and cites RegistrationService.cs:52 following save and exception handling; 003.response.raw and pinned source:43\u201352 support the source order."
+    },
+    {
+      "id": "locate-persistence.6",
+      "correctness": 0.5,
+      "evidence": 0.5,
+      "reason": "Answer explicitly disclaims database insertion, message delivery, successful execution and runtime transaction/atomicity guarantees; the cited RegistrationService.cs:21\u201353 and full 003.response.raw support the visible source limits. However, it omits API EF bus outbox configuration; pinned Program.cs:73\u201381 contains AddEntityFrameworkOutbox and UseBusOutbox, and no logged response returns Program.cs. Therefore the combined frozen atom is materially incomplete in correctness and evidence."
+    }
+  ],
+  "correctness_total": 5.5,
+  "evidence_total": 5.5,
+  "possible": 6,
+  "unsupported_claims": [],
+  "strict_success": false,
+  "limitations": [
+    "Reviewed all three logged requests and full responses plus transcript; transcript hashes verified. 002.response.raw reports truncated=false and clipped=false; 003.response.raw supplies all 54 service lines with truncated=false. No evidence was lost in these retained responses.",
+    "RegistrationService.cs and Program.cs raw SHA-256 hashes match the packet. Additional HTTP entry-point claim and precise controller:19\u201327 citation agree with 002.response.raw and original controller source.",
+    "Runtime behavior remains unknown; answer correctly limits itself to indexed source. Missing outbox configuration is an omission, not an unsupported runtime claim.",
+    "The setup-display truncation/catalog reread and isolation statements are solver self-reports outside the retained public-tool transcript; they do not affect source-fact scoring."
+  ]
+}

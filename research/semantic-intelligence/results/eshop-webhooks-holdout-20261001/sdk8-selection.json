@@ -1,0 +1,9 @@
+{
+  "version": "8.0.400",
+  "name": "dotnet-sdk-osx-arm64.tar.gz",
+  "rid": "osx-arm64",
+  "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.400/dotnet-sdk-8.0.400-osx-arm64.tar.gz",
+  "hash": "29656a362ed6d74eec08d48aef930e5098c7456faa1bcaf178f9421f8423178838071b4ff81c0429155f1f834014cbdef8121eefe002a079443ff7a3193b4ee0",
+  "verified_sha512": "29656a362ed6d74eec08d48aef930e5098c7456faa1bcaf178f9421f8423178838071b4ff81c0429155f1f834014cbdef8121eefe002a079443ff7a3193b4ee0",
+  "archive_bytes": 205163884
+}

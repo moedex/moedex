@@ -1,0 +1,1296 @@
+{
+  "repository": "https://github.com/jasontaylordev/CleanArchitecture",
+  "commit": "5353a9edae000d576eade1a4f2c0d72d3b1c1785",
+  "files": [
+    {
+      "path": ".aspire/settings.json",
+      "bytes": 52,
+      "sha256": "f4f0f13884dd1be276c37ca605191664f2a9f1b267a849c45760005841b8d1aa"
+    },
+    {
+      "path": ".devcontainer/README.md",
+      "bytes": 806,
+      "sha256": "d7e40ec38b4d0a64e8840c7f8f53d6d810418cdcd0e7998f0b96a3d17998f170"
+    },
+    {
+      "path": ".devcontainer/devcontainer.json",
+      "bytes": 862,
+      "sha256": "f50f121228cfe2b101a374b79ce75e379c9627bb05eb4a6c5bbbc38007c23a1d"
+    },
+    {
+      "path": ".editorconfig",
+      "bytes": 17875,
+      "sha256": "990226c9f588c72b136d5b19d409afb31f15d38a07368f525039d636aa2f9b85"
+    },
+    {
+      "path": ".github/FUNDING.yml",
+      "bytes": 838,
+      "sha256": "e10db24a614fb4ec7a97c64a3faadcf7a37cb33cec766d9fc51cd442dcfc05f7"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/bug_report.md",
+      "bytes": 540,
+      "sha256": "cdadc00b77d374784e1a714bc2222d4834ec26b763584aed2f56d62c1c225305"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/config.yml",
+      "bytes": 215,
+      "sha256": "d1860e94a6c50702c4944441847891aea2da2d6d6cf36ebb114b7ea69627a7ca"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/feature_request.md",
+      "bytes": 599,
+      "sha256": "9f34944ba514a1d7a698d0f977e2ce57b81983b31fd03bb3e1ed9a93d484036b"
+    },
+    {
+      "path": ".github/icon.png",
+      "bytes": 13629,
+      "sha256": "fa0c80ba5cf040f5d342052a8bda2d24a14aca071e00ac32a450797b4827a34f"
+    },
+    {
+      "path": ".github/workflows/build.yml",
+      "bytes": 1553,
+      "sha256": "c893ea0571f91f6b0fd7f3bc7337835fb78c806a51a0e8fca3a69c485df22933"
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "bytes": 750,
+      "sha256": "c2d75b2d506f2b40260b5b225035779218e5435aba8aca2849754d4bbf97eee5"
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "bytes": 1939,
+      "sha256": "94216c3a8ea889b7553014ad26e525765e6ab298be5c96a115af8b39f79204af"
+    },
+    {
+      "path": ".github/workflows/test-templates.yml",
+      "bytes": 2111,
+      "sha256": "029d55ffde24cc877ac295f673c17c88092e3b1ba47a2142a8bbf300de4ba0b7"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 8173,
+      "sha256": "dd70e6b27c75bd2ef0f077fbc920665709cda63fd3a0759e0d419e277a3b86d4"
+    },
+    {
+      "path": ".template.config/dotnetcli.host.json",
+      "bytes": 841,
+      "sha256": "68691b5d1c1b72c01c56aa0d5745d8a5eff7a14c81a5b8b5e3f0f71811719217"
+    },
+    {
+      "path": ".template.config/icon.png",
+      "bytes": 13629,
+      "sha256": "fa0c80ba5cf040f5d342052a8bda2d24a14aca071e00ac32a450797b4827a34f"
+    },
+    {
+      "path": ".template.config/ide.host.json",
+      "bytes": 549,
+      "sha256": "3b2f06b20ee855b8b9bb7de57beaf73d7e37fde9d90c8bc93247657b40a06a9a"
+    },
+    {
+      "path": ".template.config/template.json",
+      "bytes": 11693,
+      "sha256": "653fa5f2eac1f8be7d74f4a29d786c55b929ed960a3b099da32a2435919d75e2"
+    },
+    {
+      "path": "CODE_OF_CONDUCT.md",
+      "bytes": 3357,
+      "sha256": "4fac73348f56ebf4d0467821ae960b3c3e7aa7cbe71b5777eabe7267f712a02d"
+    },
+    {
+      "path": "CleanArchitecture.nuspec",
+      "bytes": 1922,
+      "sha256": "72eb81ee891155a466e463409519ceffe6bbf698ef698041f9ca88781b9f3534"
+    },
+    {
+      "path": "CleanArchitecture.slnx",
+      "bytes": 1281,
+      "sha256": "c6965f818bd3ec03dc0b780074f813b49fc403b1871e3a7ac05540bcc0d93f67"
+    },
+    {
+      "path": "Directory.Build.props",
+      "bytes": 602,
+      "sha256": "901bd42aa49502d41a0c91295d98b253fdf0d87563e5093e3def04ec5a5a6729"
+    },
+    {
+      "path": "Directory.Packages.props",
+      "bytes": 4378,
+      "sha256": "478da69d9de448bec1a8d33e51b202a984be9533ba9c62aae64c8130cdf809f7"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 1071,
+      "sha256": "24d99e81249eb4150b3baf49b00fd8eeb6c19e8f583bb7792ad451f4472532fa"
+    },
+    {
+      "path": "README-template.md",
+      "bytes": 1755,
+      "sha256": "8805ab584fefe2cfa63351b4f965d6955be9e24d19153cca38f547f1b5fe2ee1"
+    },
+    {
+      "path": "README.md",
+      "bytes": 5092,
+      "sha256": "47f16a34edbdc6a561aa286bcf88a9b1408a2a12d6af3d1ce997dfffa62184d7"
+    },
+    {
+      "path": "build/build.ps1",
+      "bytes": 1259,
+      "sha256": "867a7a37c4a1c474add07699e9a917c177a0e734046cbf553d626f341cb0ec37"
+    },
+    {
+      "path": "build/repack.ps1",
+      "bytes": 412,
+      "sha256": "dcca42e4bc9c70b69ddd069baed778e0d0d568d7e08025613aea96fc20dbe075"
+    },
+    {
+      "path": "build/test.ps1",
+      "bytes": 3382,
+      "sha256": "49013f4c9e8d70112c37d85d24c03ee929a1f46a708e6c43d158014793ec00cf"
+    },
+    {
+      "path": "docs/decisions/ADR-000-template.md",
+      "bytes": 812,
+      "sha256": "54da4b57a73c6822bf9d2b29ecd229946dbf656ddda716ece3e843c9ea1920a4"
+    },
+    {
+      "path": "docs/decisions/ADR-001-Use-EFCore-In-Application-Layer.md",
+      "bytes": 5182,
+      "sha256": "8aa42362eab5ea85e7994aafc51f78cd5000e520a996f48508c64752c63296a1"
+    },
+    {
+      "path": "docs/decisions/ADR-002-Aspire-For-Orchestration-And-Testing.md",
+      "bytes": 2643,
+      "sha256": "8536c8247c62a4e7b8cf12d88b43d457c074f8b36c79d9ab1715ae255b471e9c"
+    },
+    {
+      "path": "docs/decisions/ADR-003-MediatR-Contracts-In-Domain.md",
+      "bytes": 1752,
+      "sha256": "f6e286d80a6eaee66052f10e340795f528371f273ea904465e5ddc4ded026909"
+    },
+    {
+      "path": "docs/decisions/README.md",
+      "bytes": 782,
+      "sha256": "8f1bf0c2027431b6507c7fa9352f39534876827207d6f074ad14754a95c621ab"
+    },
+    {
+      "path": "global.json",
+      "bytes": 85,
+      "sha256": "b3ac8136d82f1662b181346a919eec0916d7c6603340050681f0f9bb73780e51"
+    },
+    {
+      "path": "renovate.json",
+      "bytes": 1429,
+      "sha256": "d4cb2d8986a0777a36486b31a75af3b1b7501ab0b66fe69b11cb0c31ff5cb6c8"
+    },
+    {
+      "path": "src/AppHost/AppHost.csproj",
+      "bytes": 984,
+      "sha256": "6f4dfa4798fa30131a68cf95142aa77f5ad490d2240050c9caf1a61e3dd22fc8"
+    },
+    {
+      "path": "src/AppHost/Extensions.cs",
+      "bytes": 480,
+      "sha256": "a39524a0377d8d7624c3ee9a8b8196e1e2c34bc96e72d7e6db6c4a05e8e902bd"
+    },
+    {
+      "path": "src/AppHost/Program.cs",
+      "bytes": 1379,
+      "sha256": "de89d376ad802606ee4a594ac681fc4a783300c8f2653282ef01f318ee9bd1fb"
+    },
+    {
+      "path": "src/AppHost/Properties/launchSettings.json",
+      "bytes": 1426,
+      "sha256": "de4438e2395c36de70a39a9e528a814040089367a2c509bd568933da415e7017"
+    },
+    {
+      "path": "src/AppHost/appsettings.Development.json",
+      "bytes": 119,
+      "sha256": "817db0bf2ecca78364c41dbaf7949bf2504cf47a1c3d0d54f3be8178fefc030b"
+    },
+    {
+      "path": "src/AppHost/appsettings.json",
+      "bytes": 158,
+      "sha256": "42f506bc3a9d676eecf304ff7482b89cd46f448d4964ee87d55d116b5dae3954"
+    },
+    {
+      "path": "src/Application/Application.csproj",
+      "bytes": 841,
+      "sha256": "d810d74826771799fa524baf51235746d0b469bd115defb8b82318c6d4af902a"
+    },
+    {
+      "path": "src/Application/Common/Behaviours/AuthorizationBehaviour.cs",
+      "bytes": 2770,
+      "sha256": "375a23e06e72f5d4d43cc3d91a2b930076602542a58375b0b028fa05c2964eda"
+    },
+    {
+      "path": "src/Application/Common/Behaviours/LoggingBehaviour.cs",
+      "bytes": 1144,
+      "sha256": "89f7aa4254965cfa9ef4880546c4bf6242ee2cb4e06cc66d8f3085a70001ece5"
+    },
+    {
+      "path": "src/Application/Common/Behaviours/PerformanceBehaviour.cs",
+      "bytes": 1666,
+      "sha256": "f937a5dbf8d6a5692c015b014a7fbb1978b802bd087c378cc60bed5be3b67bda"
+    },
+    {
+      "path": "src/Application/Common/Behaviours/UnhandledExceptionBehaviour.cs",
+      "bytes": 860,
+      "sha256": "9e079bc70e5ba7e927b06ba9106db8bfccd91e1de701527ebaaf82d6b45f1950"
+    },
+    {
+      "path": "src/Application/Common/Behaviours/ValidationBehaviour.cs",
+      "bytes": 1161,
+      "sha256": "1b93f144bfb1b432578d73d8cb49a4157a5d69631210c28bcaab00a9b47004f3"
+    },
+    {
+      "path": "src/Application/Common/Exceptions/ForbiddenAccessException.cs",
+      "bytes": 168,
+      "sha256": "69eef057907fb105f34e495aa734b3e0657a2aa0aaa6c3c9afd8ab613120bdfa"
+    },
+    {
+      "path": "src/Application/Common/Exceptions/ValidationException.cs",
+      "bytes": 658,
+      "sha256": "fe225cf01db9b9e99cb50814b99c855fb963c4428cd3a1c4a50b4337185241c7"
+    },
+    {
+      "path": "src/Application/Common/Interfaces/IApplicationDbContext.cs",
+      "bytes": 297,
+      "sha256": "972d948a57c1dffcd9077503a73528cc2e75326ed465b3e18a05fd6b9eebf1f2"
+    },
+    {
+      "path": "src/Application/Common/Interfaces/IIdentityService.cs",
+      "bytes": 472,
+      "sha256": "b95e412896bb0f1e1b4810869c5a384c9ceb54055d124da0d1a7af2d4b027a31"
+    },
+    {
+      "path": "src/Application/Common/Interfaces/IUser.cs",
+      "bytes": 148,
+      "sha256": "942596f7c0685c0f3da63b1f5b8da171ace29335f25d61ccb85df45513c1380a"
+    },
+    {
+      "path": "src/Application/Common/Models/LookupDto.cs",
+      "bytes": 388,
+      "sha256": "9bbbc28fbcb0923c792d1c148f46052e35c75fc2d283733230f576bce3f4b882"
+    },
+    {
+      "path": "src/Application/Common/Models/Result.cs",
+      "bytes": 530,
+      "sha256": "a1131e6a797fc14dbfec1c8672f4cc7920a40783a590ac7c0dacfb3ef4af2c3e"
+    },
+    {
+      "path": "src/Application/Common/Security/AuthorizeAttribute.cs",
+      "bytes": 808,
+      "sha256": "abf70a4fb3ef5e80bab47b2ff57c107a60cfbdf5540a590582155282e6ad7cde"
+    },
+    {
+      "path": "src/Application/DependencyInjection.cs",
+      "bytes": 986,
+      "sha256": "55deb255ce0c1f774d42964b1362c1d7b6aeaf7e93d7f78e95b96eb936b396da"
+    },
+    {
+      "path": "src/Application/GlobalUsings.cs",
+      "bytes": 204,
+      "sha256": "5fd150c3ae50f4b8f652d7f10542958dac6f45417200e596d69f807dc33a4eb2"
+    },
+    {
+      "path": "src/Application/TodoItems/Commands/CreateTodoItem/CreateTodoItem.cs",
+      "bytes": 964,
+      "sha256": "c338889fa3b54b73da1de075495ebee7d54f40d27a634f17770275430594a8d9"
+    },
+    {
+      "path": "src/Application/TodoItems/Commands/CreateTodoItem/CreateTodoItemCommandValidator.cs",
+      "bytes": 313,
+      "sha256": "bf20ecbb19ddf909f6fc401177d163bcc719d53527260a63359eb97af6e4fc9b"
+    },
+    {
+      "path": "src/Application/TodoItems/Commands/DeleteTodoItem/DeleteTodoItem.cs",
+      "bytes": 816,
+      "sha256": "907f3713079877f1dc49bbd819abba6ef901a5bc2cb2eb47d15caa3f4ed97e0a"
+    },
+    {
+      "path": "src/Application/TodoItems/Commands/UpdateTodoItem/UpdateTodoItem.cs",
+      "bytes": 952,
+      "sha256": "a0a8174c7874e653de8a3c89b19a299cbada3548b46f20c25265dcb016132403"
+    },
+    {
+      "path": "src/Application/TodoItems/Commands/UpdateTodoItem/UpdateTodoItemCommandValidator.cs",
+      "bytes": 313,
+      "sha256": "1260474d3aeb477b595c5500339b6e65a967b5607a52a1e417501c3329e84500"
+    },
+    {
+      "path": "src/Application/TodoItems/Commands/UpdateTodoItemDetail/UpdateTodoItemDetail.cs",
+      "bytes": 1122,
+      "sha256": "3c7ab91be68f7b3aaf68725e297e49061e16434d9f8a1cdf8920b80f5cc13a33"
+    },
+    {
+      "path": "src/Application/TodoItems/EventHandlers/LogTodoItemCompleted.cs",
+      "bytes": 655,
+      "sha256": "9b1e2b4a6a6c9bc08c90cb61a1cc9ddc699a49d51b9a7dd5db58758898581165"
+    },
+    {
+      "path": "src/Application/TodoLists/Commands/CreateTodoList/CreateTodoList.cs",
+      "bytes": 1015,
+      "sha256": "a201556767b5e25bd3007cdc21763dc301ae5ba6178d9d1870f4c93e9838cf6f"
+    },
+    {
+      "path": "src/Application/TodoLists/Commands/CreateTodoList/CreateTodoListCommandValidator.cs",
+      "bytes": 837,
+      "sha256": "05660428247c4b96daa8fa5f1af10ff99d6d3d87c4d6373c86f87ee6eeb927c9"
+    },
+    {
+      "path": "src/Application/TodoLists/Commands/DeleteTodoList/DeleteTodoList.cs",
+      "bytes": 856,
+      "sha256": "c642f81af6953afa47171a1d0d6eaed18d7b9d00040a3ffef1789f8baf012c66"
+    },
+    {
+      "path": "src/Application/TodoLists/Commands/UpdateTodoList/UpdateTodoList.cs",
+      "bytes": 1081,
+      "sha256": "ace58ce1a62dd223f786a5413fc4e21d98e76f3c355e50581d2d2421fd7689f9"
+    },
+    {
+      "path": "src/Application/TodoLists/Commands/UpdateTodoList/UpdateTodoListCommandValidator.cs",
+      "bytes": 908,
+      "sha256": "6d849237235919f6d9a2379ed61b3bacb8fc71bd21a3744e23b040b7f45d7e86"
+    },
+    {
+      "path": "src/Application/TodoLists/Queries/GetTodos/GetTodos.cs",
+      "bytes": 1938,
+      "sha256": "b6ac64a0942a148c095b2c4226d97ce5319c80f8a2ceb8e68047084b502cfa27"
+    },
+    {
+      "path": "src/Application/TodoLists/Queries/GetTodos/TodoItemDto.cs",
+      "bytes": 600,
+      "sha256": "96f002d1da4fafeb4b42236d278b7d9f9406db23cc6125026c083a7e4fc7652f"
+    },
+    {
+      "path": "src/Application/TodoLists/Queries/GetTodos/TodoListDto.cs",
+      "bytes": 525,
+      "sha256": "1b62d9bfd66b9f952cca857aed8f2c6827e09e850cfc1382ac7cac42fd04234c"
+    },
+    {
+      "path": "src/Application/TodoLists/Queries/GetTodos/TodosVm.cs",
+      "bytes": 508,
+      "sha256": "4b0af998d14faa465362957add0fec7f08454e275b2e82eb6d6430d958a0bf97"
+    },
+    {
+      "path": "src/Application/WeatherForecasts/Queries/GetWeatherForecasts/GetWeatherForecastsQuery.cs",
+      "bytes": 1092,
+      "sha256": "22952587084b449f835a2260341da0ffa328d756f645850b3bb9179e6f52c7fe"
+    },
+    {
+      "path": "src/Application/WeatherForecasts/Queries/GetWeatherForecasts/WeatherForecast.cs",
+      "bytes": 332,
+      "sha256": "09263c817d1e26a0e292e74a7d6eafcbee309b7c84bdf40a46f990faee97e29c"
+    },
+    {
+      "path": "src/Domain/Common/BaseAuditableEntity.cs",
+      "bytes": 301,
+      "sha256": "2d74a20960d96f58cbff1a0b9a9bca6213e0b64d0321c4c1c419586652a481f1"
+    },
+    {
+      "path": "src/Domain/Common/BaseEntity.cs",
+      "bytes": 790,
+      "sha256": "b933f85dfb3eca48ba7c3559a1d2f9fbaf94b5cc96ee0a5de998b81d93e156ad"
+    },
+    {
+      "path": "src/Domain/Common/BaseEvent.cs",
+      "bytes": 115,
+      "sha256": "d66fdc1486212dd1d18c8c71736d4e9100f9f8ffa5b138cb12b3cb172c767156"
+    },
+    {
+      "path": "src/Domain/Common/ValueObject.cs",
+      "bytes": 1439,
+      "sha256": "0aae5b8e2e78fd1897f1f6870b5758c042d9c8e3ecced1c98ab240a5d2171ff0"
+    },
+    {
+      "path": "src/Domain/Constants/Roles.cs",
+      "bytes": 144,
+      "sha256": "6042dad8abd3ba494fe0a514f6f65b9df3dbc9113cb97dbd7a7a3e6faa7d63c1"
+    },
+    {
+      "path": "src/Domain/Domain.csproj",
+      "bytes": 300,
+      "sha256": "4eb98744f6a3cf98d4db190398b7874849297d2dd517b7b81e15dac94bae16f9"
+    },
+    {
+      "path": "src/Domain/Entities/TodoItem.cs",
+      "bytes": 577,
+      "sha256": "90655b6cd79bcc53716b4eb5846188457a1730416ce39256810ef44bf2dc6a32"
+    },
+    {
+      "path": "src/Domain/Entities/TodoList.cs",
+      "bytes": 271,
+      "sha256": "e67455f589993cffb2fb661ca2681133319d6676830fd29938a13baf7932c63d"
+    },
+    {
+      "path": "src/Domain/Enums/PriorityLevel.cs",
+      "bytes": 132,
+      "sha256": "fdbc1b3054892e945142262ff9cb33005bc8a43e18d1ef864c296cc9d2062a49"
+    },
+    {
+      "path": "src/Domain/Events/TodoItemCompletedEvent.cs",
+      "bytes": 216,
+      "sha256": "ad1945f366055ecfbe4de974ab4de851ea5d08c832fa02676ef0fb870b0beb62"
+    },
+    {
+      "path": "src/Domain/Exceptions/UnsupportedColourException.cs",
+      "bytes": 223,
+      "sha256": "f46089cef207badd64a045d8645bf81b55e1c1c8f0d2fbcf2acf9b26993df9e6"
+    },
+    {
+      "path": "src/Domain/GlobalUsings.cs",
+      "bytes": 289,
+      "sha256": "42638aa0ddf27a7698ca395a88b2756d82c2ffe39cbbba12230942bdf9ccfa7b"
+    },
+    {
+      "path": "src/Domain/ValueObjects/Colour.cs",
+      "bytes": 1495,
+      "sha256": "99a32e14f4549f426acd945593b676691df58ac1e5df3d1b2dbf7a629debd85c"
+    },
+    {
+      "path": "src/Infrastructure/Data/ApplicationDbContext.cs",
+      "bytes": 832,
+      "sha256": "71f1796c0ffdbabc7ca0531b6d039f7e105ef407893ea1a4ec1b8a3676fc1f2a"
+    },
+    {
+      "path": "src/Infrastructure/Data/ApplicationDbContextInitialiser.cs",
+      "bytes": 3660,
+      "sha256": "83d8f1b3fc1761872ed001b656dbc50f142dd0aec151b072692ef46c2186bd29"
+    },
+    {
+      "path": "src/Infrastructure/Data/Configurations/TodoItemConfiguration.cs",
+      "bytes": 450,
+      "sha256": "4860f8ad4d4ebcd06bbabab30544230b64bb422bb7911ce78f5929a66e1a12d8"
+    },
+    {
+      "path": "src/Infrastructure/Data/Configurations/TodoListConfiguration.cs",
+      "bytes": 504,
+      "sha256": "338744038ac024d07bd615db2b22b7a2f20dcad836ac44a01593feeaac369112"
+    },
+    {
+      "path": "src/Infrastructure/Data/Interceptors/AuditableEntityInterceptor.cs",
+      "bytes": 2187,
+      "sha256": "49257b40e74c1f5e2c381fa4f1fef9260f0b109c98efe5d77a90e06ff65023d5"
+    },
+    {
+      "path": "src/Infrastructure/Data/Interceptors/DispatchDomainEventsInterceptor.cs",
+      "bytes": 1587,
+      "sha256": "01da9ed4cebd02e26035a2cb871274c75e27283a965025ec3340bf50470055bb"
+    },
+    {
+      "path": "src/Infrastructure/DependencyInjection.cs",
+      "bytes": 3088,
+      "sha256": "2a552c701fb860cae6dc6f04e57b87c538a80b70f1757c3f56ce5908a56b84ea"
+    },
+    {
+      "path": "src/Infrastructure/GlobalUsings.cs",
+      "bytes": 76,
+      "sha256": "befadf95859144d4995cc4b180dbb48c2eccef343cb333934f78428dec092540"
+    },
+    {
+      "path": "src/Infrastructure/Identity/ApplicationUser.cs",
+      "bytes": 143,
+      "sha256": "17e90858c80622e1bfd9575a898aa0e3d520aca5601023a72bfed8568c9f0b94"
+    },
+    {
+      "path": "src/Infrastructure/Identity/IdentityResultExtensions.cs",
+      "bytes": 415,
+      "sha256": "4ad344373604ce09966c3a3d30cc615d3ee7ab7a3f8e960d3d59dcc4d61c674f"
+    },
+    {
+      "path": "src/Infrastructure/Identity/IdentityService.cs",
+      "bytes": 2517,
+      "sha256": "4cf0045b4fe2f060c8670ac6984a5038c7410cd63f168d3f07a4a2533b3beb28"
+    },
+    {
+      "path": "src/Infrastructure/Infrastructure.csproj",
+      "bytes": 1176,
+      "sha256": "817e0225ea891930d6f3d69704009ed4d60255f812f784c2430ceea20726c69b"
+    },
+    {
+      "path": "src/ServiceDefaults/Extensions.cs",
+      "bytes": 4529,
+      "sha256": "574fac292c8fc51b7242eff223dd928a4dcfc61426ae025141acb429ba6320f7"
+    },
+    {
+      "path": "src/ServiceDefaults/ServiceDefaults.csproj",
+      "bytes": 888,
+      "sha256": "587574269a90efe5fb5927ef2342c07dc040d66e8529b49711c73e06b4bfcecd"
+    },
+    {
+      "path": "src/Shared/Services.cs",
+      "bytes": 950,
+      "sha256": "34410c53065b627441ba6bb65c5baded11e3717952997e038a47beafb963e3f5"
+    },
+    {
+      "path": "src/Shared/Shared.csproj",
+      "bytes": 366,
+      "sha256": "bbc6df80364a1811c7767e44a81f4eeed9dac784c9720356b95067f01d88f086"
+    },
+    {
+      "path": "src/Web/ClientApp-React/.env",
+      "bytes": 98,
+      "sha256": "1785715c0589613147995bd39e04da02599e0ca1dd2516e4cce176b2f6d25927"
+    },
+    {
+      "path": "src/Web/ClientApp-React/.env.development",
+      "bytes": 87,
+      "sha256": "2f727fa76ce4f491712879bfde091cc4350d5a8a7c7870402b7ec147afa57308"
+    },
+    {
+      "path": "src/Web/ClientApp-React/.gitignore",
+      "bytes": 285,
+      "sha256": "f5fd985d5e5beb0079293a92d88701b6a78aac7d6290084ffc689dc06b06bb1a"
+    },
+    {
+      "path": "src/Web/ClientApp-React/README.md",
+      "bytes": 1422,
+      "sha256": "cd8519b8b7303f03570bcc0ea9a6d7df843bdda171f8c33be114b9b7d270eee6"
+    },
+    {
+      "path": "src/Web/ClientApp-React/aspnetcore-https.cjs",
+      "bytes": 1254,
+      "sha256": "8855003084d3bf7b6da8a3fb682c82e0b3e1993577064a28ab58c272252b63ac"
+    },
+    {
+      "path": "src/Web/ClientApp-React/index.html",
+      "bytes": 1078,
+      "sha256": "2fbae0ee7d12dc3cb194ef15151490bea8f77d65592fd637ff228036a8f36543"
+    },
+    {
+      "path": "src/Web/ClientApp-React/nswag.json",
+      "bytes": 2389,
+      "sha256": "19b27795dad823cdcb8902e6d41a973d3ba6a674e01805ffaac7b0f97c0a6631"
+    },
+    {
+      "path": "src/Web/ClientApp-React/package-lock.json",
+      "bytes": 103865,
+      "sha256": "a6480fb765e69f24599665775a6648f63461d61907967d4169502edc1fa6835f"
+    },
+    {
+      "path": "src/Web/ClientApp-React/package.json",
+      "bytes": 922,
+      "sha256": "5af57eb06a50991dce59e3ad95b8d124ec6cb19cad2c61609c95070593ad3d50"
+    },
+    {
+      "path": "src/Web/ClientApp-React/public/favicon.png",
+      "bytes": 3222,
+      "sha256": "8cc56b3996b5ac4b0b864400e74ba21a4b484a43f1faab4776d5af57f215968f"
+    },
+    {
+      "path": "src/Web/ClientApp-React/public/manifest.webmanifest",
+      "bytes": 327,
+      "sha256": "a3cc8348195f83f9539450fb2def46a355f8d9b44c68d642f62441bf99c7fb3d"
+    },
+    {
+      "path": "src/Web/ClientApp-React/src/App.jsx",
+      "bytes": 763,
+      "sha256": "acad04e5211d21efdf042c1eb3c8c21f0ca24924ea48abad6c844cc957b38aad"
+    },
+    {
+      "path": "src/Web/ClientApp-React/src/AppRoutes.jsx",
+      "bytes": 852,
+      "sha256": "5c4c5a2eb724f8ca53c38656a41736ef3cf611dc2b18dca630b84ed66cf0907e"
+    },
+    {
+      "path": "src/Web/ClientApp-React/src/components/Counter.jsx",
+      "bytes": 369,
+      "sha256": "1a95ed412cd9a12042a042abc947aec70989c7815f67caa68f934ce2c2b1a2ea"
+    },
+    {
+      "path": "src/Web/ClientApp-React/src/components/Home.jsx",
+      "bytes": 1520,
+      "sha256": "792a7a5081b8e79c0fccfff4be6f3e673bb5f410de4abe26d22532f99a10e10b"
+    },
+    {
+      "path": "src/Web/ClientApp-React/src/components/Layout.jsx",
+      "bytes": 158,
+      "sha256": "26fadf0f64f4b8154f421aeb7e4b0749f37bc08a6e9538bc1ca47f4cd8b7ad96"
+    },
+    {
+      "path": "src/Web/ClientApp-React/src/components/NavMenu.jsx",
+      "bytes": 1170,
+      "sha256": "ff2dcd07f4d5eaffc94db22b418089fb8359d24bd9b2fed7462d0bd8bf1ea636"
+    },
+    {
+      "path": "src/Web/ClientApp-React/src/components/ThemeContext.jsx",
+      "bytes": 742,
+      "sha256": "8ee2c1fc345d15f7600e5877ca9fd30a7196c9d66fa7139f3126d27186c5c027"
+    },
+    {
+      "path": "src/Web/ClientApp-React/src/components/ThemeToggle.jsx",
+      "bytes": 567,
+      "sha256": "2a29ac3510f9d9766624c7142c860491ae249524afddcf6b108fe53722462c8b"
+    },
+    {
+      "path": "src/Web/ClientApp-React/src/components/Todo.jsx",
+      "bytes": 17113,
+      "sha256": "542a447863574e2a6b15c03fdd963a32d072458f0f0fad571e0be8c44700cbe3"
+    },
+    {
+      "path": "src/Web/ClientApp-React/src/components/Weather.jsx",
+      "bytes": 1630,
+      "sha256": "6d5bdb9622ecb6e01ccf048664a904ff0951739769ea1ff67cc90e3985d21eee"
+    },
+    {
+      "path": "src/Web/ClientApp-React/src/components/api-authorization/AuthContext.jsx",
+      "bytes": 1141,
+      "sha256": "6273d1b2e0ceefd897d30e7235dc3e7d92f2ea2e3e082520caf118d56dbd26b0"
+    },
+    {
+      "path": "src/Web/ClientApp-React/src/components/api-authorization/LoginPage.jsx",
+      "bytes": 1712,
+      "sha256": "edd851059e8f92586edde429fa5d108e02bc59b27856735b0352eaa25db1e107"
+    },
+    {
+      "path": "src/Web/ClientApp-React/src/components/api-authorization/ProtectedRoute.jsx",
+      "bytes": 391,
+      "sha256": "45403714c94dc71751ca7039a6c5d3e9d9d5b21fc344aa8c70352aaca95148a4"
+    },
+    {
+      "path": "src/Web/ClientApp-React/src/components/api-authorization/RegisterPage.jsx",
+      "bytes": 2502,
+      "sha256": "5e91349faab44ce40dc5deca14cb7987c15904a7ee9140c40d0a41fef2ef1048"
+    },
+    {
+      "path": "src/Web/ClientApp-React/src/main.jsx",
+      "bytes": 396,
+      "sha256": "5303f544b022f5f0f4502c5f9cea9083557696ac1229569d9415d5ef8ab84659"
+    },
+    {
+      "path": "src/Web/ClientApp-React/src/styles.scss",
+      "bytes": 9310,
+      "sha256": "9383e967ad885dfa92880eb0a5b56442d3cf2cf8c3b6b32b02d4a3c8c994dcaa"
+    },
+    {
+      "path": "src/Web/ClientApp-React/src/vite-env.d.ts",
+      "bytes": 38,
+      "sha256": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5"
+    },
+    {
+      "path": "src/Web/ClientApp-React/tsconfig.json",
+      "bytes": 746,
+      "sha256": "95be8ef6b22945b23d7cd927b1decd4f117d3a62a47719a4df46a51f7f891a89"
+    },
+    {
+      "path": "src/Web/ClientApp-React/vite.config.ts",
+      "bytes": 714,
+      "sha256": "9b55163081823b6870b704a67afc02a8e4c2ac7a98ef26ac24dd4516fcd5962d"
+    },
+    {
+      "path": "src/Web/ClientApp/.editorconfig",
+      "bytes": 313,
+      "sha256": "691729673e5674f714749a741f6a700b651d24cf581d267080540c22605baccb"
+    },
+    {
+      "path": "src/Web/ClientApp/.gitignore",
+      "bytes": 526,
+      "sha256": "4231d9de701a3628bd403171b7785b890d70fa7898fbd5996686f68815884ef3"
+    },
+    {
+      "path": "src/Web/ClientApp/README.md",
+      "bytes": 1075,
+      "sha256": "d78c062f3422aa1abdbfeebb6590b7f7296c9a6a5a46f0ba57fc2371f2f4a691"
+    },
+    {
+      "path": "src/Web/ClientApp/angular.json",
+      "bytes": 3269,
+      "sha256": "9ab48d0deb468e3181791fd8f0c86dd5cceb34429ab3759dbd924202d5c97491"
+    },
+    {
+      "path": "src/Web/ClientApp/karma.conf.js",
+      "bytes": 1427,
+      "sha256": "7f6b66599a84138bdc17f5908656ed4e92f3469bdf30074fa490629e0a78c482"
+    },
+    {
+      "path": "src/Web/ClientApp/nswag.json",
+      "bytes": 2394,
+      "sha256": "5b1d314027d7226ea126891363588189c6f43cf643d6f03d0856de0c3cb7727a"
+    },
+    {
+      "path": "src/Web/ClientApp/package-lock.json",
+      "bytes": 553471,
+      "sha256": "e6b71663ac52da7909b35daefd325643afda5cea36e9e52eb847539a2347ccb4"
+    },
+    {
+      "path": "src/Web/ClientApp/package.json",
+      "bytes": 1469,
+      "sha256": "c0e0acefb8430bdab73d051e49ac4d92ce34c75d2e07fb6bd718b6ebb9bb1caa"
+    },
+    {
+      "path": "src/Web/ClientApp/proxy.conf.js",
+      "bytes": 383,
+      "sha256": "5c71f3643112f22b8e39ba0dc943620faa3508f97f10d43b8aaeb2879cf6a522"
+    },
+    {
+      "path": "src/Web/ClientApp/src/api-authorization/auth.guard.ts",
+      "bytes": 776,
+      "sha256": "a82299b0c5f88df419d488da1797c554e2152d89c8017b8e5d1265034a475e28"
+    },
+    {
+      "path": "src/Web/ClientApp/src/api-authorization/auth.service.ts",
+      "bytes": 1223,
+      "sha256": "ba6a3d023742bfa7b78d2fca602ed95c17ce168e2bba70249f56329b501585b1"
+    },
+    {
+      "path": "src/Web/ClientApp/src/api-authorization/authorize.interceptor.spec.ts",
+      "bytes": 508,
+      "sha256": "2dc9ef52036844b8624578ab20331102db4265546c0f9a37da6efd1d8e94bb5c"
+    },
+    {
+      "path": "src/Web/ClientApp/src/api-authorization/authorize.interceptor.ts",
+      "bytes": 1000,
+      "sha256": "6c18bd6668be7722e79a1ff51f7e84fe08bb9a76e60d10ec889f5d8eeadcd2a6"
+    },
+    {
+      "path": "src/Web/ClientApp/src/api-authorization/login/login.component.html",
+      "bytes": 892,
+      "sha256": "9e84bc94579dc25fd2de43caf7ee84bc41bcd193be4c10822a7bd7819dfc3e57"
+    },
+    {
+      "path": "src/Web/ClientApp/src/api-authorization/login/login.component.ts",
+      "bytes": 894,
+      "sha256": "96efbc0f164db145e2431d2fdf374da4e57b91cbf8c12dce95f2127228981823"
+    },
+    {
+      "path": "src/Web/ClientApp/src/api-authorization/register/register.component.html",
+      "bytes": 1159,
+      "sha256": "604189bb048597e8332e5d2b3a2aa24a888606303de0d3f8bd6d82c459d0e440"
+    },
+    {
+      "path": "src/Web/ClientApp/src/api-authorization/register/register.component.ts",
+      "bytes": 1197,
+      "sha256": "1b32aae6b0704db3a2f51c99f99511bd8395a5ab5787edff6ba46ae23987fe84"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/app.component.html",
+      "bytes": 79,
+      "sha256": "4ed793e383e55941b30bc8683c7f33ec46ae56d959874cfa6db74c2e11342ff5"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/app.component.ts",
+      "bytes": 190,
+      "sha256": "a5008a327d080f94d182e62117bd95435c55641a5e631d4d589aa5fd3d74035e"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/app.module.ts",
+      "bytes": 2769,
+      "sha256": "e83858fc3fd369c71be2164ba486b5441a7976925d2b33e8923cebebc0f28297"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/app.server.module.ts",
+      "bytes": 308,
+      "sha256": "569ff415d53a9434c5e2f3326d7267305c67fccb99504340892fa6c0ac1a6eef"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/counter/counter.component.html",
+      "bytes": 210,
+      "sha256": "49d1e3dbb51e7be01c68951e62378939a5670ceeb2847019a59cc3d6650b2128"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/counter/counter.component.spec.ts",
+      "bytes": 1083,
+      "sha256": "aed1bc7932e5b8c71b72a859382d6fa2dc99dec0e73222eca5ad6fb2b2300b07"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/counter/counter.component.ts",
+      "bytes": 281,
+      "sha256": "46daf8322909d69afe0344bb649f1d339d060282667e2ec82c16bdb0f3c144b7"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/fetch-data/fetch-data.component.html",
+      "bytes": 641,
+      "sha256": "00d6f33e26f887bbddf42f63c5334bb1d7246ff9f2aa42382fe0e2539ebe4b5d"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/fetch-data/fetch-data.component.ts",
+      "bytes": 649,
+      "sha256": "cc82be89569f104955cd62a896b5f100d8b5a35bda1db7bfbe01708ceb87c483"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/home/home.component.html",
+      "bytes": 1565,
+      "sha256": "5aaa70558570f791d806206770ef9df89e7adee7939efe90d4b79954cd7311cb"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/home/home.component.ts",
+      "bytes": 176,
+      "sha256": "4216134abc818cfb74df6cb7269f5ef7c97867a303b852c3aa603f013a441396"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/nav-menu/nav-menu.component.html",
+      "bytes": 997,
+      "sha256": "4852aaf30e78b1a95177e29f9d9be378b80e6a5f56b6810b1a7974bdad502c9e"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/nav-menu/nav-menu.component.scss",
+      "bytes": 42,
+      "sha256": "73baa18ed5605e29a2309ee3054388947557e482bada14972b9add9df07eba1b"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/nav-menu/nav-menu.component.ts",
+      "bytes": 635,
+      "sha256": "421a7a39e765a7d2c77a7cc647cd8dc2b361b9ed32aab688224622b5f2df514b"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/theme-toggle/theme-toggle.component.html",
+      "bytes": 166,
+      "sha256": "5095045c4b2aa9284f3ecdd8d49c4481a6ec6c13dcf418c8aedbc559c5ffe98d"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/theme-toggle/theme-toggle.component.ts",
+      "bytes": 864,
+      "sha256": "3b70b3f130189c1c59d1fc79cf5dd37424ba657db9aa718decb0101227d07197"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/theme.service.ts",
+      "bytes": 822,
+      "sha256": "5e9038d5d8341f328bceaf372836caceff960a886df3d6d51d16a346332d67ed"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/todo/todo.component.html",
+      "bytes": 6777,
+      "sha256": "732a9b1cec0b246f8c22b728eb9b4267b4b239a46a254536137b86193f923165"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/todo/todo.component.scss",
+      "bytes": 42,
+      "sha256": "73baa18ed5605e29a2309ee3054388947557e482bada14972b9add9df07eba1b"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/todo/todo.component.ts",
+      "bytes": 9643,
+      "sha256": "5eda3712215c5e371b1f5096d5f7d44ae2233695cecaba222b16f16d4212cc7c"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/weather/weather.component.html",
+      "bytes": 753,
+      "sha256": "07f75f7a4b93f024c7be09ccbe51bdf91db153832692819a9881375493c0664b"
+    },
+    {
+      "path": "src/Web/ClientApp/src/app/weather/weather.component.ts",
+      "bytes": 817,
+      "sha256": "ad7e69cabf58ab33d4dd46e8886d54d62c24f52b6953686717290edc96b4dc72"
+    },
+    {
+      "path": "src/Web/ClientApp/src/assets/.gitkeep",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "src/Web/ClientApp/src/environments/environment.prod.ts",
+      "bytes": 51,
+      "sha256": "365e9914fc285641a8c9152fa331c83164325564451bd2b05c73859ceaf54a3c"
+    },
+    {
+      "path": "src/Web/ClientApp/src/environments/environment.ts",
+      "bytes": 658,
+      "sha256": "3fa01c82af9ac445ad958c564ad026c766798cd3ff43220783c56bcdbb96748f"
+    },
+    {
+      "path": "src/Web/ClientApp/src/favicon.png",
+      "bytes": 3222,
+      "sha256": "8cc56b3996b5ac4b0b864400e74ba21a4b484a43f1faab4776d5af57f215968f"
+    },
+    {
+      "path": "src/Web/ClientApp/src/index.html",
+      "bytes": 906,
+      "sha256": "ab7c42200aae1d988d326f408fda74813c6b4abd27c73477b6530a8499a81b88"
+    },
+    {
+      "path": "src/Web/ClientApp/src/main.ts",
+      "bytes": 553,
+      "sha256": "77453b4cce68f60265f132425ec99eec6be6ee4bfcf28f4735edfaf1bc45083a"
+    },
+    {
+      "path": "src/Web/ClientApp/src/polyfills.ts",
+      "bytes": 2820,
+      "sha256": "019255f2dbb5e92b500f188c25fd07506515f233b82db568a1dc293c9ae07b2a"
+    },
+    {
+      "path": "src/Web/ClientApp/src/styles.scss",
+      "bytes": 9489,
+      "sha256": "f737db302127bd00f64bcad7a314832fc441d4ef7361e647f191d06854f59dae"
+    },
+    {
+      "path": "src/Web/ClientApp/src/test.ts",
+      "bytes": 404,
+      "sha256": "cc6c2d4a7d88c6a37be36d3abd7508fc809c9b9dbef8cd2876457f9e17e31d85"
+    },
+    {
+      "path": "src/Web/ClientApp/tsconfig.app.json",
+      "bytes": 263,
+      "sha256": "a184f5fb7f000739dc69163beecad2de028802e3d89216a0351d86eb55156e45"
+    },
+    {
+      "path": "src/Web/ClientApp/tsconfig.json",
+      "bytes": 748,
+      "sha256": "d09963c0273a55c2e3c6c52ab5911564cb10e151197ecef87971ce51d041f6ca"
+    },
+    {
+      "path": "src/Web/ClientApp/tsconfig.spec.json",
+      "bytes": 323,
+      "sha256": "8f472be523fbb54cdf4be0bfea111a532eca61c068112c5d184e474027e2fd5d"
+    },
+    {
+      "path": "src/Web/DependencyInjection.cs",
+      "bytes": 1618,
+      "sha256": "5108eedecf1ec69b0d5f9a9431c64ea5e743b50cd0577ef9766ecdc909672968"
+    },
+    {
+      "path": "src/Web/Endpoints/TodoItems.cs",
+      "bytes": 2421,
+      "sha256": "3b87bb21953a54b5933c8b13efb508dbf9b67b108405cce0acb27b7d5915ef4b"
+    },
+    {
+      "path": "src/Web/Endpoints/TodoLists.cs",
+      "bytes": 2184,
+      "sha256": "f1a2036e6296e12c17b718ea92ef6fb720dd27285bb2a02819b953ab3ef9d5b0"
+    },
+    {
+      "path": "src/Web/Endpoints/Users.cs",
+      "bytes": 912,
+      "sha256": "54843b5e327b020ca9decf1a33a51986d743606d34c61257fa431054917b8086"
+    },
+    {
+      "path": "src/Web/Endpoints/WeatherForecasts.cs",
+      "bytes": 758,
+      "sha256": "9df16bc3038902f6454620a73abcf45a62bcbf7ec8f2d03230607181daaaca24"
+    },
+    {
+      "path": "src/Web/GlobalUsings.cs",
+      "bytes": 108,
+      "sha256": "fc2ef80c8edd45e99d98ed759b13da6888eca9d1c38c7dc09052c52bae446f40"
+    },
+    {
+      "path": "src/Web/Infrastructure/ApiExceptionOperationTransformer.cs",
+      "bytes": 1286,
+      "sha256": "975415742721677ba3023684cbe56152bb452c9b362a33e86b99c081cee9c0ef"
+    },
+    {
+      "path": "src/Web/Infrastructure/BearerSecuritySchemeTransformer.cs",
+      "bytes": 1430,
+      "sha256": "dfd3ac44ffa722f0996b02515577611ee8d042d093f0924627ec50159628aa50"
+    },
+    {
+      "path": "src/Web/Infrastructure/EndpointRouteBuilderExtensions.cs",
+      "bytes": 2634,
+      "sha256": "280e1b3e7024ace6094bf6b443cc42545c7185a790aecc1f7e7657adec4b265b"
+    },
+    {
+      "path": "src/Web/Infrastructure/IEndpointGroup.cs",
+      "bytes": 777,
+      "sha256": "61cacf35e0b345aa5edb2f0e1ca81d2480fad95c09dc96aa214fb7e39632a185"
+    },
+    {
+      "path": "src/Web/Infrastructure/IdentityApiOperationTransformer.cs",
+      "bytes": 2653,
+      "sha256": "71355e6b4d4b3d4b608e12e8e916ee7bf15e1f6b59334f7b0237c46beba2384f"
+    },
+    {
+      "path": "src/Web/Infrastructure/MethodInfoExtensions.cs",
+      "bytes": 1253,
+      "sha256": "19a0d9832e387c53f89813415d6a5d90fe08e1452b4641f2b8a01de3b43436e6"
+    },
+    {
+      "path": "src/Web/Infrastructure/ProblemDetailsExceptionHandler.cs",
+      "bytes": 2382,
+      "sha256": "7b9ed673cd416d1b0c17088883ee1764fa22efc018fb6b2691cc2a51e8c9c925"
+    },
+    {
+      "path": "src/Web/Infrastructure/WebApplicationExtensions.cs",
+      "bytes": 1192,
+      "sha256": "e41e22cf2012eca0094ca5ebdbb9f4e8739a485ee9d67431ccbb43eecbfc0cd2"
+    },
+    {
+      "path": "src/Web/Program.cs",
+      "bytes": 1156,
+      "sha256": "a2374af31194bdd866e30cacbdc7c4a0ea7ed485eddd28a757b5e60206681a2e"
+    },
+    {
+      "path": "src/Web/Properties/launchSettings.json",
+      "bytes": 677,
+      "sha256": "e736475ea32df3d02fe078cc9177f1dc93c5142e538703d3b33d0abb8014e8f3"
+    },
+    {
+      "path": "src/Web/Services/CurrentUser.cs",
+      "bytes": 604,
+      "sha256": "ecc6a122649e89954ea4b5c862e107e16bbc6bc00e2640ba5e24365bc65e6de2"
+    },
+    {
+      "path": "src/Web/Web-webapi.http",
+      "bytes": 2376,
+      "sha256": "ca39b32b9ad9690116f9142ad4c51dc2a7916f8619f12eb6d6e1715051b5c0ce"
+    },
+    {
+      "path": "src/Web/Web.csproj",
+      "bytes": 2959,
+      "sha256": "2ea7124b00b7e26b823489b61f7b495edeee3ef38caff277bbe080f808cb3cd5"
+    },
+    {
+      "path": "src/Web/Web.http",
+      "bytes": 2655,
+      "sha256": "26b0be43a401cf4ec263820ffec4c5250836ef7cc3aed88c4bc8b4c35b10dc81"
+    },
+    {
+      "path": "src/Web/appsettings.PostgreSQL.json",
+      "bytes": 308,
+      "sha256": "95f4edbe538c9b6e4d0fd1287d14eea2edb1e38a62c9c527b44e8004126f9cbc"
+    },
+    {
+      "path": "src/Web/appsettings.SQLServer.json",
+      "bytes": 332,
+      "sha256": "e65820493e85baa1b9c72cb64bc76764bdbc35feecb0990a11b6f507b6e2f11e"
+    },
+    {
+      "path": "src/Web/appsettings.SQLite.json",
+      "bytes": 263,
+      "sha256": "eda936990c545a7ff30ee20581dfdfa84cf6a9bdf5645e2f3d0821872083f864"
+    },
+    {
+      "path": "src/Web/appsettings.json",
+      "bytes": 286,
+      "sha256": "d67092e2ef1b1a81c1854c8db6a1092a274c392cd3c540af72cca590da0269c9"
+    },
+    {
+      "path": "src/Web/wwwroot/favicon.ico",
+      "bytes": 5430,
+      "sha256": "26dc5ff4bfb9213291735808465e156d4a4691135f3815e3613761243e1f69c3"
+    },
+    {
+      "path": "templates/ca-use-case/.template.config/dotnetcli.host.json",
+      "bytes": 458,
+      "sha256": "f82aabcb92cac47886924606d716b9c806f9df85a59a8d26274c86fcd01a714b"
+    },
+    {
+      "path": "templates/ca-use-case/.template.config/icon.png",
+      "bytes": 13629,
+      "sha256": "fa0c80ba5cf040f5d342052a8bda2d24a14aca071e00ac32a450797b4827a34f"
+    },
+    {
+      "path": "templates/ca-use-case/.template.config/template.json",
+      "bytes": 3066,
+      "sha256": "3ee5cd38f4ecda7903ee685e0f8b943d8eaf7dfad7044021b4bbe55f1503b665"
+    },
+    {
+      "path": "templates/ca-use-case/FeatureName/Commands/CleanArchitectureUseCase/CleanArchitectureUseCase.cs",
+      "bytes": 1311,
+      "sha256": "195724dc145960321c2f8263bfaf8ac6beb34fdb3ce0db87e5db865283291c7e"
+    },
+    {
+      "path": "templates/ca-use-case/FeatureName/Queries/CleanArchitectureUseCase/CleanArchitectureUseCase.cs",
+      "bytes": 1286,
+      "sha256": "afe6f9c15edb5a8360b4899fc25dc8bfd17f823b7ec23092e2694f05992c529f"
+    },
+    {
+      "path": "tests/Application.FunctionalTests/Application.FunctionalTests.csproj",
+      "bytes": 1693,
+      "sha256": "ae610119e7da0f50fdfcb67dec77ed8a75296a6721c0d891a066a4aeb1e02352"
+    },
+    {
+      "path": "tests/Application.FunctionalTests/FunctionalTestSetup.cs",
+      "bytes": 1870,
+      "sha256": "138e7eae1f85ad6d997d5b7e5305ac296a395869b729fd6539e1951f37c074d8"
+    },
+    {
+      "path": "tests/Application.FunctionalTests/GlobalUsings.cs",
+      "bytes": 223,
+      "sha256": "fd169555d50e906b4bf1694f688563e9778ee98419828cda4e49f2c1f0220589"
+    },
+    {
+      "path": "tests/Application.FunctionalTests/Infrastructure/DatabaseResetter.cs",
+      "bytes": 1353,
+      "sha256": "4c064159179416e421b242e1135857fb46e717841c8f554741b973d240848146"
+    },
+    {
+      "path": "tests/Application.FunctionalTests/Infrastructure/TestApp.cs",
+      "bytes": 3823,
+      "sha256": "754764573a0397872490e870fbfee3bdbe2b15c6762e76a2e3ed53d70f0941d2"
+    },
+    {
+      "path": "tests/Application.FunctionalTests/Infrastructure/TestBase.cs",
+      "bytes": 198,
+      "sha256": "64ff437b1bdb4ac38320e96418eb26eabdb9aede47decaf11cbb4d4731c04218"
+    },
+    {
+      "path": "tests/Application.FunctionalTests/Infrastructure/WebApiFactory.cs",
+      "bytes": 1072,
+      "sha256": "34ce58d0d842c51c68eaf8c3dd76bc98d159b33a4949707b69ddf2c9f44ece4f"
+    },
+    {
+      "path": "tests/Application.FunctionalTests/TodoItems/Commands/CreateTodoItemTests.cs",
+      "bytes": 1455,
+      "sha256": "ebb5899d10cdefe55dd6a176ff9ab9307a8a29af137ef369ca407b6452bf7089"
+    },
+    {
+      "path": "tests/Application.FunctionalTests/TodoItems/Commands/DeleteTodoItemTests.cs",
+      "bytes": 1108,
+      "sha256": "ee7490573b11505e11d9324eaf15e07dae11c23f5d908736b54ba6397ccc5178"
+    },
+    {
+      "path": "tests/Application.FunctionalTests/TodoItems/Commands/UpdateTodoItemDetailTests.cs",
+      "bytes": 1824,
+      "sha256": "176f5704f2c7142ba18a8e72b7f90c6ced5bb0c1b26aa6995924308b3ca7e05c"
+    },
+    {
+      "path": "tests/Application.FunctionalTests/TodoItems/Commands/UpdateTodoItemTests.cs",
+      "bytes": 1532,
+      "sha256": "02164481da066712b9157b59008d1eb722c4b9e15e1e9ed9cd13bc4521450a8a"
+    },
+    {
+      "path": "tests/Application.FunctionalTests/TodoLists/Commands/CreateTodoListTests.cs",
+      "bytes": 1419,
+      "sha256": "304dd929d5b39cfe8cf19037b30fcf2cad4c32bee31bd46b6b11ded26415acf4"
+    },
+    {
+      "path": "tests/Application.FunctionalTests/TodoLists/Commands/DeleteTodoListTests.cs",
+      "bytes": 882,
+      "sha256": "38aaaa33f1ca7f807afe5e6aa732fd50fd0c4875dd57d414dccacfbf2f0d0863"
+    },
+    {
+      "path": "tests/Application.FunctionalTests/TodoLists/Commands/UpdateTodoListTests.cs",
+      "bytes": 2014,
+      "sha256": "c55ded3957e897a1a537c8f0d8ee2fccd359e8c3b87f61449edc1fc654d2d389"
+    },
+    {
+      "path": "tests/Application.FunctionalTests/TodoLists/Queries/GetTodosTests.cs",
+      "bytes": 1706,
+      "sha256": "de57c11a48dae8b8d58f50791142385b5d8005c0de8377269018748ee51553af"
+    },
+    {
+      "path": "tests/Application.UnitTests/Application.UnitTests.csproj",
+      "bytes": 1287,
+      "sha256": "8bfd6c29bd6c3c74376954c41d79cd5429f02d127226c923eb0d3f76b1998140"
+    },
+    {
+      "path": "tests/Application.UnitTests/Common/Behaviours/RequestLoggerTests.cs",
+      "bytes": 1674,
+      "sha256": "ce924fde5890a2512f918856cae6eaa7472625e1be7694bd31159cbee13c678a"
+    },
+    {
+      "path": "tests/Application.UnitTests/Common/Exceptions/ValidationExceptionTests.cs",
+      "bytes": 2162,
+      "sha256": "81c06b4faced0c4942aa473b72492aa8801ecf1f4c1d38afeaca4e24e06c6358"
+    },
+    {
+      "path": "tests/Application.UnitTests/Common/Mappings/MappingTests.cs",
+      "bytes": 1757,
+      "sha256": "feab2155578243425f30eb3eb4cc2b603267e0bb8f8367691d8e22cce8e89101"
+    },
+    {
+      "path": "tests/Domain.UnitTests/Domain.UnitTests.csproj",
+      "bytes": 1081,
+      "sha256": "07896dc60796dc1c72d92eb05ea1d30f71a0a28e0bc69423c73d2ae56b26e513"
+    },
+    {
+      "path": "tests/Domain.UnitTests/ValueObjects/ColourTests.cs",
+      "bytes": 1359,
+      "sha256": "f9570183c95fc2151a1d37de2505c02d45c1f2d3f06873eb032f0a14a7f8c5e5"
+    },
+    {
+      "path": "tests/Infrastructure.IntegrationTests/GlobalUsings.cs",
+      "bytes": 29,
+      "sha256": "d080bbb50dbbb80aa5b7c64606b24f2bb04f8f79238a874f707581deffc94fea"
+    },
+    {
+      "path": "tests/Infrastructure.IntegrationTests/Infrastructure.IntegrationTests.csproj",
+      "bytes": 951,
+      "sha256": "591b3ed26754dba2fbfde7f23d71f57a44fb5b0cd8ab82d0715668cc047460b4"
+    },
+    {
+      "path": "tests/TestAppHost/Program.cs",
+      "bytes": 595,
+      "sha256": "0f9209043aa0fbc850dda8b1c3d18ac7042d2263a4a9648239c1037e5f5abfc3"
+    },
+    {
+      "path": "tests/TestAppHost/TestAppHost.csproj",
+      "bytes": 812,
+      "sha256": "86e6f2e8f09b44391ae000bd0b44b0c1d28fa71fc06cf88f67692a2115773d57"
+    },
+    {
+      "path": "tests/Web.AcceptanceTests/AspireSetup.cs",
+      "bytes": 2058,
+      "sha256": "4f31ea37faad3034ce6705fff3ec986e8aa18ef43673771bbaac41f9e0d14329"
+    },
+    {
+      "path": "tests/Web.AcceptanceTests/Features/Counter.feature",
+      "bytes": 339,
+      "sha256": "9a69716c76234f03a5f397ba570721e022c1f22007e1ecf9078ec71a4fc3a797"
+    },
+    {
+      "path": "tests/Web.AcceptanceTests/Features/Home.feature",
+      "bytes": 140,
+      "sha256": "3bf69e0e17657ee4654fb51fb1c8daa4e5ed9dfd460f106a65103fd43f7c0171"
+    },
+    {
+      "path": "tests/Web.AcceptanceTests/Features/Login.feature",
+      "bytes": 361,
+      "sha256": "2b9681c47351810b878b1c153d3d40e5a31d776512954ddb258a865afeaee629"
+    },
+    {
+      "path": "tests/Web.AcceptanceTests/Features/Weather.feature",
+      "bytes": 265,
+      "sha256": "71bb2854ff58374a1d70332dcfead239b15a86ff33891bf123914b151b1dd834"
+    },
+    {
+      "path": "tests/Web.AcceptanceTests/GlobalUsings.cs",
+      "bytes": 209,
+      "sha256": "065b430c630262dbab96abbcd9a31f8aed3b693136adf783dfab87a81b0b818c"
+    },
+    {
+      "path": "tests/Web.AcceptanceTests/Pages/BasePage.cs",
+      "bytes": 364,
+      "sha256": "cbb9795a65589861028182050401c81238969a40dbc7742940e8a21ffb9a15cd"
+    },
+    {
+      "path": "tests/Web.AcceptanceTests/Pages/CounterPage.cs",
+      "bytes": 552,
+      "sha256": "741ce81c8a5093184e9777f304b29bfb1fac5e3bf5be5d4da14a947088b14544"
+    },
+    {
+      "path": "tests/Web.AcceptanceTests/Pages/HomePage.cs",
+      "bytes": 275,
+      "sha256": "6f585d0eb1740ab5861fd0f093800b481357a484d2968fded3df8a165736d0d7"
+    },
+    {
+      "path": "tests/Web.AcceptanceTests/Pages/LoginPage.cs",
+      "bytes": 675,
+      "sha256": "30f849ec74f48eb36bf2e6c26ba3b71456ab071dc5d0f9e9ebed68bf1b865ad6"
+    },
+    {
+      "path": "tests/Web.AcceptanceTests/Pages/WeatherPage.cs",
+      "bytes": 524,
+      "sha256": "da980cac4da58a338671f1ecd4c5765ff3d825d797765c0dbd60d3d1e8b29045"
+    },
+    {
+      "path": "tests/Web.AcceptanceTests/PlaywrightSetup.cs",
+      "bytes": 810,
+      "sha256": "119e0b24492e06f4b7ae4cb218e4b632294f914ee9152c469b6c00796d498f15"
+    },
+    {
+      "path": "tests/Web.AcceptanceTests/StepDefinitions/CounterStepDefinitions.cs",
+      "bytes": 1216,
+      "sha256": "ec13c2bdd832ef9a4cb2bcbb5c01a3e6a16bbc5c5971b743485e11b7ea027c23"
+    },
+    {
+      "path": "tests/Web.AcceptanceTests/StepDefinitions/HomeStepDefinitions.cs",
+      "bytes": 931,
+      "sha256": "d209a78412bb14bc1a34266cb2bf7cd0fde229c0635b2b12072a652bdd9a5ac7"
+    },
+    {
+      "path": "tests/Web.AcceptanceTests/StepDefinitions/LoginStepDefinitions.cs",
+      "bytes": 1703,
+      "sha256": "3d4855f55d67f57ae0a56c74cc25a68a7e1980cdf2b965bed76d667a730b2833"
+    },
+    {
+      "path": "tests/Web.AcceptanceTests/StepDefinitions/WeatherStepDefinitions.cs",
+      "bytes": 1632,
+      "sha256": "fcc7c9ee80816525de03ab22257c695789b42cf2ab497fa9a7d4750e22cb77c9"
+    },
+    {
+      "path": "tests/Web.AcceptanceTests/Web.AcceptanceTests.csproj",
+      "bytes": 1266,
+      "sha256": "1be42b3ace63ac822f71836a57ec007a2d6ca584c3702f5f58e5142e3d62dc5f"
+    }
+  ]
+}

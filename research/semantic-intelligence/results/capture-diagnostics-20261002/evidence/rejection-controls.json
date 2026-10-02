@@ -1,0 +1,38 @@
+[
+  {
+    "fixture": "warning",
+    "argv": [
+      ".local/workspace-diagnostics/moedex",
+      "semantic",
+      "import",
+      "--input",
+      ".local/workspace-diagnostics/regression-final/warning-capture.stdout",
+      "--root",
+      ".local/workspace-diagnostics/regression-final/warning",
+      "--repo",
+      "fixture",
+      "--output",
+      ".local/workspace-diagnostics/warning.semantic"
+    ],
+    "returncode": 1,
+    "artifact_published": false
+  },
+  {
+    "fixture": "error",
+    "argv": [
+      ".local/workspace-diagnostics/moedex",
+      "semantic",
+      "import",
+      "--input",
+      ".local/workspace-diagnostics/regression-final/error-capture.stdout",
+      "--root",
+      ".local/workspace-diagnostics/regression-final/error",
+      "--repo",
+      "fixture",
+      "--output",
+      ".local/workspace-diagnostics/error.semantic"
+    ],
+    "returncode": 1,
+    "artifact_published": false
+  }
+]

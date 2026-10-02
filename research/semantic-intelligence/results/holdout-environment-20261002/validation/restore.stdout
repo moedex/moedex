@@ -1,0 +1,7 @@
+  Determining projects to restore...
+  Restored /Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/build-source/src/Infrastructure/Infrastructure.csproj (in 17.98 sec).
+  Restored /Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/build-source/src/Domain/Domain.csproj (in 0.9 ms).
+  Restored /Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/build-source/src/Application/Application.csproj (in 232 ms).
+  Restored /Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/build-source/src/Web/Web.csproj (in 8.15 sec).
+  Restored /Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/build-source/src/Shared/Shared.csproj (in 0.6 ms).
+  Restored /Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/build-source/src/ServiceDefaults/ServiceDefaults.csproj (in 2 ms).

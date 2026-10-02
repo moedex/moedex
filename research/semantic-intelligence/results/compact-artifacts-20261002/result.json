@@ -1,0 +1,1091 @@
+{
+  "classification": "development compact-storage acceptance and synthetic paired-harness validation; no heldout or paired quality score",
+  "storage": {
+    "artifact_bytes": 56658037,
+    "payload_bytes": 169213758,
+    "legacy_envelope_bytes_same_payload": 225618473,
+    "reduction_percent": 74.88767819113818,
+    "sha256": "955f50ee6b89e5d07b9deadc1c968a56f534757056152c7e5b8371d268de5042",
+    "payload_sha256": "5aceeead96266c3a1d6acc1f947afb19e9cea79b96e26fd1136bebab4a2b028f",
+    "envelope_version": 2,
+    "payload_version": 1
+  },
+  "quartz_summary": {
+    "format": "moedex.semantic",
+    "version": 1,
+    "complete": true,
+    "snapshots": 1,
+    "contexts": 1,
+    "sources": 702,
+    "symbols": 31881,
+    "occurrences": 202888,
+    "bindings": 202888,
+    "diagnostics": 72
+  },
+  "capture": {
+    "classification": "development compact artifact storage validation, not holdout",
+    "argv": [
+      "/Users/zakkeown/Code/moedex/.local/compact-artifacts/moedex",
+      "semantic",
+      "capture",
+      "--checkout",
+      "/Users/zakkeown/Code/moedex/.local/holdout-quartz/corpus/Quartz",
+      "--commit",
+      "15d90a9c2681cd9e273dcd3901c0fbbdbdc5fe90",
+      "--origin",
+      "https://github.com/quartznet/quartznet.git",
+      "--repo",
+      "Quartz",
+      "--project",
+      "src/Quartz/Quartz.csproj",
+      "--framework",
+      "net10.0",
+      "--configuration",
+      "Debug",
+      "--dotnet",
+      "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/dotnet",
+      "--sdk-path",
+      "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/sdk/10.0.401",
+      "--worker",
+      "/Users/zakkeown/Code/moedex/.local/project-analyzers/final-worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+      "--workspace",
+      "/Users/zakkeown/Code/moedex/.local/compact-artifacts/quartz/workspace",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/compact-artifacts/quartz/project.semantic",
+      "--dependency-bundle",
+      "/Users/zakkeown/Code/moedex/.local/holdout-quartz/bundle",
+      "--restore-offline",
+      "--restore-standard-evaluation",
+      "--timeout",
+      "8m",
+      "--max-worker-bytes",
+      "268435456"
+    ],
+    "returncode": 0,
+    "seconds": 52.73226008399797
+  },
+  "publication": {
+    "argv": [
+      "/Users/zakkeown/Code/moedex/.local/compact-artifacts/moedex",
+      "index",
+      "snapshot",
+      "build",
+      "--corpus",
+      "/Users/zakkeown/Code/moedex/.local/holdout-quartz/corpus",
+      "--index-dir",
+      "/Users/zakkeown/Code/moedex/.local/compact-artifacts/quartz/index",
+      "--id",
+      "compact-quartz",
+      "--graph=false",
+      "--semantic-artifact",
+      "/Users/zakkeown/Code/moedex/.local/compact-artifacts/quartz/project.semantic",
+      "--semantic-workspace",
+      "/Users/zakkeown/Code/moedex/.local/compact-artifacts/quartz/workspace/semantic-git-projection-499253758/source"
+    ],
+    "returncode": 0,
+    "seconds": 19.383671250005136
+  },
+  "native_mcp": {
+    "classification": "unscored native compiler serving smoke",
+    "server_pid": 13679,
+    "calls": [
+      {
+        "tool": "compiler_symbols",
+        "bytes": 5007,
+        "snapshot_id": "compact-quartz",
+        "artifact_sha256": "955f50ee6b89e5d07b9deadc1c968a56f534757056152c7e5b8371d268de5042"
+      },
+      {
+        "tool": "compiler_definitions",
+        "bytes": 2480,
+        "snapshot_id": "compact-quartz",
+        "artifact_sha256": "955f50ee6b89e5d07b9deadc1c968a56f534757056152c7e5b8371d268de5042"
+      }
+    ],
+    "discovered_symbols": 2,
+    "definitions": 1,
+    "source_hash_verified": true,
+    "worker_version": "21",
+    "server_returncode": 0,
+    "server_stopped": true
+  },
+  "fixture": [
+    {
+      "name": "debug",
+      "argv": [
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/moedex",
+        "semantic",
+        "capture",
+        "--checkout",
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/fixture/corpus/Fixture",
+        "--repo",
+        "Fixture",
+        "--commit",
+        "ad037faf83443c7b7dca432c1127fbf9e1108d7e",
+        "--origin",
+        "https://example.com/Fixture.git",
+        "--project",
+        "App/App.csproj",
+        "--framework",
+        "net10.0",
+        "--configuration",
+        "Debug",
+        "--dotnet",
+        "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/dotnet",
+        "--sdk-path",
+        "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/sdk/10.0.401",
+        "--worker",
+        "/Users/zakkeown/Code/moedex/.local/project-analyzers/final-worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+        "--dependency-bundle",
+        "/Users/zakkeown/Code/moedex/.local/holdout-quartz/bundle",
+        "--restore-offline",
+        "--workspace",
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/fixture/debug/workspace",
+        "--output",
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/fixture/debug/project.semantic",
+        "--timeout",
+        "2m"
+      ],
+      "returncode": 0,
+      "generated_value": 42,
+      "analyzer_hash_verified": true,
+      "publication": true,
+      "tampered_analyzer_rejected": true,
+      "artifact_sha256": "50ced4a61c317f87256c6c4a4023329ac9b9760dcbdd3670a4bb199c6b2a64b7"
+    },
+    {
+      "name": "release",
+      "argv": [
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/moedex",
+        "semantic",
+        "capture",
+        "--checkout",
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/fixture/corpus/Fixture",
+        "--repo",
+        "Fixture",
+        "--commit",
+        "a1e29efe65482c451443483c90cadaa7497df569",
+        "--origin",
+        "https://example.com/Fixture.git",
+        "--project",
+        "App/App.csproj",
+        "--framework",
+        "net10.0",
+        "--configuration",
+        "Release",
+        "--dotnet",
+        "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/dotnet",
+        "--sdk-path",
+        "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/sdk/10.0.401",
+        "--worker",
+        "/Users/zakkeown/Code/moedex/.local/project-analyzers/final-worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+        "--dependency-bundle",
+        "/Users/zakkeown/Code/moedex/.local/holdout-quartz/bundle",
+        "--restore-offline",
+        "--workspace",
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/fixture/release/workspace",
+        "--output",
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/fixture/release/project.semantic",
+        "--timeout",
+        "2m"
+      ],
+      "returncode": 0,
+      "generated_value": 84,
+      "analyzer_hash_verified": true,
+      "publication": true,
+      "tampered_analyzer_rejected": true,
+      "artifact_sha256": "57bd5bb567c274cdf183a6d958bf0432107486b7f6958f6dd3c71c56f9a264aa"
+    },
+    {
+      "name": "broken-generator",
+      "argv": [
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/moedex",
+        "semantic",
+        "capture",
+        "--checkout",
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/fixture/corpus/Fixture",
+        "--repo",
+        "Fixture",
+        "--commit",
+        "b953ac4dd48da0d966af12de972670a43f68ce7e",
+        "--origin",
+        "https://example.com/Fixture.git",
+        "--project",
+        "App/App.csproj",
+        "--framework",
+        "net10.0",
+        "--configuration",
+        "Debug",
+        "--dotnet",
+        "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/dotnet",
+        "--sdk-path",
+        "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/sdk/10.0.401",
+        "--worker",
+        "/Users/zakkeown/Code/moedex/.local/project-analyzers/final-worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+        "--dependency-bundle",
+        "/Users/zakkeown/Code/moedex/.local/holdout-quartz/bundle",
+        "--restore-offline",
+        "--workspace",
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/fixture/broken-generator/workspace",
+        "--output",
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/fixture/broken-generator/project.semantic",
+        "--timeout",
+        "2m"
+      ],
+      "returncode": 1
+    },
+    {
+      "name": "missing-analyzer",
+      "argv": [
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/moedex",
+        "semantic",
+        "capture",
+        "--checkout",
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/fixture/corpus/Fixture",
+        "--repo",
+        "Fixture",
+        "--commit",
+        "0f358ac0319dc796e4a8a6f7fa470e6a1311c53a",
+        "--origin",
+        "https://example.com/Fixture.git",
+        "--project",
+        "App/App.csproj",
+        "--framework",
+        "net10.0",
+        "--configuration",
+        "Debug",
+        "--dotnet",
+        "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/dotnet",
+        "--sdk-path",
+        "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/sdk/10.0.401",
+        "--worker",
+        "/Users/zakkeown/Code/moedex/.local/project-analyzers/final-worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+        "--dependency-bundle",
+        "/Users/zakkeown/Code/moedex/.local/holdout-quartz/bundle",
+        "--restore-offline",
+        "--workspace",
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/fixture/missing-analyzer/workspace",
+        "--output",
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/fixture/missing-analyzer/project.semantic",
+        "--timeout",
+        "2m"
+      ],
+      "returncode": 1
+    },
+    {
+      "name": "ambiguous-framework-output",
+      "argv": [
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/moedex",
+        "semantic",
+        "capture",
+        "--checkout",
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/fixture/corpus/Fixture",
+        "--repo",
+        "Fixture",
+        "--commit",
+        "46a4244e2c76eea739d5cbafc8ceeb078c008aa1",
+        "--origin",
+        "https://example.com/Fixture.git",
+        "--project",
+        "App/App.csproj",
+        "--framework",
+        "net10.0",
+        "--configuration",
+        "Debug",
+        "--dotnet",
+        "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/dotnet",
+        "--sdk-path",
+        "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/sdk/10.0.401",
+        "--worker",
+        "/Users/zakkeown/Code/moedex/.local/project-analyzers/final-worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+        "--dependency-bundle",
+        "/Users/zakkeown/Code/moedex/.local/holdout-quartz/bundle",
+        "--restore-offline",
+        "--workspace",
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/fixture/ambiguous-framework-output/workspace",
+        "--output",
+        "/Users/zakkeown/Code/moedex/.local/compact-artifacts/fixture/ambiguous-framework-output/project.semantic",
+        "--timeout",
+        "2m"
+      ],
+      "returncode": 1
+    }
+  ],
+  "validation": {
+    "go_full": true,
+    "go_vet": true,
+    "focused_race": true,
+    "journey_harness_tests": 35
+  },
+  "final_cli_sha256": "cd8f7a88850c233fae9eb0600592a1608eba7762ccf33c484842aaa35e3b128a",
+  "capture_cli_sha256": "1b007ee167f6f37e0081da8cab8cbf514591544e5aa46f9cd94213add6223d85",
+  "worker_sha256": "59661a7a9c3a1ee7bf4a281594a3db5e4fa83a87bd0b37e5fe39627d65e42940",
+  "prior_archives_verified": [
+    {
+      "path": "research/semantic-intelligence/results/project-analyzers-20261002/result.json",
+      "sha256": "8742e28d5ae694ff4bcffa837547d8773886f4b167c69bf414c2bfbc380cbfcb",
+      "files_verified": 397
+    },
+    {
+      "path": "research/semantic-intelligence/results/quartz-capture-attempt-20261002/result.json",
+      "sha256": "e55494f1944c81374a155e1ea93a8a1796271d181ec77a1ba85c6b9b8f6f2e93",
+      "files_verified": 38
+    },
+    {
+      "path": "research/semantic-intelligence/results/holdout-quartz-20261002/result.json",
+      "sha256": "b6281d4f9406b7f32743fe669d8ed6d0ecab2f31190ca21fc4e6cad1de56f830",
+      "files_verified": 51
+    },
+    {
+      "path": "research/semantic-intelligence/results/build-event-severity-20261002/result.json",
+      "sha256": "69b110a8a45e96f8c187418cb42c032832c4296b01ba1f758668771e88e6b038",
+      "files_verified": 325
+    },
+    {
+      "path": "research/semantic-intelligence/results/capture-diagnostics-20261002/result.json",
+      "sha256": "e49433226271f91ef1f30b568da8ba6411bc518a415444c214265aba22bd9964",
+      "files_verified": 151
+    },
+    {
+      "path": "research/semantic-intelligence/results/holdout-journeys-20261002/result.json",
+      "sha256": "c0abef1b8b406ab92cf748342b26d1916cefbba5d9c2e4770ef69be3eb2cbf08",
+      "files_verified": 637
+    }
+  ],
+  "quartz_source_hashes_verified": 2713,
+  "subagents_used": 1,
+  "gpu_used": false,
+  "limitations": [
+    "Composition retains a 64 MiB canonical legacy-envelope aggregate budget.",
+    "Older binaries cannot read compact envelopes.",
+    "Serialization bounds do not bound process heap.",
+    "No competitive performance or quality claim; native CodeGraph setup remains open."
+  ],
+  "files": [
+    {
+      "path": "evidence/archive.py",
+      "bytes": 4626,
+      "sha256": "9d67c04e3ec4264a254f25e9217226dbc4a426ba829015f6389b80264bb66999"
+    },
+    {
+      "path": "evidence/capture.log",
+      "bytes": 1220,
+      "sha256": "bb1ddaee16f7e46642a815d78746c36ddf561cc07ed357729f2e76c0f84420b0"
+    },
+    {
+      "path": "evidence/capture.py",
+      "bytes": 950,
+      "sha256": "c7e9c2e1b837ccbbce5e1ae6e7fafa37def17aade02ac1ab687556bceb02b8f3"
+    },
+    {
+      "path": "evidence/compose-tests.log",
+      "bytes": 81,
+      "sha256": "e62eec8ae5168221c3c1e3fbba2522bef64aceea67fe46a7e9f5b1b4be193df2"
+    },
+    {
+      "path": "evidence/final-inspect.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/final-inspect.stdout",
+      "bytes": 170,
+      "sha256": "7a928a230a7742d0c2e241df20281c865edb68b4a95865356228b921527ea7a9"
+    },
+    {
+      "path": "evidence/final-race.log",
+      "bytes": 81,
+      "sha256": "e3d19ea93c39968a6af496debb68f833cd5b8573f219fcf95a9307d440003735"
+    },
+    {
+      "path": "evidence/final-tests.log",
+      "bytes": 2668,
+      "sha256": "cd224dd5c54b20714f653c40e047fe37fe1306c9c1b6e4c62207259703a24bbc"
+    },
+    {
+      "path": "evidence/final-vet.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/fixture/ambiguous-framework-output/source/App/Api.cs",
+      "bytes": 95,
+      "sha256": "0acd8f554f48f8d8d08e6ba303c0e6406ca2f4b6cfde77cd93d1949553446c91"
+    },
+    {
+      "path": "evidence/fixture/ambiguous-framework-output/source/App/App.csproj",
+      "bytes": 330,
+      "sha256": "941a4799fc2264a1a6b404e7de1a234d1cc6158fcdc4528f350669dbcc76b6d9"
+    },
+    {
+      "path": "evidence/fixture/ambiguous-framework-output/source/App/Marker.cs",
+      "bytes": 37,
+      "sha256": "6489784c4fd122c4179c2f7697d3098719698670315a23ea48c3fb3d2a3409f6"
+    },
+    {
+      "path": "evidence/fixture/ambiguous-framework-output/source/Directory.Build.props",
+      "bytes": 146,
+      "sha256": "1d7e83bcf3576086c4732f4bd6d2ac77c918135d51794840f2c18503b6f8e857"
+    },
+    {
+      "path": "evidence/fixture/ambiguous-framework-output/source/Generator/Generate.cs",
+      "bytes": 430,
+      "sha256": "7d90dd114bf5dd9a8f77143cba34534bc84b8570c899e8cff93b8ca4fa6a1150"
+    },
+    {
+      "path": "evidence/fixture/ambiguous-framework-output/source/Generator/Generator.csproj",
+      "bytes": 276,
+      "sha256": "f7303a21c29a9fd2dde8af482896db59c7d00088e77f36abe8e1baa2b11c0dc8"
+    },
+    {
+      "path": "evidence/fixture/ambiguous-framework-output/source/Library/Library.csproj",
+      "bytes": 123,
+      "sha256": "c5d11e27413600f7d2ad15452b7821e1684e556dac0658f3901248d143f4e1fc"
+    },
+    {
+      "path": "evidence/fixture/ambiguous-framework-output/source/Library/Shared.cs",
+      "bytes": 61,
+      "sha256": "2325f8fc4a76d555bf90f7ad4f8478df6a1e2b723e286835e9db9082bb44261c"
+    },
+    {
+      "path": "evidence/fixture/ambiguous-framework-output/stderr",
+      "bytes": 272,
+      "sha256": "6938c9a52780a2230131b64e5ad551fb5bebe075befed8762d9aa7cfdb1ce25a"
+    },
+    {
+      "path": "evidence/fixture/ambiguous-framework-output/stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/fixture/broken-generator/source/App/Api.cs",
+      "bytes": 95,
+      "sha256": "0acd8f554f48f8d8d08e6ba303c0e6406ca2f4b6cfde77cd93d1949553446c91"
+    },
+    {
+      "path": "evidence/fixture/broken-generator/source/App/App.csproj",
+      "bytes": 330,
+      "sha256": "941a4799fc2264a1a6b404e7de1a234d1cc6158fcdc4528f350669dbcc76b6d9"
+    },
+    {
+      "path": "evidence/fixture/broken-generator/source/App/Marker.cs",
+      "bytes": 37,
+      "sha256": "6489784c4fd122c4179c2f7697d3098719698670315a23ea48c3fb3d2a3409f6"
+    },
+    {
+      "path": "evidence/fixture/broken-generator/source/Directory.Build.props",
+      "bytes": 95,
+      "sha256": "d15c7708cd0ed874b38ef2a4bdcbab803275e5a3ebecf1614727766b7154ef03"
+    },
+    {
+      "path": "evidence/fixture/broken-generator/source/Generator/Broken.cs",
+      "bytes": 21,
+      "sha256": "7d2063bb3ef1c4af24148e8cbe06742d5315c9e9b027df268320002ebdddea0f"
+    },
+    {
+      "path": "evidence/fixture/broken-generator/source/Generator/Generate.cs",
+      "bytes": 430,
+      "sha256": "7d90dd114bf5dd9a8f77143cba34534bc84b8570c899e8cff93b8ca4fa6a1150"
+    },
+    {
+      "path": "evidence/fixture/broken-generator/source/Generator/Generator.csproj",
+      "bytes": 276,
+      "sha256": "f7303a21c29a9fd2dde8af482896db59c7d00088e77f36abe8e1baa2b11c0dc8"
+    },
+    {
+      "path": "evidence/fixture/broken-generator/source/Library/Library.csproj",
+      "bytes": 123,
+      "sha256": "c5d11e27413600f7d2ad15452b7821e1684e556dac0658f3901248d143f4e1fc"
+    },
+    {
+      "path": "evidence/fixture/broken-generator/source/Library/Shared.cs",
+      "bytes": 61,
+      "sha256": "2325f8fc4a76d555bf90f7ad4f8478df6a1e2b723e286835e9db9082bb44261c"
+    },
+    {
+      "path": "evidence/fixture/broken-generator/stderr",
+      "bytes": 4794,
+      "sha256": "3df5c4e8ae0b9f645544c98deb851e968974074dded0a84ceeb361cfca60c5cb"
+    },
+    {
+      "path": "evidence/fixture/broken-generator/stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/fixture/debug/damaged.stderr",
+      "bytes": 320,
+      "sha256": "0ce224f0c3b740b5a05cd9fa2fca41fb1a20155b3250d7d2454685383cca6d57"
+    },
+    {
+      "path": "evidence/fixture/debug/project.semantic",
+      "bytes": 61518,
+      "sha256": "50ced4a61c317f87256c6c4a4023329ac9b9760dcbdd3670a4bb199c6b2a64b7"
+    },
+    {
+      "path": "evidence/fixture/debug/publish.stderr",
+      "bytes": 211,
+      "sha256": "e6e2ca017a9e4ba96a0e8a666e26cb1ea42e89bce36e7c30aec3db1e0d3ffa96"
+    },
+    {
+      "path": "evidence/fixture/debug/publish.stdout",
+      "bytes": 88,
+      "sha256": "e223d82eaa9993f2df3f7ba22b914d3c69dfa739af473cf57a6dc43796a2a0f9"
+    },
+    {
+      "path": "evidence/fixture/debug/roots.json",
+      "bytes": 199,
+      "sha256": "ea837b4e29fdf7c0f506f833b4b048887c62638b06e5bb9f0dc1cfe98b7b6405"
+    },
+    {
+      "path": "evidence/fixture/debug/source/App/Api.cs",
+      "bytes": 95,
+      "sha256": "0acd8f554f48f8d8d08e6ba303c0e6406ca2f4b6cfde77cd93d1949553446c91"
+    },
+    {
+      "path": "evidence/fixture/debug/source/App/App.csproj",
+      "bytes": 330,
+      "sha256": "941a4799fc2264a1a6b404e7de1a234d1cc6158fcdc4528f350669dbcc76b6d9"
+    },
+    {
+      "path": "evidence/fixture/debug/source/Directory.Build.props",
+      "bytes": 95,
+      "sha256": "d15c7708cd0ed874b38ef2a4bdcbab803275e5a3ebecf1614727766b7154ef03"
+    },
+    {
+      "path": "evidence/fixture/debug/source/Generator/Generate.cs",
+      "bytes": 430,
+      "sha256": "7d90dd114bf5dd9a8f77143cba34534bc84b8570c899e8cff93b8ca4fa6a1150"
+    },
+    {
+      "path": "evidence/fixture/debug/source/Generator/Generator.csproj",
+      "bytes": 276,
+      "sha256": "f7303a21c29a9fd2dde8af482896db59c7d00088e77f36abe8e1baa2b11c0dc8"
+    },
+    {
+      "path": "evidence/fixture/debug/source/Library/Library.csproj",
+      "bytes": 123,
+      "sha256": "c5d11e27413600f7d2ad15452b7821e1684e556dac0658f3901248d143f4e1fc"
+    },
+    {
+      "path": "evidence/fixture/debug/source/Library/Shared.cs",
+      "bytes": 61,
+      "sha256": "2325f8fc4a76d555bf90f7ad4f8478df6a1e2b723e286835e9db9082bb44261c"
+    },
+    {
+      "path": "evidence/fixture/debug/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/fixture/debug/stdout",
+      "bytes": 672,
+      "sha256": "16e2f4190e90332c8d03882560406322da5ab1b1e781007a96d2b7f020fcce4a"
+    },
+    {
+      "path": "evidence/fixture/missing-analyzer/source/App/Api.cs",
+      "bytes": 95,
+      "sha256": "0acd8f554f48f8d8d08e6ba303c0e6406ca2f4b6cfde77cd93d1949553446c91"
+    },
+    {
+      "path": "evidence/fixture/missing-analyzer/source/App/App.csproj",
+      "bytes": 387,
+      "sha256": "0606df6d2ac4cd44bb9c359e0bcaad2cf7e8e534feda2f9cd92d361e0c4e08b9"
+    },
+    {
+      "path": "evidence/fixture/missing-analyzer/source/App/Marker.cs",
+      "bytes": 37,
+      "sha256": "6489784c4fd122c4179c2f7697d3098719698670315a23ea48c3fb3d2a3409f6"
+    },
+    {
+      "path": "evidence/fixture/missing-analyzer/source/Directory.Build.props",
+      "bytes": 95,
+      "sha256": "d15c7708cd0ed874b38ef2a4bdcbab803275e5a3ebecf1614727766b7154ef03"
+    },
+    {
+      "path": "evidence/fixture/missing-analyzer/source/Generator/Generate.cs",
+      "bytes": 430,
+      "sha256": "7d90dd114bf5dd9a8f77143cba34534bc84b8570c899e8cff93b8ca4fa6a1150"
+    },
+    {
+      "path": "evidence/fixture/missing-analyzer/source/Generator/Generator.csproj",
+      "bytes": 276,
+      "sha256": "f7303a21c29a9fd2dde8af482896db59c7d00088e77f36abe8e1baa2b11c0dc8"
+    },
+    {
+      "path": "evidence/fixture/missing-analyzer/source/Library/Library.csproj",
+      "bytes": 123,
+      "sha256": "c5d11e27413600f7d2ad15452b7821e1684e556dac0658f3901248d143f4e1fc"
+    },
+    {
+      "path": "evidence/fixture/missing-analyzer/source/Library/Shared.cs",
+      "bytes": 61,
+      "sha256": "2325f8fc4a76d555bf90f7ad4f8478df6a1e2b723e286835e9db9082bb44261c"
+    },
+    {
+      "path": "evidence/fixture/missing-analyzer/stderr",
+      "bytes": 391,
+      "sha256": "e49a4a54d92e8bee7370c58b9ec74a31e4930a36de1914b51d1e63e85e784897"
+    },
+    {
+      "path": "evidence/fixture/missing-analyzer/stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/fixture/release/damaged.stderr",
+      "bytes": 322,
+      "sha256": "b0d88f55994f052a6b355cf6588a196f722997c06ee811326849567edd024ded"
+    },
+    {
+      "path": "evidence/fixture/release/project.semantic",
+      "bytes": 61894,
+      "sha256": "57bd5bb567c274cdf183a6d958bf0432107486b7f6958f6dd3c71c56f9a264aa"
+    },
+    {
+      "path": "evidence/fixture/release/publish.stderr",
+      "bytes": 211,
+      "sha256": "e6e2ca017a9e4ba96a0e8a666e26cb1ea42e89bce36e7c30aec3db1e0d3ffa96"
+    },
+    {
+      "path": "evidence/fixture/release/publish.stdout",
+      "bytes": 90,
+      "sha256": "b9e5f6ff01744793573a441f2abec6a432651bc5edc60762f335c016ce4430b7"
+    },
+    {
+      "path": "evidence/fixture/release/roots.json",
+      "bytes": 201,
+      "sha256": "f867bbfe02bf005ec421c8dda0da8fff3055398855e234176af1bcb7abe0a15f"
+    },
+    {
+      "path": "evidence/fixture/release/source/App/Api.cs",
+      "bytes": 95,
+      "sha256": "0acd8f554f48f8d8d08e6ba303c0e6406ca2f4b6cfde77cd93d1949553446c91"
+    },
+    {
+      "path": "evidence/fixture/release/source/App/App.csproj",
+      "bytes": 330,
+      "sha256": "941a4799fc2264a1a6b404e7de1a234d1cc6158fcdc4528f350669dbcc76b6d9"
+    },
+    {
+      "path": "evidence/fixture/release/source/App/Marker.cs",
+      "bytes": 37,
+      "sha256": "6489784c4fd122c4179c2f7697d3098719698670315a23ea48c3fb3d2a3409f6"
+    },
+    {
+      "path": "evidence/fixture/release/source/Directory.Build.props",
+      "bytes": 95,
+      "sha256": "d15c7708cd0ed874b38ef2a4bdcbab803275e5a3ebecf1614727766b7154ef03"
+    },
+    {
+      "path": "evidence/fixture/release/source/Generator/Generate.cs",
+      "bytes": 430,
+      "sha256": "7d90dd114bf5dd9a8f77143cba34534bc84b8570c899e8cff93b8ca4fa6a1150"
+    },
+    {
+      "path": "evidence/fixture/release/source/Generator/Generator.csproj",
+      "bytes": 276,
+      "sha256": "f7303a21c29a9fd2dde8af482896db59c7d00088e77f36abe8e1baa2b11c0dc8"
+    },
+    {
+      "path": "evidence/fixture/release/source/Library/Library.csproj",
+      "bytes": 123,
+      "sha256": "c5d11e27413600f7d2ad15452b7821e1684e556dac0658f3901248d143f4e1fc"
+    },
+    {
+      "path": "evidence/fixture/release/source/Library/Shared.cs",
+      "bytes": 61,
+      "sha256": "2325f8fc4a76d555bf90f7ad4f8478df6a1e2b723e286835e9db9082bb44261c"
+    },
+    {
+      "path": "evidence/fixture/release/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/fixture/release/stdout",
+      "bytes": 676,
+      "sha256": "08fdc14244b5c6e41a23fd7f2d9bed85af03a2e2fd1e7ccdb8bd6e7e64cebe5d"
+    },
+    {
+      "path": "evidence/fixture/result.json",
+      "bytes": 6978,
+      "sha256": "cbcc4bc0d652b876c7dd50b9c108be21ad4207e2fc5597ea1b22e45f934e97a5"
+    },
+    {
+      "path": "evidence/fixture.log",
+      "bytes": 6978,
+      "sha256": "cbcc4bc0d652b876c7dd50b9c108be21ad4207e2fc5597ea1b22e45f934e97a5"
+    },
+    {
+      "path": "evidence/full-tests.log",
+      "bytes": 2672,
+      "sha256": "8c8e6a5c93802bbfa0dbfe5fe6adecbd937745c212857569cb380ed7bfe77ebf"
+    },
+    {
+      "path": "evidence/harness-tests.log",
+      "bytes": 134,
+      "sha256": "70f0ac27cbae62932bea8e60ddbe6412138bd0d0c218beaa5f1f7fed9ea84897"
+    },
+    {
+      "path": "evidence/inspect-correct.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/inspect-correct.stdout",
+      "bytes": 170,
+      "sha256": "7a928a230a7742d0c2e241df20281c865edb68b4a95865356228b921527ea7a9"
+    },
+    {
+      "path": "evidence/inspect.stderr",
+      "bytes": 178,
+      "sha256": "2d7ce5320591c218a6c678ff646847508436aebc5d868b3690528f4fbfa323c9"
+    },
+    {
+      "path": "evidence/inspect.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-run/001.request.json",
+      "bytes": 180,
+      "sha256": "5f79fd81a801b6045f488b19bcc6398573d77cf361d669d74875516ec9e3d185"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-run/001.response.raw",
+      "bytes": 5007,
+      "sha256": "6f04043fe878de51a06c8a41124825cfea1f8831f0f774be6f5df9e437b4bba4"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-run/002.request.json",
+      "bytes": 291,
+      "sha256": "eed4c6e334af093525e506e8db84df7aeb69a9d45eb91257729fed8d4d56c09d"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-run/002.response.raw",
+      "bytes": 2480,
+      "sha256": "41e7b7881fd0275e89fc9168974e9469183c475fc90909ad8fb0c3758853d589"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-run/catalog.json",
+      "bytes": 97229,
+      "sha256": "7e9426ddf0847eaa67cc385545af860e95c771852e38ae31780b70bd1803b39b"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-run/initialize.json",
+      "bytes": 1457,
+      "sha256": "2ee0e43f6779dfd19bee0075fb3d193959f8269b8091578051f715ee671434ae"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-run/lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-run/prompt.txt",
+      "bytes": 71,
+      "sha256": "b949c98dbf94e638efc5f1cb35c433aa66d76dac4676ada4047c1da0fa9df482"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-run/setup.json",
+      "bytes": 1613,
+      "sha256": "9c84a09858d00f20641a6a7c30aaf07b610543ca62bb647c87453eab85b1ae76"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-run/state.json",
+      "bytes": 1155,
+      "sha256": "ed886a49bf02cdfdade5d0de81188dc690ef743f5d66f5c17aa8b2533860b67d"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-run/transcript.jsonl",
+      "bytes": 1455,
+      "sha256": "fb9f160639a7fb0ca9d280067ebccf88c11ff249f56e8ec3cae90b08fa257fcc"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-setup/catalog.request.json",
+      "bytes": 58,
+      "sha256": "0f4c3a29ae49f3954c9a399461300966ae7654929e7a6213836b7dcc1598cceb"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-setup/catalog.response.raw",
+      "bytes": 97229,
+      "sha256": "7e9426ddf0847eaa67cc385545af860e95c771852e38ae31780b70bd1803b39b"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-setup/initialize.request.json",
+      "bytes": 165,
+      "sha256": "0012e07f0ef0a9d685fc20f9403d48bae2596f379d28920e7df30c5d29c5b295"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-setup/initialize.response.raw",
+      "bytes": 1457,
+      "sha256": "2ee0e43f6779dfd19bee0075fb3d193959f8269b8091578051f715ee671434ae"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-setup/initialized.request.json",
+      "bytes": 66,
+      "sha256": "c01acc5d43647dfe74d55a6c24e26a748188851204d330e6d1f1d7e64b2ed999"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-setup/initialized.response.raw",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-setup/result.json",
+      "bytes": 1613,
+      "sha256": "9c84a09858d00f20641a6a7c30aaf07b610543ca62bb647c87453eab85b1ae76"
+    },
+    {
+      "path": "evidence/mcp-final/mcp-smoke.json",
+      "bytes": 664,
+      "sha256": "ddb85a629e997ce1a068b10eb201c08343d443bfb8d44b45dcfe792cae7caad2"
+    },
+    {
+      "path": "evidence/mcp-final/run.log",
+      "bytes": 572,
+      "sha256": "f85017f7d102c7a8ca75a7b58ecea8958e04fbc12254c2da72dde9489b2f134a"
+    },
+    {
+      "path": "evidence/mcp-final/run.py",
+      "bytes": 2625,
+      "sha256": "3bfe3e5e1daf403c531ea21903e1031c3a7f4d93208a043c5dd6125446f030ec"
+    },
+    {
+      "path": "evidence/mcp-final/server.stderr",
+      "bytes": 2109,
+      "sha256": "305247b99c4e8d7890c7006ebdbaa6bf85a8969ee108503d24ec815bf12e1f53"
+    },
+    {
+      "path": "evidence/mcp-final/server.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/mcp-final/smoke-prompt.txt",
+      "bytes": 71,
+      "sha256": "b949c98dbf94e638efc5f1cb35c433aa66d76dac4676ada4047c1da0fa9df482"
+    },
+    {
+      "path": "evidence/package-tests.log",
+      "bytes": 165,
+      "sha256": "d2ca42acd8d68e25985e84b437597326fdc67a6cd9728a1c848882b7348c5d2d"
+    },
+    {
+      "path": "evidence/quartz/command.json",
+      "bytes": 1374,
+      "sha256": "7a6f5550c9e0660ad6240ea3e2c70ed2ad47147858cb8fee3299e879a8947c1e"
+    },
+    {
+      "path": "evidence/quartz/publish.json",
+      "bytes": 664,
+      "sha256": "af91e677e70cd6196f668890e41b79b78ed71a5089666271baeaa2604f12eba7"
+    },
+    {
+      "path": "evidence/quartz/publish.stderr",
+      "bytes": 211,
+      "sha256": "e6e2ca017a9e4ba96a0e8a666e26cb1ea42e89bce36e7c30aec3db1e0d3ffa96"
+    },
+    {
+      "path": "evidence/quartz/publish.stdout",
+      "bytes": 100,
+      "sha256": "c377c7edea15b49f25be5e8ecf95cc44a24a003857cf4211657002cf1723ce01"
+    },
+    {
+      "path": "evidence/quartz/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/quartz/stdout",
+      "bytes": 716,
+      "sha256": "8492716f7760d501c17ff1383b22a453c17bb019f370d6a17da881e4002ab01b"
+    },
+    {
+      "path": "evidence/race.log",
+      "bytes": 37,
+      "sha256": "3ccc8b044b3e165953e41c08edfdcd72e008fa3271506be7ceafb738315c6d56"
+    },
+    {
+      "path": "evidence/size-report.json",
+      "bytes": 373,
+      "sha256": "775c1260672d6d5a4388fed999248b8f650a4d6faa97f433b415e2c02211cf02"
+    },
+    {
+      "path": "evidence/vet.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "source/docs/adr/0065-compact-semantic-artifacts.md",
+      "bytes": 2101,
+      "sha256": "de65cfcbfdef9aa566134699ccc8fc59b362c2d39a9b46b1d9f861ce1c85b95d"
+    },
+    {
+      "path": "source/docs/adr/README.md",
+      "bytes": 7909,
+      "sha256": "366e704ef0deb8cee69ab28e166a2620b2c95b5c9f2442714301ae7efe9bfa28"
+    },
+    {
+      "path": "source/docs/plans/semantic-intelligence/DELIVERY.md",
+      "bytes": 80382,
+      "sha256": "05187f5b0570895095cf31e92ec3f26c70e8c34421ce6cdfb0f9d22f8b4907b0"
+    },
+    {
+      "path": "source/docs/plans/semantic-intelligence/PROGRAM.md",
+      "bytes": 39107,
+      "sha256": "34376060e410bc03c7a7725bde933ad28407f0f3209f63dd1e41fcab5dd555ce"
+    },
+    {
+      "path": "source/internal/app/semanticcmd/compose.go",
+      "bytes": 6518,
+      "sha256": "f831afab9608e4c975cdaffe02428650f661ffacee2e021fb1a23745bd20436b"
+    },
+    {
+      "path": "source/internal/app/semanticcmd/compose_test.go",
+      "bytes": 9316,
+      "sha256": "163851554f65bb9954c3fed21812a11c8e846ee58c4ddfd298a85ba970edc38b"
+    },
+    {
+      "path": "source/internal/semantic/artifact.go",
+      "bytes": 7075,
+      "sha256": "622df0fe5f2f7295c31919a8b0d6482c6f43d14901acc5f026fbae2b8613b3b3"
+    },
+    {
+      "path": "source/internal/semantic/artifact_compact_test.go",
+      "bytes": 4641,
+      "sha256": "3f5be301bd710b61ce3e1e6c8f352f0ab518d24de62a0b671f4bebe16cd3d64d"
+    },
+    {
+      "path": "source/internal/semantic/compose.go",
+      "bytes": 6767,
+      "sha256": "dcac6b703a59aae85819a7660c2aad52cd55c3cada3bb44903095f8272e5a184"
+    },
+    {
+      "path": "source/research/semantic-intelligence/COMPACT-ARTIFACT-ACCEPTANCE.md",
+      "bytes": 4792,
+      "sha256": "8e55c32ef9c23b5124a873e1f4649a20018e8bf177c26eb27c9deebd5c591b11"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/COMPARISON.md",
+      "bytes": 8028,
+      "sha256": "ffb8836246ba081ebcc2ae2311699e31249b8fe6eae9d09961e664ba694c5c74"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/README.md",
+      "bytes": 7297,
+      "sha256": "2edbfbc58479bbfa6566fe6dafe2b84c372610c2a53c18ce1348a6ba879dd92f"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/browse.py",
+      "bytes": 6237,
+      "sha256": "4b9310844d31a5e1b5ecab80b65f7a410c9fd46ce06fbf2890d277e287dd495c"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/check_compact_evidence_path.py",
+      "bytes": 4435,
+      "sha256": "e185f0e749df08aed9d2af4df1831ce98a0cc9d3f59b59c0d82f9f348e47cee6"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/check_default_forwarding.py",
+      "bytes": 7248,
+      "sha256": "197edfdd3dca133e7c572601b3bf17e1c95bf4a9395eb135e8d0d9c4ec1a7998"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/check_default_selection.py",
+      "bytes": 5861,
+      "sha256": "856f5fca5cf8decbd18d9e8a648c1ad59c5c15bc7136497da9ed00aabaa12018"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/check_discovery_workflow.py",
+      "bytes": 6329,
+      "sha256": "6c93fbe42cf55dd5848e0ba64de935f01f757bfd2de07db1f84193d13110278f"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/check_framework_bridge.py",
+      "bytes": 7571,
+      "sha256": "a2d372e3b7986e9c0fcb1affbdac324e779289fa684103d047195165f881a2ae"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/check_fresh_paths.py",
+      "bytes": 3351,
+      "sha256": "66de26ebcbf53a569a7fc011ed439e2bf90b6b64939f8d530572f6329cb5960e"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/check_remaining_tasks.py",
+      "bytes": 6297,
+      "sha256": "084d7e693bff04fa0b8c6fcbca6b72241398996d02d30b89d73dd3c7f6b41040"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/check_source_only.py",
+      "bytes": 3980,
+      "sha256": "573f6ad7f041603859691d883bfbb159323fe20d9a58f538a0012718e7c9b50b"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/check_symbol_discovery.py",
+      "bytes": 4244,
+      "sha256": "4ebc91250133e9029aea1148a2ac57e85789572d3dfcb6ff2a2833b9c5f8ae68"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/client.py",
+      "bytes": 10398,
+      "sha256": "6e2934d7f16a8f87ba961d716899a8f298c8abf9feea367cce2b9e2fc00c36a1"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/compare.py",
+      "bytes": 11860,
+      "sha256": "b60a96eafba023d90634ceb5166f7300fd17dc5afcab7bc049bc7e8a49ed5e72"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/prepare.py",
+      "bytes": 5713,
+      "sha256": "1ed8763d260db4bea74ef41ceb8423c1dd01f2331c342f76122c1a4111f12afd"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/test_browse.py",
+      "bytes": 3769,
+      "sha256": "edb5f1241006bde77627c8940809275cf9dbc679d968e3ceb0e80d0a0a17552b"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/test_client.py",
+      "bytes": 6702,
+      "sha256": "367eb2250b2413410a7b8bbe547283a117efe6c9ce52f92ac742cc91bf69cd69"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/test_compare.py",
+      "bytes": 9298,
+      "sha256": "f4965e157674df0093158a89cfa6fb11b98b93f47a462f228548caf775ad3d8a"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/test_discovery_workflow.py",
+      "bytes": 917,
+      "sha256": "1968dd1b1fbdb230212dbd9d774a68429383d6a73d822ce6ca80cee275c55ba9"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/test_prepare.py",
+      "bytes": 5847,
+      "sha256": "a08f4b571855be0d04679b4302333aa2a48df53ac190eb603bda9adaeb6571bb"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/test_view.py",
+      "bytes": 3110,
+      "sha256": "b767fdfa792521e2d9ee2a6b4e28dd6ef91669d4e2337bce22c499de97cc5996"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/view.py",
+      "bytes": 1953,
+      "sha256": "c47e482ed9be9016e79722e0854696acb8331bab84baed3a8b23bd28c93c7fc3"
+    },
+    {
+      "path": "source/tools/semantic-dotnet/README.md",
+      "bytes": 36796,
+      "sha256": "4699f41866e147e944d45ed2a6ba1dec5329adccc0d54a288d2cc53ed0ecd3a1"
+    },
+    {
+      "path": "source/tools/semantic-dotnet/test_project_analyzers.py",
+      "bytes": 8114,
+      "sha256": "8b43902d8d7184f61aa233b58ad4ef13b17ccac0eee8a8a16d4cf9602a64ce68"
+    }
+  ]
+}

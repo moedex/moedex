@@ -1,0 +1,9 @@
+{
+  "internal/app/servecmd/webhooks_holdout_public_test.go": "86b7c37d0bee7f1134fc857edc64e0bf8b7821ea04f5b6f73696c97c5a472082",
+  "research/semantic-intelligence/score-webhooks-holdout.py": "eefa25feef5c49da2bfc9af7f06e1cbf3cb72e90a641b4187c0d570eb7bf0e3c",
+  "research/semantic-intelligence/test_score_webhooks_holdout.py": "3116575e42fa4d7bcaf9408e67d648419037eafa0211928624776c72afd33d91",
+  "research/semantic-intelligence/score-moedex-component.py": "3d8e6179cf73469a5391e94a63cb5d368c52b1c529939c918d4b7b53afe205ed",
+  "internal/mcp/compiler.go": "87eb98393795cd56214c957a7a576992d8efd4b5500a7432ff9ae3d0091b7357",
+  "tools/semantic-dotnet/Worker.cs": "e1348a347a1256fa1dd3cb1aa75e1d89933745891a4ed665e75a030d155e0cd7",
+  "tools/semantic-dotnet/ImplementationFacts.cs": "f5e3aab3abc8f9379a9c089e746f1bb621e4f25209dd3aa65ee1e01967efba29"
+}

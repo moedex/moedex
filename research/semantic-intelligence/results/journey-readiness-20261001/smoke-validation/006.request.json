@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"compiler_definitions","arguments":{"repo":"Sample-Outbox","symbol_id":"symbol:9ce6605baa8091eeaba7a7548ff477b6a822eca842c2957abdf82c5260fa08c9","context_id":"context:c3ea5704a009646629a19c999d15b71f6ab1eef15b158d92e8bba1851fbe327f"}}}

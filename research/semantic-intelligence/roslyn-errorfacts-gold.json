@@ -1,0 +1,219 @@
+{
+  "schema": "moedex.roslyn-compiler-acceptance.v1",
+  "origin": "https://github.com/dotnet/roslyn",
+  "commit": "36d26c5466e4d25940657ccb8d5b9557ccaf7be1",
+  "project": "src/Tools/CompilerGeneratorTools/Source/CSharpErrorFactsGenerator/CSharpErrorFactsGenerator.csproj",
+  "framework": "net10.0",
+  "configuration": "Debug",
+  "authored_from": "Original source before any compiler execution on this project; SDK dependencies not acquired.",
+  "scope": "Ten selected source-authored compiler binding cases. Not a full Roslyn compiler build or quality estimate.",
+  "inputs": [
+    {
+      "path": "global.json",
+      "sha256": "0a14db34cdfccad73ff1e38eeb7a5300ec5d0a70b9de159ec79873454c0a76b6",
+      "byte_size": 568
+    },
+    {
+      "path": "Directory.Build.props",
+      "sha256": "3528f28dc7ac49d159852ea40c2d85b2756a871478a6e3bc3e706c61c0c85d67",
+      "byte_size": 342
+    },
+    {
+      "path": "Directory.Build.targets",
+      "sha256": "4f71313577da1c0fc1a750b7a07fbe969ebdf6e097ea050b2b029b6fc3b2c2b6",
+      "byte_size": 468
+    },
+    {
+      "path": "Directory.Packages.props",
+      "sha256": "f97a2adf30618247ac2d18789686b8eefcc21b8a32e7fc003e4c1970b1637442",
+      "byte_size": 267
+    },
+    {
+      "path": "NuGet.config",
+      "sha256": "a0cc93a5e2dccf6fb12f0ea981e696d235ef7a5e6d3dbc007a2eedf7030bd7db",
+      "byte_size": 3175
+    },
+    {
+      "path": "src/Tools/Directory.Build.props",
+      "sha256": "69bdf82d04112a1816c42cea5ff3817fe3a57ea9358f5fb209ecb8a74a0783eb",
+      "byte_size": 239
+    },
+    {
+      "path": "eng/targets/Settings.props",
+      "sha256": "9de1778ab0534b9d8f3d78a7aedd53aa3fdd6cb3df1fb271b0d6fc1d9c0fea08",
+      "byte_size": 15445
+    },
+    {
+      "path": "eng/targets/TargetFrameworks.props",
+      "sha256": "038c0e3210d328566cfb4bca09a3beedc6a8f57e89b304258bf0bbcceb784796",
+      "byte_size": 2448
+    },
+    {
+      "path": "eng/targets/TargetFrameworks.targets",
+      "sha256": "9c6f8e93e8f59b9925d5a66dfd90cc1c8c935e5621116f025a29eb93779d5835",
+      "byte_size": 1165
+    },
+    {
+      "path": "eng/targets/Imports.BeforeArcade.targets",
+      "sha256": "581bed1920e9df39821f9368544ba1fd6fa28e994d1ff0628b2d1d112233a225",
+      "byte_size": 997
+    },
+    {
+      "path": "eng/targets/Imports.targets",
+      "sha256": "b0d2f04dd5bb684a6c9576c2fa9e4fc76e9c6412f47357a71033e391984df93a",
+      "byte_size": 23736
+    },
+    {
+      "path": "eng/targets/DeveloperSettings.targets",
+      "sha256": "08ca40b8a01c93671e1e010ca1a43bd49b6e309ec52d38abcf253136a872e23e",
+      "byte_size": 2342
+    },
+    {
+      "path": "eng/Packages.props",
+      "sha256": "d78e032fe9b7105273c61d7cd8f6ca84245729ae3cdf69e5dac70ea6edc9d249",
+      "byte_size": 28138
+    },
+    {
+      "path": "eng/Versions.props",
+      "sha256": "b692ce3c50cf05647f59a953c3d6c5143889b7c6bd55e837a3fe199fc2f09208",
+      "byte_size": 9969
+    },
+    {
+      "path": "eng/Version.Details.props",
+      "sha256": "1074dd1515d001e7e35cab376366efabb262f293842e11ea3fbf41b095e043ec",
+      "byte_size": 9581
+    },
+    {
+      "path": "src/Tools/CompilerGeneratorTools/Source/CSharpErrorFactsGenerator/CSharpErrorFactsGenerator.csproj",
+      "sha256": "149027c807d188e16dee3d3363ba644d0967b9813abe3a76be4cc10fb64a4708",
+      "byte_size": 540
+    },
+    {
+      "path": "src/Tools/CompilerGeneratorTools/Source/CSharpErrorFactsGenerator/Program.cs",
+      "sha256": "f797971c625c212d0cedd7ace6be8d5772842f4fa2dba0e0e61513fe916237c4",
+      "byte_size": 5858
+    }
+  ],
+  "labels": [
+    {
+      "id": "local-generate",
+      "path": "src/Tools/CompilerGeneratorTools/Source/CSharpErrorFactsGenerator/Program.cs",
+      "source_sha256": "f797971c625c212d0cedd7ace6be8d5772842f4fa2dba0e0e61513fe916237c4",
+      "anchor": "return Generate(inputPath, outputPath);",
+      "token": "Generate",
+      "byte_offset": 818,
+      "byte_length": 8,
+      "reference_kind": "invocation",
+      "expected_descriptor": "M:Microsoft.CodeAnalysis.CSharp.Internal.CSharpErrorFactsGenerator.Program.Generate(System.String,System.String)",
+      "definition_expected": true
+    },
+    {
+      "id": "file-read-overload",
+      "path": "src/Tools/CompilerGeneratorTools/Source/CSharpErrorFactsGenerator/Program.cs",
+      "source_sha256": "f797971c625c212d0cedd7ace6be8d5772842f4fa2dba0e0e61513fe916237c4",
+      "anchor": "File.ReadAllLines(inputPath)",
+      "token": "ReadAllLines",
+      "byte_offset": 1492,
+      "byte_length": 12,
+      "reference_kind": "invocation",
+      "expected_descriptor": "M:System.IO.File.ReadAllLines(System.String)",
+      "definition_expected": false
+    },
+    {
+      "id": "generic-select",
+      "path": "src/Tools/CompilerGeneratorTools/Source/CSharpErrorFactsGenerator/Program.cs",
+      "source_sha256": "f797971c625c212d0cedd7ace6be8d5772842f4fa2dba0e0e61513fe916237c4",
+      "anchor": "File.ReadAllLines(inputPath).Select(l => l.Trim())",
+      "token": "Select",
+      "byte_offset": 1516,
+      "byte_length": 6,
+      "reference_kind": "invocation",
+      "expected_descriptor": "M:System.Linq.Enumerable.Select``2(System.Collections.Generic.IEnumerable{``0},System.Func{``0,``1})",
+      "definition_expected": false
+    },
+    {
+      "id": "lambda-string-trim",
+      "path": "src/Tools/CompilerGeneratorTools/Source/CSharpErrorFactsGenerator/Program.cs",
+      "source_sha256": "f797971c625c212d0cedd7ace6be8d5772842f4fa2dba0e0e61513fe916237c4",
+      "anchor": "File.ReadAllLines(inputPath).Select(l => l.Trim())",
+      "token": "Trim",
+      "byte_offset": 1530,
+      "byte_length": 4,
+      "reference_kind": "invocation",
+      "expected_descriptor": "M:System.String.Trim",
+      "definition_expected": false
+    },
+    {
+      "id": "string-comparison-overload",
+      "path": "src/Tools/CompilerGeneratorTools/Source/CSharpErrorFactsGenerator/Program.cs",
+      "source_sha256": "f797971c625c212d0cedd7ace6be8d5772842f4fa2dba0e0e61513fe916237c4",
+      "anchor": "line.StartsWith(\"WRN_\", StringComparison.OrdinalIgnoreCase)",
+      "token": "StartsWith",
+      "byte_offset": 1578,
+      "byte_length": 10,
+      "reference_kind": "invocation",
+      "expected_descriptor": "M:System.String.StartsWith(System.String,System.StringComparison)",
+      "definition_expected": false
+    },
+    {
+      "id": "char-index-overload",
+      "path": "src/Tools/CompilerGeneratorTools/Source/CSharpErrorFactsGenerator/Program.cs",
+      "source_sha256": "f797971c625c212d0cedd7ace6be8d5772842f4fa2dba0e0e61513fe916237c4",
+      "anchor": "warningCodeNames.Add(line.Substring(0, line.IndexOf(' ')))",
+      "token": "IndexOf",
+      "byte_offset": 1716,
+      "byte_length": 7,
+      "reference_kind": "invocation",
+      "expected_descriptor": "M:System.String.IndexOf(System.Char)",
+      "definition_expected": false
+    },
+    {
+      "id": "substring-overload",
+      "path": "src/Tools/CompilerGeneratorTools/Source/CSharpErrorFactsGenerator/Program.cs",
+      "source_sha256": "f797971c625c212d0cedd7ace6be8d5772842f4fa2dba0e0e61513fe916237c4",
+      "anchor": "warningCodeNames.Add(line.Substring(0, line.IndexOf(' ')))",
+      "token": "Substring",
+      "byte_offset": 1698,
+      "byte_length": 9,
+      "reference_kind": "invocation",
+      "expected_descriptor": "M:System.String.Substring(System.Int32,System.Int32)",
+      "definition_expected": false
+    },
+    {
+      "id": "generic-list-add",
+      "path": "src/Tools/CompilerGeneratorTools/Source/CSharpErrorFactsGenerator/Program.cs",
+      "source_sha256": "f797971c625c212d0cedd7ace6be8d5772842f4fa2dba0e0e61513fe916237c4",
+      "anchor": "warningCodeNames.Add(line.Substring(0, line.IndexOf(' ')))",
+      "token": "Add",
+      "byte_offset": 1689,
+      "byte_length": 3,
+      "reference_kind": "invocation",
+      "expected_descriptor": "M:System.Collections.Generic.List`1.Add(`0)",
+      "definition_expected": false
+    },
+    {
+      "id": "sdk-parameterless-constructor",
+      "path": "src/Tools/CompilerGeneratorTools/Source/CSharpErrorFactsGenerator/Program.cs",
+      "source_sha256": "f797971c625c212d0cedd7ace6be8d5772842f4fa2dba0e0e61513fe916237c4",
+      "anchor": "new StringBuilder()",
+      "token": "StringBuilder",
+      "byte_offset": 977,
+      "byte_length": 13,
+      "reference_kind": "constructor",
+      "expected_descriptor": "M:System.Text.StringBuilder.#ctor",
+      "definition_expected": false
+    },
+    {
+      "id": "encoding-property",
+      "path": "src/Tools/CompilerGeneratorTools/Source/CSharpErrorFactsGenerator/Program.cs",
+      "source_sha256": "f797971c625c212d0cedd7ace6be8d5772842f4fa2dba0e0e61513fe916237c4",
+      "anchor": "File.WriteAllText(outputPath, outputText.ToString(), Encoding.UTF8)",
+      "token": "UTF8",
+      "byte_offset": 5810,
+      "byte_length": 4,
+      "reference_kind": "name",
+      "expected_descriptor": "P:System.Text.Encoding.UTF8",
+      "definition_expected": false
+    }
+  ]
+}

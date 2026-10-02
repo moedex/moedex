@@ -1,0 +1,9 @@
+> serve      started
+moedex-serve: snapshot 20260930T230839Z-1 -> /private/tmp/moedex-roslyn-compiler/index-compiler/snapshots/20260930T230839Z-1/serve
+moedex-serve: dense arm disabled; ranking lexical+symbol
+server: token index loaded from cache
+server: symbol index loaded from cache
+moedex-serve: corpus ranker ready — 31998 blobs, 31998 docs, 17591 symbol blobs, 0 dense chunks (none) in 6.466s
+2026/09/30 17:13:23 INFO graph artifact absent; preparing source-only serving snapshot
+moedex-serve: MCP ready on stdio (SIGHUP to reload)
+> serve      completed

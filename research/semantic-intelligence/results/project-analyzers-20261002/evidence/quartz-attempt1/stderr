@@ -1,0 +1,37 @@
+          
+   ERROR  
+          
+  Semantic capture: project reference preparation: semanticrun: process failed: exit status 1: Build started 10/2/2026
+  10:46:31 AM. Project "/Users/zakkeown/Code/moedex/.local/project-analyzers/quartz-attempt1/workspace/semantic-git-  
+  projection-3945937457/source/src/Quartz/Quartz.csproj" on node 1 (ResolveReferences target(s)). Project             
+  "/Users/zakkeown/Code/moedex/.local/project-analyzers/quartz-attempt1/workspace/semantic-git-projection-            
+  3945937457/source/src/Quartz/Quartz.csproj" (1) is building "/Users/zakkeown/Code/moedex/.local/project-            
+  analyzers/quartz-attempt1/workspace/semantic-git-projection-                                                        
+  3945937457/source/src/Quartz.Analyzers/Quartz.Analyzers.csproj" (2:2) on node 1 (default targets). PrepareForBuild: 
+  Creating directory "/Users/zakkeown/Code/moedex/.local/project-analyzers/quartz-attempt1/workspace/semantic-git-    
+  projection-3945937457/source/artifacts/bin/Quartz.Analyzers/debug/". Creating directory                             
+  "/Users/zakkeown/Code/moedex/.local/project-analyzers/quartz-attempt1/workspace/semantic-git-projection-            
+  3945937457/source/artifacts/obj/Quartz.Analyzers/debug/". /Users/zakkeown/Code/moedex/.local/holdout-               
+  cleanarchitecture/dotnet/sdk/10.0.401/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(2
+  66,5): error NETSDK1005: Assets file '/Users/zakkeown/Code/moedex/.local/project-analyzers/quartz-                  
+  attempt1/workspace/semantic-git-projection-3945937457/source/artifacts/obj/Quartz.Analyzers/project.assets.json'    
+  doesn't have a target for 'netstandard2.0'. Ensure that restore has run and that you have included 'netstandard2.0' 
+  in the TargetFrameworks for your project. [/Users/zakkeown/Code/moedex/.local/project-analyzers/quartz-             
+  attempt1/workspace/semantic-git-projection-3945937457/source/src/Quartz.Analyzers/Quartz.Analyzers.csproj] Done     
+  Building Project "/Users/zakkeown/Code/moedex/.local/project-analyzers/quartz-attempt1/workspace/semantic-git-      
+  projection-3945937457/source/src/Quartz.Analyzers/Quartz.Analyzers.csproj" (default targets) -- FAILED. Done        
+  Building Project "/Users/zakkeown/Code/moedex/.local/project-analyzers/quartz-attempt1/workspace/semantic-git-      
+  projection-3945937457/source/src/Quartz/Quartz.csproj" (ResolveReferences target(s)) -- FAILED. Build FAILED.       
+  "/Users/zakkeown/Code/moedex/.local/project-analyzers/quartz-attempt1/workspace/semantic-git-projection-            
+  3945937457/source/src/Quartz/Quartz.csproj" (ResolveReferences target) (1) ->                                       
+  "/Users/zakkeown/Code/moedex/.local/project-analyzers/quartz-attempt1/workspace/semantic-git-projection-            
+  3945937457/source/src/Quartz.Analyzers/Quartz.Analyzers.csproj" (default target) (2:2) -> (ResolvePackageAssets     
+  target) -> /Users/zakkeown/Code/moedex/.local/holdout-                                                              
+  cleanarchitecture/dotnet/sdk/10.0.401/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(2
+  66,5): error NETSDK1005: Assets file '/Users/zakkeown/Code/moedex/.local/project-analyzers/quartz-                  
+  attempt1/workspace/semantic-git-projection-3945937457/source/artifacts/obj/Quartz.Analyzers/project.assets.json'    
+  doesn't have a target for 'netstandard2.0'. Ensure that restore has run and that you have included 'netstandard2.0' 
+  in the TargetFrameworks for your project. [/Users/zakkeown/Code/moedex/.local/project-analyzers/quartz-             
+  attempt1/workspace/semantic-git-projection-3945937457/source/src/Quartz.Analyzers/Quartz.Analyzers.csproj] 0        
+  Warning(s) 1 Error(s) Time Elapsed 00:00:00.24.                                                                     
+

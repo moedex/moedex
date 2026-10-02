@@ -1,0 +1,7 @@
+{
+  "name": "dotnet-sdk-osx-arm64.tar.gz",
+  "rid": "osx-arm64",
+  "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.100/dotnet-sdk-10.0.100-osx-arm64.tar.gz",
+  "hash": "0ee9c774f9c63601844619b67d6ca829d70fa26b9949b808e801380c35edb12e4c9418baf8e2ef8ba1dc6dc7d307dbf5830fb0f4f97666032a391c5c097ee607",
+  "verified_sha512": "0ee9c774f9c63601844619b67d6ca829d70fa26b9949b808e801380c35edb12e4c9418baf8e2ef8ba1dc6dc7d307dbf5830fb0f4f97666032a391c5c097ee607"
+}

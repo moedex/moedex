@@ -1,0 +1,1 @@
+Trace QuartzHostedService.StartAsync when some schedulers await application startup and others do not. Include scheduler creation, per-name options, AutoStart, delay, cancellation, and startup failure handling. Cite precise checked-in source ranges. Describe static behavior and its conditions; do not claim that a scheduler or job actually ran.

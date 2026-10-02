@@ -1,0 +1,17 @@
+{
+  "ordinal": 23,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"repo\":\"CleanArchitecture\",\"path\":\"src/Domain/Common/BaseEntity.cs\",\"format\":\"text\"}"
+  ],
+  "started_monotonic": 78838.702589333,
+  "finished_monotonic": 78838.761468791,
+  "returncode": 0,
+  "stdout_bytes": 2974,
+  "stdout_sha256": "f1aed149486869af440e71372c5e6955ec54ff09e33c8fc5e7351c404dc2c104",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

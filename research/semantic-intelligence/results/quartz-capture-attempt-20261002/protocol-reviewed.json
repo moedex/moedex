@@ -1,0 +1,51 @@
+{
+  "version": 2,
+  "status": "reviewed oracle frozen before capture",
+  "corpus_commit": "15d90a9c2681cd9e273dcd3901c0fbbdbdc5fe90",
+  "tasks": [
+    {
+      "id": "locate-host-options",
+      "prompt": "Where is hosted scheduler registration implemented? Explain shared versus named options, the built-in startup/shutdown option defaults, and how a derived hosted service is retained when registrations overlap. Cite precise checked-in source ranges. Describe static behavior and its conditions; do not claim that a scheduler or job actually ran."
+    },
+    {
+      "id": "locate-job-resolution",
+      "prompt": "Where does MicrosoftDependencyInjectionJobFactory resolve a job for a named scheduler? Explain the lookup order and exactly when it may construct a job without a dependency-injection scope. Cite precise checked-in source ranges. Describe static behavior and its conditions; do not claim that a scheduler or job actually ran."
+    },
+    {
+      "id": "flow-cron-misfire",
+      "prompt": "Trace a cron misfire policy from CronScheduleBuilder into CronTriggerImpl.UpdateAfterMisfire. Contrast SmartPolicy, DoNothing, and FireAndProceed, including calendar handling. Does that method itself execute a job? Cite precise checked-in source ranges. Describe static behavior and its conditions; do not claim that a scheduler or job actually ran."
+    },
+    {
+      "id": "flow-host-start",
+      "prompt": "Trace QuartzHostedService.StartAsync when some schedulers await application startup and others do not. Include scheduler creation, per-name options, AutoStart, delay, cancellation, and startup failure handling. Cite precise checked-in source ranges. Describe static behavior and its conditions; do not claim that a scheduler or job actually ran."
+    },
+    {
+      "id": "impact-host-shutdown",
+      "prompt": "A change is proposed to how hosted schedulers stop. Identify the coordination points for repeated/concurrent StopAsync calls, startup in progress, dynamically added schedulers, waiting for jobs, and multiple shutdown failures. Bound the analysis to this hosted-service path. Cite precise checked-in source ranges. Describe static behavior and its conditions; do not claim that a scheduler or job actually ran."
+    },
+    {
+      "id": "impact-job-cleanup",
+      "prompt": "A change is proposed to job creation and cleanup in MicrosoftDependencyInjectionJobFactory. Review ownership and failure handling for scoped container-resolved jobs, factory-activated jobs, unscoped jobs, and derived factories replacing JobScope.State. What prevents duplicate disposal of its own scope state? Cite precise checked-in source ranges. Describe static behavior and its conditions; do not claim that a scheduler or job actually ran."
+    }
+  ],
+  "budgets": {
+    "attempted_calls": 24,
+    "complete_response_bytes": 131072,
+    "assignment_wall_seconds": 600
+  },
+  "presentation": {
+    "browser": "agent-journeys/view.py wrapping browse.py",
+    "default_display_bytes": 8192,
+    "initial_catalog": "uncharged names index; open full descriptors as needed",
+    "local_rereads": "no new RPC charge; full solver wall deadline still applies",
+    "required": "Follow next_offset or select fields until cited evidence has been inspected. Preserve transcript of all displayed pages. Never treat a partial view as full response.",
+    "onboarding": "Native initialize/initialized/catalog before assignment with same network permissions. Solver reads every initialization instruction page through view.py first.",
+    "view_log": "Exact stdout/stderr plus args, hash and timestamps; 8192-byte cap; assignment.json deadline_monotonic on this host; no direct browser/client/raw-file access by solver."
+  },
+  "execution": "User explicitly authorized one oracle reviewer, six fresh solvers and six fresh answer reviewers, sequentially with only one agent active at a time. The coordinator is not a blind solver.",
+  "comparison": "Same source commit, prompts, budgets and scoring for both arms. Native catalogs may differ. Report setup failure separately; no Moedex-vs-CodeGraph claim unless paired arm runs. No aggregation with development corpus.",
+  "freeze_policy": "Record independent oracle amendments before any product query. Freeze product, worker, dependencies, capture inputs, browser/client, corpus and rubric before launch. Do not tune on holdout outputs or silently replace failed tasks. Product and harness frozen before capture. Any failure retained; changing product makes this development evidence. No silent source-only substitution; source-only would be a separately declared arm.",
+  "capture_status": "Not attempted. Target src/Quartz/Quartz.csproj, Debug/net10.0, SDK10.0.401; includes project-referenced analyzer. Restore/build prerequisite readiness remains separately recorded.",
+  "repository": "https://github.com/quartznet/quartznet",
+  "reviewed_gold_sha256": "0b6018a5fa3ed73d524439797ab0cd4bd10bcf14b1659f2a164b73ae92bccb8b"
+}

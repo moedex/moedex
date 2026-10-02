@@ -1,0 +1,17 @@
+{
+  "ordinal": 4,
+  "argv": [
+    "--pointer",
+    "/result/structuredContent/blocks/3",
+    "response",
+    "--ordinal",
+    "1"
+  ],
+  "started_monotonic": 78610.145825208,
+  "finished_monotonic": 78610.204955,
+  "returncode": 0,
+  "stdout_bytes": 1525,
+  "stdout_sha256": "78822ffeadd0321e713528eee7c955de9b2a66cc6865a9e2f5f8dae282b2c6ae",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

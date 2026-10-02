@@ -1,0 +1,50 @@
+{
+  "task": "impact-entity-uniqueness",
+  "reviewer": "root",
+  "reviewed_utc": "2026-10-02T02:24:18.204477+00:00",
+  "answer_sha256": "878d504c90ada368e2edee2cd76bdfdf7c5bf156afa1b8141b0de2253a14e56e",
+  "atoms": [
+    {
+      "id": "impact-entity-uniqueness.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Distinct int Id primary key and Guid RegistrationId explicitly identified with entity and mapping citations."
+    },
+    {
+      "id": "impact-entity-uniqueness.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Current composite uniqueness and review of replacement by RegistrationId unique index clearly stated and cited at 34-51."
+    },
+    {
+      "id": "impact-entity-uniqueness.3",
+      "correctness": 0.5,
+      "evidence": 0.5,
+      "reason": "Says RegistrationId is mapped as a property and recommends a unique index, but does not explicitly state that no unique index on RegistrationId exists in this mapping. Supporting mapping was retrieved."
+    },
+    {
+      "id": "impact-entity-uniqueness.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "NewId generation and broad PostgreSQL UniqueViolation translation without constraint-name check explicitly stated with service citation."
+    },
+    {
+      "id": "impact-entity-uniqueness.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Controller Conflict payload limited to member/event and need for semantic review correctly described and cited."
+    },
+    {
+      "id": "impact-entity-uniqueness.6",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly denies a physical table-name declaration in the mapping and invents none; full mapping retrieved."
+    }
+  ],
+  "correctness": 5.5,
+  "evidence": 5.5,
+  "possible": 6,
+  "unsupported_claims": [],
+  "strict_success": false,
+  "isolation_audit": "Solver attestation and logged RPCs available; full model/tool activity not exposed to root, so host isolation is not independently verified."
+}

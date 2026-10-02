@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"search_context","arguments":{"query":"AddEventAttendee RegistrationValidated","repo":"Sample-Outbox","top_k":8,"token_budget":7000}}}

@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"compiler_symbols","arguments":{"repo":"Quartz","path":"src/Quartz/Impl/StdScheduler.cs","query":"Start","limit":5}}}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"moedex/internal/graph"
+	"moedex/internal/graph/adjacency"
 	"moedex/internal/graph/artifact"
 	"moedex/internal/graph/cluster"
 	"moedex/internal/graph/diskgraph"
@@ -16,6 +17,7 @@ import (
 )
 
 const DefaultClusterMaxNodes = 250_000
+const DefaultClusterMaxEdges = 1_000_000
 
 type offlineLocation struct {
 	Repo, Path, AbsPath string
@@ -39,8 +41,24 @@ func clusterMaxNodes() (int, error) {
 	return value, nil
 }
 
+func clusterMaxEdges() (int, error) {
+	raw := os.Getenv("MOEDEX_GRAPH_CLUSTER_MAX_EDGES")
+	if raw == "" {
+		return DefaultClusterMaxEdges, nil
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil || value < 1 {
+		return 0, fmt.Errorf("MOEDEX_GRAPH_CLUSTER_MAX_EDGES must be a positive integer")
+	}
+	return value, nil
+}
+
 func buildClusterSidecar(dir string) (report cluster.BuildReport, err error) {
 	cap, err := clusterMaxNodes()
+	if err != nil {
+		return report, err
+	}
+	edgeCap, err := clusterMaxEdges()
 	if err != nil {
 		return report, err
 	}
@@ -56,12 +74,17 @@ func buildClusterSidecar(dir string) (report cluster.BuildReport, err error) {
 			err = closeErr
 		}
 	}()
-	sidecar, err := detectClusters(context.Background(), graphFile, nodes, cap)
+	return writeClusterSidecar(dir, graphFile, nodes, cap, edgeCap)
+}
+
+// writeClusterSidecar borrows the graph and catalog; their owner controls lifetime.
+func writeClusterSidecar(dir string, graphFile *diskgraph.Graph, nodes map[diskgraph.Key]offlineNode, cap, edgeCap int) (cluster.BuildReport, error) {
+	sidecar, err := detectClustersWithLimits(context.Background(), graphFile, nodes, cap, edgeCap)
 	if err != nil {
-		return report, err
+		return cluster.BuildReport{}, err
 	}
 	if err := cluster.Save(artifact.ClusterPath(dir), sidecar); err != nil {
-		return report, fmt.Errorf("graph build: persist cluster sidecar: %w", err)
+		return cluster.BuildReport{}, fmt.Errorf("graph build: persist cluster sidecar: %w", err)
 	}
 	return sidecar.Report(), nil
 }
@@ -81,44 +104,71 @@ func ensureClusterSidecar(dir string, generation uint64) (cluster.BuildReport, e
 }
 
 func detectClusters(ctx context.Context, graphFile *diskgraph.Graph, catalog map[diskgraph.Key]offlineNode, cap int) (cluster.Sidecar, error) {
+	return detectClustersWithLimits(ctx, graphFile, catalog, cap, DefaultClusterMaxEdges)
+}
+
+func detectClustersWithLimits(ctx context.Context, graphFile *diskgraph.Graph, catalog map[diskgraph.Key]offlineNode, cap, edgeCap int) (cluster.Sidecar, error) {
 	start := time.Now()
-	sidecar := cluster.Sidecar{
-		Version: cluster.SidecarVersion, Generation: graphFile.Generation(), Cap: cap,
-		ObservedNodes: graphFile.NumNodes(), ObservedEdges: graphFile.NumEdges(), Clusters: []cluster.Cluster{},
-	}
-	type eligibleEdge struct {
-		source, target diskgraph.Key
-		weight         float64
-	}
+	sidecar := cluster.Sidecar{Version: cluster.SidecarVersion, Generation: graphFile.Generation(), Cap: cap, EdgeCap: edgeCap,
+		ObservedNodes: graphFile.NumNodes(), ObservedEdges: graphFile.NumEdges(), Clusters: []cluster.Cluster{}}
 	nodeKeys := make(map[diskgraph.Key]struct{})
-	var eligible []eligibleEdge
-	for index, source := range graphFile.Keys() {
-		if index&1023 == 0 {
-			if err := ctx.Err(); err != nil {
-				return cluster.Sidecar{}, err
-			}
+	targets := make(adjacency.TargetUnion)
+	var walkErr error
+	checked := 0
+	check := func() bool {
+		checked++
+		if checked&1023 == 0 {
+			walkErr = ctx.Err()
 		}
-		for _, edge := range graphFile.Edges(source) {
-			if !offlineClusterEdge(edge) {
-				continue
-			}
-			target := diskgraph.Key{BlobSHA: edge.TargetBlob, SymbolOffset: edge.TargetOffset}
-			nodeKeys[source] = struct{}{}
-			nodeKeys[target] = struct{}{}
-			sidecar.EligibleEdges++
-			if len(nodeKeys) <= cap {
-				eligible = append(eligible, eligibleEdge{source: source, target: target, weight: edge.Weight()})
-			}
+		return walkErr == nil
+	}
+	// Count logical edges arithmetically and union each shared target set once.
+	// Admission must precede any Cartesian expansion or clustering allocations.
+	graphFile.EachRecord(func(r diskgraph.PhysicalRecord) bool {
+		if !check() {
+			return false
 		}
+		if !offlineClusterEdge(r.Edge) {
+			return true
+		}
+		n := adjacency.RecordCount(graphFile, r)
+		if n == 0 {
+			return true
+		}
+		sidecar.EligibleEdges += n
+		nodeKeys[r.Source] = struct{}{}
+		if r.Factored {
+			targets.Add(r.Targets, r.Exclude)
+		} else {
+			nodeKeys[diskgraph.Key{BlobSHA: r.Edge.TargetBlob, SymbolOffset: r.Edge.TargetOffset}] = struct{}{}
+		}
+		return true
+	})
+	if walkErr != nil {
+		return cluster.Sidecar{}, walkErr
+	}
+	targets.Each(graphFile, func(key diskgraph.Key) bool {
+		if !check() {
+			return false
+		}
+		nodeKeys[key] = struct{}{}
+		return true
+	})
+	if err := ctx.Err(); err != nil {
+		return cluster.Sidecar{}, err
 	}
 	sidecar.EligibleNodes = len(nodeKeys)
-	if sidecar.EligibleNodes > cap {
+	switch {
+	case sidecar.EligibleNodes > cap:
 		sidecar.Status = cluster.StatusOverCap
-		sidecar.BuildMillis = time.Since(start).Milliseconds()
-		return sidecar, nil
-	}
-	if cluster.UnderCovered(sidecar.EligibleNodes, sidecar.ObservedNodes) {
+	case sidecar.EligibleEdges > edgeCap:
+		sidecar.Status = cluster.StatusOverEdgeCap
+	case cluster.UnderCovered(sidecar.EligibleNodes, sidecar.ObservedNodes):
 		sidecar.Status = cluster.StatusUnderCovered
+	default:
+		sidecar.Status = cluster.StatusAvailable
+	}
+	if sidecar.Status != cluster.StatusAvailable {
 		sidecar.BuildMillis = time.Since(start).Milliseconds()
 		return sidecar, nil
 	}
@@ -131,11 +181,31 @@ func detectClusters(ctx context.Context, graphFile *diskgraph.Graph, catalog map
 		}
 		nodes = append(nodes, node)
 	}
-	edges := make([]cluster.Edge, 0, len(eligible))
-	for _, edge := range eligible {
-		edges = append(edges, cluster.Edge{Source: offlineKeyID(edge.source), Target: offlineKeyID(edge.target), Weight: edge.weight})
+	edges := make([]cluster.Edge, 0, sidecar.EligibleEdges)
+	graphFile.EachRecord(func(r diskgraph.PhysicalRecord) bool {
+		if !check() {
+			return false
+		}
+		if !offlineClusterEdge(r.Edge) {
+			return true
+		}
+		complete := true
+		graphFile.EachRecordEdge(r, func(edge diskgraph.Edge) bool {
+			if !check() {
+				complete = false
+				return false
+			}
+			edges = append(edges, cluster.Edge{Source: offlineKeyID(r.Source), Target: offlineKeyID(diskgraph.Key{BlobSHA: edge.TargetBlob, SymbolOffset: edge.TargetOffset}), Weight: edge.Weight()})
+			return true
+		})
+		if !complete {
+			return false
+		}
+		return true
+	})
+	if err := ctx.Err(); err != nil {
+		return cluster.Sidecar{}, err
 	}
-	sidecar.Status = cluster.StatusAvailable
 	sidecar.Clusters = cluster.Detect(nodes, edges)
 	sidecar.BuildMillis = time.Since(start).Milliseconds()
 	return sidecar, nil
@@ -206,25 +276,25 @@ func buildOfflineCatalog(graphFile *diskgraph.Graph, sweep *graphSweep) map[disk
 			nodes[key] = offlineNode{Locations: locationsForKey(key)}
 		}
 	}
-	graphFile.EachEdge(func(source diskgraph.Key, edge diskgraph.Edge) bool {
-		target := diskgraph.Key{BlobSHA: edge.TargetBlob, SymbolOffset: edge.TargetOffset}
-		if _, exists := nodes[target]; !exists {
-			nodes[target] = offlineNode{Locations: locationsForKey(target)}
+	adjacency.EachEndpoint(graphFile, func(key diskgraph.Key, typ diskgraph.EdgeType, source bool) bool {
+		if _, exists := nodes[key]; !exists {
+			nodes[key] = offlineNode{Locations: locationsForKey(key)}
 		}
-		switch edge.Type {
+		kind := "Occurrence"
+		switch typ {
 		case diskgraph.EdgeDependsOn:
-			assignOfflineKind(nodes, source, "File")
-			assignOfflineKind(nodes, target, "File")
+			kind = "File"
 		case diskgraph.EdgeHTTPCalls:
-			assignOfflineKind(nodes, source, "Occurrence")
-			assignOfflineKind(nodes, target, "Route")
+			if !source {
+				kind = "Route"
+			}
 		case diskgraph.EdgeUnknown:
-		default:
-			assignOfflineKind(nodes, source, "Occurrence")
-			assignOfflineKind(nodes, target, "Occurrence")
+			return true
 		}
+		assignOfflineKind(nodes, key, kind)
 		return true
 	})
+
 	return nodes
 }
 

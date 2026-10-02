@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+"""Capture/publish an exact independently labelled project using frozen dependencies.
+
+No labels are generated from output, no repository/project files are rewritten,
+and no detector configuration is adjusted after capture.
+"""
+import argparse
+import base64
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import time
+
+
+def sha(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__)
+    for key in ('source', 'output', 'moe', 'dotnet', 'sdk', 'worker', 'bundle', 'gold'):
+        p.add_argument('--'+key, type=Path, required=True)
+    p.add_argument('--restore-standard-evaluation', action='store_true')
+    p.add_argument('--max-dependency-bytes', type=int, default=0)
+    a = p.parse_args()
+    for key in ('source', 'output', 'moe', 'dotnet', 'sdk', 'worker', 'bundle', 'gold'):
+        setattr(a, key, getattr(a, key).resolve())
+    gold = json.loads(a.gold.read_text())
+    repo, pin = gold['repo'], gold['commit']
+    origin = gold['upstream'].removesuffix('.git')+'.git'
+    if a.source.name != repo:
+        raise ValueError('source basename must match frozen repository namespace')
+    if subprocess.check_output(['git', '-C', str(a.source), 'rev-parse', 'HEAD'], text=True).strip() != pin:
+        raise ValueError('source commit does not match frozen gold')
+    if subprocess.check_output(['git', '-C', str(a.source), 'status', '--porcelain', '--untracked-files=no']):
+        raise ValueError('source tracked bytes differ from commit')
+    tracked = subprocess.check_output(['git', '-C', str(a.source), 'ls-files', '-z']).decode().split('\0')
+    before = {name: sha(a.source/name) for name in tracked if name}
+    for path, digest in gold['reviewed_closure']['source_sha256'].items():
+        if before.get(path) != digest:
+            raise ValueError('gold/source hash mismatch: '+path)
+    a.output.mkdir(parents=True, exist_ok=False)
+    inputs = dict(commit=pin, origin=origin, repo=repo, gold_sha256=sha(a.gold),
+                  source_sha256=before, worker_sha256=sha(a.worker), moe_sha256=sha(a.moe),
+                  runner_sha256=sha(__file__), dotnet_sha256=sha(a.dotnet), sdk=str(a.sdk),
+                  dependency_manifest_sha256=sha(a.bundle/'manifest.json'),
+                  restore_standard_evaluation=a.restore_standard_evaluation,
+                  max_dependency_bytes=a.max_dependency_bytes)
+    (a.output/'inputs.json').write_text(json.dumps(inputs, indent=2)+'\n')
+    commands = []
+    env = dict(os.environ, DOTNET_PROCESSOR_COUNT='2')
+
+    def run(label, args):
+        argv = list(map(str, args))
+        row = dict(label=label, argv=argv)
+        commands.append(row)
+        (a.output/'commands.json').write_text(json.dumps(commands, indent=2)+'\n')
+        start = time.time()
+        with (a.output/(label+'.stdout')).open('w') as out, (a.output/(label+'.stderr')).open('w') as err:
+            result = subprocess.run(argv, env=env, stdout=out, stderr=err, timeout=600)
+        row.update(returncode=result.returncode, elapsed_seconds=time.time()-start)
+        (a.output/'commands.json').write_text(json.dumps(commands, indent=2)+'\n')
+        result.check_returncode()
+        return (a.output/(label+'.stdout')).read_text()
+
+    artifact = a.output/'project.semantic'
+    capture = [a.moe, 'semantic', 'capture', '--checkout', a.source, '--commit', pin,
+               '--origin', origin, '--repo', repo, '--project', gold['root_project'],
+               '--framework', gold['framework'], '--configuration', gold['configuration'],
+               '--dotnet', a.dotnet, '--sdk-path', a.sdk, '--worker', a.worker,
+               '--workspace', a.output/'workspace', '--output', artifact,
+               '--dependency-bundle', a.bundle, '--restore-offline', '--timeout', '8m']
+    if a.restore_standard_evaluation:
+        capture.append('--restore-standard-evaluation')
+    if a.max_dependency_bytes:
+        capture.extend(['--max-dependency-bytes', str(a.max_dependency_bytes)])
+    result = json.loads(run('capture', capture))
+    envelope = json.loads(artifact.read_text())
+    payload = json.loads(base64.b64decode(envelope['payload'], validate=True))
+    captured_projects = {c['project'] for c in payload['contexts']}
+    if captured_projects != set(gold['reviewed_closure']['projects']):
+        raise ValueError('captured project closure differs from source-reviewed closure')
+    captured_sources = {(s['path'], s['raw_sha256']) for s in payload['sources']}
+    missing = [path for path, digest in gold['reviewed_closure']['source_sha256'].items()
+               if (path, digest) not in captured_sources]
+    if missing:
+        raise ValueError('capture omitted or changed reviewed sources: '+repr(missing))
+    roots = {s['id']: result['workspace'] for s in payload['snapshots']}
+    mapping = a.output/'roots.json'; mapping.write_text(json.dumps(roots, indent=2)+'\n')
+    corpus = a.output/'corpus'; corpus.mkdir()
+    run('clone-publication', ['git', 'clone', '--no-hardlinks', a.source, corpus/repo])
+    run('publish', [a.moe, 'index', 'snapshot', 'build', '--corpus', corpus,
+                    '--index-dir', a.output/'index', '--id', 'independent-project',
+                    '--graph=false', '--semantic-artifact', artifact,
+                    '--semantic-workspaces', mapping])
+    if before != {name: sha(a.source/name) for name in before}:
+        raise ValueError('source changed during capture/publication')
+    inputs.update(source_unchanged=True, artifact_sha256=sha(artifact),
+                  captured_contexts=len(payload['contexts']), reviewed_sources_present=len(captured_sources & set(gold['reviewed_closure']['source_sha256'].items())))
+    (a.output/'inputs.json').write_text(json.dumps(inputs, indent=2)+'\n')
+
+
+if __name__ == '__main__':
+    main()

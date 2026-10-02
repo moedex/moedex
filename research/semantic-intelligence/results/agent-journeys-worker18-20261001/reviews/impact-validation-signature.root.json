@@ -1,0 +1,44 @@
+{
+  "task": "impact-validation-signature",
+  "reviewer": "root",
+  "reviewed_utc": "2026-10-02T02:22:05.754146+00:00",
+  "answer_sha256": "ab1447c11a3cf6eced8ae2459ce986f94706fa3ba442880d5ad414627c1cb7fd",
+  "atoms": [
+    {
+      "id": "impact-validation-signature.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Exact interface signature and Task return type cited and retrieved."
+    },
+    {
+      "id": "impact-validation-signature.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Implementation and registrationId propagation explicitly identified with precise 17-20 citation."
+    },
+    {
+      "id": "impact-validation-signature.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Direct caller with EventId/MemberId/RegistrationId argument order and await stated; cited 21-24."
+    },
+    {
+      "id": "impact-validation-signature.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Correct scoped mapping at Worker line 62 and explicit method-only change need not alter generic registration."
+    },
+    {
+      "id": "impact-validation-signature.5",
+      "correctness": 1,
+      "evidence": 0.5,
+      "reason": "Injection, consumer-definition wiring and runtime limits stated, but AddConsumer citation is Worker line 78 (saga registration) rather than line 77. Other injection and definition citations are correct."
+    }
+  ],
+  "correctness": 5,
+  "evidence": 4.5,
+  "possible": 5,
+  "unsupported_claims": [],
+  "strict_success": false,
+  "isolation_audit": "Solver attestation and logged RPCs available; full model/tool activity not exposed to root, so host isolation is not independently verified."
+}

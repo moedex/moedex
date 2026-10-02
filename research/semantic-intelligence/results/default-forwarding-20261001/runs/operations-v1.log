@@ -1,0 +1,7 @@
+  Determining projects to restore...
+  Restored /Users/zakkeown/Code/moedex/.local/default-forwarding/operations-v1/Fixture.csproj (in 57 ms).
+Traceback (most recent call last):
+  File "/Users/zakkeown/Code/moedex/tools/semantic-dotnet/test_default_forwarding.py", line 58, in <module>
+    assert r.returncode == 0, (r.returncode, r.stderr)
+           ^^^^^^^^^^^^^^^^^
+AssertionError: (2, b'')

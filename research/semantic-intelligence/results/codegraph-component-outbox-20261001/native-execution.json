@@ -1,0 +1,17 @@
+{
+  "component": "CodeGraph native SolutionAnalyzer/CodeGraphSyntaxWalker/GraphBuffer",
+  "extractionMs": 4202.3394,
+  "totalMs": 4249.7116,
+  "processPeakWorkingSetBytes": 0,
+  "solution": "/Users/zakkeown/Code/moedex/.local/application-impact/comparison/codegraph-outbox-v2/source/Sample-Outbox.sln",
+  "root": "/Users/zakkeown/Code/moedex/.local/application-impact/comparison/codegraph-outbox-v2/source",
+  "repository": "Sample-Outbox",
+  "modelCalls": 0,
+  "gpuRequested": false,
+  "limitations": [
+    "Component execution only, not the production API/MCP/indexing pipeline.",
+    "Native analyzer logs workspace/restore/document failures and may continue; retain logs and lint diagnostics.",
+    "Native nodes expose line ranges; extraction edges do not universally carry callsite spans.",
+    "No private call resolver, cross-repo linker, AI enrichment, embeddings, or reconstructed query/store behavior."
+  ]
+}

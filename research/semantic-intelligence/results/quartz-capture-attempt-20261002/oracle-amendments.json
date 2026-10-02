@@ -1,0 +1,395 @@
+{
+  "timestamp_utc": "2026-10-02T16:38:14.450388+00:00",
+  "product_queries": 0,
+  "capture_attempted": false,
+  "decisions": [
+    {
+      "atom": "flow-cron-misfire.4",
+      "decision": "accept",
+      "reason": "The give-up-year check is inside the calendar-exclusion loop, after advancing the candidate; it is not an unconditional upper-bound check on the initial candidate.",
+      "before": {
+        "id": "flow-cron-misfire.4",
+        "requirement": "DoNothing asks for the next fire after current time, advances past calendar-excluded candidates, stops when no next time exists or the give-up year is exceeded, then sets NextFireTimeUtc.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Impl/Triggers/CronTriggerImpl.cs",
+            "start_line": 529,
+            "end_line": 549,
+            "raw_sha256": "21540bfd8da58479c35ac74a5aee887f864a6c9f08deeb934da5c1c0d8abdf62",
+            "excerpt": "        if (instr == Quartz.MisfireInstruction.CronTrigger.DoNothing)\n        {\n            DateTimeOffset? newFireTime = GetFireTimeAfter(TimeProvider.GetUtcNow());\n\n            while (newFireTime.HasValue && calendar is not null\n                                        && !calendar.IsTimeIncluded(newFireTime.Value))\n            {\n                newFireTime = GetFireTimeAfter(newFireTime);\n\n                if (!newFireTime.HasValue)\n                {\n                    break;\n                }\n\n                //avoid infinite loop\n                if (newFireTime.Value.Year > TriggerConstants.YearToGiveUpSchedulingAt)\n                {\n                    newFireTime = null;\n                }\n            }\n            NextFireTimeUtc = newFireTime;"
+          }
+        ]
+      },
+      "after": {
+        "id": "flow-cron-misfire.4",
+        "requirement": "DoNothing obtains a candidate using GetFireTimeAfter(current UTC time). While a candidate exists and a supplied calendar excludes it, it advances to the next candidate, exits if none exists, and clears a newly advanced candidate if its year exceeds YearToGiveUpSchedulingAt. It then assigns the resulting candidate or null to NextFireTimeUtc. With no calendar or an initially included candidate, the loop and its year check are skipped.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Impl/Triggers/CronTriggerImpl.cs",
+            "start_line": 529,
+            "end_line": 549,
+            "raw_sha256": "21540bfd8da58479c35ac74a5aee887f864a6c9f08deeb934da5c1c0d8abdf62",
+            "excerpt": "        if (instr == Quartz.MisfireInstruction.CronTrigger.DoNothing)\n        {\n            DateTimeOffset? newFireTime = GetFireTimeAfter(TimeProvider.GetUtcNow());\n\n            while (newFireTime.HasValue && calendar is not null\n                                        && !calendar.IsTimeIncluded(newFireTime.Value))\n            {\n                newFireTime = GetFireTimeAfter(newFireTime);\n\n                if (!newFireTime.HasValue)\n                {\n                    break;\n                }\n\n                //avoid infinite loop\n                if (newFireTime.Value.Year > TriggerConstants.YearToGiveUpSchedulingAt)\n                {\n                    newFireTime = null;\n                }\n            }\n            NextFireTimeUtc = newFireTime;"
+          }
+        ]
+      }
+    },
+    {
+      "atom": "flow-host-start.5",
+      "decision": "accept",
+      "reason": "The original startup exception is rethrown only if ShutdownSchedulers succeeds. Cleanup failures can replace it; the present unconditional wording hides a directly relevant startup-failure condition.",
+      "before": {
+        "id": "flow-host-start.5",
+        "requirement": "StartAsync catches OperationCanceledException without rethrow; other exceptions observed in its try cause ShutdownSchedulers with CancellationToken.None and rethrow. Do not imply this catch observes every later detached startup-task failure or prove runtime execution.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+            "start_line": 108,
+            "end_line": 135,
+            "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+            "excerpt": "            if (schedulers.Exists(static scheduler => scheduler.Options is { AutoStart: true, AwaitApplicationStarted: true }))\n            {\n                startupTask = AwaitStartupCompletionAndStartSchedulers(cancellationToken);\n\n                // If the task completed synchronously, await it in order to bubble potential cancellation/failure to the caller\n                // Otherwise, return, allowing application startup to complete\n                if (startupTask.IsCompleted)\n                {\n                    await startupTask.ConfigureAwait(false);\n                }\n            }\n            else // Legacy mode: start jobs inline\n            {\n                startupTask = StartSchedulers(waitForApplicationStarted: false, cancellationToken);\n                await startupTask.ConfigureAwait(false);\n            }\n        }\n        catch (OperationCanceledException)\n        {\n            // if the operation was canceled, we should not start the scheduler\n        }\n        catch (Exception)\n        {\n            // A scheduler created before the failure is already bound to the repository, so it has to be\n            // shut down rather than left behind by a host that will never call StopAsync.\n            await ShutdownSchedulers(CancellationToken.None).ConfigureAwait(false);\n            throw;\n        }"
+          }
+        ]
+      },
+      "after": {
+        "id": "flow-host-start.5",
+        "requirement": "StartAsync swallows OperationCanceledException observed in its try. Other exceptions observed there cause an awaited ShutdownSchedulers(CancellationToken.None); the original exception is rethrown if cleanup succeeds, while a cleanup failure escapes instead. An incomplete deferred startup task is not awaited by StartAsync, so its later failures are not covered by this catch. These paths establish no observed execution.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+            "start_line": 97,
+            "end_line": 135,
+            "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+            "excerpt": "    public async Task StartAsync(CancellationToken cancellationToken)\n    {\n        try\n        {\n            // Require successful initialization for application startup to succeed\n            await CreateSchedulers(cancellationToken).ConfigureAwait(false);\n\n            // Sensible mode: proceed with startup, and have jobs start after application startup.\n            // Follow the pattern from BackgroundService.StartAsync: https://github.com/dotnet/runtime/blob/main/src/libraries/Microsoft.Extensions.Hosting.Abstractions/src/BackgroundService.cs\n            // A scheduler the application starts itself is not waited for: it is nothing this service\n            // will start once startup completes, so it must not be what keeps a startup task alive.\n            if (schedulers.Exists(static scheduler => scheduler.Options is { AutoStart: true, AwaitApplicationStarted: true }))\n            {\n                startupTask = AwaitStartupCompletionAndStartSchedulers(cancellationToken);\n\n                // If the task completed synchronously, await it in order to bubble potential cancellation/failure to the caller\n                // Otherwise, return, allowing application startup to complete\n                if (startupTask.IsCompleted)\n                {\n                    await startupTask.ConfigureAwait(false);\n                }\n            }\n            else // Legacy mode: start jobs inline\n            {\n                startupTask = StartSchedulers(waitForApplicationStarted: false, cancellationToken);\n                await startupTask.ConfigureAwait(false);\n            }\n        }\n        catch (OperationCanceledException)\n        {\n            // if the operation was canceled, we should not start the scheduler\n        }\n        catch (Exception)\n        {\n            // A scheduler created before the failure is already bound to the repository, so it has to be\n            // shut down rather than left behind by a host that will never call StopAsync.\n            await ShutdownSchedulers(CancellationToken.None).ConfigureAwait(false);\n            throw;\n        }"
+          }
+        ]
+      }
+    },
+    {
+      "atom": "impact-host-shutdown.2",
+      "decision": "accept",
+      "reason": "WhenAny completion does not await its winning task, propagate its exception, or cancel startup; the early return also prevents runtime-tenant draining through this StopCore invocation.",
+      "before": {
+        "id": "impact-host-shutdown.2",
+        "requirement": "StopCore returns if its scheduler list is empty; otherwise waits for startupTask or cancellation delay and always calls ShutdownSchedulers in finally.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+            "start_line": 281,
+            "end_line": 302,
+            "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+            "excerpt": "    private async Task StopCore(CancellationToken cancellationToken)\n    {\n        // Stopped without having been started\n        if (Volatile.Read(ref schedulers).Count == 0)\n        {\n            return;\n        }\n\n        try\n        {\n            // Wait until any ongoing startup logic has finished or the graceful shutdown period is over\n            if (startupTask is not null)\n            {\n                await Task.WhenAny(startupTask, Task.Delay(Timeout.Infinite, cancellationToken)).ConfigureAwait(false);\n            }\n        }\n        finally\n        {\n            // we always need to call shutdown to ensure that we unbind the scheduler from global repository\n            await ShutdownSchedulers(cancellationToken).ConfigureAwait(false);\n        }\n    }"
+          }
+        ]
+      },
+      "after": {
+        "id": "impact-host-shutdown.2",
+        "requirement": "StopCore returns immediately if the hosted scheduler list is empty, without invoking ShutdownSchedulers or draining runtime tenants. Otherwise, if startupTask exists, it awaits Task.WhenAny(startupTask, an infinite delay using the stop token); it neither awaits the winning task nor cancels startup itself. Its finally invokes ShutdownSchedulers with the first stop caller's token even when that token is canceled.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+            "start_line": 281,
+            "end_line": 302,
+            "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+            "excerpt": "    private async Task StopCore(CancellationToken cancellationToken)\n    {\n        // Stopped without having been started\n        if (Volatile.Read(ref schedulers).Count == 0)\n        {\n            return;\n        }\n\n        try\n        {\n            // Wait until any ongoing startup logic has finished or the graceful shutdown period is over\n            if (startupTask is not null)\n            {\n                await Task.WhenAny(startupTask, Task.Delay(Timeout.Infinite, cancellationToken)).ConfigureAwait(false);\n            }\n        }\n        finally\n        {\n            // we always need to call shutdown to ensure that we unbind the scheduler from global repository\n            await ShutdownSchedulers(cancellationToken).ConfigureAwait(false);\n        }\n    }"
+          }
+        ]
+      }
+    },
+    {
+      "atom": "impact-host-shutdown.4",
+      "decision": "accept",
+      "reason": "Attempt-all applies to the collected list after discovery succeeds. Runtime service resolution, TakeLiveSchedulers, or named options lookup precede the per-shutdown try blocks and can abort this path. Do not claim unconditional exhaustive shutdown.",
+      "before": {
+        "id": "impact-host-shutdown.4",
+        "requirement": "All shutdown calls are initiated before awaiting their tasks, passing each WaitForJobsToComplete option and common cancellation token; synchronous throws become failed tasks.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+            "start_line": 349,
+            "end_line": 363,
+            "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+            "excerpt": "        // Every shutdown is started before any of them is awaited, so that the waits for running jobs\n        // overlap. A scheduler that throws before it yields is captured rather than left to abandon the\n        // schedulers after it in the list.\n        List<Task> shutdowns = new List<Task>(toShutDown.Count);\n        foreach (HostedScheduler hosted in toShutDown)\n        {\n            try\n            {\n                shutdowns.Add(hosted.Scheduler.Shutdown(hosted.Options.WaitForJobsToComplete, cancellationToken).AsTask());\n            }\n            catch (Exception e)\n            {\n                shutdowns.Add(Task.FromException(e));\n            }\n        }"
+          },
+          {
+            "path": "src/Quartz/Hosting/QuartzHostedServiceOptions.cs",
+            "start_line": 33,
+            "end_line": 37,
+            "raw_sha256": "0ce9ae046f75584215fd854e70fb94495e03a502d3c41bbc641740b9cd5cafa0",
+            "excerpt": "    /// <summary>\n    /// If <see langword=\"true\" /> the scheduler will not allow shutdown process\n    /// to return until all currently executing jobs have completed.\n    /// </summary>\n    public bool WaitForJobsToComplete { get; set; }"
+          }
+        ]
+      },
+      "after": {
+        "id": "impact-host-shutdown.4",
+        "requirement": "Once scheduler discovery and named-options retrieval have completed successfully, ShutdownSchedulers initiates every collected scheduler's Shutdown call before awaiting the resulting tasks. It passes each scheduler's WaitForJobsToComplete and the common cancellation token; synchronous exceptions from invoking Shutdown or converting its ValueTask become failed tasks. A failure while collecting runtime schedulers/options occurs outside these per-scheduler catches and can prevent this loop.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+            "start_line": 338,
+            "end_line": 363,
+            "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+            "excerpt": "    private async ValueTask ShutdownSchedulers(CancellationToken cancellationToken)\n    {\n        List<HostedScheduler> toShutDown = Interlocked.Exchange(ref schedulers, []);\n\n        // Each under its own name, so AddQuartzHostedService(\"acme\", o => o.WaitForJobsToComplete = true)\n        // configures a tenant that did not exist when that line was written.\n        foreach (IScheduler tenant in serviceProvider.GetService<SchedulerRuntime>()?.TakeLiveSchedulers() ?? [])\n        {\n            toShutDown.Add(new HostedScheduler(tenant, options.Get(tenant.SchedulerName)));\n        }\n\n        // Every shutdown is started before any of them is awaited, so that the waits for running jobs\n        // overlap. A scheduler that throws before it yields is captured rather than left to abandon the\n        // schedulers after it in the list.\n        List<Task> shutdowns = new List<Task>(toShutDown.Count);\n        foreach (HostedScheduler hosted in toShutDown)\n        {\n            try\n            {\n                shutdowns.Add(hosted.Scheduler.Shutdown(hosted.Options.WaitForJobsToComplete, cancellationToken).AsTask());\n            }\n            catch (Exception e)\n            {\n                shutdowns.Add(Task.FromException(e));\n            }\n        }"
+          }
+        ]
+      }
+    },
+    {
+      "atom": "impact-host-shutdown.5",
+      "decision": "accept",
+      "reason": "The prompt asks for change-impact analysis, not a requirement that every possible proposed change preserve current policy. Also bound aggregation to exceptions observed from the created shutdown tasks.",
+      "before": {
+        "id": "impact-host-shutdown.5",
+        "requirement": "Each task is awaited with errors collected, then AggregateException is thrown if any failed. Changes must preserve that attempt-all policy; declarations alone prove no observed shutdown or completion.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+            "start_line": 365,
+            "end_line": 382,
+            "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+            "excerpt": "        List<Exception>? exceptions = null;\n        foreach (Task shutdown in shutdowns)\n        {\n            try\n            {\n                await shutdown.ConfigureAwait(false);\n            }\n            catch (Exception e)\n            {\n                exceptions ??= [];\n                exceptions.Add(e);\n            }\n        }\n\n        if (exceptions is { Count: > 0 })\n        {\n            throw new AggregateException(\"One or more scheduler shutdowns failed.\", exceptions);\n        }"
+          }
+        ]
+      },
+      "after": {
+        "id": "impact-host-shutdown.5",
+        "requirement": "Each created shutdown task is awaited with exceptions collected, and a nonempty collection produces AggregateException. A change to invocation or awaiting order can alter overlapping waits and the existing attempt-all/error-aggregation behavior. This is static behavior of the hosted-service path, not proof of shutdown or job completion; no assertion that arbitrary proposed changes must preserve this policy is required.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+            "start_line": 349,
+            "end_line": 382,
+            "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+            "excerpt": "        // Every shutdown is started before any of them is awaited, so that the waits for running jobs\n        // overlap. A scheduler that throws before it yields is captured rather than left to abandon the\n        // schedulers after it in the list.\n        List<Task> shutdowns = new List<Task>(toShutDown.Count);\n        foreach (HostedScheduler hosted in toShutDown)\n        {\n            try\n            {\n                shutdowns.Add(hosted.Scheduler.Shutdown(hosted.Options.WaitForJobsToComplete, cancellationToken).AsTask());\n            }\n            catch (Exception e)\n            {\n                shutdowns.Add(Task.FromException(e));\n            }\n        }\n\n        List<Exception>? exceptions = null;\n        foreach (Task shutdown in shutdowns)\n        {\n            try\n            {\n                await shutdown.ConfigureAwait(false);\n            }\n            catch (Exception e)\n            {\n                exceptions ??= [];\n                exceptions.Add(e);\n            }\n        }\n\n        if (exceptions is { Count: > 0 })\n        {\n            throw new AggregateException(\"One or more scheduler shutdowns failed.\", exceptions);\n        }"
+          }
+        ]
+      }
+    },
+    {
+      "atom": "impact-job-cleanup.1",
+      "decision": "accept",
+      "reason": "FromContainer suppresses direct job disposal, but does not establish that every resolved object is owned by this scope. Singleton or externally supplied instances have different ownership. The implementation proves delegation to container lifetime rules, not unconditional scope ownership.",
+      "before": {
+        "id": "impact-job-cleanup.1",
+        "requirement": "Scoped creation opens scope, calls ConfigureScope before ResolveJob, and records disposeJob=!fromContainer in ScopeState; container-resolved jobs are owned by the scope.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+            "start_line": 125,
+            "end_line": 135,
+            "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+            "excerpt": "        var scope = serviceProvider.CreateScope();\n\n        try\n        {\n            ConfigureScope(scope, bundle, scheduler);\n            var (job, fromContainer) = ResolveJob(bundle, scope.ServiceProvider);\n\n            // The scope rides along as the job's state so that ReturnJob can tear it down. The job\n            // itself is handed to the scheduler unwrapped, so listeners and the execution context see\n            // the type the user wrote rather than something of ours standing in front of it.\n            return new ValueTask<JobScope>(new JobScope(job, new ScopeState(scope, job, disposeJob: !fromContainer)));"
+          }
+        ]
+      },
+      "after": {
+        "id": "impact-job-cleanup.1",
+        "requirement": "Scoped creation opens a scope, invokes ConfigureScope before ResolveJob, and records disposeJob = !fromContainer in ScopeState. Keyed or unkeyed container resolution sets fromContainer=true, so this factory does not directly dispose that job; it disposes the scope and leaves job ownership to container registration/lifetime rules. Factory activation sets fromContainer=false, so ScopeState attempts direct job disposal before disposing the scope.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+            "start_line": 125,
+            "end_line": 135,
+            "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+            "excerpt": "        var scope = serviceProvider.CreateScope();\n\n        try\n        {\n            ConfigureScope(scope, bundle, scheduler);\n            var (job, fromContainer) = ResolveJob(bundle, scope.ServiceProvider);\n\n            // The scope rides along as the job's state so that ReturnJob can tear it down. The job\n            // itself is handed to the scheduler unwrapped, so listeners and the execution context see\n            // the type the user wrote rather than something of ours standing in front of it.\n            return new ValueTask<JobScope>(new JobScope(job, new ScopeState(scope, job, disposeJob: !fromContainer)));"
+          },
+          {
+            "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+            "start_line": 238,
+            "end_line": 256,
+            "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+            "excerpt": "    private (IJob Job, bool FromContainer) ResolveJob(TriggerFiredBundle bundle, IServiceProvider serviceProvider)\n    {\n        var jobType = bundle.JobDetail.JobType.ResolvedType;\n\n        // Before the container is asked anything: GetService constructs whatever is registered for the\n        // type it is handed, and a cast afterwards is a cast on an object that already exists.\n        JobType.EnsureIsJob(jobType);\n\n        var job = schedulerKey is null ? null : (IJob?) serviceProvider.GetKeyedService(jobType, schedulerKey);\n        job ??= (IJob?) serviceProvider.GetService(jobType);\n\n        if (job is not null)\n        {\n            // use the registered one\n            return (job, true);\n        }\n\n        return (activatorCache.CreateInstance(serviceProvider, jobType), false);\n    }"
+          },
+          {
+            "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+            "start_line": 363,
+            "end_line": 385,
+            "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+            "excerpt": "        public async ValueTask DisposeAsync()\n        {\n            // A derived factory may dispose this as well as leaving it to us, and a scope closed\n            // twice throws from the container rather than from anything we control.\n            if (Interlocked.Exchange(ref disposed, 1) != 0)\n            {\n                return;\n            }\n\n            try\n            {\n                // Only a job we activated ourselves; one the container produced is registered with\n                // the scope and disposed by it below.\n                if (disposeJob)\n                {\n                    await DisposeIfDisposable(job).ConfigureAwait(false);\n                }\n            }\n            finally\n            {\n                await DisposeScope(scope).ConfigureAwait(false);\n            }\n        }"
+          }
+        ]
+      }
+    },
+    {
+      "atom": "impact-job-cleanup.2",
+      "decision": "accept",
+      "reason": "The original wording overgeneralizes creation failures and implies the original exception always survives scope disposal. CreateScope is outside the try; disposal can mask the original failure. The inherited property-application phase has a different cleanup policy and lies on the public creation path.",
+      "before": {
+        "id": "impact-job-cleanup.2",
+        "requirement": "Creation failure disposes the newly created scope before rethrowing through ExceptionDispatchInfo; normal ReturnJob cannot be relied on for this failed creation path.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+            "start_line": 137,
+            "end_line": 149,
+            "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+            "excerpt": "        catch (Exception e)\n        {\n            // ReturnJob is not called when CreateJob throws, so the scope we just opened would be\n            // abandoned - along with every scoped dependency already resolved into it.\n            return DisposeScopeAndRethrow(scope, e);\n        }\n\n        static async ValueTask<JobScope> DisposeScopeAndRethrow(IServiceScope scope, Exception failure)\n        {\n            await DisposeScope(scope).ConfigureAwait(false);\n            ExceptionDispatchInfo.Capture(failure).Throw();\n            return default;\n        }"
+          }
+        ]
+      },
+      "after": {
+        "id": "impact-job-cleanup.2",
+        "requirement": "If ConfigureScope or ResolveJob fails after the scope was opened, CreateJobInstance attempts scope disposal itself; if disposal succeeds it rethrows the original failure via ExceptionDispatchInfo, but a disposal failure replaces it. CreateScope itself is outside this try. A failure before JobScope is returned cannot rely on normal ReturnJob. Separately, the inherited CreateJob calls ReturnJob when ApplyProperties fails after a JobScope exists; it logs cleanup failure and preserves that property-application exception.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+            "start_line": 125,
+            "end_line": 149,
+            "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+            "excerpt": "        var scope = serviceProvider.CreateScope();\n\n        try\n        {\n            ConfigureScope(scope, bundle, scheduler);\n            var (job, fromContainer) = ResolveJob(bundle, scope.ServiceProvider);\n\n            // The scope rides along as the job's state so that ReturnJob can tear it down. The job\n            // itself is handed to the scheduler unwrapped, so listeners and the execution context see\n            // the type the user wrote rather than something of ours standing in front of it.\n            return new ValueTask<JobScope>(new JobScope(job, new ScopeState(scope, job, disposeJob: !fromContainer)));\n        }\n        catch (Exception e)\n        {\n            // ReturnJob is not called when CreateJob throws, so the scope we just opened would be\n            // abandoned - along with every scoped dependency already resolved into it.\n            return DisposeScopeAndRethrow(scope, e);\n        }\n\n        static async ValueTask<JobScope> DisposeScopeAndRethrow(IServiceScope scope, Exception failure)\n        {\n            await DisposeScope(scope).ConfigureAwait(false);\n            ExceptionDispatchInfo.Capture(failure).Throw();\n            return default;\n        }"
+          },
+          {
+            "path": "src/Quartz/Impl/PropertySettingJobFactory.cs",
+            "start_line": 103,
+            "end_line": 167,
+            "raw_sha256": "c5c30535ef5a74b163572e415bdf7fba1d1e730f9f5f17d570c66ce3faeb9bc3",
+            "excerpt": "    public override ValueTask<JobScope> CreateJob(TriggerFiredBundle bundle, IScheduler scheduler, CancellationToken cancellationToken = default)\n    {\n        var creatingScope = CreateJobInstance(bundle, scheduler, cancellationToken);\n\n        if (!creatingScope.IsCompletedSuccessfully)\n        {\n            return AwaitScope(this, creatingScope, bundle, scheduler, cancellationToken);\n        }\n\n        var scope = creatingScope.Result;\n\n        try\n        {\n            ApplyProperties(scope, bundle, scheduler);\n        }\n        catch (Exception e)\n        {\n            // The job exists by now, and whatever the factory allocated to produce it is in the\n            // scope's state. ReturnJob is not called when CreateJob throws, so hand it back here\n            // rather than leaking it on every fire of a job whose data map does not match.\n            return ReturnAndRethrow(this, scope, e, cancellationToken);\n        }\n\n        return new ValueTask<JobScope>(scope);\n\n        static async ValueTask<JobScope> AwaitScope(\n            PropertySettingJobFactory factory,\n            ValueTask<JobScope> creatingScope,\n            TriggerFiredBundle bundle,\n            IScheduler scheduler,\n            CancellationToken cancellationToken)\n        {\n            var scope = await creatingScope.ConfigureAwait(false);\n\n            try\n            {\n                factory.ApplyProperties(scope, bundle, scheduler);\n            }\n            catch (Exception e)\n            {\n                return await ReturnAndRethrow(factory, scope, e, cancellationToken).ConfigureAwait(false);\n            }\n\n            return scope;\n        }\n\n        static async ValueTask<JobScope> ReturnAndRethrow(\n            PropertySettingJobFactory factory,\n            JobScope scope,\n            Exception failure,\n            CancellationToken cancellationToken)\n        {\n            try\n            {\n                await factory.ReturnJob(scope, cancellationToken).ConfigureAwait(false);\n            }\n            catch (Exception e)\n            {\n                // Never let cleanup replace the failure that caused it.\n                factory.logger.JobReturnAfterFailedCreationFailed(e);\n            }\n\n            ExceptionDispatchInfo.Capture(failure).Throw();\n            return default;\n        }"
+          }
+        ]
+      }
+    },
+    {
+      "atom": "impact-job-cleanup.3",
+      "decision": "accept",
+      "reason": "Disposal is conditional on disposable interfaces; the shared sentinel does not supply a per-job duplicate-disposal guard. Constructor failure is also relevant to the requested unscoped failure path.",
+      "before": {
+        "id": "impact-job-cleanup.3",
+        "requirement": "Unscoped construction returns Unscoped sentinel state; ReturnJob disposes its job directly.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+            "start_line": 106,
+            "end_line": 120,
+            "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+            "excerpt": "        if (FindUnscopedConstructor(bundle) is { } constructor)\n        {\n            IJob job;\n            try\n            {\n                job = (IJob) constructor.Invoke();\n            }\n            catch (Exception e)\n            {\n                // Faulted rather than thrown, which is how a constructor that throws in a scope surfaces.\n                return ValueTask.FromException<JobScope>(e);\n            }\n\n            return new ValueTask<JobScope>(new JobScope(job, Unscoped));\n        }"
+          },
+          {
+            "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+            "start_line": 178,
+            "end_line": 182,
+            "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+            "excerpt": "        if (ReferenceEquals(scope.State, Unscoped))\n        {\n            // Built by this factory with nothing from the container, so nothing else will dispose it.\n            return DisposeIfDisposable(scope.Job, cancellationToken);\n        }"
+          }
+        ]
+      },
+      "after": {
+        "id": "impact-job-cleanup.3",
+        "requirement": "Successful unscoped construction returns the Unscoped sentinel state. Constructor exceptions become a faulted ValueTask<JobScope>. ReturnJob recognizing this sentinel calls DisposeIfDisposable on the job: async disposal is preferred, otherwise synchronous disposal is used, and nondisposable jobs are left alone. This branch has no ScopeState-style duplicate-disposal guard.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+            "start_line": 106,
+            "end_line": 120,
+            "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+            "excerpt": "        if (FindUnscopedConstructor(bundle) is { } constructor)\n        {\n            IJob job;\n            try\n            {\n                job = (IJob) constructor.Invoke();\n            }\n            catch (Exception e)\n            {\n                // Faulted rather than thrown, which is how a constructor that throws in a scope surfaces.\n                return ValueTask.FromException<JobScope>(e);\n            }\n\n            return new ValueTask<JobScope>(new JobScope(job, Unscoped));\n        }"
+          },
+          {
+            "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+            "start_line": 178,
+            "end_line": 182,
+            "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+            "excerpt": "        if (ReferenceEquals(scope.State, Unscoped))\n        {\n            // Built by this factory with nothing from the container, so nothing else will dispose it.\n            return DisposeIfDisposable(scope.Job, cancellationToken);\n        }"
+          },
+          {
+            "path": "src/Quartz/Impl/SimpleJobFactory.cs",
+            "start_line": 128,
+            "end_line": 140,
+            "raw_sha256": "a3b6967aed61b1f13787c1857879f98de41b01caab276095b6c85eee83b72a56",
+            "excerpt": "    protected static ValueTask DisposeIfDisposable(object? target, CancellationToken cancellationToken = default)\n    {\n        if (target is IAsyncDisposable asyncDisposable)\n        {\n            return asyncDisposable.DisposeAsync();\n        }\n\n        if (target is IDisposable disposable)\n        {\n            disposable.Dispose();\n        }\n\n        return default;"
+          }
+        ]
+      }
+    },
+    {
+      "atom": "impact-job-cleanup.4",
+      "decision": "accept",
+      "reason": "Replacement state is disposed only when disposable; the actual helper must be cited, not just the XML documentation asserting that condition.",
+      "before": {
+        "id": "impact-job-cleanup.4",
+        "requirement": "ReturnJob delegates ScopeState disposal to that state, but for replacement state it disposes the replacement and leaves the job alone; derived factories own cascading cleanup or must override ReturnJob.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+            "start_line": 160,
+            "end_line": 187,
+            "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+            "excerpt": "    /// <para>\n    /// A derived factory that overrides <see cref=\"PropertySettingJobFactory.CreateJobInstance\" /> and\n    /// returns state of its own takes over that decision completely: this method will not touch the\n    /// job, and it disposes the replacement state only if that state is itself disposable. The\n    /// replacement's disposal must therefore cascade to the state this factory produced \u2014 wrap it\n    /// rather than discard it; it is <see cref=\"IAsyncDisposable\" /> for exactly that reason. A\n    /// derived factory whose replacement state is not disposable must override this method as well\n    /// and do its own teardown.\n    /// </para>\n    /// </remarks>\n    public override ValueTask ReturnJob(JobScope scope, CancellationToken cancellationToken = default)\n    {\n        if (scope.State is ScopeState state)\n        {\n            // Disposes the job (only when we activated it) and then the scope, once.\n            return state.DisposeAsync();\n        }\n\n        if (ReferenceEquals(scope.State, Unscoped))\n        {\n            // Built by this factory with nothing from the container, so nothing else will dispose it.\n            return DisposeIfDisposable(scope.Job, cancellationToken);\n        }\n\n        // A derived factory replaced the state, so it owns the teardown. Dispose what it gave us and\n        // leave the job alone: we can no longer tell whether the container owns it, and disposing one\n        // it owns would hand user code a second Dispose call.\n        return DisposeIfDisposable(scope.State, cancellationToken);"
+          }
+        ]
+      },
+      "after": {
+        "id": "impact-job-cleanup.4",
+        "requirement": "ReturnJob delegates its own ScopeState to DisposeAsync. For state that is neither ScopeState nor the Unscoped sentinel, it leaves the job untouched and calls DisposeIfDisposable on the replacement state, preferring async disposal and doing nothing for nondisposable state. A derived factory must preserve/cascade original cleanup through its replacement state or override ReturnJob to perform that teardown.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+            "start_line": 170,
+            "end_line": 187,
+            "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+            "excerpt": "    public override ValueTask ReturnJob(JobScope scope, CancellationToken cancellationToken = default)\n    {\n        if (scope.State is ScopeState state)\n        {\n            // Disposes the job (only when we activated it) and then the scope, once.\n            return state.DisposeAsync();\n        }\n\n        if (ReferenceEquals(scope.State, Unscoped))\n        {\n            // Built by this factory with nothing from the container, so nothing else will dispose it.\n            return DisposeIfDisposable(scope.Job, cancellationToken);\n        }\n\n        // A derived factory replaced the state, so it owns the teardown. Dispose what it gave us and\n        // leave the job alone: we can no longer tell whether the container owns it, and disposing one\n        // it owns would hand user code a second Dispose call.\n        return DisposeIfDisposable(scope.State, cancellationToken);"
+          },
+          {
+            "path": "src/Quartz/Impl/SimpleJobFactory.cs",
+            "start_line": 128,
+            "end_line": 140,
+            "raw_sha256": "a3b6967aed61b1f13787c1857879f98de41b01caab276095b6c85eee83b72a56",
+            "excerpt": "    protected static ValueTask DisposeIfDisposable(object? target, CancellationToken cancellationToken = default)\n    {\n        if (target is IAsyncDisposable asyncDisposable)\n        {\n            return asyncDisposable.DisposeAsync();\n        }\n\n        if (target is IDisposable disposable)\n        {\n            disposable.Dispose();\n        }\n\n        return default;"
+          }
+        ]
+      }
+    },
+    {
+      "atom": "impact-job-cleanup.5",
+      "decision": "accept",
+      "reason": "The guard permits one disposal attempt, not guaranteed successful disposal or shared completion for concurrent callers. Scope cleanup is attempted even if job cleanup fails; a finally exception can mask the job-disposal exception.",
+      "before": {
+        "id": "impact-job-cleanup.5",
+        "requirement": "ScopeState uses Interlocked.Exchange to permit disposal once; disposes only factory-activated jobs and disposes the scope in finally. DisposeScope prefers IAsyncDisposable, falling back to synchronous Dispose.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+            "start_line": 363,
+            "end_line": 385,
+            "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+            "excerpt": "        public async ValueTask DisposeAsync()\n        {\n            // A derived factory may dispose this as well as leaving it to us, and a scope closed\n            // twice throws from the container rather than from anything we control.\n            if (Interlocked.Exchange(ref disposed, 1) != 0)\n            {\n                return;\n            }\n\n            try\n            {\n                // Only a job we activated ourselves; one the container produced is registered with\n                // the scope and disposed by it below.\n                if (disposeJob)\n                {\n                    await DisposeIfDisposable(job).ConfigureAwait(false);\n                }\n            }\n            finally\n            {\n                await DisposeScope(scope).ConfigureAwait(false);\n            }\n        }"
+          },
+          {
+            "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+            "start_line": 190,
+            "end_line": 199,
+            "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+            "excerpt": "    private static ValueTask DisposeScope(IServiceScope scope)\n    {\n        if (scope is IAsyncDisposable asyncDisposableScope)\n        {\n            return asyncDisposableScope.DisposeAsync();\n        }\n\n        scope.Dispose();\n        return default;\n    }"
+          }
+        ]
+      },
+      "after": {
+        "id": "impact-job-cleanup.5",
+        "requirement": "ScopeState uses Interlocked.Exchange(ref disposed, 1) before cleanup so only the first caller attempts disposal; later callers return immediately, do not join that attempt, and cannot retry a failed attempt. Only factory-activated jobs are passed to DisposeIfDisposable. The scope is disposed in finally, preferring IAsyncDisposable and otherwise IDisposable; this is an attempt, not a guarantee of successful cleanup. A scope-disposal exception can replace a job-disposal exception.",
+        "evidence": [
+          {
+            "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+            "start_line": 349,
+            "end_line": 385,
+            "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+            "excerpt": "    private sealed class ScopeState : IAsyncDisposable\n    {\n        private readonly IServiceScope scope;\n        private readonly IJob job;\n        private readonly bool disposeJob;\n        private int disposed;\n\n        public ScopeState(IServiceScope scope, IJob job, bool disposeJob)\n        {\n            this.scope = scope;\n            this.job = job;\n            this.disposeJob = disposeJob;\n        }\n\n        public async ValueTask DisposeAsync()\n        {\n            // A derived factory may dispose this as well as leaving it to us, and a scope closed\n            // twice throws from the container rather than from anything we control.\n            if (Interlocked.Exchange(ref disposed, 1) != 0)\n            {\n                return;\n            }\n\n            try\n            {\n                // Only a job we activated ourselves; one the container produced is registered with\n                // the scope and disposed by it below.\n                if (disposeJob)\n                {\n                    await DisposeIfDisposable(job).ConfigureAwait(false);\n                }\n            }\n            finally\n            {\n                await DisposeScope(scope).ConfigureAwait(false);\n            }\n        }"
+          },
+          {
+            "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+            "start_line": 190,
+            "end_line": 199,
+            "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+            "excerpt": "    private static ValueTask DisposeScope(IServiceScope scope)\n    {\n        if (scope is IAsyncDisposable asyncDisposableScope)\n        {\n            return asyncDisposableScope.DisposeAsync();\n        }\n\n        scope.Dispose();\n        return default;\n    }"
+          },
+          {
+            "path": "src/Quartz/Impl/SimpleJobFactory.cs",
+            "start_line": 128,
+            "end_line": 140,
+            "raw_sha256": "a3b6967aed61b1f13787c1857879f98de41b01caab276095b6c85eee83b72a56",
+            "excerpt": "    protected static ValueTask DisposeIfDisposable(object? target, CancellationToken cancellationToken = default)\n    {\n        if (target is IAsyncDisposable asyncDisposable)\n        {\n            return asyncDisposable.DisposeAsync();\n        }\n\n        if (target is IDisposable disposable)\n        {\n            disposable.Dispose();\n        }\n\n        return default;"
+          }
+        ]
+      }
+    }
+  ],
+  "scoring_decision": "Accept explicit partial-credit and normative-claim rules; clarify strict scoring per task and corpus. Prompts unchanged."
+}

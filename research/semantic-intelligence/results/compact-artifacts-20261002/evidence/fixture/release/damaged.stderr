@@ -1,0 +1,7 @@
+> build      started
+> discover   discovering repositories
+> discover   1/1 repos completed
+> ingest     0/1 repos started
+> ingest     1/1 repos progress
+> ingest     1/1 repos completed
+moedex-index: attach semantic artifact: semantic import: build input size/type changed: artifacts/bin/Generator/release/Generator.dll

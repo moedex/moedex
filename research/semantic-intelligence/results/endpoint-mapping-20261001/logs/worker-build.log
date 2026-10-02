@@ -1,0 +1,15 @@
+  Determining projects to restore...
+  Restored /Users/zakkeown/Code/moedex/.local/endpoint-mapping/worker/Moedex.SemanticWorker.csproj (in 262 ms).
+/Users/zakkeown/Code/moedex/.local/endpoint-mapping/worker/DomainFacts.cs(53,25): error CS0103: The name 'routePattern' does not exist in the current context [/Users/zakkeown/Code/moedex/.local/endpoint-mapping/worker/Moedex.SemanticWorker.csproj]
+/Users/zakkeown/Code/moedex/.local/endpoint-mapping/worker/DomainFacts.cs(53,51): error CS0103: The name 'fact' does not exist in the current context [/Users/zakkeown/Code/moedex/.local/endpoint-mapping/worker/Moedex.SemanticWorker.csproj]
+/Users/zakkeown/Code/moedex/.local/endpoint-mapping/worker/DomainFacts.cs(53,75): error CS0103: The name 'routePattern' does not exist in the current context [/Users/zakkeown/Code/moedex/.local/endpoint-mapping/worker/Moedex.SemanticWorker.csproj]
+
+Build FAILED.
+
+/Users/zakkeown/Code/moedex/.local/endpoint-mapping/worker/DomainFacts.cs(53,25): error CS0103: The name 'routePattern' does not exist in the current context [/Users/zakkeown/Code/moedex/.local/endpoint-mapping/worker/Moedex.SemanticWorker.csproj]
+/Users/zakkeown/Code/moedex/.local/endpoint-mapping/worker/DomainFacts.cs(53,51): error CS0103: The name 'fact' does not exist in the current context [/Users/zakkeown/Code/moedex/.local/endpoint-mapping/worker/Moedex.SemanticWorker.csproj]
+/Users/zakkeown/Code/moedex/.local/endpoint-mapping/worker/DomainFacts.cs(53,75): error CS0103: The name 'routePattern' does not exist in the current context [/Users/zakkeown/Code/moedex/.local/endpoint-mapping/worker/Moedex.SemanticWorker.csproj]
+    0 Warning(s)
+    3 Error(s)
+
+Time Elapsed 00:00:03.50

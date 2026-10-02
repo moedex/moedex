@@ -1,0 +1,43 @@
+{
+  "record_type": "command results transcribed from tool output, except archived source-to-mcp logs",
+  "results": [
+    {
+      "command": "go test ./...",
+      "result": "passed; semanticimport0.757s, semanticrun26.897s, servecmd5.990s, blobstore50.542s"
+    },
+    {
+      "command": "go vet ./...",
+      "result": "passed"
+    },
+    {
+      "command": "go build ./...",
+      "result": "passed"
+    },
+    {
+      "command": "go test -race ./internal/semantic ./internal/semanticimport ./internal/semanticindex ./internal/mcp ./internal/snapshot ./internal/app/servecmd",
+      "result": "passed; 1.558s/1.433s/2.200s/cached/cached/19.843s"
+    },
+    {
+      "command": "go test -tags lsp ./internal/app/servecmd ./internal/mcp -run Compiler -count=1",
+      "result": "passed;0.862s/0.319s"
+    },
+    {
+      "command": "go test ./internal/semantic -run Domain -count=1",
+      "result": "passed0.243s after final test-only overload cases"
+    },
+    {
+      "command": "MOEDEX_DOMAIN_STREAM=/private/tmp/moedex-domain-gold-20261001/complete.jsonl MOEDEX_DOMAIN_ROOT=/private/tmp/moedex-domain-gold-20261001/fixture go test ./internal/semanticimport -run TestPublicDomain -count=1 -v",
+      "result": "passed0.304s; raw log archived"
+    },
+    {
+      "command": "MOEDEX_DOMAIN_STREAM=/private/tmp/moedex-domain-gold-20261001/complete.jsonl MOEDEX_DOMAIN_ROOT=/private/tmp/moedex-domain-gold-20261001/fixture go test -race ./internal/semanticimport -run TestPublicDomain -count=1",
+      "result": "passed3.098s; raw log archived"
+    },
+    {
+      "command": "python3 tools/semantic-dotnet/test_worker.py --dotnet /private/tmp/moedex-compiler-spike/dotnet/dotnet --sdk-path /private/tmp/moedex-compiler-spike/dotnet/sdk/10.0.100 --output-dir /private/tmp/moedex-domain-worker-baseline-20261001",
+      "result": "passed19 original labels and broader regression assertions; initial domain worker, before final scalar/consumer-owner corrections tested by final package gold"
+    }
+  ],
+  "review": "Independent source labels and final read-only production review; no acceptance blocker",
+  "toolchain": "SDK10.0.100 / Roslyn bundled compiler; final worker SHA recorded by worker-gold.json"
+}

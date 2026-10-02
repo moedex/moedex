@@ -1,0 +1,6 @@
+# moedex/internal/semanticimport_test [moedex/internal/semanticimport.test]
+internal/semanticimport/default_forwarding_public_test.go:175:27: b.ContextID undefined (type *semantic.Binding has no field or method ContextID)
+internal/semanticimport/default_forwarding_public_test.go:176:28: b.ContextID undefined (type *semantic.Binding has no field or method ContextID)
+internal/semanticimport/default_forwarding_public_test.go:179:76: b.Symbol undefined (type *semantic.Binding has no field or method Symbol)
+FAIL	moedex/internal/semanticimport [build failed]
+FAIL

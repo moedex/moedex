@@ -1,0 +1,782 @@
+[
+  {
+    "project": "src/Application/Application.csproj",
+    "context_id": "context:09c057eb3d4807f0cf69f9a123bbd764f4421e2c505096d7c426bb4c15b3b748",
+    "proof": {
+      "policy": "native-build-events-v1",
+      "verified": true,
+      "logs": 1,
+      "builds_started": 1,
+      "builds_finished": 1,
+      "reader_assembly": {
+        "path": "sdk/Microsoft.Build.dll",
+        "scope": "sdk",
+        "sha256": "0c70309f8f0bd0f73af687ce0b0c65d4d4e0346fc1c31fc97bfdd145d770f4c1",
+        "byte_size": 7235880
+      },
+      "failed_build_or_log": false,
+      "workspace_diagnostics": 15,
+      "matched_warnings": 15,
+      "projects": [
+        {
+          "project": "src/Application/Application.csproj",
+          "started": 5,
+          "finished": 5
+        },
+        {
+          "project": "src/Domain/Domain.csproj",
+          "started": 7,
+          "finished": 7
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "started": 3,
+          "finished": 3
+        },
+        {
+          "project": "src/ServiceDefaults/ServiceDefaults.csproj",
+          "started": 3,
+          "finished": 3
+        },
+        {
+          "project": "src/Shared/Shared.csproj",
+          "started": 5,
+          "finished": 5
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "started": 1,
+          "finished": 1
+        }
+      ],
+      "warnings": [
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        }
+      ],
+      "errors": []
+    }
+  },
+  {
+    "project": "src/Domain/Domain.csproj",
+    "context_id": "context:14b3e6986e12f9fa2cce41fcea0cfd1c30c3d8cfa58b1be650f9dee5fa0f5086",
+    "proof": {
+      "policy": "native-build-events-v1",
+      "verified": true,
+      "logs": 1,
+      "builds_started": 1,
+      "builds_finished": 1,
+      "reader_assembly": {
+        "path": "sdk/Microsoft.Build.dll",
+        "scope": "sdk",
+        "sha256": "0c70309f8f0bd0f73af687ce0b0c65d4d4e0346fc1c31fc97bfdd145d770f4c1",
+        "byte_size": 7235880
+      },
+      "failed_build_or_log": false,
+      "workspace_diagnostics": 15,
+      "matched_warnings": 15,
+      "projects": [
+        {
+          "project": "src/Application/Application.csproj",
+          "started": 5,
+          "finished": 5
+        },
+        {
+          "project": "src/Domain/Domain.csproj",
+          "started": 7,
+          "finished": 7
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "started": 3,
+          "finished": 3
+        },
+        {
+          "project": "src/ServiceDefaults/ServiceDefaults.csproj",
+          "started": 3,
+          "finished": 3
+        },
+        {
+          "project": "src/Shared/Shared.csproj",
+          "started": 5,
+          "finished": 5
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "started": 1,
+          "finished": 1
+        }
+      ],
+      "warnings": [
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        }
+      ],
+      "errors": []
+    }
+  },
+  {
+    "project": "src/Infrastructure/Infrastructure.csproj",
+    "context_id": "context:afd658f63d8e84443ca9b62f6e0cf3041256b028f1fda5a2eb8128b9547f1fa1",
+    "proof": {
+      "policy": "native-build-events-v1",
+      "verified": true,
+      "logs": 1,
+      "builds_started": 1,
+      "builds_finished": 1,
+      "reader_assembly": {
+        "path": "sdk/Microsoft.Build.dll",
+        "scope": "sdk",
+        "sha256": "0c70309f8f0bd0f73af687ce0b0c65d4d4e0346fc1c31fc97bfdd145d770f4c1",
+        "byte_size": 7235880
+      },
+      "failed_build_or_log": false,
+      "workspace_diagnostics": 15,
+      "matched_warnings": 15,
+      "projects": [
+        {
+          "project": "src/Application/Application.csproj",
+          "started": 5,
+          "finished": 5
+        },
+        {
+          "project": "src/Domain/Domain.csproj",
+          "started": 7,
+          "finished": 7
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "started": 3,
+          "finished": 3
+        },
+        {
+          "project": "src/ServiceDefaults/ServiceDefaults.csproj",
+          "started": 3,
+          "finished": 3
+        },
+        {
+          "project": "src/Shared/Shared.csproj",
+          "started": 5,
+          "finished": 5
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "started": 1,
+          "finished": 1
+        }
+      ],
+      "warnings": [
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        }
+      ],
+      "errors": []
+    }
+  },
+  {
+    "project": "src/ServiceDefaults/ServiceDefaults.csproj",
+    "context_id": "context:72cf997643a6449df8c40a388dee80391f945a35ca2d711b12c0d82de4901fec",
+    "proof": {
+      "policy": "native-build-events-v1",
+      "verified": true,
+      "logs": 1,
+      "builds_started": 1,
+      "builds_finished": 1,
+      "reader_assembly": {
+        "path": "sdk/Microsoft.Build.dll",
+        "scope": "sdk",
+        "sha256": "0c70309f8f0bd0f73af687ce0b0c65d4d4e0346fc1c31fc97bfdd145d770f4c1",
+        "byte_size": 7235880
+      },
+      "failed_build_or_log": false,
+      "workspace_diagnostics": 15,
+      "matched_warnings": 15,
+      "projects": [
+        {
+          "project": "src/Application/Application.csproj",
+          "started": 5,
+          "finished": 5
+        },
+        {
+          "project": "src/Domain/Domain.csproj",
+          "started": 7,
+          "finished": 7
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "started": 3,
+          "finished": 3
+        },
+        {
+          "project": "src/ServiceDefaults/ServiceDefaults.csproj",
+          "started": 3,
+          "finished": 3
+        },
+        {
+          "project": "src/Shared/Shared.csproj",
+          "started": 5,
+          "finished": 5
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "started": 1,
+          "finished": 1
+        }
+      ],
+      "warnings": [
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        }
+      ],
+      "errors": []
+    }
+  },
+  {
+    "project": "src/Shared/Shared.csproj",
+    "context_id": "context:aea486a4e56a4bf8958a345fc08d4362cec6624a63e98bc47af32ec819cda174",
+    "proof": {
+      "policy": "native-build-events-v1",
+      "verified": true,
+      "logs": 1,
+      "builds_started": 1,
+      "builds_finished": 1,
+      "reader_assembly": {
+        "path": "sdk/Microsoft.Build.dll",
+        "scope": "sdk",
+        "sha256": "0c70309f8f0bd0f73af687ce0b0c65d4d4e0346fc1c31fc97bfdd145d770f4c1",
+        "byte_size": 7235880
+      },
+      "failed_build_or_log": false,
+      "workspace_diagnostics": 15,
+      "matched_warnings": 15,
+      "projects": [
+        {
+          "project": "src/Application/Application.csproj",
+          "started": 5,
+          "finished": 5
+        },
+        {
+          "project": "src/Domain/Domain.csproj",
+          "started": 7,
+          "finished": 7
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "started": 3,
+          "finished": 3
+        },
+        {
+          "project": "src/ServiceDefaults/ServiceDefaults.csproj",
+          "started": 3,
+          "finished": 3
+        },
+        {
+          "project": "src/Shared/Shared.csproj",
+          "started": 5,
+          "finished": 5
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "started": 1,
+          "finished": 1
+        }
+      ],
+      "warnings": [
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        }
+      ],
+      "errors": []
+    }
+  },
+  {
+    "project": "src/Web/Web.csproj",
+    "context_id": "context:71110a9d73d6a756eda6c61857474af0526c0476a8a7287e5225dc0858fa3009",
+    "proof": {
+      "policy": "native-build-events-v1",
+      "verified": true,
+      "logs": 1,
+      "builds_started": 1,
+      "builds_finished": 1,
+      "reader_assembly": {
+        "path": "sdk/Microsoft.Build.dll",
+        "scope": "sdk",
+        "sha256": "0c70309f8f0bd0f73af687ce0b0c65d4d4e0346fc1c31fc97bfdd145d770f4c1",
+        "byte_size": 7235880
+      },
+      "failed_build_or_log": false,
+      "workspace_diagnostics": 15,
+      "matched_warnings": 15,
+      "projects": [
+        {
+          "project": "src/Application/Application.csproj",
+          "started": 5,
+          "finished": 5
+        },
+        {
+          "project": "src/Domain/Domain.csproj",
+          "started": 7,
+          "finished": 7
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "started": 3,
+          "finished": 3
+        },
+        {
+          "project": "src/ServiceDefaults/ServiceDefaults.csproj",
+          "started": 3,
+          "finished": 3
+        },
+        {
+          "project": "src/Shared/Shared.csproj",
+          "started": 5,
+          "finished": 5
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "started": 1,
+          "finished": 1
+        }
+      ],
+      "warnings": [
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Application/Application.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Infrastructure/Infrastructure.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Tasks.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.Build.Utilities.Core 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        },
+        {
+          "project": "src/Web/Web.csproj",
+          "code": null,
+          "message": "Microsoft.NET.StringTools 18.10.1-1.26427.6 doesn't support net10.0 and has not been tested with it. Consider upgrading your TargetFramework to net11.0 or later. You may also set <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings> in the project file to ignore this warning and attempt to run in this unsupported configuration at your own risk."
+        }
+      ],
+      "errors": []
+    }
+  }
+]

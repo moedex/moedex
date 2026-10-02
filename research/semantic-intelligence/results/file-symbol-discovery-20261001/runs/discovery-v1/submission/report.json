@@ -1,0 +1,27 @@
+{
+  "case": "submission",
+  "classification": "scripted_public_declaration_discovery_not_independent_agent_run",
+  "calls": 6,
+  "response_bytes": 36401,
+  "discovered_evidence": [
+    {
+      "path": "src/Sample.Components/IRegistrationService.cs",
+      "context_id": "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+      "raw_sha256": "c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71",
+      "raw_byte_offset": 93,
+      "symbol_id": "symbol:4776a24c2ed7d962d6c18b6aa1d42ed960ab50dad132f1170fb97d8a22233fad"
+    },
+    {
+      "path": "src/Sample.Components/IRegistrationService.cs",
+      "context_id": "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f",
+      "raw_sha256": "c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71",
+      "raw_byte_offset": 93,
+      "symbol_id": "symbol:4776a24c2ed7d962d6c18b6aa1d42ed960ab50dad132f1170fb97d8a22233fad"
+    }
+  ],
+  "compiler_identity": [
+    "reverse-outbox",
+    "24a95f5ad7307d6f3fdaf151e230b26e5cf72d2fec41971476fc4f7135cdac70"
+  ],
+  "passed": true
+}

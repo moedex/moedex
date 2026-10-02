@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+"""Offline Roslyn interface-method declaration correspondence fixtures."""
+import argparse
+import json
+import os
+from pathlib import Path
+import subprocess
+
+p = argparse.ArgumentParser()
+for key in ('dotnet', 'sdk', 'worker', 'packages', 'output'):
+    p.add_argument('--' + key, required=True, type=Path)
+p.add_argument('--expected-worker-version', choices=['6','7','8','9'], default='10')
+a = p.parse_args()
+a.output.mkdir(parents=True, exist_ok=False)
+source = '''class Disposable : System.IDisposable { public void /*metadata*/Dispose() {} }
+interface IRun { void Run(); }
+interface IOther { void Run(); }
+interface IOver { void Run(int value); }
+interface IGeneric<T> { void Run(); }
+interface IMethod { void Run<T>(); }
+interface IDefault { void Run() {} }
+interface IStatic { static abstract void Run(); }
+class Implicit : IRun { public void /*implicit*/Run() {} }
+class Explicit : IRun { void IRun./*explicit*/Run() {} }
+class Multiple : IRun, IOther { public void /*multiple*/Run() {} }
+class Overloaded : IOver { public void /*overload*/Run(int value) {} public void /*unrelated-overload*/Run() {} }
+class ShapeOnly { public void /*shape-only*/Run() {} }
+abstract class Abstract : IRun { public abstract void /*abstract*/Run(); }
+class Generic<T> : IRun { public void /*generic-class*/Run() {} }
+class GenericInterface : IGeneric<int> { public void /*generic-interface*/Run() {} }
+class GenericMethod : IMethod { public void /*generic-method*/Run<T>() {} }
+class Default : IDefault { public void /*default*/Run() {} }
+class Static : IStatic { public static void /*static*/Run() {} }
+class Derived : Implicit { }
+'''
+source += '\n'.join('interface IOverflow%d { void Run(); }' % i for i in range(33))
+source += '\nclass Overflow : ' + ','.join('IOverflow%d' % i for i in range(33)) + ' { public void /*overflow*/Run() {} }\n'
+(a.output / 'global.json').write_text(json.dumps({'sdk': {'version': a.sdk.name, 'rollForward': 'disable'}}))
+(a.output / 'Fixture.cs').write_text(source)
+(a.output / 'Fixture.csproj').write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup></Project>')
+(a.output / 'NuGet.Config').write_text('<configuration><packageSources><clear /></packageSources></configuration>')
+env = dict(os.environ, NUGET_PACKAGES=str(a.packages.resolve()), DOTNET_NOLOGO='1', DOTNET_CLI_TELEMETRY_OPTOUT='1')
+subprocess.run([str(a.dotnet), 'restore', str(a.output / 'Fixture.csproj')], env=env, cwd=a.output, check=True, timeout=120)
+result = subprocess.run([str(a.dotnet), str(a.worker), '--repo', 'fixture', '--root', str(a.output), '--project', 'Fixture.csproj', '--framework', 'net8.0', '--sdk-path', str(a.sdk)], env=env, check=True, capture_output=True, timeout=120)
+(a.output / 'capture.jsonl').write_bytes(result.stdout)
+rows = [json.loads(line) for line in result.stdout.splitlines()]
+projects = [r for r in rows if r['record_type'] == 'project']
+assert projects and all(r['compilation_status'] == 'complete' and r['extractor_version'] == a.expected_worker_version for r in projects)
+expected = {'metadata': ('T:Disposable', ['M:System.IDisposable.Dispose']), 'implicit': ('T:Implicit', ['M:IRun.Run']), 'explicit': ('T:Explicit', ['M:IRun.Run']), 'multiple': ('T:Multiple', ['M:IOther.Run', 'M:IRun.Run']), 'overload': ('T:Overloaded', ['M:IOver.Run(System.Int32)'])}
+negative = ['unrelated-overload', 'shape-only', 'abstract', 'generic-class', 'generic-interface', 'generic-method', 'default', 'static', 'overflow']
+if a.expected_worker_version in ('7', '8', '9'):
+    negative.remove('generic-interface')
+for label in [*expected, *negative]:
+    offset = source.index('/*' + label + '*/') + len(label) + 4
+    hits = [r for r in rows if r['record_type'] == 'declaration' and r['source_path'] == 'Fixture.cs' and r['span']['byte_offset'] == offset]
+    assert len(hits) == 1, (label, hits)
+    facts = hits[0].get('implementation_facts') or []
+    if label in expected:
+        typ, members = expected[label]
+        assert sorted(f['interface_symbol']['descriptor'] for f in facts) == members, (label, facts)
+        assert all(f['kind'] == 'interface_method_implementation' and f['rule'] == 'csharp-interface-v1' and f['evidence_scope'] == 'compile_time' and f['implementing_type']['descriptor'] == typ for f in facts)
+    else:
+        assert not facts, (label, facts)
+if a.expected_worker_version in ('7', '8', '9'):
+    offset = source.index('/*generic-interface*/') + len('/*generic-interface*/')
+    hit = next(r for r in rows if r.get('span', {}).get('byte_offset') == offset and r['record_type'] == 'declaration')
+    fact = hit['implementation_facts'][0]
+    assert fact['rule'] == 'csharp-interface-closed-v1'
+    assert json.loads(fact['interface_symbol']['descriptor'])['arguments'][0]['descriptor'] == 'T:System.Int32'
+assert sum(len(r.get('implementation_facts') or []) for r in rows) == (7 if a.expected_worker_version in ('7', '8', '9') else 6)
+assert all(r['record_type'] == 'declaration' for r in rows if r.get('implementation_facts'))
+# Compilation errors suppress all correspondence evidence, including otherwise
+# valid declarations. Restore original bytes for the subsequent importer gate.
+broken = source + '\nclass Broken { MissingType field; }\n'
+(a.output / 'Fixture.cs').write_text(broken)
+result = subprocess.run([str(a.dotnet), str(a.worker), '--repo', 'fixture', '--root', str(a.output), '--project', 'Fixture.csproj', '--framework', 'net8.0', '--sdk-path', str(a.sdk)], env=env, check=False, capture_output=True, timeout=120)
+(a.output / 'incomplete.jsonl').write_bytes(result.stdout)
+assert result.returncode == 2, (result.returncode, result.stderr)
+incomplete = [json.loads(line) for line in result.stdout.splitlines()]
+assert any(r['record_type'] == 'project' and r['compilation_status'] == 'incomplete' for r in incomplete)
+assert not any(r.get('implementation_facts') for r in incomplete)
+(a.output / 'Fixture.cs').write_text(source)
+print('PASS: legacy correspondence controls plus version-specific closed interface; inherited not duplicated; incomplete capture emits none')

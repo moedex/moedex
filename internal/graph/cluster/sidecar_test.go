@@ -78,3 +78,29 @@ func TestSidecarRejectsPartialOverCapAndUnorderedMembers(t *testing.T) {
 		t.Fatal("under-covered communities accepted as representative")
 	}
 }
+
+func TestSidecarEdgeWorkCapIsUnavailableAndValidated(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "clusters.json")
+	s := Sidecar{Version: SidecarVersion, Generation: 1, Status: StatusOverEdgeCap, ObservedNodes: 2, ObservedEdges: 100, EligibleNodes: 2, EligibleEdges: 100, Cap: 10, EdgeCap: 99, Clusters: []Cluster{}}
+	if err := Save(path, s); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Load(path, 1)
+	if err != nil || got.Status != StatusOverEdgeCap || got.Report().EdgeCap != 99 {
+		t.Fatalf("roundtrip %+v %v", got, err)
+	}
+	s.EdgeCap = 100
+	if err := Save(path, s); err == nil {
+		t.Fatal("within-budget graph labeled over cap")
+	}
+	s.EdgeCap = 99
+	s.Clusters = []Cluster{{ClusterID: 1, Label: "partial", MemberCount: 1, Members: []Node{{ID: "a"}}}}
+	if err := Save(path, s); err == nil {
+		t.Fatal("partial communities accepted above work cap")
+	}
+	s.Status = StatusAvailable
+	s.Clusters = []Cluster{{ClusterID: 1, Label: "all", MemberCount: 2, Members: []Node{{ID: "a"}, {ID: "b"}}}}
+	if err := Save(path, s); err == nil {
+		t.Fatal("available communities accepted above work cap")
+	}
+}

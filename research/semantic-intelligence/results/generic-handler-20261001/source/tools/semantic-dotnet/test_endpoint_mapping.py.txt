@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+"""Source static handler endpoint configuration against real ASP.NET metadata."""
+import argparse
+import json
+import os
+from pathlib import Path
+import subprocess
+
+p = argparse.ArgumentParser(description=__doc__)
+for key in ('dotnet', 'sdk', 'worker', 'packages', 'output'):
+    p.add_argument('--' + key, required=True, type=Path)
+p.add_argument('--expected-worker-version', choices=['12','13','14'], default='14')
+a = p.parse_args()
+a.output.mkdir(parents=True, exist_ok=False)
+source = '''using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+class Generic<T> { public static string Run() => "generic"; }
+class Fake { public void MapPost(string pattern, Delegate handler) {} }
+class Routes {
+ const string Pattern = "/constant";
+ static string Submit() => "ok";
+ static string Overload(int value) => "int";
+ static string Overload(string value) => value;
+ static T GenericMethod<T>() => default;
+ static Task Http(HttpContext context) => Task.CompletedTask;
+ string Instance() => "instance";
+ static Func<string> Factory() => Submit;
+ public void Configure(IEndpointRouteBuilder app, string dynamicPattern, bool enabled) {
+  app./*literal*/MapPost("/order", Submit);
+  app./*constant*/MapPost(Pattern, Submit);
+  EndpointRouteBuilderExtensions./*static-call*/MapPost(app, "/static", Submit);
+  app./*named*/MapPost(handler: Submit, pattern: "/named");
+  app./*overload*/MapPost("/overload/{value}", (Func<int,string>)Overload);
+  app.MapGroup("/parent")./*group*/MapPost("/child", Submit);
+  if(enabled) app./*conditional*/MapPost("/conditional", Submit);
+  app./*dynamic*/MapPost(dynamicPattern, Submit);
+  app./*lambda*/MapPost("/lambda", () => "ok");
+  Func<string> variable = Submit; app./*variable*/MapPost("/variable", variable);
+  app./*factory*/MapPost("/factory", Factory());
+  app./*instance*/MapPost("/instance", Instance);
+  app./*generic-method*/MapPost("/generic", GenericMethod<int>);
+  app./*generic-owner*/MapPost("/generic-owner", Generic<int>.Run);
+  app./*metadata*/MapPost("/metadata", Guid.NewGuid);
+  app./*other-verb*/MapGet("/get", Submit);
+  app./*request-delegate*/MapPost("/http", Http);
+  app./*empty*/MapPost("", Submit);
+  app./*null*/MapPost(null, Submit);
+  app./*oversized*/MapPost("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", Submit);
+  new Fake()./*lookalike*/MapPost("/fake", Submit);
+  string Local() => "local"; app./*local-function*/MapPost("/local", Local);
+ }
+}
+'''
+(a.output/'Fixture.cs').write_text(source)
+(a.output/'global.json').write_text(json.dumps({'sdk': {'version': a.sdk.name, 'rollForward': 'disable'}}))
+(a.output/'Fixture.csproj').write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup><ItemGroup><FrameworkReference Include="Microsoft.AspNetCore.App"/></ItemGroup></Project>')
+(a.output/'NuGet.Config').write_text('<configuration><packageSources><clear /></packageSources></configuration>')
+env = dict(os.environ, NUGET_PACKAGES=str(a.packages.resolve()), DOTNET_NOLOGO='1', DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_PROCESSOR_COUNT='2')
+subprocess.run([str(a.dotnet),str(a.sdk/'MSBuild.dll'),'-target:Restore',str(a.output/'Fixture.csproj'),'-p:NuGetAudit=false'], env=env, cwd=a.output, check=True, timeout=120)
+command = [str(a.dotnet),str(a.worker),'--repo','fixture','--root',str(a.output),'--project','Fixture.csproj','--framework','net8.0','--sdk-path',str(a.sdk)]
+result = subprocess.run(command,env=env,capture_output=True,timeout=120)
+(a.output/'capture.jsonl').write_bytes(result.stdout)
+(a.output/'capture.stderr').write_bytes(result.stderr)
+assert result.returncode == 0, (result.returncode,result.stderr)
+rows = list(map(json.loads,result.stdout.splitlines()))
+assert all(r['extractor_version']==a.expected_worker_version and r['compilation_status']=='complete' for r in rows if r['record_type']=='project')
+def at(label):
+    offset=source.index('/*'+label+'*/')+len(label)+4
+    hits=[r for r in rows if r.get('source_path')=='Fixture.cs' and r.get('span',{}).get('byte_offset')==offset and r['record_type']=='reference']
+    assert len(hits)==1,(label,hits)
+    return hits[0]
+expected={
+ 'literal':('/order','M:Routes.Submit'),
+ 'constant':('/constant','M:Routes.Submit'),
+ 'static-call':('/static','M:Routes.Submit'),
+ 'named':('/named','M:Routes.Submit'),
+ 'overload':('/overload/{value}','M:Routes.Overload(System.Int32)'),
+ 'group':('/child','M:Routes.Submit'),
+ 'conditional':('/conditional','M:Routes.Submit'),
+}
+for label,(pattern,target) in expected.items():
+    facts=at(label).get('domain_facts',[]);assert len(facts)==1,(label,facts)
+    f=facts[0]
+    assert f['kind']=='endpoint_post_configuration' and f['rule']=='csharp-endpoint-v1' and f['evidence_scope']=='compile_time' and f['route_pattern']==pattern,f
+    assert [(t['role'],t['symbol']['descriptor']) for t in f['targets']]==[('handler',target)],f
+negatives=['dynamic','lambda','variable','factory','instance','generic-method','generic-owner','metadata','other-verb','request-delegate','empty','null','oversized','lookalike','local-function']
+for label in negatives: assert not at(label).get('domain_facts'),(label,at(label))
+(a.output/'expected.json').write_text(json.dumps({'positive':expected,'negative':negatives},indent=2)+'\n')
+(a.output/'Fixture.cs').write_text(source+'\nclass Broken { MissingType value; }')
+broken=subprocess.run(command,env=env,capture_output=True,timeout=120)
+(a.output/'incomplete.jsonl').write_bytes(broken.stdout)
+assert broken.returncode==2
+assert not any(r.get('domain_facts') or r.get('implementation_facts') for r in map(json.loads,broken.stdout.splitlines()))
+(a.output/'Fixture.cs').write_text(source)
+print('PASS: seven endpoint configurations, fifteen exclusions, incomplete suppression')

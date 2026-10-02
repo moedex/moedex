@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"compiler_definitions","arguments":{"symbol_id":"symbol:7356d18e91e91e7af1e573fb01330b9e95ccc03d4117b78e88c0d63f9461877d","context_id":"context:007bc91472fefcef96133a44f69307b8255f2f28f14065ed42c3cafd2d8b8b1d","repo":"Quartz"}}}

@@ -1,0 +1,34 @@
+{
+  "task": "impact-title-uniqueness",
+  "answer_sha256": "ab7892fe0960a38e3b2f6e2de4f261db3ffbf28b023d8283bdda213a1be4f65d",
+  "classification": "coordinator provisional scoring independent of subsequent reviewer",
+  "atoms": [
+    {
+      "id": "impact-title-uniqueness.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer distinguishes validator rules from EF metadata, identifies the equality lookup and complete config without unique index, coordinates length changes, and scopes concurrency/database-enforcement limits accurately with source citations."
+    },
+    {
+      "id": "impact-title-uniqueness.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer distinguishes validator rules from EF metadata, identifies the equality lookup and complete config without unique index, coordinates length changes, and scopes concurrency/database-enforcement limits accurately with source citations."
+    },
+    {
+      "id": "impact-title-uniqueness.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer distinguishes validator rules from EF metadata, identifies the equality lookup and complete config without unique index, coordinates length changes, and scopes concurrency/database-enforcement limits accurately with source citations."
+    },
+    {
+      "id": "impact-title-uniqueness.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Answer distinguishes validator rules from EF metadata, identifies the equality lookup and complete config without unique index, coordinates length changes, and scopes concurrency/database-enforcement limits accurately with source citations."
+    }
+  ],
+  "material_unsupported_claims": [],
+  "runtime_distinction_preserved": true,
+  "strict_success": true
+}

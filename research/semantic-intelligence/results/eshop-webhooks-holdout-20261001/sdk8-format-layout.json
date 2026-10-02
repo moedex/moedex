@@ -1,0 +1,1112 @@
+[
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.Build.Locator.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/BuildHost-netcore/Microsoft.Build.Locator.dll",
+    "sha256": "0adbe65d87bafc46e9ae7fbd4dc40ada05315c5dde6709eef578233fb3f4f62a"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Humanizer.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Humanizer.dll",
+    "sha256": "d6853075547d7e303efd60354d911a2ff18edba582cda2fa59d91a2e5dcf9e98"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.Bcl.AsyncInterfaces.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.Bcl.AsyncInterfaces.dll",
+    "sha256": "136d5965cf4768e8420b547a8bddea882921f426c371833d558a858a2f0c235a"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.Build.Locator.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.Build.Locator.dll",
+    "sha256": "0adbe65d87bafc46e9ae7fbd4dc40ada05315c5dde6709eef578233fb3f4f62a"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.CodeAnalysis.AnalyzerUtilities.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.CodeAnalysis.AnalyzerUtilities.dll",
+    "sha256": "27300b349ae0c552ccb9bea18baf55b1fc99a517b0d4e15e557af4d3a4bff119"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.CodeAnalysis.CSharp.Features.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.CodeAnalysis.CSharp.Features.dll",
+    "sha256": "d6901c923ce1924a7960cccdcb9127ba068a00ea76a0fd8f88d7ebb800a6e5db"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.CodeAnalysis.CSharp.Workspaces.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.CodeAnalysis.CSharp.Workspaces.dll",
+    "sha256": "5f017cee6168c850bc0b87cb1c5a20b510411254fbac134fd954e225ebe83656"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.CodeAnalysis.CSharp.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.CodeAnalysis.CSharp.dll",
+    "sha256": "af262c8a65afd475605058e51dbc7066b423483e06c4db0f085ad0de627d8ec3"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.CodeAnalysis.Elfie.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.CodeAnalysis.Elfie.dll",
+    "sha256": "8ec0e18ac570157b3863f70035b644925d89996ad901f31ef918d2b0f7428941"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.CodeAnalysis.Features.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.CodeAnalysis.Features.dll",
+    "sha256": "a2c8ee9a39adf764c23a813a7c7d2a0ec42c9278d4c071492bf73cbc9be6556f"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.CodeAnalysis.Scripting.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.CodeAnalysis.Scripting.dll",
+    "sha256": "ea6973c5dad6b000fd5a5e3ae7bd6a8f64971aea51d0c39e5429c2c0de34a07b"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.CodeAnalysis.VisualBasic.Features.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.CodeAnalysis.VisualBasic.Features.dll",
+    "sha256": "6f5d1496248623e1ef5af656c6866c6b94cc33fc8d039f466fd87b6088525932"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.CodeAnalysis.VisualBasic.Workspaces.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.CodeAnalysis.VisualBasic.Workspaces.dll",
+    "sha256": "537c9126f01b56c99c087991b42c0317edb52d3243368e3eec12e679e68054e5"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.CodeAnalysis.VisualBasic.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.CodeAnalysis.VisualBasic.dll",
+    "sha256": "ca5a02a5e9f8718a5102eb31e4ee95023902c7f64b6a6ffd17f148ef2ac81b6d"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.dll",
+    "sha256": "774b298135fe0b0a5d9638e389c2872fd1738191910af6eb13f4a189a6ebe219"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.CodeAnalysis.Workspaces.MSBuild.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.CodeAnalysis.Workspaces.MSBuild.dll",
+    "sha256": "e506342710b8fec65dff7442f0046a745a01c31ef4b260289ad32f13bc42aa6d"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.CodeAnalysis.Workspaces.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.CodeAnalysis.Workspaces.dll",
+    "sha256": "47c71d46a49a010897ee8f114e8f9dec9bc7677c5d2e05ab30a4344b8aa43fe8"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.CodeAnalysis.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.CodeAnalysis.dll",
+    "sha256": "4e7dbdc5bf38ecf3a7791453b2bfcc9140d4e1b503c58609c933ce49bec533e6"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.DiaSymReader.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.DiaSymReader.dll",
+    "sha256": "7f3e7543321ff4c2675b94e56a4a32c935c11c82fcc60d4f6cb611cb0a8daadc"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
+    "sha256": "a0106a638facae621f870eda720cb6c980c1d5d49c2f4351134e3fe043b9291b"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.Extensions.DependencyInjection.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.Extensions.DependencyInjection.dll",
+    "sha256": "8d6e7b64cce554f0a0fbdb2ba80745895fa0b4e6cc378b9fedfe8ce86f0d8ae4"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.Extensions.FileSystemGlobbing.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.Extensions.FileSystemGlobbing.dll",
+    "sha256": "ed0855b522f09b5a9ddbb85de62042c25e07d10044086da8620c845de41e473c"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.Extensions.Logging.Abstractions.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.Extensions.Logging.Abstractions.dll",
+    "sha256": "29e6bfaf5ce079ad4d70dc547d966038992a7428df6e726084eb9010ec837715"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.Extensions.Logging.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.Extensions.Logging.dll",
+    "sha256": "4330a5efe9d110afb7f8e567d5b43eee976e0f7f6802d13a211b65d747529179"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.Extensions.Options.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.Extensions.Options.dll",
+    "sha256": "5f9b0e589f1ce9ca656588cd92cc0bd53803fdfad258fb2916aaa14aedce682c"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.Extensions.Primitives.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.Extensions.Primitives.dll",
+    "sha256": "446ff16e903e7479558816e213a3adee9a1c1adad65a56d853801b10933e29d7"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/Microsoft.Win32.SystemEvents.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/Microsoft.Win32.SystemEvents.dll",
+    "sha256": "d7511a478b8116ba9d85bc22848cec5bcaf56d351a89b4f1801c835f5adaf9e4"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/System.CommandLine.Rendering.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/System.CommandLine.Rendering.dll",
+    "sha256": "37696a920598654e5a717fab89622bbec6b10fe298eb31b1efd16a60b7e39b96"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/System.CommandLine.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/System.CommandLine.dll",
+    "sha256": "b0b839efa01becb0d9e7d140c8c81ff3f89957f047e269c2865c86859cbc2843"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/System.Composition.AttributedModel.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/System.Composition.AttributedModel.dll",
+    "sha256": "6c4d617570f09b1aa0917e87f611a23ed0654b24ac3bc610ce0f079ccabab5fb"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/System.Composition.Convention.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/System.Composition.Convention.dll",
+    "sha256": "c1b92e811bb8de8584411715acbd7864b93ebc0b979618b7ae49c70cfbc4f9d0"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/System.Composition.Hosting.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/System.Composition.Hosting.dll",
+    "sha256": "aec9d434500a7b6ff2991b0e248160eae4654d6821373e30c3893bf932ab3618"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/System.Composition.Runtime.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/System.Composition.Runtime.dll",
+    "sha256": "0f3aa3ea1030d1e4b97f0a2109ea241ea426ef12a431abd0a12bb20902fce447"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/System.Composition.TypedParts.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/System.Composition.TypedParts.dll",
+    "sha256": "c3293950c1190ef7bb1826ee7da520a4ec74a455f9c3fd6fc695c56e1c383167"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/System.Configuration.ConfigurationManager.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/System.Configuration.ConfigurationManager.dll",
+    "sha256": "6fedb98c27c81ed9a1a75bd6260554009b8e44cdb4d1a370b7393daa9553c180"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/System.Diagnostics.EventLog.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/System.Diagnostics.EventLog.dll",
+    "sha256": "4be4fe3f94d686976081991b8621d1b8f6ee4d7f729191baf3be3201b0d8bbc9"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/System.Drawing.Common.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/System.Drawing.Common.dll",
+    "sha256": "1cbef69e470eafac9da174b5705c44c52067cb8b3304c0de23cc04ea43daee5d"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/System.IO.Pipelines.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/System.IO.Pipelines.dll",
+    "sha256": "3ff32a0f47c205de5b813335e890b5402fd9cfbb3e0b0562cb3983164046e3f7"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/System.Security.Cryptography.ProtectedData.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/System.Security.Cryptography.ProtectedData.dll",
+    "sha256": "07d6846b6ea4bcf238c1e9ce90b261ec57f0d6fc7e18c34f9d8b09b2399f014f"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/System.Security.Permissions.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/System.Security.Permissions.dll",
+    "sha256": "e136aa788f5de55de83ae0403b49d48095937aa690cba60c4ca455bca5737aa1"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/System.Windows.Extensions.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/System.Windows.Extensions.dll",
+    "sha256": "30d2c9966096f23410d8593eddaaf3c0217e1c7075520822dbe7d858d581309b"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/cs/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/cs/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "sha256": "dcd23ecba4da6da21f67b4860324e643ec14f28db9ed46eea88f1ce8cc6d3edf"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/cs/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/cs/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "sha256": "870d23a4571b9c682ff27eb4ab23824b770dcf5441a6935cd13992cf112fc19d"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/cs/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/cs/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "sha256": "b8a950723260a705e089f6467ba266d72a2b0d1990a34b12de96905b6a45ac41"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/cs/Microsoft.CodeAnalysis.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/cs/Microsoft.CodeAnalysis.Features.resources.dll",
+    "sha256": "905b9cfd0e1294a5e0fe6dab6e46ec765ca22c63b08d727bccbf54db7fed587d"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/cs/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/cs/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "sha256": "e804d887ed93a4cd8d7d7a654c8876dd8429c91daa5cf33550b8a03064f0b07e"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/cs/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/cs/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "sha256": "185baacd5d36880309072aaf197f116735244aba4a6eb0341d847b67b7ba496c"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/cs/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/cs/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "sha256": "2143836eaada8da491fe999f4f811f3478b6071d5ed4557a9877f96e287b6b3d"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/cs/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/cs/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "sha256": "d6f5617219b4c179bb5a882f1263612f5d7ce4ae9a48b54076fb0cafaca0b76e"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/cs/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/cs/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "sha256": "c823a50280ec4f54d09233ef5acaa1285f8474d0a67f98549708d5b4fd0c90a4"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/cs/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/cs/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "sha256": "689e3da7ba6fffbe4be6c89baff4e28711e1887e05dc0800ef3b4b98ef694726"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/cs/Microsoft.CodeAnalysis.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/cs/Microsoft.CodeAnalysis.resources.dll",
+    "sha256": "84a8d85b63ee30c2bbdb27a7cc9c8636f2d1a3ff6765ef102438d8ba20fb230e"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/cs/System.CommandLine.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/cs/System.CommandLine.resources.dll",
+    "sha256": "6c9e8a37d656c8ee738cb0db392d49e908505a82175266e072a4552a7c98adcf"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/cs/dotnet-format.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/cs/dotnet-format.resources.dll",
+    "sha256": "62c03ec66b6145fed3313b02db9e92d6df761d9e6ab9539111d12f3792b36ca5"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/de/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/de/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "sha256": "d07f6390bc272e42e26ac4f8485966f44abdc8c059425cbb9349514099a74c0a"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/de/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/de/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "sha256": "fd61ed39b2fc42ef93f4f25f9f41395fb61a2cc8ef8c1fd1c32f788d45292944"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/de/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/de/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "sha256": "66f8db4246a94daac890d6b431f4fbc662c494badba251f5788321ca0453387f"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/de/Microsoft.CodeAnalysis.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/de/Microsoft.CodeAnalysis.Features.resources.dll",
+    "sha256": "69b07d8e8d85bb9ee4145e10545af9978e61a3bb5bc037c7df6f90067641cc64"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/de/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/de/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "sha256": "447f7b7f56725f6f1354920fbb8d4455fb9d7e64e5989c5bd6fce338f3d8dff4"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/de/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/de/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "sha256": "0cfd587dcb179c4774be6114ff2c38159fdcdbe6c78fda6d05de6ae489323908"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/de/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/de/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "sha256": "a51de521a9a92058326eb5f4c978d8a56d313f322f6869f7cf8fa6ea94c960f6"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/de/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/de/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "sha256": "d5cedec4fc7f864e7bf976548715cefeb76bdec3d779e935e46927ab58e14e75"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/de/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/de/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "sha256": "ddfd60678c890dd05a9a54d8f168d1ab007c9f1b1c8836e574df39dad3e4250b"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/de/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/de/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "sha256": "7afd92691484201b1c23cba06feeb40df2bdbed9be564eeea9f3c687ebf9be3f"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/de/Microsoft.CodeAnalysis.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/de/Microsoft.CodeAnalysis.resources.dll",
+    "sha256": "f9655bee428812981c6858ce3ebf18a148ce1b23ba541deb9886a012b656edbf"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/de/System.CommandLine.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/de/System.CommandLine.resources.dll",
+    "sha256": "8c4a1a6e84875ae583fc032a723e934f0d8805d452b43a81b4eec624b5ea7e15"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/de/dotnet-format.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/de/dotnet-format.resources.dll",
+    "sha256": "5bcd2fed9333bc24c541f9d76dfd83c8d41e5f312162365136fbaa8d42aeb87b"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/dotnet-format.deps.json",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/dotnet-format.deps.json",
+    "sha256": "930ce604b4f27512733ab817758ce4de45bd502a9b80d507c12bb32079a5c2a5"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/dotnet-format.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/dotnet-format.dll",
+    "sha256": "251bdf8be396d585dd7891b4784b5997f0f276d9d2c0a40db2fcddde830bbd46"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/dotnet-format.dll.config",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/dotnet-format.dll.config",
+    "sha256": "d4cd6f5b2662c87a4ca6c4a1789c20af8cb2d5a9759ddaa4d04912d929d2f958"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/dotnet-format.runtimeconfig.json",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/dotnet-format.runtimeconfig.json",
+    "sha256": "c039f042c0802265917bd9707bbb1e6f45c794f846b8dead9707433131b0b8f5"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/es/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/es/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "sha256": "d9ff9ab5f8592212ebf6a11441e785024275e94c394db5600f865092ac14548a"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/es/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/es/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "sha256": "700165118b1ad673e1250cf4f5bafb1e63e69b723d82ec177fffce94155c364c"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/es/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/es/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "sha256": "bf60f4229ac8cd99ae20db765bc7a8b85e148b11adc58a270fc2edbf0e33a0ca"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/es/Microsoft.CodeAnalysis.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/es/Microsoft.CodeAnalysis.Features.resources.dll",
+    "sha256": "a60e37132f414dbf9579217a436b5d7046e9f1dcba23d28cdffddd055c82f537"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/es/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/es/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "sha256": "6524330b1584d7e0fc05079620014b9e884062933fccb34a167d5e02d843d909"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/es/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/es/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "sha256": "772db4cbb540027345b2435f95feac1ef52819d1937484b9846868081919232a"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/es/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/es/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "sha256": "a1a61291b1b99e4c17776d12ecbd22b6e1fd1c10ceac3c3da8ddcf10406deba8"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/es/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/es/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "sha256": "35200b34a11b988d42ac07162de3b357cc3706d8a0dad98bf44a3553a166cc1d"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/es/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/es/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "sha256": "aa63e2c5ed16d54e36bdabe0df21b82049b665d274c204562110bc01c9c374c7"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/es/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/es/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "sha256": "2c0d62f935613d3220eaed95554c244b96d5c0d66e2907807e8974a13494e847"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/es/Microsoft.CodeAnalysis.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/es/Microsoft.CodeAnalysis.resources.dll",
+    "sha256": "5d5edec9095d31d89de1f30bfc84adc962c5ce5238191fe7321f92a9f6309430"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/es/System.CommandLine.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/es/System.CommandLine.resources.dll",
+    "sha256": "b58c35c328c383e3461c3ea2f1f0c46e7a48446d863f2c2c63f42aa466e002b8"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/es/dotnet-format.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/es/dotnet-format.resources.dll",
+    "sha256": "5cc4d4393642ed55ec87030a027bfc5e4b21d7853a010fc042210e4f7c614bd0"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/fr/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/fr/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "sha256": "f25d07fbde5cf2d8c8681cea76f8d58f775b64d9c1e2443ebe5d463f022dd8a0"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/fr/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/fr/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "sha256": "f627e54819e5039758ea88d7ca7d9d38f155ce8cede576c74e3fe34bf548c60c"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/fr/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/fr/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "sha256": "01fe4cd9ee0153417180cd1a8925331187007adacef4d4b5bb089b1b7bc5503b"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/fr/Microsoft.CodeAnalysis.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/fr/Microsoft.CodeAnalysis.Features.resources.dll",
+    "sha256": "ef1fede4e9b7e3a4d94137cf803b1dea1175f5e1d080fef20d6e4eda36690ff6"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/fr/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/fr/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "sha256": "98f5930d4018a259f9cb44bf9ae24f414dfba5362ddd518d6b3492eeaf042447"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/fr/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/fr/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "sha256": "a439c4307648dc4bc8d8a27fab8a46190772cffeb9f0b8cc0aa71085b5add6a6"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/fr/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/fr/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "sha256": "5c1e0320d3d0e90b8601fe09f7f193ed74a2b1965cad5b2f7c7c5e1ac83a4b74"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/fr/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/fr/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "sha256": "30b39928c5d651e02d7dec7ff5a760939a05678bb9888b7f71fb16dedfaa45be"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/fr/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/fr/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "sha256": "63025fc9f7cdf1523700b6d939a1f594331e515ab631a16d32e034b17112aed7"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/fr/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/fr/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "sha256": "77505b3eba1f6dd5108a80b665c0fb7b0b8ed998d0245f0a37009d7629d05ff0"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/fr/Microsoft.CodeAnalysis.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/fr/Microsoft.CodeAnalysis.resources.dll",
+    "sha256": "15a6e4ec3e778d31071795a2c9f42b889305ecd0a9b39d7541f09bdd4da87757"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/fr/System.CommandLine.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/fr/System.CommandLine.resources.dll",
+    "sha256": "7ad12924769e5e85266ebd510fb4be141cf5092f0f8988345f80f5bacce0479b"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/fr/dotnet-format.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/fr/dotnet-format.resources.dll",
+    "sha256": "d5714d50fceda5337e7273d3b9d25f12735c79435ee9ce219dd9ef199e1b8da0"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/it/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/it/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "sha256": "cb668f6a5e690c495192ab0cfbf8206538c37226b0a3f500fd48111ebaed0cc8"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/it/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/it/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "sha256": "5793df2d0cddc0db12d1777de4b804efb71b3bd99a1091b8657d0b8f9a84bc0b"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/it/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/it/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "sha256": "69e57517e0f6ffaf9bbf2dd59f1a93992864ef70bbbd0f3db2cc3f5bb6477f86"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/it/Microsoft.CodeAnalysis.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/it/Microsoft.CodeAnalysis.Features.resources.dll",
+    "sha256": "9ada950387932ca7e2e770baef18399e373efc3f539c6c67ccdda3ea0cbd1f06"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/it/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/it/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "sha256": "c5c48ab9ca0e09c3171918623969007007451eb206a284d2d5fb74a7f84f8b3d"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/it/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/it/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "sha256": "5d8e327fb1aea412ce63370e1eb6d21384b8949036c0f1b925271584690d2f33"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/it/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/it/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "sha256": "3a2361877f3620eb182ea0301da66281da7b1d581e9e4561f9a81b618c95985c"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/it/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/it/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "sha256": "6564269085c22e74491e78d0046f39cfb780b167c64d82328ec62cd4d37ac9fd"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/it/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/it/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "sha256": "fb24f29674040e9986dcf1e32c29f9f93ea289f6906cfa0c7e8d15c5f6325567"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/it/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/it/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "sha256": "ff10c174c12fbf7d9d5f8765ca8c5f06437c71a3b52963d9c3c9f9295efa5ff5"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/it/Microsoft.CodeAnalysis.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/it/Microsoft.CodeAnalysis.resources.dll",
+    "sha256": "f995a0566750b0bdbd3788e60c923d0025c7921db2e7e2ec3c2c962276ec8b19"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/it/System.CommandLine.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/it/System.CommandLine.resources.dll",
+    "sha256": "37ab1ac8eafeb21cdca5418d01ee65671dacad3fe206f13e8ddb5b199e5ee471"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/it/dotnet-format.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/it/dotnet-format.resources.dll",
+    "sha256": "27fe2c64f50354470299ee06bfce774ea8d2bb830618bae9a058de982e47387d"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ja/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ja/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "sha256": "8d16a54c43f2dd2c8527ab0c046d3c62c900334583f599a9b7dd71dd325bb54b"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ja/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ja/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "sha256": "afb425f13fc739209af12f5f97fb2196ea1ca9346361c2eb256c7b2974422970"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ja/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ja/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "sha256": "eeba81b4c0f6cf431ef9f0fdc20fbabc2b2153013db597c0e0b77124fa1e2ac7"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ja/Microsoft.CodeAnalysis.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ja/Microsoft.CodeAnalysis.Features.resources.dll",
+    "sha256": "5a7216e26420eecf9d6db3d30238b4a586015ddce0deaabc9b71160d9066de60"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ja/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ja/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "sha256": "0158fdcdc5d83b60b998932f4c3b270640647ed07eb54fc5389c0e73a089160e"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ja/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ja/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "sha256": "ad7f66fec47a78da3eaed2f39df2a4a23491bf06fe31b57f37cd4a2343818a1f"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ja/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ja/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "sha256": "71e54580b46b697333395b266acb72afae4a089d85eb112ef5c0385466007800"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ja/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ja/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "sha256": "484166cddc1e0e9130c1678e457a8d45a970d05b6de4ee0c36440b19724864c8"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ja/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ja/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "sha256": "0f4dfba2ef1e1058fcb7f859ed33d5811e14ed68f0e69b6e7937d7a6dac3fdb4"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ja/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ja/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "sha256": "83c6fe325f8b3f8a1de574cb0452b6c06567c018ed5b25cefb6a842f421ad08a"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ja/Microsoft.CodeAnalysis.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ja/Microsoft.CodeAnalysis.resources.dll",
+    "sha256": "0c0a3c86c5a88fa254c58d9d57d7eb0f6bb84f5aed37a9f1743ba21640ccc750"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ja/System.CommandLine.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ja/System.CommandLine.resources.dll",
+    "sha256": "654efb9ccd7c39ce7992616f8aad94e5855f01a3b1ad5dbf21710b1b6d24f00c"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ja/dotnet-format.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ja/dotnet-format.resources.dll",
+    "sha256": "6cfbc9fc123083871c0422784ee3d32423d8eaa96b83044063d7b0b084feca00"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ko/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ko/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "sha256": "894b5a53a95f55ced95d91a0d4efa2b71afb9ca96bb1458ce3171953da0d987d"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ko/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ko/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "sha256": "1366b39cf0c9687722cfbf6a4f31234ffc113e974a57c095c44115f3cb77d479"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ko/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ko/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "sha256": "a8cc45ce7f68a67870a3b5b144e3841538eff77896a29d903bb153d8aa89ba92"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ko/Microsoft.CodeAnalysis.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ko/Microsoft.CodeAnalysis.Features.resources.dll",
+    "sha256": "bf8dffc7049eff77b28872edaa2ca7c4930ded8979cfadca9d6ba32f5ad54eb3"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ko/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ko/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "sha256": "9b72e0b4c47d9a8592b067b8e655ca34638c3ecaf24141678a02d4ad0da188e8"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ko/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ko/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "sha256": "847e300cc4c3b81db0a0648f9d195b36029107bb591f0837b39d6197c5bae040"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ko/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ko/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "sha256": "dc96e5d61f6a18afdadbd91618fdc1dc948f26dae1698f0e6a9301daef13e0bc"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ko/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ko/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "sha256": "1df47ead63094b3da1aacac626ffeafc9ab7716d6a0b94e12d7052e7d9221a3e"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ko/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ko/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "sha256": "cadd84e0e8497e69af245d8fb0b478249e582bd961d2fd90ef303571edca6a76"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ko/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ko/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "sha256": "915c2c2d7551ed5133a6d3c37afe4060c158985e62c42ccab178dec8feb6c1d0"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ko/Microsoft.CodeAnalysis.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ko/Microsoft.CodeAnalysis.resources.dll",
+    "sha256": "aeebe43ed1618cb30443ec482c7c6660265d286a7cbf3fe857d707e281eb5fc1"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ko/System.CommandLine.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ko/System.CommandLine.resources.dll",
+    "sha256": "f3d814678daa95c4609d723548edef7a76bb87423a4e78a20e48fded87089483"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ko/dotnet-format.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ko/dotnet-format.resources.dll",
+    "sha256": "92d47fb7ce8bd1630b8f2c69213e844da9b79f6cc9e99eb01efa7f970625c3a9"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pl/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pl/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "sha256": "c9cf0402af03a970540ee73c0700ca7aabc5d86db1c3204d09c6c75e81cbc9b0"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pl/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pl/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "sha256": "d529c2d30b4e5bfb7d8a6899f3ffb2db886271ead92e6d8f88b7b01beb535f40"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pl/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pl/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "sha256": "9c218bb0e5ffbcef80f03b0dd804da98bff8a30736a66ad4d6f2ae7a1d0487ba"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pl/Microsoft.CodeAnalysis.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pl/Microsoft.CodeAnalysis.Features.resources.dll",
+    "sha256": "d777c399ac2e9e7744e5aa79d2bbabceb194bc1a8fb875ea11281b0af7dcf1fe"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pl/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pl/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "sha256": "7c3c222d9ed18a91dc57436532b198c0e597c2dd4d747efe548f812e0f38cedb"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pl/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pl/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "sha256": "3dd19f1ecdcc7bed70fce87389b6d43dad556554500f5425b3faecb5457ae4f2"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pl/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pl/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "sha256": "fd7ac155b5ff91689ccac1280bfa43ec1687251bec63f2ed16c4e316ff2d3ce9"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pl/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pl/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "sha256": "83feb144323888a69c29f8c22ad2dd8aa7699da4ee7311cdf69ad8b49f47f840"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pl/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pl/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "sha256": "67dad7e833d76c67a67efba716f58be743d4b74d8ebaec4c548709612a9e6c2e"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pl/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pl/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "sha256": "f99b78b2f132467f1672231d3e7e843add9970a871f30943dac8250c17a8ce2b"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pl/Microsoft.CodeAnalysis.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pl/Microsoft.CodeAnalysis.resources.dll",
+    "sha256": "6b6f5f717ddc76971ab68a28c8f13fde18dfb33a51bd8561bd5d1cf80578f43d"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pl/System.CommandLine.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pl/System.CommandLine.resources.dll",
+    "sha256": "09eafe24bde0110f526b49001d97673e533ffd9d361d9be9c4b511eac4dd1bc2"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pl/dotnet-format.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pl/dotnet-format.resources.dll",
+    "sha256": "f1793e133a68b14ddbd7e7453e7d58fd29b22cde77abf1ed1c9a251c26d70d27"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pt-BR/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pt-BR/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "sha256": "87b3a7b3463631e4647032627084aad882b9e3b7de963eae7c087781607d21a3"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pt-BR/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pt-BR/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "sha256": "c3e4df9fa59bd442dc5fb3a90b8641cc4c90970e128faa758e065f7a29b046f9"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pt-BR/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pt-BR/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "sha256": "a24179840d61f54b9484c32dffaa23823795b64302154ffb7437687cc46379f0"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pt-BR/Microsoft.CodeAnalysis.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pt-BR/Microsoft.CodeAnalysis.Features.resources.dll",
+    "sha256": "771c5bef7c2599318225e4e45317ba36f5af8c0837302363e96d8beeab7c8475"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pt-BR/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pt-BR/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "sha256": "ae237d0f8c965039062f54d7cb5581c27cc8b6ecbdc2263008c43cf7e5c87b56"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pt-BR/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pt-BR/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "sha256": "90650003e7ca1ea9e23b53e78c88fa9aacde5d4bafb93adc0cce295703db39da"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pt-BR/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pt-BR/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "sha256": "1137cbd7203b72ae954204159e4d70967e6d8459e1befcea73dc874a6f975820"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pt-BR/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pt-BR/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "sha256": "5a65fa336856dbd883b3ac4ea2f8817d7bf4017e7b91aa9cf8e72a07a0b63e8b"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pt-BR/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pt-BR/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "sha256": "6b623b84de154eb7d4d4ed0ba463d044b2a7f3e30bfebe2ee165c5068111d7e7"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pt-BR/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pt-BR/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "sha256": "c7c4e817445e6edc13a054fbb85dc5e1feaa2ce8140fb6ee2d803a323921651b"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pt-BR/Microsoft.CodeAnalysis.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pt-BR/Microsoft.CodeAnalysis.resources.dll",
+    "sha256": "bcd0529c5ac0f1f015267162fc2dcb8181f93f66184137a3171a7be20dfecc55"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pt-BR/System.CommandLine.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pt-BR/System.CommandLine.resources.dll",
+    "sha256": "516e73295a8c886807ef125de6dfdcc3b783133603655c7a105b38a953ca3353"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/pt-BR/dotnet-format.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/pt-BR/dotnet-format.resources.dll",
+    "sha256": "725b310322a7f54c66b358843e4d047fed87b37938aaad2c4435510456f96332"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ru/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ru/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "sha256": "12bf801eb4bb27073373d46ab456506e0c889df19a8514061ee86431bf28ce28"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ru/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ru/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "sha256": "0dc33df77acd21f0fe1a6dab5b7eb8cebcc0e78f4bc58a30c0181e9459b0a86a"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ru/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ru/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "sha256": "f24e601f393616f6b88b961415183a0d70867e7189a3c107ad00ec7008c0898f"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ru/Microsoft.CodeAnalysis.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ru/Microsoft.CodeAnalysis.Features.resources.dll",
+    "sha256": "0f03aed98fca5ce9e8aa4b5c62a6d389276e2638e245797d1370dc504fc54664"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ru/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ru/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "sha256": "e3dee19ce8c199734e35598bb1281defc8dd912e7d8478775ea9c6d4d663ef15"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ru/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ru/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "sha256": "cb40cd683d6d49323f4dac9928a6db5b7dc4bc9cd48da754364ab1cc3a902088"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ru/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ru/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "sha256": "a86c1c8917fcad774b3bc233fcb8794f05cdfdc4c32249cd49fccd02ef9d706d"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ru/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ru/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "sha256": "7f780d69d52854d2698e6245f715489e400a4aa06553e0aeea475c6857261da6"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ru/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ru/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "sha256": "8711d33282c213000f44369893eea5cf4f59808d177d0b8885398d443462a71c"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ru/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ru/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "sha256": "13afc2e65f5b2f61ee35079572dfcf5e56ac5dd7153f9e75ccd7c0987107a7dd"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ru/Microsoft.CodeAnalysis.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ru/Microsoft.CodeAnalysis.resources.dll",
+    "sha256": "e50920367885ee8c60269a40209edb1af9113e60f3ba887df1b4c9fe89b46dc8"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ru/System.CommandLine.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ru/System.CommandLine.resources.dll",
+    "sha256": "8a24f850a71065e93ae80d3a62903653e1aaff9ff478e05831f288761e4bcc02"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/ru/dotnet-format.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/ru/dotnet-format.resources.dll",
+    "sha256": "a56a4389d5f774207b116b9aac7403cea4e3c89ddaff3b691749c3c029a8c7d6"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/runtimes/win/lib/net7.0/Microsoft.Win32.SystemEvents.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/runtimes/win/lib/net7.0/Microsoft.Win32.SystemEvents.dll",
+    "sha256": "4bf1b38f6f5acb5ae0927b87013a24733791244564578205dfeff57ab112fa17"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/runtimes/win/lib/net7.0/System.Diagnostics.EventLog.Messages.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/runtimes/win/lib/net7.0/System.Diagnostics.EventLog.Messages.dll",
+    "sha256": "3a2ea792755bbe4674f349d7870aeb917494ac39f96a9e5d9625d4ac68dc3ec5"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/runtimes/win/lib/net7.0/System.Diagnostics.EventLog.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/runtimes/win/lib/net7.0/System.Diagnostics.EventLog.dll",
+    "sha256": "0e5cb3744efff35a178774f056fb8b64e678bc762f01df0d30279108c235693a"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/runtimes/win/lib/net7.0/System.Drawing.Common.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/runtimes/win/lib/net7.0/System.Drawing.Common.dll",
+    "sha256": "3fd911243a82a5b430011a8c2102d21a3028f794b4c4ed3ba61112c890d2c033"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/runtimes/win/lib/net7.0/System.Security.Cryptography.ProtectedData.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/runtimes/win/lib/net7.0/System.Security.Cryptography.ProtectedData.dll",
+    "sha256": "ab07cb22e1fd92736a89ee84bc29e338e6d7f70a2b35a68c5fc17fcaa2a158ca"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/runtimes/win/lib/net7.0/System.Windows.Extensions.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/runtimes/win/lib/net7.0/System.Windows.Extensions.dll",
+    "sha256": "54433d0e22b3e827ad266dfb32ca736e8075f76e5bb9de5fec3f340ef384fbf0"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/tr/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/tr/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "sha256": "8bcfeb5bdc3fd7308b0b679805a1f686daf46dc606cde72a3b5630c7b82047d9"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/tr/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/tr/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "sha256": "69f31762fd49ea3ff621dedf9a040c22cc718085e5854a4c48bee9a72d90ee5a"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/tr/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/tr/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "sha256": "219198c627c80eb693446bd9c4748ff2c1c56801c094f535021d07b330c7e44b"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/tr/Microsoft.CodeAnalysis.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/tr/Microsoft.CodeAnalysis.Features.resources.dll",
+    "sha256": "7d9aa5dc9607eae546395dbcd647e5f1d61d00a23867595496697c9f212918b9"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/tr/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/tr/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "sha256": "388039ab7f8ae925435d283da32ed6a8a91162b4738706da78b7fdc7e7cd32dd"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/tr/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/tr/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "sha256": "797642087c47c0f31b8735919df530a674159be34a1282edeafe44ae223ca27a"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/tr/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/tr/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "sha256": "eab236a6ebd116fb72b31c61f08f0b80c402e01d0962602dfbbf4b78f353ae61"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/tr/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/tr/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "sha256": "6610ce61da9714715104c30b8ff2e83c3fca87bb4778a976da5473040c65dd11"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/tr/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/tr/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "sha256": "db620a3cca46b6c619240d837d1698369a77b3c7fca06a31361bce64849dfc1f"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/tr/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/tr/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "sha256": "ff7b85284e8962770e246bca4acf16396e7b910890613faf0394489641081487"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/tr/Microsoft.CodeAnalysis.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/tr/Microsoft.CodeAnalysis.resources.dll",
+    "sha256": "5dad7ec3963cf77999540e20ab2f8988935836b9b2ec7c5068b913662931bd78"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/tr/System.CommandLine.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/tr/System.CommandLine.resources.dll",
+    "sha256": "7a2ada59d84ae17791ca23ff010f1251d98a72df15d1c7355274557349c124bf"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/tr/dotnet-format.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/tr/dotnet-format.resources.dll",
+    "sha256": "68ee5576ac788c178e4232aa1c7620cde4ceaf80bc456698e84c04a001d0d958"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hans/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hans/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "sha256": "058ae21aa14b59e107a73178702bbec158b17be8aab52a801d89099b83720e29"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hans/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hans/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "sha256": "58ea8e1b257538c5b837e5c27724d52c150211074b7905f49aa37999d0170770"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hans/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hans/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "sha256": "4bac7c8336ee6b76af092997947dad17406d39954b29df9fff607e32605e822f"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hans/Microsoft.CodeAnalysis.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hans/Microsoft.CodeAnalysis.Features.resources.dll",
+    "sha256": "f4ccb666d2fa6b9c021e36f803683afc6c240baed79afaadabc912347eeff658"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hans/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hans/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "sha256": "e015557ce53c79731c41c51ea2b04805f79d3aee248a405bac97edc8309ab0b0"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hans/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hans/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "sha256": "5e6d0363d46064d3ba098f1752ddf981e271b910a16209621447aabac6c6e4c2"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hans/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hans/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "sha256": "3e39c1c71b87beee1d9ff9c376094cf0542099754069651374956c212b72ebf7"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hans/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hans/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "sha256": "74af1277a3b6bf6e2e8528509f7e82bbdb22f315852a87a3b71d59b4f84f1fee"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hans/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hans/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "sha256": "e0cfc5bab9409c0887b89aa1780fdba4fff8001a6796c9c74609ee2794176ee7"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hans/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hans/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "sha256": "0e60fb7e1263e4bdec05ed7b6b041376fa1207242b052378aa4fec9e612bd6b6"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hans/Microsoft.CodeAnalysis.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hans/Microsoft.CodeAnalysis.resources.dll",
+    "sha256": "6e1142b9c092fb035421f59b30360b05e1167ef57cd975f3085ad491ff65f0ff"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hans/System.CommandLine.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hans/System.CommandLine.resources.dll",
+    "sha256": "d8682c24396dd5093f4e4bee6cc021148ed2558039b2682bebb60dbb95db56cd"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hans/dotnet-format.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hans/dotnet-format.resources.dll",
+    "sha256": "fb9b4c00b1867e3bf680492921148d4e209d9794310e1b02e83218feb2c7a512"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hant/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hant/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+    "sha256": "2d2e5cad290ca1444037641d6a81e0fdc8f634acd1e18d70a3392f91e4501244"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hant/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hant/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
+    "sha256": "7c1a8037b3b3178894836d7e99bf4fb1cd0a324cfcff77e4ccaac50cbc5279f8"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hant/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hant/Microsoft.CodeAnalysis.CSharp.resources.dll",
+    "sha256": "cfdbbbc0b8494de393f8768cf665942b6fc2264e91da6bb00b340db186f132c7"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hant/Microsoft.CodeAnalysis.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hant/Microsoft.CodeAnalysis.Features.resources.dll",
+    "sha256": "8e226a1d21c929d29465dcd861cfa81fceea174abcabb66cdf1ba22b7262b946"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hant/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hant/Microsoft.CodeAnalysis.Scripting.resources.dll",
+    "sha256": "1965f25e4a63bd2e787332179310bd6d50661f97e56bf2db973d7b015dd85cac"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hant/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hant/Microsoft.CodeAnalysis.VisualBasic.Features.resources.dll",
+    "sha256": "bfe13e172100bc923b51eaf7d987aef4f8815405d822ab77d315b3f5d0d7457b"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hant/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hant/Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll",
+    "sha256": "8710b9b6014951959a9667d688a3e1b3b906cf72a248cdddfc7a01f8833671fa"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hant/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hant/Microsoft.CodeAnalysis.VisualBasic.resources.dll",
+    "sha256": "fb75ecf865acf34c823ccfbb4443cde03cf4b4d3bc9aa3681dee14d8dda0666a"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hant/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hant/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll",
+    "sha256": "f66928be18925c746830df5575acce3a145b93c41b3ac0f57860e1f76764e10c"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hant/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hant/Microsoft.CodeAnalysis.Workspaces.resources.dll",
+    "sha256": "5f271c3a1ac7a480a9122b137a505678e77e464a73d541d4b3af8be1fcc7934a"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hant/Microsoft.CodeAnalysis.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hant/Microsoft.CodeAnalysis.resources.dll",
+    "sha256": "0ed0c4e4a5ccd8a9a822fb271482e817da721845227462d5aebc77f2dd394cdb"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hant/System.CommandLine.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hant/System.CommandLine.resources.dll",
+    "sha256": "8508d85c0fcf1040b05d2a2f0c7e4f74ac476f9a46f414e05e8d47d565367e5e"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/zh-Hant/dotnet-format.resources.dll",
+    "staged": ".local/application-impact/independent/sdk8-format-staged/zh-Hant/dotnet-format.resources.dll",
+    "sha256": "5068826da40c6576c8f42a8ad7cb9074a9c47481d90da1ffa0258f88ba630e5e"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/dotnet-format.deps.json",
+    "staged": ".local/application-impact/independent/worker-v6-sdk8-source/bin/Debug/net10.0/dotnet-format.deps.json",
+    "sha256": "930ce604b4f27512733ab817758ce4de45bd502a9b80d507c12bb32079a5c2a5"
+  },
+  {
+    "original": ".local/application-impact/independent/dotnet8/sdk/8.0.400/DotnetTools/dotnet-format/dotnet-format.runtimeconfig.json",
+    "staged": ".local/application-impact/independent/worker-v6-sdk8-source/bin/Debug/net10.0/dotnet-format.runtimeconfig.json",
+    "sha256": "c039f042c0802265917bd9707bbb1e6f45c794f846b8dead9707433131b0b8f5"
+  }
+]

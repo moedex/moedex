@@ -1,0 +1,59 @@
+=== RUN   TestPublicApplicationImpact
+server: token index loaded from cache
+server: symbol index loaded from cache
+2026/10/01 10:32:48 INFO graph artifact absent; preparing source-only serving snapshot
+    application_impact_public_test.go:447: real_application supported=15 TP=15 FN=0 FP=0 precision=1.0000 recall=1.0000 context_misses=0 unsupported=2 unsupported_missed=2 negative_violations=0 outside_closure=0
+--- PASS: TestPublicApplicationImpact (0.45s)
+=== RUN   TestApplicationObservationIdentitySeparatesNamespaceOwnerAndSource
+--- PASS: TestApplicationObservationIdentitySeparatesNamespaceOwnerAndSource (0.00s)
+=== RUN   TestApplicationScoringSeparatesMissesExtrasGapsAndContexts
+--- PASS: TestApplicationScoringSeparatesMissesExtrasGapsAndContexts (0.00s)
+=== RUN   TestApplicationScoringWrongQualifiedTargetIsFalseJoin
+--- PASS: TestApplicationScoringWrongQualifiedTargetIsFalseJoin (0.00s)
+=== RUN   TestApplicationFrozenGoldSchema
+--- PASS: TestApplicationFrozenGoldSchema (0.00s)
+=== RUN   TestApplicationScoringPartialContextCannotHideMiss
+--- PASS: TestApplicationScoringPartialContextCannotHideMiss (0.00s)
+=== RUN   TestApplicationSuccessorGoldPreservesBaselineAndOnlyPromotesEF
+--- PASS: TestApplicationSuccessorGoldPreservesBaselineAndOnlyPromotesEF (0.00s)
+=== RUN   TestApplicationScoringRejectsWrongRule
+--- PASS: TestApplicationScoringRejectsWrongRule (0.00s)
+=== RUN   TestApplicationV3GoldOnlyPromotesContextRegistrations
+--- PASS: TestApplicationV3GoldOnlyPromotesContextRegistrations (0.01s)
+=== RUN   TestApplicationContextRegistrationScoringRejectsLifetimeAndRoleDrift
+=== RUN   TestApplicationContextRegistrationScoringRejectsLifetimeAndRoleDrift/lifetime
+=== RUN   TestApplicationContextRegistrationScoringRejectsLifetimeAndRoleDrift/missing-role
+=== RUN   TestApplicationContextRegistrationScoringRejectsLifetimeAndRoleDrift/wrong-rule
+=== RUN   TestApplicationContextRegistrationScoringRejectsLifetimeAndRoleDrift/table-inference
+--- PASS: TestApplicationContextRegistrationScoringRejectsLifetimeAndRoleDrift (0.00s)
+    --- PASS: TestApplicationContextRegistrationScoringRejectsLifetimeAndRoleDrift/lifetime (0.00s)
+    --- PASS: TestApplicationContextRegistrationScoringRejectsLifetimeAndRoleDrift/missing-role (0.00s)
+    --- PASS: TestApplicationContextRegistrationScoringRejectsLifetimeAndRoleDrift/wrong-rule (0.00s)
+    --- PASS: TestApplicationContextRegistrationScoringRejectsLifetimeAndRoleDrift/table-inference (0.00s)
+=== RUN   TestApplicationV4GoldOnlyPromotesStateMachineConfiguration
+--- PASS: TestApplicationV4GoldOnlyPromotesStateMachineConfiguration (0.00s)
+=== RUN   TestApplicationConfigurationCannotScoreAsRuntimePublishOrConsumer
+=== RUN   TestApplicationConfigurationCannotScoreAsRuntimePublishOrConsumer/message_publish_configuration
+=== RUN   TestApplicationConfigurationCannotScoreAsRuntimePublishOrConsumer/message_event_configuration
+--- PASS: TestApplicationConfigurationCannotScoreAsRuntimePublishOrConsumer (0.00s)
+    --- PASS: TestApplicationConfigurationCannotScoreAsRuntimePublishOrConsumer/message_publish_configuration (0.00s)
+    --- PASS: TestApplicationConfigurationCannotScoreAsRuntimePublishOrConsumer/message_event_configuration (0.00s)
+=== RUN   TestPublicApplicationImpactTasks
+server: token index loaded from cache
+server: symbol index loaded from cache
+2026/10/01 10:32:49 INFO graph artifact absent; preparing source-only serving snapshot
+    application_tasks_public_test.go:275: task=submitted-message variants=[context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35 context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841] baseline_calls=4 candidate_calls=1 baseline_wire=12619 candidate_wire=8929 baseline_structured=11562 candidate_structured=8575 equivalent=true
+    application_tasks_public_test.go:275: task=submitted-message variants=[context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35 context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a] baseline_calls=4 candidate_calls=1 baseline_wire=12619 candidate_wire=8929 baseline_structured=11562 candidate_structured=8575 equivalent=true
+    application_tasks_public_test.go:275: task=attendee-message variants=[context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35 context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841] baseline_calls=4 candidate_calls=1 baseline_wire=12465 candidate_wire=8520 baseline_structured=11408 candidate_structured=8166 equivalent=true
+    application_tasks_public_test.go:275: task=attendee-message variants=[context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35 context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a] baseline_calls=4 candidate_calls=1 baseline_wire=12465 candidate_wire=8520 baseline_structured=11408 candidate_structured=8166 equivalent=true
+    application_tasks_public_test.go:275: task=registration-entity variants=[context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35 context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841] baseline_calls=4 candidate_calls=1 baseline_wire=9460 candidate_wire=6871 baseline_structured=8403 candidate_structured=6517 equivalent=true
+    application_tasks_public_test.go:275: task=registration-entity variants=[context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35 context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a] baseline_calls=4 candidate_calls=1 baseline_wire=9460 candidate_wire=6873 baseline_structured=8403 candidate_structured=6519 equivalent=true
+    application_tasks_public_test.go:275: task=registration-service variants=[context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35 context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841] baseline_calls=4 candidate_calls=1 baseline_wire=7355 candidate_wire=5659 baseline_structured=6298 candidate_structured=5305 equivalent=true
+    application_tasks_public_test.go:275: task=registration-service variants=[context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35 context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a] baseline_calls=4 candidate_calls=1 baseline_wire=7355 candidate_wire=5659 baseline_structured=6298 candidate_structured=5305 equivalent=true
+--- PASS: TestPublicApplicationImpactTasks (0.48s)
+=== RUN   TestApplicationTasksAreFrozenSourceExpectations
+--- PASS: TestApplicationTasksAreFrozenSourceExpectations (0.00s)
+=== RUN   TestApplicationTaskSuccessorPreservesProtocol
+--- PASS: TestApplicationTaskSuccessorPreservesProtocol (0.00s)
+PASS
+ok  	moedex/internal/app/servecmd	2.172s

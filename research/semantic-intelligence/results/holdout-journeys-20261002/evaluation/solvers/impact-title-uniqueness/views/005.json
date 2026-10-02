@@ -1,0 +1,17 @@
+{
+  "ordinal": 5,
+  "argv": [
+    "call",
+    "--name",
+    "search_context",
+    "--arguments",
+    "{\"query\":\"TodoListConfiguration\",\"repo\":\"CleanArchitecture\",\"top_k\":2,\"token_budget\":1200,\"graph_depth\":0}"
+  ],
+  "started_monotonic": 79075.871486125,
+  "finished_monotonic": 79075.935647083,
+  "returncode": 0,
+  "stdout_bytes": 8019,
+  "stdout_sha256": "920c17a5cca14479c05b78c116c9c59c519a50ef364556afa2edd93eb0fbce04",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

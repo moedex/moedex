@@ -1,0 +1,19 @@
+--- FAIL: TestPublicFrameworkBridge (0.04s)
+panic: interface conversion: interface {} is nil, not []interface {} [recovered, repanicked]
+
+goroutine 99 [running]:
+testing.tRunner.func1.2({0x102ac88d8, 0x5c27b78b7950})
+	/opt/homebrew/Cellar/go/1.27.1/libexec/src/testing/testing.go:2123 +0x1a0
+testing.tRunner.func1()
+	/opt/homebrew/Cellar/go/1.27.1/libexec/src/testing/testing.go:2126 +0x2c8
+panic({0x102ac88d8?, 0x5c27b78b7950?})
+	/opt/homebrew/Cellar/go/1.27.1/libexec/src/runtime/panic.go:859 +0x120
+moedex/internal/semanticimport_test.TestPublicFrameworkBridge(0x5c27b7697448)
+	/Users/zakkeown/Code/moedex/internal/semanticimport/framework_bridge_public_test.go:114 +0x1524
+testing.tRunner(0x5c27b7697448, 0x102b6c790)
+	/opt/homebrew/Cellar/go/1.27.1/libexec/src/testing/testing.go:2193 +0xc4
+created by testing.(*T).Run in goroutine 1
+	/opt/homebrew/Cellar/go/1.27.1/libexec/src/testing/testing.go:2258 +0x3b8
+FAIL	moedex/internal/semanticimport	0.264s
+ok  	moedex/internal/mcp	0.485s
+FAIL

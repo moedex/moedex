@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":1,"result":{"_meta":{"dev.moedex/server":{"version":"dev+unknown"},"dev.moedex/snapshot":{"cacheable":true,"corpus_fingerprint":"b5149e390d53a03fad142e70324881acadf0b31a2966863526bd6fb79355caf3"}},"content":[{"type":"text","text":"list_repos: 1 repositories"}],"structuredContent":{"repos":[{"name":"Sample-Outbox","files":40}],"total":1}}}

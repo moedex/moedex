@@ -1,0 +1,195 @@
+package semanticindex
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"moedex/internal/semantic"
+	"sort"
+)
+
+func (x *Index) invocationKey(fact uint64) [3]uint64 {
+	return [3]uint64{x.field(facts, fact, 9), x.field(facts, fact, 3), fact}
+}
+func (x *Index) implementationKey(p [3]uint64) [4]uint64 {
+	return [4]uint64{p[0], x.field(facts, p[1], 3), p[1], p[2]}
+}
+func (x *Index) implementationPosting(row uint64) [3]uint64 {
+	return [3]uint64{x.field(implementationPostings, row, 0), x.field(implementationPostings, row, 1), x.field(implementationPostings, row, 2)}
+}
+func (x *Index) implementationPayload(fact uint64) []byte {
+	i := uint64(sort.Search(int(x.sections[implementationFacts].n), func(i int) bool { return x.field(implementationFacts, uint64(i), 0) >= fact }))
+	if i == x.sections[implementationFacts].n || x.field(implementationFacts, i, 0) != fact {
+		return nil
+	}
+	return x.textBytes(x.field(implementationFacts, i, 1))
+}
+func (x *Index) resultImplementationFacts(fact uint64) ([]semantic.ImplementationFact, []semantic.Symbol) {
+	raw := x.implementationPayload(fact)
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	var fs []semantic.ImplementationFact
+	_ = json.Unmarshal(raw, &fs)
+	var sy []semantic.Symbol
+	seen := map[string]bool{}
+	for _, f := range fs {
+		for _, id := range f.SymbolIDs() {
+			if !seen[id] {
+				row, _ := x.domainSymbolRow(id)
+				sy = append(sy, x.symbol(row))
+				seen[id] = true
+			}
+		}
+	}
+	return fs, sy
+}
+func (x *Index) implementationResultCost(fact uint64) uint64 {
+	raw := x.implementationPayload(fact)
+	if len(raw) == 0 {
+		return 0
+	}
+	var fs []semantic.ImplementationFact
+	_ = json.Unmarshal(raw, &fs)
+	cost := uint64(len(raw))*2 + 1024
+	seen := map[string]bool{}
+	for _, f := range fs {
+		for _, id := range f.SymbolIDs() {
+			if !seen[id] {
+				row, _ := x.domainSymbolRow(id)
+				cost += 2 * x.rowCost(symbols, row, 0, 1, 2, 3, 4, 5)
+				seen[id] = true
+			}
+		}
+	}
+	return cost
+}
+func (x *Index) validateImplementationFacts() error {
+	if x.version < 4 {
+		return nil
+	}
+	bad := func() error { return fmt.Errorf("semanticindex: invalid implementation facts/postings") }
+	payloads := map[uint64][]semantic.ImplementationFact{}
+	var expected uint64
+	for row := uint64(0); row < x.sections[implementationFacts].n; row++ {
+		fact, sid := x.field(implementationFacts, row, 0), x.field(implementationFacts, row, 1)
+		if fact >= x.sections[facts].n || sid >= x.sections[strdir].n || row > 0 && x.field(implementationFacts, row-1, 0) >= fact {
+			return bad()
+		}
+		fs, ok := payloads[sid]
+		if !ok {
+			raw := x.textBytes(sid)
+			if len(raw) == 0 || len(raw) > maxDomainJSONBytes {
+				return bad()
+			}
+			d := json.NewDecoder(bytes.NewReader(raw))
+			d.DisallowUnknownFields()
+			if d.Decode(&fs) != nil || len(fs) == 0 {
+				return bad()
+			}
+			canonical, e := json.Marshal(fs)
+			if e != nil || !bytes.Equal(raw, canonical) {
+				return bad()
+			}
+			payloads[sid] = fs
+		}
+		// Validate every binding even if its canonical payload is shared.
+		if x.text(x.field(facts, fact, 6)) != "declaration" || x.text(x.field(facts, fact, 7)) != "declaration" || x.text(x.field(facts, fact, 8)) != "resolved" || x.text(x.field(facts, fact, 13)) != "roslyn-semantic-model" || x.text(x.field(facts, fact, 14)) != "msbuild-roslyn" || (x.text(x.field(facts, fact, 15)) != "6" && x.text(x.field(facts, fact, 15)) != "7" && x.text(x.field(facts, fact, 15)) != "8" && x.text(x.field(facts, fact, 15)) != "9" && x.text(x.field(facts, fact, 15)) != "10" && x.text(x.field(facts, fact, 15)) != "11" && x.text(x.field(facts, fact, 15)) != "12" && x.text(x.field(facts, fact, 15)) != "13") {
+			return bad()
+		}
+		if err := semantic.ValidateImplementationFacts(fs); err != nil {
+			return bad()
+		}
+		implementation := x.symbol(x.field(facts, fact, 9) - 1)
+		for _, f := range fs {
+			if semantic.ValidateImplementationExtractor(f, x.text(x.field(facts, fact, 15))) != nil {
+				return bad()
+			}
+			iface, ok := x.domainSymbolRow(f.InterfaceSymbolID)
+			if !ok {
+				return bad()
+			}
+			typ, ok := x.domainSymbolRow(f.ImplementingTypeSymbolID)
+			if !ok {
+				return bad()
+			}
+			var selection []semantic.Symbol
+			for _, id := range f.SymbolIDs()[2:] {
+				row, ok := x.domainSymbolRow(id)
+				if !ok {
+					return bad()
+				}
+				selection = append(selection, x.symbol(row))
+			}
+			if err := semantic.ValidateImplementationSymbols(f, implementation, x.symbol(iface), x.symbol(typ), selection...); err != nil {
+				return bad()
+			}
+		}
+		for _, f := range fs {
+			if f.Forwarding != nil {
+				// Facts are ordered by occurrence identity; no unbounded scan.
+				id := f.Forwarding.CallOccurrenceID
+				row := uint64(sort.Search(int(x.sections[facts].n), func(i int) bool { return x.text(x.field(facts, uint64(i), 0)) >= id }))
+				if row >= x.sections[facts].n || x.text(x.field(facts, row, 0)) != id {
+					return bad()
+				}
+				// Read only fixed columns here. A referenced row's optional JSON
+				// payload may not have been validated yet; do not materialize it.
+				sc := x.source(x.field(facts, row, 2), x.field(facts, row, 3))
+				o := semantic.Occurrence{ID: id, SourceID: sc.Source.ID, ContextID: sc.Context.ID, Role: x.text(x.field(facts, row, 6)), Kind: x.text(x.field(facts, row, 7)), Offset: x.field(facts, row, 4), Length: x.field(facts, row, 5)}
+				b := semantic.Binding{OccurrenceID: id, Status: x.text(x.field(facts, row, 8)), Method: x.text(x.field(facts, row, 13)), Extractor: x.text(x.field(facts, row, 14)), ExtractorVersion: x.text(x.field(facts, row, 15))}
+				if target := x.field(facts, row, 9); target > 0 {
+					b.SymbolID = x.text(x.field(symbols, target-1, 0))
+				}
+				if owner := x.field(facts, row, 10); owner > 0 {
+					b.EnclosingSymbolID = x.text(x.field(symbols, owner-1, 0))
+				}
+				template, _ := x.domainSymbolRow(f.DefaultTemplateSymbolID)
+				target, _ := x.domainSymbolRow(f.Forwarding.InterfaceSymbolID)
+				own := x.source(x.field(facts, fact, 2), x.field(facts, fact, 3))
+				if semantic.ValidateForwardingWitness(f, own.Snapshot.ID, o, b, sc.Source, sc.Context, x.symbol(template), x.symbol(target)) != nil {
+					return bad()
+				}
+			}
+		}
+		expected += uint64(len(fs))
+	}
+	if expected != x.sections[implementationPostings].n {
+		return bad()
+	}
+	for row := uint64(0); row < x.sections[implementationPostings].n; row++ {
+		p := x.implementationPosting(row)
+		if p[0] >= x.sections[symbols].n || p[1] >= x.sections[facts].n || x.field(facts, p[1], 9) != p[0]+1 {
+			return bad()
+		}
+		var fs []semantic.ImplementationFact
+		if json.Unmarshal(x.implementationPayload(p[1]), &fs) != nil || p[2] >= uint64(len(fs)) {
+			return bad()
+		}
+		if row > 0 && !lessContractPosting(x.implementationKey(x.implementationPosting(row-1)), x.implementationKey(p)) {
+			return bad()
+		}
+	}
+	var count uint64
+	eligible := func(f uint64) bool {
+		return x.text(x.field(facts, f, 6)) == "reference" && x.text(x.field(facts, f, 7)) == "invocation" && x.text(x.field(facts, f, 8)) == "resolved" && x.field(facts, f, 9) > 0 && x.field(facts, f, 10) > 0
+	}
+	for row := uint64(0); row < x.sections[facts].n; row++ {
+		if eligible(row) {
+			count++
+		}
+	}
+	if count != x.sections[invocationPostings].n {
+		return bad()
+	}
+	for row := uint64(0); row < count; row++ {
+		f := x.field(invocationPostings, row, 0)
+		if f >= x.sections[facts].n || !eligible(f) {
+			return bad()
+		}
+		if row > 0 && !less3(x.invocationKey(x.field(invocationPostings, row-1, 0)), x.invocationKey(f)) {
+			return bad()
+		}
+	}
+	return nil
+}

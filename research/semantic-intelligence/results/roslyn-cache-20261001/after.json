@@ -1,0 +1,26 @@
+{
+  "corpus-graph.clusters.json": {
+    "bytes": 216,
+    "sha256": "2afdec934143991b46702d3d69cfbec3e09966ed352223c541fef8a4c97f7767"
+  },
+  "corpus-graph.graph": {
+    "bytes": 763241278,
+    "sha256": "fcc77570f2f18640264f216d29a54c68cd5253490d34270d5e0fb436efa8d002"
+  },
+  "manifest.json": {
+    "bytes": 1140,
+    "sha256": "223d8d09b54a350d31000eee96aed25aaec92491efd5c19c1377339c4e974555"
+  },
+  "shard-0000.idx": {
+    "bytes": 426353753,
+    "sha256": "c7c1941da48b15d33902954a7733e7d2f83cae01d70f701febe3f353510e7320"
+  },
+  "shard-0001.idx": {
+    "bytes": 418489359,
+    "sha256": "41fb5b8ceb6d875e656142355cfbce3bf17f1ce3054e897e889ecc761a6c5676"
+  },
+  "shard-0002.idx": {
+    "bytes": 368739716,
+    "sha256": "c67034c72fcd3fe28cfb05299dcd974181fc6aeb06165e5ed58c2019c971c603"
+  }
+}

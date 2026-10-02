@@ -1,0 +1,192 @@
+package semantic
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"strconv"
+	"strings"
+)
+
+// ImplementationFact records the compiler's interface-member implementation
+// relationship at a source method declaration, or a default selection at a
+// concrete class declaration. Neither proves that a call executes.
+type ImplementationFact struct {
+	Forwarding               *DefaultForwarding `json:"forwarding,omitempty"`
+	Kind                     string             `json:"kind"`
+	Rule                     string             `json:"rule"`
+	EvidenceScope            string             `json:"evidence_scope"`
+	InterfaceSymbolID        string             `json:"interface_symbol_id"`
+	ImplementingTypeSymbolID string             `json:"implementing_type_symbol_id"`
+	SelectedDefaultSymbolID  string             `json:"selected_default_symbol_id,omitempty"`
+	DefaultTemplateSymbolID  string             `json:"default_template_symbol_id,omitempty"`
+}
+
+// SymbolIDs lists every identity materialized with this fact, in wire order.
+func (f ImplementationFact) SymbolIDs() []string {
+	ids := []string{f.InterfaceSymbolID, f.ImplementingTypeSymbolID}
+	if f.SelectedDefaultSymbolID != "" {
+		ids = append(ids, f.SelectedDefaultSymbolID)
+	}
+	if f.DefaultTemplateSymbolID != "" {
+		ids = append(ids, f.DefaultTemplateSymbolID)
+	}
+	if f.Forwarding != nil {
+		ids = append(ids, f.Forwarding.InterfaceSymbolID, f.Forwarding.ImplementationSymbolID, f.Forwarding.CastTypeSymbolID)
+	}
+	return ids
+}
+
+const MaxImplementationFacts = 32
+
+func ValidateImplementationFacts(facts []ImplementationFact) error {
+	if len(facts) > MaxImplementationFacts {
+		return fmt.Errorf("semantic: too many implementation facts")
+	}
+	last := ""
+	for _, f := range facts {
+		selection := f.Kind == "interface_default_selection" && f.Rule == "csharp-interface-selection-v1"
+		ordinary := f.Kind == "interface_method_implementation" && oneOf(f.Rule, "csharp-interface-v1", "csharp-interface-closed-v1", "csharp-interface-default-v1")
+		if (!selection && !ordinary) || f.EvidenceScope != "compile_time" || selection != (f.SelectedDefaultSymbolID != "") || selection != (f.DefaultTemplateSymbolID != "") {
+			return fmt.Errorf("semantic: unsupported implementation evidence")
+		}
+		if f.Forwarding != nil {
+			if !selection {
+				return fmt.Errorf("semantic: forwarding requires default selection")
+			}
+			if err := ValidateDefaultForwarding(*f.Forwarding); err != nil {
+				return err
+			}
+		}
+		for _, id := range f.SymbolIDs() {
+			if !strings.HasPrefix(id, "symbol:") || !digest(strings.TrimPrefix(id, "symbol:")) {
+				return fmt.Errorf("semantic: invalid implementation target")
+			}
+		}
+		key := f.InterfaceSymbolID + "/" + f.ImplementingTypeSymbolID
+		if key <= last {
+			return fmt.Errorf("semantic: implementation facts must be sorted and unique")
+		}
+		last = key
+	}
+	return nil
+}
+
+// ValidateImplementationSymbols checks bounded identity shape and the source
+// method/type relationship. Compiler provenance establishes interface semantics.
+func ValidateImplementationSymbols(f ImplementationFact, implementation, iface, typ Symbol, selection ...Symbol) error {
+	if f.Kind == "interface_default_selection" {
+		return validateDefaultSelectionSymbols(f, implementation, iface, typ, selection)
+	}
+	if len(selection) != 0 {
+		return fmt.Errorf("semantic: unexpected default selection symbols")
+	}
+	method := func(s Symbol) bool {
+		k := s.Key
+		name, _, _ := strings.Cut(k.Descriptor, "(")
+		return k.Language == "csharp" && (k.NamespaceKind == "project" || k.NamespaceKind == "assembly") && k.DescriptorKind == "documentation_comment_id" && strings.HasPrefix(name, "M:") && !strings.Contains(name, "`") && !strings.Contains(name, ".#")
+	}
+	validImplementation, validInterface, validType := method(implementation), method(iface), ValidateDomainTarget(typ) == nil
+	if f.Rule == "csharp-interface-closed-v1" {
+		validInterface = ValidateConstructedInterfaceMethod(iface.Key) == nil
+	}
+	if f.Rule == "csharp-interface-default-v1" {
+		validImplementation = implementation.Key.Language == "csharp" && implementation.Key.DescriptorKind == "documentation_comment_id" && strings.HasPrefix(implementation.Key.Descriptor, "M:") && strings.Contains(implementation.Key.Descriptor, "#")
+		validType = typ.Key.Language == "csharp" && typ.Key.DescriptorKind == "documentation_comment_id" && strings.HasPrefix(typ.Key.Descriptor, "T:") && !strings.ContainsAny(typ.Key.Descriptor, "{}[]")
+	}
+	if !validImplementation || implementation.Key.NamespaceKind != "project" || !validInterface || !validType || typ.Key.NamespaceKind != "project" || f.InterfaceSymbolID != iface.ID || f.ImplementingTypeSymbolID != typ.ID || implementation.ID == iface.ID {
+		return fmt.Errorf("semantic: invalid implementation symbols")
+	}
+	name, _, _ := strings.Cut(implementation.Key.Descriptor, "(")
+	member, matchesType := strings.CutPrefix(name, "M:"+strings.TrimPrefix(typ.Key.Descriptor, "T:")+".")
+	if implementation.Key.Namespace != typ.Key.Namespace || !matchesType || member == "" || strings.Contains(member, ".") {
+		return fmt.Errorf("semantic: implementation method is outside implementing type")
+	}
+	return nil
+}
+
+// ValidateConstructedInterfaceMethod checks qualified closed argument identities.
+// Definition is the original documentation ID; the outer namespace owns it.
+func ValidateConstructedInterfaceMethod(k SymbolKey) error {
+	bad := func() error { return fmt.Errorf("semantic: invalid constructed interface member") }
+	if k.Language != "csharp" || !oneOf(k.NamespaceKind, "project", "assembly") || k.Namespace == "" || k.DescriptorKind != "constructed_interface_method_v1" || len(k.Descriptor) > 32768 {
+		return bad()
+	}
+	var value struct {
+		Definition string      `json:"definition"`
+		Arguments  []SymbolKey `json:"arguments"`
+	}
+	d := json.NewDecoder(bytes.NewBufferString(k.Descriptor))
+	d.DisallowUnknownFields()
+	if d.Decode(&value) != nil {
+		return bad()
+	}
+	var extra any
+	if d.Decode(&extra) != io.EOF {
+		return bad()
+	}
+	name, _, _ := strings.Cut(value.Definition, "(")
+	if !strings.HasPrefix(name, "M:") || !strings.Contains(name, "`") || strings.Contains(name, "``") || len(value.Arguments) < 1 || len(value.Arguments) > 8 {
+		return bad()
+	}
+	_, member, ok := strings.Cut(name, "`")
+	arityText, _, dot := strings.Cut(member, ".")
+	arity, err := strconv.Atoi(arityText)
+	if !ok || !dot || err != nil || arity != len(value.Arguments) || strings.Count(name, "`") != 1 {
+		return bad()
+	}
+	for _, a := range value.Arguments {
+		if !oneOf(a.NamespaceKind, "project", "assembly") || !required(a.Namespace) || !required(a.Descriptor) || ValidateDomainTarget(Symbol{Key: a}) != nil {
+			return bad()
+		}
+	}
+	return nil
+}
+
+func ValidateImplementationExtractor(f ImplementationFact, version string) error {
+	if f.Forwarding != nil && version != "9" && (version != "10" && (version != "11" && version != "12")) {
+		return fmt.Errorf("semantic: forwarding requires workers 9–12")
+	}
+	if f.Rule == "csharp-interface-v1" && oneOf(version, "6", "7", "8", "9", "10", "11", "12") || (f.Rule == "csharp-interface-closed-v1" || f.Rule == "csharp-interface-default-v1") && oneOf(version, "7", "8", "9", "10", "11", "12") || f.Rule == "csharp-interface-selection-v1" && oneOf(version, "8", "9", "10", "11", "12") {
+		return nil
+	}
+	return fmt.Errorf("semantic: implementation rule requires supported extractor version")
+}
+
+func validateDefaultSelectionSymbols(f ImplementationFact, anchor, iface, typ Symbol, extra []Symbol) error {
+	bad := func() error { return fmt.Errorf("semantic: invalid closed default selection") }
+	if (len(extra) != 2 && (f.Forwarding == nil || len(extra) != 5)) || anchor.ID != typ.ID || anchor.Key != typ.Key || ValidateDomainTarget(typ) != nil || typ.Key.NamespaceKind != "project" || typ.ID != f.ImplementingTypeSymbolID || iface.ID != f.InterfaceSymbolID {
+		return bad()
+	}
+	name, _, _ := strings.Cut(iface.Key.Descriptor, "(")
+	if iface.Key.Language != "csharp" || !oneOf(iface.Key.NamespaceKind, "project", "assembly") || iface.Key.DescriptorKind != "documentation_comment_id" || !strings.HasPrefix(name, "M:") || strings.ContainsAny(name, "`#") {
+		return bad()
+	}
+	closed, template := extra[0], extra[1]
+	if closed.ID != f.SelectedDefaultSymbolID || template.ID != f.DefaultTemplateSymbolID || ValidateConstructedInterfaceMethod(closed.Key) != nil || closed.Key.NamespaceKind != "project" || template.Key.NamespaceKind != "project" || closed.Key.Namespace != template.Key.Namespace || template.Key.Language != "csharp" || template.Key.DescriptorKind != "documentation_comment_id" || !strings.Contains(template.Key.Descriptor, "#") {
+		return bad()
+	}
+	var value struct {
+		Definition string `json:"definition"`
+	}
+	if json.Unmarshal([]byte(closed.Key.Descriptor), &value) != nil || value.Definition != template.Key.Descriptor {
+		return bad()
+	}
+	// The explicit member name encodes the exact base interface slot. Parameter
+	// text retains its documentation-ID spelling (only the name uses '#').
+	suffix := strings.ReplaceAll(strings.TrimPrefix(name, "M:"), ".", "#") + strings.TrimPrefix(iface.Key.Descriptor, name)
+	if !strings.HasSuffix(value.Definition, "."+suffix) {
+		return bad()
+	}
+	if f.Forwarding != nil {
+		if len(extra) != 5 {
+			return bad()
+		}
+		return validateForwardingSymbols(f, typ, closed, extra[2], extra[3], extra[4])
+	}
+	if len(extra) != 2 {
+		return bad()
+	}
+	return nil
+}

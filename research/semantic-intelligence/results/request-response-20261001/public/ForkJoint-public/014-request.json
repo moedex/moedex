@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": 14,
+  "method": "tools/call",
+  "params": {
+    "name": "compiler_binding_at",
+    "arguments": {
+      "repo": "Sample-ForkJoint",
+      "path": "src/ForkJoint.Api/Startup.cs",
+      "byte_offset": 1562,
+      "raw_sha256": "791dd61d4fc07062799ff3eab8e9d7345f666f64d016d73c36cedb8592ae268d",
+      "context_id": "context:7e2cde7ad504707f470c6a133fb17a6e207236c01c58fb1fe76a6602b00175d8"
+    }
+  }
+}

@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"search_context","arguments":{"repo":"CleanArchitecture","query":"sender.Send","path_prefix":"src/Web","top_k":2,"token_budget":1600}}}

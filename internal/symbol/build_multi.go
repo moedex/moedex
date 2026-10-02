@@ -50,6 +50,8 @@ func ExtractorForPath(relPath string) Extractor {
 // as Build. Extractors here never error; any error is treated as no symbols.
 func BuildMulti(ix *index.Index) *Index {
 	out := NewIndex()
+	out.deferNames = true
+	defer out.rebuildNames()
 	if ix == nil {
 		return out
 	}

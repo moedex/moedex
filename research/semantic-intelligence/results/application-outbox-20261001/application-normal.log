@@ -1,0 +1,8 @@
+=== RUN   TestPublicApplicationImpact
+server: token index loaded from cache
+server: symbol index loaded from cache
+2026/10/01 09:36:57 INFO graph artifact absent; preparing source-only serving snapshot
+    application_impact_public_test.go:440: real_application supported=8 TP=8 FN=0 FP=0 precision=1.0000 recall=1.0000 context_misses=0 unsupported=9 unsupported_missed=9 negative_violations=0 outside_closure=0
+--- PASS: TestPublicApplicationImpact (0.03s)
+PASS
+ok  	moedex/internal/app/servecmd	0.246s

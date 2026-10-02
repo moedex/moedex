@@ -1,0 +1,62 @@
+{
+  "status": "passed",
+  "comparisons": [
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+          "name": "graph_schema",
+          "arguments": {}
+        }
+      },
+      "sha256": "414e4a9c8abeb39f0c57562a687f695e569140b73c27ead338088b8d6c22902d"
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/call",
+        "params": {
+          "name": "trace_calls",
+          "arguments": {
+            "symbol": "Main",
+            "hops": 1
+          }
+        }
+      },
+      "sha256": "07e99d874f399cb93de80175754b2b5a0574aa3cb1b1ce264a84393e1ca149c7"
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/call",
+        "params": {
+          "name": "trace_calls",
+          "arguments": {
+            "symbol": "Create",
+            "hops": 1
+          }
+        }
+      },
+      "sha256": "5948ad68803e040dacd9ad4bd135dbf846c145c32b05c0cb487aa2d7a848900b"
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/call",
+        "params": {
+          "name": "impact_analysis",
+          "arguments": {
+            "symbol": "Create",
+            "depth": 1
+          }
+        }
+      },
+      "sha256": "3763136ed63cd669458078170458af75454e79a2b0fc59dbdb3ce6f8836091ec"
+    }
+  ]
+}

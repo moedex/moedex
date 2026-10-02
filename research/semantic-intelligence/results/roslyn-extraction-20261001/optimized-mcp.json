@@ -1,0 +1,33 @@
+{
+  "command": [
+    "/usr/bin/env",
+    "MOEDEX_ROSLYN_GRAPH_DIR=/private/tmp/moedex-roslyn-latency-20261001/shards",
+    "/private/tmp/moedex-roslyn-extraction-20261001/serve.test",
+    "-test.run",
+    "^TestPinnedRoslynFactoredGraphMCP$",
+    "-test.v",
+    "-test.cpuprofile",
+    "/private/tmp/moedex-roslyn-extraction-20261001/optimized.cpu.pprof"
+  ],
+  "cwd": "/Users/zakkeown/Code/moedex",
+  "environment": {
+    "PATH": "/usr/bin:/bin",
+    "HOME": "/private/tmp/moedex-roslyn-extraction-20261001/home",
+    "TMPDIR": "/private/tmp/moedex-roslyn-extraction-20261001/tmp",
+    "GOMAXPROCS": "8",
+    "GOMEMLIMIT": "6GiB"
+  },
+  "started_utc": "2026-10-01T01:53:58.584476+00:00",
+  "elapsed_seconds": 38.29552295800386,
+  "exit_code": 0,
+  "stop_reasons": [],
+  "timeout_seconds": 600,
+  "max_log_bytes": 16777216,
+  "memory_metric": "macos_physical_footprint",
+  "max_memory_bytes": 8589934592,
+  "sampled_peak_memory_bytes": 2390870320,
+  "memory_samples": 150,
+  "sample_interval_seconds": 0.25,
+  "memory_scope": "direct child only",
+  "runner_sha256": "65eedda0b780ec22cf4a948f83c16f05953b176d7bdd0eec8abe20bc242a6e18"
+}

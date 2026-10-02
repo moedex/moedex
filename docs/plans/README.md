@@ -6,6 +6,11 @@ verification contract for one delivery gate.
 
 ## Standalone remediation plans
 
+- [Semantic intelligence delivery program](./semantic-intelligence/PROGRAM.md)
+  implements the approved CodeGraph comparison design through extraction-quality,
+  identity, compiler, task-context, and freshness gates. Delivery is in progress;
+  this does not change the status of the existing branch rollout phases.
+
 - [Pattern call resolution and context block selection](./graph-pattern-call-resolution-and-context-selection.md)
   resolves same-name Pattern call fan-out with bounded, fail-open LSP work and replaces absolute
   header/test-file ranking gates with composable penalties.

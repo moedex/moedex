@@ -1,0 +1,1384 @@
+{
+  "version": 1,
+  "frozen_at_utc": "2026-10-01T18:11:44.518348+00:00",
+  "classification": "development_single_product_agent_journey_rubric_not_heldout_or_paired_comparison",
+  "source_repository": "https://github.com/MassTransit/Sample-Outbox",
+  "source_commit": "1ab8e66ebf96e5733e68c2f4d2201276f38ed9c5",
+  "prompt_source": "research/semantic-intelligence/results/codegraph-component-outbox-20261001/agent-journey-proposal.json",
+  "prompt_source_sha256": "68dd4f8a76acfad79e8ff2ef4488c703ec50090c9c1669ba09f1d82a87d07009",
+  "prompts_unchanged": true,
+  "gold_method": "Direct independent reading of pinned authored source only; no solver or new tool-query outputs used. Existing corpus is development data.",
+  "tasks": [
+    {
+      "id": "locate-duplicate",
+      "journey": "locate_behavior",
+      "prompt": "Where does the application enforce uniqueness of an event/member registration, and how does a duplicate reach the HTTP response? Cite the relevant code.",
+      "requirements": [
+        {
+          "claim": "EF mapping makes the composite MemberId/EventId index unique.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/RegistrationDbContext.cs",
+              "start_line": 47,
+              "end_line": 51,
+              "raw_sha256": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef"
+            }
+          ],
+          "id": "locate-duplicate.1",
+          "weight": 1
+        },
+        {
+          "claim": "SaveChangesAsync catches DbUpdateException only when its inner PostgresException has UniqueViolation SQL state.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "start_line": 43,
+              "end_line": 49,
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+            }
+          ],
+          "id": "locate-duplicate.2",
+          "weight": 1
+        },
+        {
+          "claim": "The service translates that failure into DuplicateRegistrationException.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "start_line": 47,
+              "end_line": 49,
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+            }
+          ],
+          "id": "locate-duplicate.3",
+          "weight": 1
+        },
+        {
+          "claim": "Submit catches DuplicateRegistrationException and returns Conflict containing MemberId and EventId.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+              "start_line": 37,
+              "end_line": 43,
+              "raw_sha256": "57da78434440b2da392bf6cb0a5eb954a1b3bc93f27e786c9c55bf9100fdd4df"
+            }
+          ],
+          "id": "locate-duplicate.4",
+          "weight": 1
+        }
+      ],
+      "permissible_unknowns": [
+        "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+        "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+      ]
+    },
+    {
+      "id": "locate-retry",
+      "journey": "locate_behavior",
+      "prompt": "Find the deliberately intermittent registration-processing failure. State its exact payment and retry conditions, with source evidence.",
+      "requirements": [
+        {
+          "claim": "The deliberately injected failure is configured in RegistrationStateMachine, on initial RegistrationSubmitted handling.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "start_line": 16,
+              "end_line": 34,
+              "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+            }
+          ],
+          "id": "locate-retry.1",
+          "weight": 1
+        },
+        {
+          "claim": "Failure condition is Payment < 50m AND GetRetryAttempt() == 0; payment exactly 50 does not satisfy it.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "start_line": 33,
+              "end_line": 34,
+              "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+            }
+          ],
+          "id": "locate-retry.2",
+          "weight": 1
+        },
+        {
+          "claim": "The configured action throws ApplicationException; the message says random but the predicate itself is deterministic.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "start_line": 33,
+              "end_line": 34,
+              "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+            }
+          ],
+          "id": "locate-retry.3",
+          "weight": 1
+        },
+        {
+          "claim": "The failure sits after configured SendRegistrationEmail publication and before configured AddEventAttendee publication.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "start_line": 26,
+              "end_line": 40,
+              "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+            }
+          ],
+          "id": "locate-retry.4",
+          "weight": 1
+        },
+        {
+          "claim": "RegistrationStateDefinition configures UseMessageRetry with literal interval sequence 10,50,100,1000,1000,1000,1000,1000.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateDefinition.cs",
+              "start_line": 9,
+              "end_line": 14,
+              "raw_sha256": "c315310b0f33c525ba4a3a14066594953491507c9254df37685573dec7c30f56"
+            }
+          ],
+          "id": "locate-retry.5",
+          "weight": 1
+        }
+      ],
+      "permissible_unknowns": [
+        "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+        "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+      ]
+    },
+    {
+      "id": "locate-validation-service",
+      "journey": "locate_behavior",
+      "prompt": "Which implementation is registered for registration validation, with what lifetime, and where is it called? Distinguish configured registration from runtime instance selection.",
+      "requirements": [
+        {
+          "claim": "Worker configures IRegistrationValidationService -> RegistrationValidationService with AddScoped.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Worker/Program.cs",
+              "start_line": 62,
+              "end_line": 62,
+              "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+            }
+          ],
+          "id": "locate-validation-service.1",
+          "weight": 1
+        },
+        {
+          "claim": "RegistrationValidationService declares IRegistrationValidationService and provides its ValidateRegistration method.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+              "start_line": 7,
+              "end_line": 19,
+              "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20"
+            },
+            {
+              "path": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+              "start_line": 3,
+              "end_line": 5,
+              "raw_sha256": "094614ab8d70256ca3accc40e20d4d358d1170031938fa03a68fbcd2be99a97a"
+            }
+          ],
+          "id": "locate-validation-service.2",
+          "weight": 1
+        },
+        {
+          "claim": "ValidateRegistrationConsumer receives the interface through its constructor.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+              "start_line": 13,
+              "end_line": 18,
+              "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+            }
+          ],
+          "id": "locate-validation-service.3",
+          "weight": 1
+        },
+        {
+          "claim": "Consume calls ValidateRegistration with message EventId, MemberId and RegistrationId.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+              "start_line": 21,
+              "end_line": 23,
+              "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+            }
+          ],
+          "id": "locate-validation-service.4",
+          "weight": 1
+        },
+        {
+          "claim": "This registration/interface relationship is a static candidate, not proof of the concrete runtime instance selected.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Worker/Program.cs",
+              "start_line": 62,
+              "end_line": 62,
+              "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+            },
+            {
+              "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+              "start_line": 13,
+              "end_line": 23,
+              "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+            }
+          ],
+          "id": "locate-validation-service.5",
+          "weight": 1
+        }
+      ],
+      "permissible_unknowns": [
+        "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+        "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+      ]
+    },
+    {
+      "id": "locate-persistence",
+      "journey": "locate_behavior",
+      "prompt": "Locate creation, entity insertion, publication, and persistence of a new registration. Describe their source order without claiming a runtime transaction guarantee.",
+      "requirements": [
+        {
+          "claim": "SubmitRegistration constructs Registration with a new GUID, UTC date, member, event and payment.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "start_line": 21,
+              "end_line": 30,
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+            }
+          ],
+          "id": "locate-persistence.1",
+          "weight": 1
+        },
+        {
+          "claim": "It awaits Set<Registration>().AddAsync(registration).",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "start_line": 32,
+              "end_line": 32,
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+            }
+          ],
+          "id": "locate-persistence.2",
+          "weight": 1
+        },
+        {
+          "claim": "It then awaits Publish(new RegistrationSubmitted) copying the registration fields/payment.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "start_line": 34,
+              "end_line": 41,
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+            }
+          ],
+          "id": "locate-persistence.3",
+          "weight": 1
+        },
+        {
+          "claim": "SaveChangesAsync follows publication in source order, inside the duplicate exception handling block.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "start_line": 43,
+              "end_line": 50,
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+            }
+          ],
+          "id": "locate-persistence.4",
+          "weight": 1
+        },
+        {
+          "claim": "Registration is returned only after that save block completes.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "start_line": 45,
+              "end_line": 52,
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+            }
+          ],
+          "id": "locate-persistence.5",
+          "weight": 1
+        },
+        {
+          "claim": "Source order alone does not establish runtime atomicity or delivered publication; API configures EF bus outbox.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Api/Program.cs",
+              "start_line": 73,
+              "end_line": 81,
+              "raw_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53"
+            },
+            {
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "start_line": 32,
+              "end_line": 45,
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+            }
+          ],
+          "id": "locate-persistence.6",
+          "weight": 1
+        }
+      ],
+      "permissible_unknowns": [
+        "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+        "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+      ]
+    },
+    {
+      "id": "flow-notification",
+      "journey": "explain_cross_service",
+      "prompt": "Trace a submitted registration from the HTTP action to the recorded RegistrationSubmitted publisher and notification consumer. Explain where interface dispatch remains a static candidate.",
+      "requirements": [
+        {
+          "claim": "HTTP POST Submit invokes IRegistrationService.SubmitRegistration with model values.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+              "start_line": 19,
+              "end_line": 27,
+              "raw_sha256": "57da78434440b2da392bf6cb0a5eb954a1b3bc93f27e786c9c55bf9100fdd4df"
+            }
+          ],
+          "id": "flow-notification.1",
+          "weight": 1
+        },
+        {
+          "claim": "RegistrationService implements that interface; API configures it scoped.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "start_line": 9,
+              "end_line": 21,
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+            },
+            {
+              "path": "src/Sample.Components/IRegistrationService.cs",
+              "start_line": 3,
+              "end_line": 5,
+              "raw_sha256": "c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71"
+            },
+            {
+              "path": "src/Sample.Api/Program.cs",
+              "start_line": 30,
+              "end_line": 30,
+              "raw_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53"
+            }
+          ],
+          "id": "flow-notification.2",
+          "weight": 1
+        },
+        {
+          "claim": "RegistrationService.SubmitRegistration directly publishes RegistrationSubmitted.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "start_line": 34,
+              "end_line": 41,
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+            }
+          ],
+          "id": "flow-notification.3",
+          "weight": 1
+        },
+        {
+          "claim": "NotifyRegistrationConsumer declares IConsumer<RegistrationSubmitted> and its Consume logs member/event/date.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+              "start_line": 8,
+              "end_line": 23,
+              "raw_sha256": "5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81"
+            }
+          ],
+          "id": "flow-notification.4",
+          "weight": 1
+        },
+        {
+          "claim": "Worker registers NotifyRegistrationConsumer and configures RabbitMQ endpoints.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Worker/Program.cs",
+              "start_line": 74,
+              "end_line": 74,
+              "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+            },
+            {
+              "path": "src/Sample.Worker/Program.cs",
+              "start_line": 85,
+              "end_line": 88,
+              "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+            }
+          ],
+          "id": "flow-notification.5",
+          "weight": 1
+        },
+        {
+          "claim": "The interface-to-implementation hop and publisher-to-consumer relationship are static candidates/configuration, not observed dispatch or delivery.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+              "start_line": 27,
+              "end_line": 27,
+              "raw_sha256": "57da78434440b2da392bf6cb0a5eb954a1b3bc93f27e786c9c55bf9100fdd4df"
+            },
+            {
+              "path": "src/Sample.Worker/Program.cs",
+              "start_line": 74,
+              "end_line": 88,
+              "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+            }
+          ],
+          "id": "flow-notification.6",
+          "weight": 1
+        }
+      ],
+      "permissible_unknowns": [
+        "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+        "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+      ]
+    },
+    {
+      "id": "flow-email",
+      "journey": "explain_cross_service",
+      "prompt": "Explain how registration submission configures a registration-email action and where that email message is consumed. Separate state-machine configuration from proof of delivery.",
+      "requirements": [
+        {
+          "claim": "Saga declares RegistrationSubmitted event and correlates it by Message.RegistrationId.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "start_line": 14,
+              "end_line": 14,
+              "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+            },
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "start_line": 47,
+              "end_line": 47,
+              "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+            }
+          ],
+          "id": "flow-email.1",
+          "weight": 1
+        },
+        {
+          "claim": "Initially When(RegistrationSubmitted) copies date/event/member/payment and transitions to Registered.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "start_line": 16,
+              "end_line": 25,
+              "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+            }
+          ],
+          "id": "flow-email.2",
+          "weight": 1
+        },
+        {
+          "claim": "Fluent Publish configures SendRegistrationEmail using saga CorrelationId/date/event/member.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "start_line": 26,
+              "end_line": 32,
+              "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+            }
+          ],
+          "id": "flow-email.3",
+          "weight": 1
+        },
+        {
+          "claim": "SendRegistrationEmailConsumer declares IConsumer<SendRegistrationEmail>; worker registers it.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+              "start_line": 8,
+              "end_line": 18,
+              "raw_sha256": "0e5c8f13aa04dd9b46c488b677fcfef3c9583998a74a98cb4283087326de7592"
+            },
+            {
+              "path": "src/Sample.Worker/Program.cs",
+              "start_line": 75,
+              "end_line": 75,
+              "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+            }
+          ],
+          "id": "flow-email.4",
+          "weight": 1
+        },
+        {
+          "claim": "Consume only logs notification then returns Task.CompletedTask; checked-in method is not an actual email transport send.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+              "start_line": 18,
+              "end_line": 23,
+              "raw_sha256": "0e5c8f13aa04dd9b46c488b677fcfef3c9583998a74a98cb4283087326de7592"
+            }
+          ],
+          "id": "flow-email.5",
+          "weight": 1
+        },
+        {
+          "claim": "Configured publication and consumption do not prove message delivery or that email was sent.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "start_line": 26,
+              "end_line": 34,
+              "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+            },
+            {
+              "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+              "start_line": 18,
+              "end_line": 23,
+              "raw_sha256": "0e5c8f13aa04dd9b46c488b677fcfef3c9583998a74a98cb4283087326de7592"
+            }
+          ],
+          "id": "flow-email.6",
+          "weight": 1
+        }
+      ],
+      "permissible_unknowns": [
+        "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+        "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+      ]
+    },
+    {
+      "id": "flow-validation",
+      "journey": "explain_cross_service",
+      "prompt": "Trace AddEventAttendee consumption through validation to RegistrationValidated publication. Cite the interface/implementation step and state what execution is not proven.",
+      "requirements": [
+        {
+          "claim": "ValidateRegistrationConsumer declares IConsumer<AddEventAttendee>.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+              "start_line": 9,
+              "end_line": 10,
+              "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+            }
+          ],
+          "id": "flow-validation.1",
+          "weight": 1
+        },
+        {
+          "claim": "Worker registers this consumer with ValidateRegistrationConsumerDefinition.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Worker/Program.cs",
+              "start_line": 77,
+              "end_line": 77,
+              "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+            }
+          ],
+          "id": "flow-validation.2",
+          "weight": 1
+        },
+        {
+          "claim": "Consume passes EventId, MemberId and RegistrationId to injected IRegistrationValidationService.ValidateRegistration.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+              "start_line": 13,
+              "end_line": 23,
+              "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+            }
+          ],
+          "id": "flow-validation.3",
+          "weight": 1
+        },
+        {
+          "claim": "RegistrationValidationService implements that interface; worker registers it scoped.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+              "start_line": 7,
+              "end_line": 17,
+              "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20"
+            },
+            {
+              "path": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+              "start_line": 3,
+              "end_line": 5,
+              "raw_sha256": "094614ab8d70256ca3accc40e20d4d358d1170031938fa03a68fbcd2be99a97a"
+            },
+            {
+              "path": "src/Sample.Worker/Program.cs",
+              "start_line": 62,
+              "end_line": 62,
+              "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+            }
+          ],
+          "id": "flow-validation.4",
+          "weight": 1
+        },
+        {
+          "claim": "Implementation publishes RegistrationValidated with RegistrationId set from the argument.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+              "start_line": 17,
+              "end_line": 19,
+              "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20"
+            }
+          ],
+          "id": "flow-validation.5",
+          "weight": 1
+        },
+        {
+          "claim": "This static chain does not prove runtime DI selection, consumer activation, publication delivery, or substantive validation of event/member.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+              "start_line": 23,
+              "end_line": 23,
+              "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+            },
+            {
+              "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+              "start_line": 17,
+              "end_line": 19,
+              "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20"
+            }
+          ],
+          "id": "flow-validation.6",
+          "weight": 1
+        }
+      ],
+      "permissible_unknowns": [
+        "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+        "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+      ]
+    },
+    {
+      "id": "flow-runtime-proof",
+      "journey": "explain_cross_service",
+      "prompt": "Does this checked-in source prove that every successful registration request delivers exactly one email in the running system? Give the strongest supported answer and identify the missing evidence.",
+      "requirements": [
+        {
+          "claim": "No: checked-in source does not prove every successful HTTP request results in exactly one actual email.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+              "start_line": 27,
+              "end_line": 35,
+              "raw_sha256": "57da78434440b2da392bf6cb0a5eb954a1b3bc93f27e786c9c55bf9100fdd4df"
+            },
+            {
+              "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+              "start_line": 18,
+              "end_line": 23,
+              "raw_sha256": "0e5c8f13aa04dd9b46c488b677fcfef3c9583998a74a98cb4283087326de7592"
+            }
+          ],
+          "id": "flow-runtime-proof.1",
+          "weight": 1
+        },
+        {
+          "claim": "Success follows service return/save and returns Ok; it is not an email delivery acknowledgment.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "start_line": 43,
+              "end_line": 52,
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+            },
+            {
+              "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+              "start_line": 27,
+              "end_line": 35,
+              "raw_sha256": "57da78434440b2da392bf6cb0a5eb954a1b3bc93f27e786c9c55bf9100fdd4df"
+            }
+          ],
+          "id": "flow-runtime-proof.2",
+          "weight": 1
+        },
+        {
+          "claim": "Email consumer implementation logs a notification rather than sending email.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+              "start_line": 18,
+              "end_line": 23,
+              "raw_sha256": "0e5c8f13aa04dd9b46c488b677fcfef3c9583998a74a98cb4283087326de7592"
+            }
+          ],
+          "id": "flow-runtime-proof.3",
+          "weight": 1
+        },
+        {
+          "claim": "Outbox/retry configuration is present but is configuration rather than runtime execution evidence.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Api/Program.cs",
+              "start_line": 75,
+              "end_line": 81,
+              "raw_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53"
+            },
+            {
+              "path": "src/Sample.Worker/Program.cs",
+              "start_line": 65,
+              "end_line": 70,
+              "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+            },
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateDefinition.cs",
+              "start_line": 12,
+              "end_line": 14,
+              "raw_sha256": "c315310b0f33c525ba4a3a14066594953491507c9254df37685573dec7c30f56"
+            }
+          ],
+          "id": "flow-runtime-proof.4",
+          "weight": 1
+        },
+        {
+          "claim": "Missing evidence includes deployed configuration and broker/database health, observed delivery/processing and an actual email provider send/receipt; no runtime traces are supplied.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Worker/Program.cs",
+              "start_line": 85,
+              "end_line": 94,
+              "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+            },
+            {
+              "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+              "start_line": 18,
+              "end_line": 23,
+              "raw_sha256": "0e5c8f13aa04dd9b46c488b677fcfef3c9583998a74a98cb4283087326de7592"
+            }
+          ],
+          "id": "flow-runtime-proof.5",
+          "weight": 1
+        }
+      ],
+      "permissible_unknowns": [
+        "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+        "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+      ]
+    },
+    {
+      "id": "impact-submitted",
+      "journey": "contract_impact",
+      "prompt": "Assess the source impact of changing RegistrationSubmitted.RegistrationId. Identify producer, consumer, and saga-correlation references, separating compile-time references from runtime routing.",
+      "requirements": [
+        {
+          "claim": "RegistrationSubmitted declares Guid RegistrationId.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+              "start_line": 3,
+              "end_line": 5,
+              "raw_sha256": "0f659a342b91338f1aca4f547bebebe11e65d42c5606a3b7164f74ce46d63bf0"
+            }
+          ],
+          "id": "impact-submitted.1",
+          "weight": 1
+        },
+        {
+          "claim": "RegistrationService populates the message RegistrationId from the entity.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "start_line": 34,
+              "end_line": 40,
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+            }
+          ],
+          "id": "impact-submitted.2",
+          "weight": 1
+        },
+        {
+          "claim": "Saga correlation reads m.Message.RegistrationId; a type/meaning change requires reviewing that correlation.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "start_line": 14,
+              "end_line": 14,
+              "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+            }
+          ],
+          "id": "impact-submitted.3",
+          "weight": 1
+        },
+        {
+          "claim": "NotifyRegistrationConsumer consumes the contract but its body reads member/event/date, not RegistrationId directly.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+              "start_line": 8,
+              "end_line": 21,
+              "raw_sha256": "5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81"
+            }
+          ],
+          "id": "impact-submitted.4",
+          "weight": 1
+        },
+        {
+          "claim": "Saga initial event handling is another contract consumer/configuration site; downstream email/attendee IDs come from saga CorrelationId.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "start_line": 16,
+              "end_line": 40,
+              "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+            }
+          ],
+          "id": "impact-submitted.5",
+          "weight": 1
+        },
+        {
+          "claim": "These are source references/configuration; runtime routing or deployed compatibility is not established.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Worker/Program.cs",
+              "start_line": 74,
+              "end_line": 88,
+              "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+            }
+          ],
+          "id": "impact-submitted.6",
+          "weight": 1
+        }
+      ],
+      "permissible_unknowns": [
+        "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+        "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+      ]
+    },
+    {
+      "id": "impact-validation-signature",
+      "journey": "contract_impact",
+      "prompt": "If the registration-validation method signature changes, identify the interface, implementation, callers, and registration configuration that need review. Cite source.",
+      "requirements": [
+        {
+          "claim": "Review IRegistrationValidationService.ValidateRegistration(string eventId,string memberId,Guid registrationId) returning Task.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+              "start_line": 3,
+              "end_line": 5,
+              "raw_sha256": "094614ab8d70256ca3accc40e20d4d358d1170031938fa03a68fbcd2be99a97a"
+            }
+          ],
+          "id": "impact-validation-signature.1",
+          "weight": 1
+        },
+        {
+          "claim": "Review corresponding RegistrationValidationService implementation and registrationId use in publication.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+              "start_line": 7,
+              "end_line": 19,
+              "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20"
+            }
+          ],
+          "id": "impact-validation-signature.2",
+          "weight": 1
+        },
+        {
+          "claim": "Review ValidateRegistrationConsumer.Consume call and argument order.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+              "start_line": 21,
+              "end_line": 23,
+              "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+            }
+          ],
+          "id": "impact-validation-signature.3",
+          "weight": 1
+        },
+        {
+          "claim": "Review worker scoped interface/implementation registration for compatibility; a method-only signature change need not mechanically change this generic registration expression.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Worker/Program.cs",
+              "start_line": 62,
+              "end_line": 62,
+              "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+            }
+          ],
+          "id": "impact-validation-signature.4",
+          "weight": 1
+        },
+        {
+          "claim": "The interface injection in the consumer and configured consumer definition remain relevant wiring to review; runtime selection is not proven.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+              "start_line": 13,
+              "end_line": 18,
+              "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+            },
+            {
+              "path": "src/Sample.Worker/Program.cs",
+              "start_line": 77,
+              "end_line": 77,
+              "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+            }
+          ],
+          "id": "impact-validation-signature.5",
+          "weight": 1
+        }
+      ],
+      "permissible_unknowns": [
+        "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+        "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+      ]
+    },
+    {
+      "id": "impact-entity-uniqueness",
+      "journey": "contract_impact",
+      "prompt": "If registration uniqueness changes from event-plus-member to registration identifier, identify the entity mapping and duplicate-handling code to review. Do not invent a physical table name.",
+      "requirements": [
+        {
+          "claim": "Current entity Id is int and primary key; RegistrationId is a distinct Guid property.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Registration.cs",
+              "start_line": 5,
+              "end_line": 8,
+              "raw_sha256": "84db43f9d9292799c5685e2ccb54a2eba4400681f5e87edd5e8b3d5f360ad8b4"
+            },
+            {
+              "path": "src/Sample.Components/RegistrationDbContext.cs",
+              "start_line": 38,
+              "end_line": 41,
+              "raw_sha256": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef"
+            }
+          ],
+          "id": "impact-entity-uniqueness.1",
+          "weight": 1
+        },
+        {
+          "claim": "Review and replace composite MemberId/EventId IsUnique mapping according to the new policy.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/RegistrationDbContext.cs",
+              "start_line": 47,
+              "end_line": 51,
+              "raw_sha256": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef"
+            }
+          ],
+          "id": "impact-entity-uniqueness.2",
+          "weight": 1
+        },
+        {
+          "claim": "RegistrationId is mapped but no explicit unique index on it appears in this mapping.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/RegistrationDbContext.cs",
+              "start_line": 34,
+              "end_line": 51,
+              "raw_sha256": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef"
+            }
+          ],
+          "id": "impact-entity-uniqueness.3",
+          "weight": 1
+        },
+        {
+          "claim": "Review generated RegistrationId and SaveChanges unique-violation translation; catch is not specific to one named unique constraint.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "start_line": 25,
+              "end_line": 25,
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+            },
+            {
+              "path": "src/Sample.Components/RegistrationService.cs",
+              "start_line": 43,
+              "end_line": 49,
+              "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+            }
+          ],
+          "id": "impact-entity-uniqueness.4",
+          "weight": 1
+        },
+        {
+          "claim": "Review controller Conflict response currently describing MemberId/EventId.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+              "start_line": 37,
+              "end_line": 43,
+              "raw_sha256": "57da78434440b2da392bf6cb0a5eb954a1b3bc93f27e786c9c55bf9100fdd4df"
+            }
+          ],
+          "id": "impact-entity-uniqueness.5",
+          "weight": 1
+        },
+        {
+          "claim": "No explicit physical table name is configured in MapRegistration; do not invent one or treat migration-history table name as registration table.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/RegistrationDbContext.cs",
+              "start_line": 34,
+              "end_line": 52,
+              "raw_sha256": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef"
+            },
+            {
+              "path": "src/Sample.Api/Program.cs",
+              "start_line": 40,
+              "end_line": 41,
+              "raw_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53"
+            }
+          ],
+          "id": "impact-entity-uniqueness.6",
+          "weight": 1
+        }
+      ],
+      "permissible_unknowns": [
+        "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+        "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+      ]
+    },
+    {
+      "id": "impact-attendee",
+      "journey": "contract_impact",
+      "prompt": "Which checked-in classes and state-machine actions should be reviewed if AddEventAttendee changes? Distinguish consumer declarations, configured consumers, configured publication, and runtime activation.",
+      "requirements": [
+        {
+          "claim": "Review AddEventAttendee contract RegistrationId, MemberId and EventId.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Contracts/AddEventAttendee.cs",
+              "start_line": 3,
+              "end_line": 8,
+              "raw_sha256": "bd97b1816fc8732ebba2f7cbb5b97cb29e8d878b13330ddf7fa94e55dea987cb"
+            }
+          ],
+          "id": "impact-attendee.1",
+          "weight": 1
+        },
+        {
+          "claim": "AddEventAttendeeConsumer declares IConsumer<AddEventAttendee>; its body logs MemberId/EventId.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+              "start_line": 8,
+              "end_line": 20,
+              "raw_sha256": "f7ae50324fc1b3c8fa3fec399e233b6e6e977b9458d348b834e5ced0f5fc6184"
+            }
+          ],
+          "id": "impact-attendee.2",
+          "weight": 1
+        },
+        {
+          "claim": "ValidateRegistrationConsumer also declares IConsumer<AddEventAttendee>; it reads all three properties for validation.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+              "start_line": 9,
+              "end_line": 23,
+              "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+            }
+          ],
+          "id": "impact-attendee.3",
+          "weight": 1
+        },
+        {
+          "claim": "Worker configures both consumers; validation uses its consumer definition.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Worker/Program.cs",
+              "start_line": 76,
+              "end_line": 77,
+              "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+            }
+          ],
+          "id": "impact-attendee.4",
+          "weight": 1
+        },
+        {
+          "claim": "Saga fluent Publish configures AddEventAttendee from CorrelationId/EventId/MemberId after the conditional failure step.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "start_line": 33,
+              "end_line": 40,
+              "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+            }
+          ],
+          "id": "impact-attendee.5",
+          "weight": 1
+        },
+        {
+          "claim": "Review validation interface/implementation when changed fields alter forwarded arguments; registrationId is propagated to RegistrationValidated.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+              "start_line": 23,
+              "end_line": 23,
+              "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+            },
+            {
+              "path": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+              "start_line": 5,
+              "end_line": 5,
+              "raw_sha256": "094614ab8d70256ca3accc40e20d4d358d1170031938fa03a68fbcd2be99a97a"
+            },
+            {
+              "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+              "start_line": 17,
+              "end_line": 19,
+              "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20"
+            }
+          ],
+          "id": "impact-attendee.6",
+          "weight": 1
+        },
+        {
+          "claim": "Declarations, registrations and configured publication do not establish runtime consumer activation or delivery.",
+          "source_evidence": [
+            {
+              "path": "src/Sample.Worker/Program.cs",
+              "start_line": 76,
+              "end_line": 88,
+              "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+            },
+            {
+              "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+              "start_line": 35,
+              "end_line": 40,
+              "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+            }
+          ],
+          "id": "impact-attendee.7",
+          "weight": 1
+        }
+      ],
+      "permissible_unknowns": [
+        "Runtime execution, deployed overrides, broker delivery, physical schema and external-service effects may remain unknown when not established by the cited source.",
+        "Exact compiler IDs or context IDs are not answer requirements. A correct source-supported answer earns credit regardless of which permitted public tool supplied its evidence."
+      ]
+    }
+  ],
+  "scoring": {
+    "atomic_correctness": "Each atom scores 1 if correct and explicit, 0.5 if correct but materially incomplete, 0 if absent/incorrect. Report raw numerator/denominator and per-atom verdicts.",
+    "evidence": "Independently score each atom 1 for precise retrievable citation supporting the whole claim, 0.5 for a relevant but incomplete/broad citation, 0 for absent or contradictory evidence. Line-number equivalents and exact tool source spans are acceptable.",
+    "unsupported_claims": "Inventory false or unsupported claims separately with severity. Unsupported runtime certainty or invented source facts prevents a fully-correct task label even if positive atoms are present.",
+    "abstention": "Explicit unknowns avoid false-claim penalties but do not earn missing source-fact credit. Missing tool capability is incomplete evidence, not itself a false claim.",
+    "task_success": "All atoms receive correctness=1 and evidence=1, no material unsupported claims, and applicable configuration/runtime distinction is stated. Report graded scores as well as this strict success label.",
+    "review": "Two independent source reviewers adjudicate using source, rubric and retained solver transcript; disagreements retained and resolved explicitly. No tool output creates new gold after execution.",
+    "runtime_unknown_atoms": "Citations support the visible source limits, not proof that no unseen runtime evidence could exist."
+  },
+  "source_roster": [
+    {
+      "path": ".gitignore",
+      "raw_sha256": "c618bcfd973a1b99ef8762ecbe6677dc8c80a5c915155cd5b6f591c21a829115",
+      "bytes": 709
+    },
+    {
+      "path": "README.md",
+      "raw_sha256": "a666abf7a819f32567103beef6c762c0a87de65164136c6207409da35315dfba",
+      "bytes": 945
+    },
+    {
+      "path": "Sample-Outbox.sln",
+      "raw_sha256": "c7b6bde794ab7098ed0157e5da2452f997075ced5b43a1f2dc0284575c01cd5d",
+      "bytes": 2727
+    },
+    {
+      "path": "docker-compose.yml",
+      "raw_sha256": "3dc572438fef72f15fe27b47eed1e9d4990d490128258216a7479bfdb876406f",
+      "bytes": 1428
+    },
+    {
+      "path": "src/.dockerignore",
+      "raw_sha256": "126281730f03544d4fc5762f294bc824ea7778b53d1fe597b8be42ee98787b58",
+      "bytes": 357
+    },
+    {
+      "path": "src/Dockerfile.api",
+      "raw_sha256": "e25fb491427ba36f57a0661e5e0fff4b1692bf47268dad157c7af82df7662bd3",
+      "bytes": 447
+    },
+    {
+      "path": "src/Dockerfile.worker",
+      "raw_sha256": "7c0fad79a4b6c4d39ca2df5b5eeccc4cdcf2813de5f37f5aa98142818148fdd0",
+      "bytes": 471
+    },
+    {
+      "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+      "raw_sha256": "57da78434440b2da392bf6cb0a5eb954a1b3bc93f27e786c9c55bf9100fdd4df",
+      "bytes": 1143
+    },
+    {
+      "path": "src/Sample.Api/Program.cs",
+      "raw_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53",
+      "bytes": 2978
+    },
+    {
+      "path": "src/Sample.Api/Properties/launchSettings.json",
+      "raw_sha256": "b28b2b5e51db36db959e4021956eeffef9a9e5563f253406902070cc7f6cd9ac",
+      "bytes": 808
+    },
+    {
+      "path": "src/Sample.Api/RecreateDatabaseHostedService.cs",
+      "raw_sha256": "ab268907370a2f35298fe8b0340020b1df909fc80ff0abc1140f73c69e567bca",
+      "bytes": 1683
+    },
+    {
+      "path": "src/Sample.Api/RegistrationModel.cs",
+      "raw_sha256": "5af7d622867aa3a9c10aa39256419aaa797e625d84c324455f01cfb8120bf542",
+      "bytes": 291
+    },
+    {
+      "path": "src/Sample.Api/RegistrationResult.cs",
+      "raw_sha256": "bfda4c0c2d819760ca443a8c381f0437478ab9d8c64d844d84032ae21ab030f6",
+      "bytes": 186
+    },
+    {
+      "path": "src/Sample.Api/Sample.Api.csproj",
+      "raw_sha256": "d7a844dcad96abacb3fdf0ce7ab06e2acdbfa2525d7d24cedd8808e44c4ce10d",
+      "bytes": 517
+    },
+    {
+      "path": "src/Sample.Api/appsettings.json",
+      "raw_sha256": "afe04ca4b26e51e724f3224a35763611cd8b38144ff217a1bcdaf991654c64c0",
+      "bytes": 259
+    },
+    {
+      "path": "src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+      "raw_sha256": "f7ae50324fc1b3c8fa3fec399e233b6e6e977b9458d348b834e5ced0f5fc6184",
+      "bytes": 623
+    },
+    {
+      "path": "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+      "raw_sha256": "5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81",
+      "bytes": 698
+    },
+    {
+      "path": "src/Sample.Components/Consumers/RegistrationValidated.cs",
+      "raw_sha256": "5c1029d87ada8134ca31e7863c0a8185467f6b7ce02ef34865ae0290724b5953",
+      "bytes": 125
+    },
+    {
+      "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+      "raw_sha256": "0e5c8f13aa04dd9b46c488b677fcfef3c9583998a74a98cb4283087326de7592",
+      "bytes": 730
+    },
+    {
+      "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+      "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca",
+      "bytes": 779
+    },
+    {
+      "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumerDefinition.cs",
+      "raw_sha256": "3e039a4aadaceff5e3e6e233e0fa5923d66ff16fa942413ec37b4e59584fd9f1",
+      "bytes": 587
+    },
+    {
+      "path": "src/Sample.Components/Contracts/AddEventAttendee.cs",
+      "raw_sha256": "bd97b1816fc8732ebba2f7cbb5b97cb29e8d878b13330ddf7fa94e55dea987cb",
+      "bytes": 221
+    },
+    {
+      "path": "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+      "raw_sha256": "0f659a342b91338f1aca4f547bebebe11e65d42c5606a3b7164f74ce46d63bf0",
+      "bytes": 320
+    },
+    {
+      "path": "src/Sample.Components/Contracts/SendRegistrationEmail.cs",
+      "raw_sha256": "6aa68e8627a691f56e0c653dbd65f4e9289ef309a4aaa5bbe063eb1f6cec9c09",
+      "bytes": 278
+    },
+    {
+      "path": "src/Sample.Components/DuplicateRegistrationException.cs",
+      "raw_sha256": "f01d4205ff12574af2bf12f0633c44e3af2cfef22ef37733e4a2bb84c25f5163",
+      "bytes": 383
+    },
+    {
+      "path": "src/Sample.Components/IRegistrationService.cs",
+      "raw_sha256": "c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71",
+      "bytes": 164
+    },
+    {
+      "path": "src/Sample.Components/Registration.cs",
+      "raw_sha256": "84db43f9d9292799c5685e2ccb54a2eba4400681f5e87edd5e8b3d5f360ad8b4",
+      "bytes": 330
+    },
+    {
+      "path": "src/Sample.Components/RegistrationDbContext.cs",
+      "raw_sha256": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef",
+      "bytes": 1486
+    },
+    {
+      "path": "src/Sample.Components/RegistrationService.cs",
+      "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+      "bytes": 1603
+    },
+    {
+      "path": "src/Sample.Components/Sample.Components.csproj",
+      "raw_sha256": "aec4160544051ac7ec19dd2b44292d15cd8459ba82e0f9f20a4d2b7a60d05b72",
+      "bytes": 880
+    },
+    {
+      "path": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+      "raw_sha256": "094614ab8d70256ca3accc40e20d4d358d1170031938fa03a68fbcd2be99a97a",
+      "bytes": 175
+    },
+    {
+      "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+      "raw_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20",
+      "bytes": 553
+    },
+    {
+      "path": "src/Sample.Components/StateMachines/RegistrationState.cs",
+      "raw_sha256": "5ced8f8102ccbe2e0a3c8c9095e5e0d6635b032cc93977187daf15301a73025f",
+      "bytes": 421
+    },
+    {
+      "path": "src/Sample.Components/StateMachines/RegistrationStateDefinition.cs",
+      "raw_sha256": "c315310b0f33c525ba4a3a14066594953491507c9254df37685573dec7c30f56",
+      "bytes": 546
+    },
+    {
+      "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+      "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570",
+      "bytes": 1861
+    },
+    {
+      "path": "src/Sample.Components/StateMachines/RegistrationStateMap.cs",
+      "raw_sha256": "325580737a2ec1fb3f77d6cc958a71b6921b4049ceaa1f78de75f5d66ede0572",
+      "bytes": 576
+    },
+    {
+      "path": "src/Sample.Worker/Program.cs",
+      "raw_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db",
+      "bytes": 3392
+    },
+    {
+      "path": "src/Sample.Worker/Properties/launchSettings.json",
+      "raw_sha256": "1b9af6f180578084828025544b9cb812c2ee5a856e353643bceeef189a87d4ea",
+      "bytes": 205
+    },
+    {
+      "path": "src/Sample.Worker/Sample.Worker.csproj",
+      "raw_sha256": "23b1ddd89030749fed22edd6ba48092dd1c9666030f24661695945a754843035",
+      "bytes": 526
+    },
+    {
+      "path": "src/Sample.Worker/appsettings.json",
+      "raw_sha256": "ec26ac51c234aeb53d480d6ec3aa521433f502131ee98d8a55d23555d5acaf3a",
+      "bytes": 246
+    }
+  ],
+  "execution_status": "rubric_frozen_before_solver_execution; execution protocol and runner configuration owned by root",
+  "pre_execution_review": {
+    "reviewer": "root independent source review",
+    "status": "all 67 atoms approved with one terminology correction before solver execution",
+    "correction": "locate-validation-service.2 replaced ambiguous explicitly implements wording with declares the interface and provides its method; this is an ordinary public method, not C# explicit interface implementation.",
+    "prior_rubric_sha256": "6cc8c66416490109aef35438b07c945ab653f78efa6599c2f00710708dc1e4d8"
+  }
+}

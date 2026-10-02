@@ -1,0 +1,24 @@
+Review the contract, both consumer classes, the state-machine action chain, and the worker’s registrations.
+
+| Evidence category | Checked-in review target | What depends on `AddEventAttendee` |
+|---|---|---|
+| Contract | `src/Sample.Components/Contracts/AddEventAttendee.cs:3–8` | Record with `Guid RegistrationId`, `string MemberId`, and `string EventId`, all init-only. |
+| Consumer declaration | `src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs:8–24` | Implements `IConsumer<AddEventAttendee>`; `Consume` reads `MemberId` and `EventId` for a log and returns `Task.CompletedTask`. Its checked-in body does not actually persist an attendee. |
+| Consumer declaration | `src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs:9–25` | Also implements `IConsumer<AddEventAttendee>`; `Consume` passes `EventId`, `MemberId`, and `RegistrationId` to `IRegistrationValidationService.ValidateRegistration`. |
+| Configured consumers | `src/Sample.Worker/Program.cs:60–87` | Registers `AddEventAttendeeConsumer` and `ValidateRegistrationConsumer` (the latter with `ValidateRegistrationConsumerDefinition`), registers the validation service, and calls RabbitMQ `ConfigureEndpoints(context)`. These registrations are separate evidence from the interface declarations. |
+| Configured publication | `src/Sample.Components/StateMachines/RegistrationStateMachine.cs:14–41` | The constructor configures an `Initially(When(RegistrationSubmitted))` action chain that eventually publishes a new `AddEventAttendee`, mapping `RegistrationId` from `Saga.CorrelationId` and the other two fields from saga state. |
+
+Review the whole state-machine sequence, not just the object initializer: it correlates the incoming registration by `RegistrationId`, copies registration fields into the saga, transitions to `Registered`, configures publication of `SendRegistrationEmail`, then throws when `Payment < 50m` and `GetRetryAttempt() == 0`, before the `AddEventAttendee` publication action (`RegistrationStateMachine.cs:14–41`). Changes to the message’s required fields or meaning may require changes to the saga-field assignment and publication mapping. The constructor configures this action; constructing the state machine is not evidence that a message was published.
+
+Supporting classes/configuration to review:
+
+- `src/Sample.Components/Services/IRegistrationValidationService.cs:5` and `src/Sample.Components/Services/RegistrationValidationService.cs:7–20`: the downstream validation signature receives all three values; the current implementation publishes `RegistrationValidated` containing `RegistrationId` and does not use `eventId` or `memberId` in its body.
+- `src/Sample.Components/Consumers/ValidateRegistrationConsumerDefinition.cs:6–15`: configures message retry intervals and `UseEntityFrameworkOutbox<RegistrationDbContext>` for the validation consumer.
+- `src/Sample.Components/StateMachines/RegistrationStateDefinition.cs:6–15`: configures the same retry intervals and EF outbox for the saga. This matters when reviewing the exception before the attendee publication action.
+- `src/Sample.Worker/Program.cs:60–94`: registers the PostgreSQL EF outbox with a 30-second duplicate-detection window, the state machine with `RegistrationState`/`RegistrationStateDefinition` and an EF repository, configures RabbitMQ endpoints, builds the host, and calls `RunAsync`.
+
+Runtime activation remains unproven. These are checked-in declarations, configuration, and startup code—not observed successful host startup, consumer instantiation, broker delivery, execution order between the two consumers, validation-service resolution, or database effects. The compiler contract-context result independently labels the two declarations `message_consumer` and the state-machine call `message_publish_configuration`, all with compile-time scope. It does not establish a runtime publisher-to-consumer delivery link.
+
+Evidence limitations: findings use indexed source and one explicitly selected captured `Sample.Components` compiler context; the alternate context was not merged into it. Public capture supports bounded API patterns, so missing facts do not prove absence of other dependencies. No runtime tests or traces were available in this investigation, and the returned snapshot identity did not independently attest the requested Git commit pin.
+
+Isolation note: only the permitted setup files and logged public-tool responses were used; no host source, implementation, other runs, web, or other agents were consulted. All 11 client calls used the required escalation and succeeded. The initial catalog display and one search response were truncated by the tool-output display despite a complete logged search response; subsequent calls used a larger outer output limit. No local CLI errors occurred.

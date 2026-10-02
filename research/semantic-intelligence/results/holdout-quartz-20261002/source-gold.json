@@ -1,0 +1,493 @@
+{
+  "status": "coordinator-authored; independent review pending; no product queries or capture",
+  "tasks": [
+    {
+      "id": "locate-host-options",
+      "prompt": "Where is hosted scheduler registration implemented? Explain shared versus named options, the built-in startup/shutdown option defaults, and how a derived hosted service is retained when registrations overlap. Cite precise checked-in source ranges. Describe static behavior and its conditions; do not claim that a scheduler or job actually ran.",
+      "atoms": [
+        {
+          "id": "locate-host-options.1",
+          "requirement": "The ordinary AddQuartzHostedService overload delegates to the generic QuartzHostedService registration.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Hosting/QuartzServiceCollectionExtensions.cs",
+              "start_line": 22,
+              "end_line": 27,
+              "raw_sha256": "42189591f9dfc651b872df17aad896976506b3f2d434cca021fcbbcbcf51f16b",
+              "excerpt": "    public static IServiceCollection AddQuartzHostedService(\n        this IServiceCollection services,\n        Action<QuartzHostedServiceOptions>? configure = null)\n    {\n        return services.AddQuartzHostedService<QuartzHostedService>(configure);\n    }"
+            }
+          ]
+        },
+        {
+          "id": "locate-host-options.2",
+          "requirement": "Generic registration uses ConfigureAll for a provided delegate and registers the hosted service.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Hosting/QuartzServiceCollectionExtensions.cs",
+              "start_line": 36,
+              "end_line": 56,
+              "raw_sha256": "42189591f9dfc651b872df17aad896976506b3f2d434cca021fcbbcbcf51f16b",
+              "excerpt": "    public static IServiceCollection AddQuartzHostedService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(\n        this IServiceCollection services,\n        Action<QuartzHostedServiceOptions>? configure = null)\n        where T : QuartzHostedService\n    {\n        ArgumentNullException.ThrowIfNull(services);\n\n        if (configure is not null)\n        {\n            // Every scheduler's options, not only the default scheduler's: one hosted service used to\n            // read one options object for all of them, and a setting like WaitForJobsToComplete has to\n            // go on meaning what it did.\n            services.ConfigureAll(configure);\n        }\n\n        // Registered whatever else the container holds. The service resolves its schedulers when the host\n        // starts, so this no longer has to be called after AddQuartz to have any effect \u2014 and a container\n        // with no scheduler in it is reported at startup rather than silently doing nothing.\n        AddHostedService(services, typeof(T));\n\n        return services;"
+            }
+          ]
+        },
+        {
+          "id": "locate-host-options.3",
+          "requirement": "Named registration validates a nonblank name and uses PostConfigure(name, configure), so named settings refine shared settings independent of registration order.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Hosting/QuartzServiceCollectionExtensions.cs",
+              "start_line": 71,
+              "end_line": 90,
+              "raw_sha256": "42189591f9dfc651b872df17aad896976506b3f2d434cca021fcbbcbcf51f16b",
+              "excerpt": "    public static IServiceCollection AddQuartzHostedService(\n        this IServiceCollection services,\n        string schedulerName,\n        Action<QuartzHostedServiceOptions>? configure = null)\n    {\n        ArgumentNullException.ThrowIfNull(services);\n        ArgumentException.ThrowIfNullOrWhiteSpace(schedulerName);\n\n        if (configure is not null)\n        {\n            // PostConfigure rather than Configure, so this scheduler's own settings are applied after the\n            // shared ones no matter which call came first.\n            services.PostConfigure(schedulerName, configure);\n        }\n\n        // So that configuring one scheduler is enough to have the schedulers started, without a second\n        // hosted service appearing when the application also called AddQuartzHostedService().\n        AddHostedService(services, typeof(QuartzHostedService));\n\n        return services;"
+            }
+          ]
+        },
+        {
+          "id": "locate-host-options.4",
+          "requirement": "WaitForJobsToComplete defaults false, StartDelay null, AwaitApplicationStarted true and AutoStart true.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Hosting/QuartzHostedServiceOptions.cs",
+              "start_line": 31,
+              "end_line": 53,
+              "raw_sha256": "0ce9ae046f75584215fd854e70fb94495e03a502d3c41bbc641740b9cd5cafa0",
+              "excerpt": "public sealed class QuartzHostedServiceOptions\n{\n    /// <summary>\n    /// If <see langword=\"true\" /> the scheduler will not allow shutdown process\n    /// to return until all currently executing jobs have completed.\n    /// </summary>\n    public bool WaitForJobsToComplete { get; set; }\n\n    /// <summary>\n    /// <para>\n    /// If not <see langword=\"null\" /> the scheduler will start after specified delay.\n    /// </para>\n    /// <para>\n    /// If <see cref=\"AwaitApplicationStarted\"/> is true, the delay starts when application startup completes.\n    /// </para>\n    /// </summary>\n    public TimeSpan? StartDelay { get; set; }\n\n    /// <summary>\n    /// If true (default), jobs will not be started until application startup completes.\n    /// This avoids the running of jobs <em>during</em> application startup.\n    /// </summary>\n    public bool AwaitApplicationStarted { get; set; } = true;"
+            },
+            {
+              "path": "src/Quartz/Hosting/QuartzHostedServiceOptions.cs",
+              "start_line": 78,
+              "end_line": 78,
+              "raw_sha256": "0ce9ae046f75584215fd854e70fb94495e03a502d3c41bbc641740b9cd5cafa0",
+              "excerpt": "    public bool AutoStart { get; set; } = true;"
+            }
+          ]
+        },
+        {
+          "id": "locate-host-options.5",
+          "requirement": "AddHostedService searches implementation-type IHostedService registrations assignable to QuartzHostedService; adds singleton if absent, replaces the existing base type when requested type differs, otherwise keeps existing. Do not claim general deduplication of arbitrary factory/instance registrations or all competing subclasses.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Hosting/QuartzServiceCollectionExtensions.cs",
+              "start_line": 102,
+              "end_line": 123,
+              "raw_sha256": "42189591f9dfc651b872df17aad896976506b3f2d434cca021fcbbcbcf51f16b",
+              "excerpt": "    private static void AddHostedService(\n        IServiceCollection services,\n        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type implementationType)\n    {\n        var existing = services.FirstOrDefault(descriptor =>\n            descriptor.ServiceType == typeof(IHostedService)\n            && descriptor.ImplementationType is not null\n            && typeof(QuartzHostedService).IsAssignableFrom(descriptor.ImplementationType));\n\n        if (existing is null)\n        {\n            services.Add(ServiceDescriptor.Singleton(typeof(IHostedService), implementationType));\n            return;\n        }\n\n        if (existing.ImplementationType != implementationType\n            && existing.ImplementationType == typeof(QuartzHostedService))\n        {\n            services.Remove(existing);\n            services.Add(ServiceDescriptor.Singleton(typeof(IHostedService), implementationType));\n        }\n    }"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "locate-job-resolution",
+      "prompt": "Where does MicrosoftDependencyInjectionJobFactory resolve a job for a named scheduler? Explain the lookup order and exactly when it may construct a job without a dependency-injection scope. Cite precise checked-in source ranges. Describe static behavior and its conditions; do not claim that a scheduler or job actually ran.",
+      "atoms": [
+        {
+          "id": "locate-job-resolution.1",
+          "requirement": "Constructor derives schedulerKey from SchedulerScopedServiceProvider and permits the unscoped optimization only for the exact built-in factory type.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+              "start_line": 69,
+              "end_line": 83,
+              "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+              "excerpt": "    public MicrosoftDependencyInjectionJobFactory(\n        IServiceProvider serviceProvider,\n        IOptions<JobFactoryOptions>? options = null,\n        ILoggerFactory? loggerFactory = null) : base(loggerFactory)\n    {\n        this.serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));\n        this.options = options?.Value ?? new JobFactoryOptions();\n\n        // Read once rather than per fire. A factory handed the raw container - by a caller constructing\n        // one itself, or because this is the default scheduler, which has no wrapper - has no key, and\n        // resolves jobs exactly as it always did.\n        schedulerKey = (serviceProvider as SchedulerScopedServiceProvider)?.SchedulerServiceKey;\n\n        mayBuildWithoutScope = GetType() == typeof(MicrosoftDependencyInjectionJobFactory);\n    }"
+            }
+          ]
+        },
+        {
+          "id": "locate-job-resolution.2",
+          "requirement": "ResolveJob validates resolved job type, tries scheduler-keyed registration when a key exists, then unkeyed registration, then activator cache; FromContainer distinguishes these paths.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+              "start_line": 238,
+              "end_line": 256,
+              "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+              "excerpt": "    private (IJob Job, bool FromContainer) ResolveJob(TriggerFiredBundle bundle, IServiceProvider serviceProvider)\n    {\n        var jobType = bundle.JobDetail.JobType.ResolvedType;\n\n        // Before the container is asked anything: GetService constructs whatever is registered for the\n        // type it is handed, and a cast afterwards is a cast on an object that already exists.\n        JobType.EnsureIsJob(jobType);\n\n        var job = schedulerKey is null ? null : (IJob?) serviceProvider.GetKeyedService(jobType, schedulerKey);\n        job ??= (IJob?) serviceProvider.GetService(jobType);\n\n        if (job is not null)\n        {\n            // use the registered one\n            return (job, true);\n        }\n\n        return (activatorCache.CreateInstance(serviceProvider, jobType), false);\n    }"
+            }
+          ]
+        },
+        {
+          "id": "locate-job-resolution.3",
+          "requirement": "FindUnscopedConstructor rejects derived factories or a configured scope hook and requires an already loaded job type; decisions are cached by type per factory.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+              "start_line": 267,
+              "end_line": 289,
+              "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+              "excerpt": "    private ConstructorInvoker? FindUnscopedConstructor(TriggerFiredBundle bundle)\n    {\n        // Read per firing rather than once: the options instance is shared, and a hook added to it after\n        // this factory was built is one the scope path would run.\n        if (!mayBuildWithoutScope || options.ConfigureScope is not null)\n        {\n            return null;\n        }\n\n        if (bundle.JobDetail.JobType.GetLoadedType() is not { } jobType)\n        {\n            return null;\n        }\n\n        // Looked up before it is decided rather than through a GetOrAdd factory, for the reason\n        // JobActivatorCache gives: a lambda's parameter carries no annotation.\n        if (unscopedConstructors.TryGetValue(jobType, out ConstructorInvoker? constructor))\n        {\n            return constructor;\n        }\n\n        return unscopedConstructors.GetOrAdd(jobType, DecideUnscopedConstructor(jobType));\n    }"
+            },
+            {
+              "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+              "start_line": 56,
+              "end_line": 56,
+              "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+              "excerpt": "    private readonly ConcurrentDictionary<Type, ConstructorInvoker?> unscopedConstructors = new();"
+            }
+          ]
+        },
+        {
+          "id": "locate-job-resolution.4",
+          "requirement": "Unscoped eligibility requires a concrete non-value nongeneric-open IJob type with exactly one public parameterless constructor.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+              "start_line": 309,
+              "end_line": 323,
+              "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+              "excerpt": "    private ConstructorInvoker? DecideUnscopedConstructor(\n        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type jobType)\n    {\n        // Not a job, or not one anything could construct: the scope path refuses it with the message it\n        // always has.\n        if (!typeof(IJob).IsAssignableFrom(jobType) || jobType.IsAbstract || jobType.IsValueType || jobType.ContainsGenericParameters)\n        {\n            return null;\n        }\n\n        ConstructorInfo[] constructors = jobType.GetConstructors();\n        if (constructors.Length != 1 || constructors[0].GetParameters().Length != 0)\n        {\n            return null;\n        }"
+            }
+          ]
+        },
+        {
+          "id": "locate-job-resolution.5",
+          "requirement": "It also requires service-registration introspection and no unkeyed registration; a named scheduler also needs keyed introspection and no matching keyed registration. Otherwise retain the scoped path.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+              "start_line": 325,
+              "end_line": 338,
+              "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+              "excerpt": "        if (serviceProvider.GetService(typeof(IServiceProviderIsService)) is not IServiceProviderIsService registrations\n            || registrations.IsService(jobType))\n        {\n            return null;\n        }\n\n        if (schedulerKey is not null\n            && (serviceProvider.GetService(typeof(IServiceProviderIsKeyedService)) is not IServiceProviderIsKeyedService keyedRegistrations\n                || keyedRegistrations.IsKeyedService(jobType, schedulerKey)))\n        {\n            return null;\n        }\n\n        return ConstructorInvoker.Create(constructors[0]);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "flow-cron-misfire",
+      "prompt": "Trace a cron misfire policy from CronScheduleBuilder into CronTriggerImpl.UpdateAfterMisfire. Contrast SmartPolicy, DoNothing, and FireAndProceed, including calendar handling. Does that method itself execute a job? Cite precise checked-in source ranges. Describe static behavior and its conditions; do not claim that a scheduler or job actually ran.",
+      "atoms": [
+        {
+          "id": "flow-cron-misfire.1",
+          "requirement": "Builder defaults to SmartPolicy, stores the typed policy as an integer, and copies it to the built CronTriggerImpl.",
+          "evidence": [
+            {
+              "path": "src/Quartz/CronScheduleBuilder.cs",
+              "start_line": 98,
+              "end_line": 104,
+              "raw_sha256": "aa8acfdbf84b987676896d0fd18cf10196786550951b52d55865278f5e9b68e3",
+              "excerpt": "public sealed class CronScheduleBuilder : IScheduleBuilder, IHashKeyAwareScheduleBuilder\n{\n    private CronExpression? cronExpression;\n    private readonly string? deferredHashExpression;\n    private TimeZoneInfo? deferredTimeZone;\n    private int misfireInstruction = MisfireInstruction.SmartPolicy;\n"
+            },
+            {
+              "path": "src/Quartz/CronScheduleBuilder.cs",
+              "start_line": 139,
+              "end_line": 146,
+              "raw_sha256": "aa8acfdbf84b987676896d0fd18cf10196786550951b52d55865278f5e9b68e3",
+              "excerpt": "        CronTriggerImpl ct = new CronTriggerImpl();\n\n        // CronExpression is immutable, so every trigger built here can safely share this instance;\n        // its setter also adopts the expression's time zone as the trigger's.\n        ct.CronExpression = cronExpression;\n        ct.MisfireInstructionCode = misfireInstruction;\n\n        return ct;"
+            },
+            {
+              "path": "src/Quartz/CronScheduleBuilder.cs",
+              "start_line": 283,
+              "end_line": 287,
+              "raw_sha256": "aa8acfdbf84b987676896d0fd18cf10196786550951b52d55865278f5e9b68e3",
+              "excerpt": "    public CronScheduleBuilder WithMisfireInstruction(CronTriggerMisfireInstruction instruction)\n    {\n        misfireInstruction = (int) instruction;\n        return this;\n    }"
+            }
+          ]
+        },
+        {
+          "id": "flow-cron-misfire.2",
+          "requirement": "FireAndProceed maps to the FireOnceNow constant; DoNothing and SmartPolicy map to their corresponding constants.",
+          "evidence": [
+            {
+              "path": "src/Quartz/CronTriggerMisfireInstruction.cs",
+              "start_line": 31,
+              "end_line": 67,
+              "raw_sha256": "30b633b6f998082d7cf595b8dffec85b372cc8ba86afaea4e1bc28eecb39e691",
+              "excerpt": "public enum CronTriggerMisfireInstruction\n{\n    /// <summary>\n    /// Let the scheduler pick the policy. This is the default, and for a cron trigger it means\n    /// <see cref=\"FireAndProceed\" />.\n    /// </summary>\n    /// <remarks>\n    /// Spelled <c>SmartPolicy</c> in XML and JSON scheduling data.\n    /// </remarks>\n    SmartPolicy = MisfireInstruction.SmartPolicy,\n\n    /// <summary>\n    /// Never treat a missed firing as a misfire: fire every missed firing as soon as possible.\n    /// </summary>\n    /// <remarks>\n    /// A trigger that missed many firings will fire that many times in rapid succession while it\n    /// catches up.\n    /// <para>Spelled <c>IgnoreMisfirePolicy</c> in XML and JSON scheduling data.</para>\n    /// </remarks>\n    IgnoreMisfires = MisfireInstruction.IgnoreMisfirePolicy,\n\n    /// <summary>\n    /// Fire once now, then resume the schedule.\n    /// </summary>\n    /// <remarks>\n    /// Spelled <c>FireOnceNow</c> in XML and JSON scheduling data.\n    /// </remarks>\n    FireAndProceed = MisfireInstruction.CronTrigger.FireOnceNow,\n\n    /// <summary>\n    /// Skip the missed firings and resume at the next scheduled time.\n    /// </summary>\n    /// <remarks>\n    /// Spelled <c>DoNothing</c> in XML and JSON scheduling data.\n    /// </remarks>\n    DoNothing = MisfireInstruction.CronTrigger.DoNothing,\n}"
+            }
+          ]
+        },
+        {
+          "id": "flow-cron-misfire.3",
+          "requirement": "UpdateAfterMisfire translates SmartPolicy to FireOnceNow.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Impl/Triggers/CronTriggerImpl.cs",
+              "start_line": 520,
+              "end_line": 527,
+              "raw_sha256": "21540bfd8da58479c35ac74a5aee887f864a6c9f08deeb934da5c1c0d8abdf62",
+              "excerpt": "    public override void UpdateAfterMisfire(ICalendar? calendar)\n    {\n        int instr = MisfireInstructionCode;\n\n        if (instr == Quartz.MisfireInstruction.SmartPolicy)\n        {\n            instr = Quartz.MisfireInstruction.CronTrigger.FireOnceNow;\n        }"
+            }
+          ]
+        },
+        {
+          "id": "flow-cron-misfire.4",
+          "requirement": "DoNothing asks for the next fire after current time, advances past calendar-excluded candidates, stops when no next time exists or the give-up year is exceeded, then sets NextFireTimeUtc.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Impl/Triggers/CronTriggerImpl.cs",
+              "start_line": 529,
+              "end_line": 549,
+              "raw_sha256": "21540bfd8da58479c35ac74a5aee887f864a6c9f08deeb934da5c1c0d8abdf62",
+              "excerpt": "        if (instr == Quartz.MisfireInstruction.CronTrigger.DoNothing)\n        {\n            DateTimeOffset? newFireTime = GetFireTimeAfter(TimeProvider.GetUtcNow());\n\n            while (newFireTime.HasValue && calendar is not null\n                                        && !calendar.IsTimeIncluded(newFireTime.Value))\n            {\n                newFireTime = GetFireTimeAfter(newFireTime);\n\n                if (!newFireTime.HasValue)\n                {\n                    break;\n                }\n\n                //avoid infinite loop\n                if (newFireTime.Value.Year > TriggerConstants.YearToGiveUpSchedulingAt)\n                {\n                    newFireTime = null;\n                }\n            }\n            NextFireTimeUtc = newFireTime;"
+            }
+          ]
+        },
+        {
+          "id": "flow-cron-misfire.5",
+          "requirement": "FireOnceNow sets NextFireTimeUtc to current time without the calendar-filter loop; this method changes trigger state, contains no job execution call, and does not prove actual firing.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Impl/Triggers/CronTriggerImpl.cs",
+              "start_line": 520,
+              "end_line": 555,
+              "raw_sha256": "21540bfd8da58479c35ac74a5aee887f864a6c9f08deeb934da5c1c0d8abdf62",
+              "excerpt": "    public override void UpdateAfterMisfire(ICalendar? calendar)\n    {\n        int instr = MisfireInstructionCode;\n\n        if (instr == Quartz.MisfireInstruction.SmartPolicy)\n        {\n            instr = Quartz.MisfireInstruction.CronTrigger.FireOnceNow;\n        }\n\n        if (instr == Quartz.MisfireInstruction.CronTrigger.DoNothing)\n        {\n            DateTimeOffset? newFireTime = GetFireTimeAfter(TimeProvider.GetUtcNow());\n\n            while (newFireTime.HasValue && calendar is not null\n                                        && !calendar.IsTimeIncluded(newFireTime.Value))\n            {\n                newFireTime = GetFireTimeAfter(newFireTime);\n\n                if (!newFireTime.HasValue)\n                {\n                    break;\n                }\n\n                //avoid infinite loop\n                if (newFireTime.Value.Year > TriggerConstants.YearToGiveUpSchedulingAt)\n                {\n                    newFireTime = null;\n                }\n            }\n            NextFireTimeUtc = newFireTime;\n        }\n        else if (instr == Quartz.MisfireInstruction.CronTrigger.FireOnceNow)\n        {\n            NextFireTimeUtc = TimeProvider.GetUtcNow();\n        }\n    }"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "flow-host-start",
+      "prompt": "Trace QuartzHostedService.StartAsync when some schedulers await application startup and others do not. Include scheduler creation, per-name options, AutoStart, delay, cancellation, and startup failure handling. Cite precise checked-in source ranges. Describe static behavior and its conditions; do not claim that a scheduler or job actually ran.",
+      "atoms": [
+        {
+          "id": "flow-host-start.1",
+          "requirement": "CreateSchedulers obtains the default factory and default options, then registered named keyed factories with per-name options; no schedulers produces configuration error.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+              "start_line": 155,
+              "end_line": 179,
+              "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+              "excerpt": "    private async ValueTask CreateSchedulers(CancellationToken cancellationToken)\n    {\n        var factory = serviceProvider.GetService<ISchedulerFactory>();\n        if (factory is not null)\n        {\n            var scheduler = await factory.GetScheduler(cancellationToken).ConfigureAwait(false);\n            schedulers.Add(new HostedScheduler(scheduler, options.Get(Options.DefaultName)));\n        }\n\n        var registry = serviceProvider.GetService<SchedulerNameRegistry>();\n        foreach (var name in registry?.Names ?? [])\n        {\n            // Each named scheduler's factory is registered under the scheduler's name as the service key.\n            var named = serviceProvider.GetRequiredKeyedService<ISchedulerFactory>(name);\n            var scheduler = await named.GetScheduler(cancellationToken).ConfigureAwait(false);\n            schedulers.Add(new HostedScheduler(scheduler, options.Get(name)));\n        }\n\n        if (schedulers.Count == 0)\n        {\n            Throw.SchedulerConfigException(\n                \"AddQuartzHostedService() was called but no scheduler is registered in the container, so \"\n                + \"there is nothing to start. Call AddQuartz(...) to register one.\");\n        }\n    }"
+            }
+          ]
+        },
+        {
+          "id": "flow-host-start.2",
+          "requirement": "StartAsync waits for creation then chooses the deferred path if any AutoStart+AwaitApplicationStarted scheduler exists; awaits already-completed startup tasks, otherwise allows host startup; the other path awaits inline starts.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+              "start_line": 97,
+              "end_line": 123,
+              "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+              "excerpt": "    public async Task StartAsync(CancellationToken cancellationToken)\n    {\n        try\n        {\n            // Require successful initialization for application startup to succeed\n            await CreateSchedulers(cancellationToken).ConfigureAwait(false);\n\n            // Sensible mode: proceed with startup, and have jobs start after application startup.\n            // Follow the pattern from BackgroundService.StartAsync: https://github.com/dotnet/runtime/blob/main/src/libraries/Microsoft.Extensions.Hosting.Abstractions/src/BackgroundService.cs\n            // A scheduler the application starts itself is not waited for: it is nothing this service\n            // will start once startup completes, so it must not be what keeps a startup task alive.\n            if (schedulers.Exists(static scheduler => scheduler.Options is { AutoStart: true, AwaitApplicationStarted: true }))\n            {\n                startupTask = AwaitStartupCompletionAndStartSchedulers(cancellationToken);\n\n                // If the task completed synchronously, await it in order to bubble potential cancellation/failure to the caller\n                // Otherwise, return, allowing application startup to complete\n                if (startupTask.IsCompleted)\n                {\n                    await startupTask.ConfigureAwait(false);\n                }\n            }\n            else // Legacy mode: start jobs inline\n            {\n                startupTask = StartSchedulers(waitForApplicationStarted: false, cancellationToken);\n                await startupTask.ConfigureAwait(false);\n            }"
+            }
+          ]
+        },
+        {
+          "id": "flow-host-start.3",
+          "requirement": "Deferred path first starts non-waiting schedulers, waits for linked startup-cancellation or ApplicationStarted signal, then starts waiting schedulers only if startup was not canceled, using ApplicationStopping token.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+              "start_line": 181,
+              "end_line": 197,
+              "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+              "excerpt": "    private async Task AwaitStartupCompletionAndStartSchedulers(CancellationToken startupCancellationToken)\n    {\n        // The schedulers that were told not to wait start before anything is awaited.\n        await StartSchedulers(waitForApplicationStarted: false, startupCancellationToken).ConfigureAwait(false);\n\n        using var combinedCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(startupCancellationToken, applicationLifetime.ApplicationStarted);\n\n        await Task.Delay(Timeout.InfiniteTimeSpan, combinedCancellationSource.Token) // Wait \"indefinitely\", until startup completes or is aborted\n            .ContinueWith(_ => { }, CancellationToken.None, TaskContinuationOptions.OnlyOnCanceled, TaskScheduler.Default) // Without an OperationCanceledException on cancellation\n            .ConfigureAwait(false);\n\n        if (!startupCancellationToken.IsCancellationRequested)\n        {\n            // Startup has finished, but ApplicationStopping may still interrupt starting of the scheduler\n            await StartSchedulers(waitForApplicationStarted: true, applicationLifetime.ApplicationStopping).ConfigureAwait(false);\n        }\n    }"
+            }
+          ]
+        },
+        {
+          "id": "flow-host-start.4",
+          "requirement": "StartSchedulers returns when application stopping; skips AutoStart=false and mismatched wait mode, and selects StartDelayed or Start. AutoStart=false does not skip creation.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+              "start_line": 155,
+              "end_line": 171,
+              "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+              "excerpt": "    private async ValueTask CreateSchedulers(CancellationToken cancellationToken)\n    {\n        var factory = serviceProvider.GetService<ISchedulerFactory>();\n        if (factory is not null)\n        {\n            var scheduler = await factory.GetScheduler(cancellationToken).ConfigureAwait(false);\n            schedulers.Add(new HostedScheduler(scheduler, options.Get(Options.DefaultName)));\n        }\n\n        var registry = serviceProvider.GetService<SchedulerNameRegistry>();\n        foreach (var name in registry?.Names ?? [])\n        {\n            // Each named scheduler's factory is registered under the scheduler's name as the service key.\n            var named = serviceProvider.GetRequiredKeyedService<ISchedulerFactory>(name);\n            var scheduler = await named.GetScheduler(cancellationToken).ConfigureAwait(false);\n            schedulers.Add(new HostedScheduler(scheduler, options.Get(name)));\n        }"
+            },
+            {
+              "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+              "start_line": 203,
+              "end_line": 235,
+              "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+              "excerpt": "    private async Task StartSchedulers(bool waitForApplicationStarted, CancellationToken cancellationToken)\n    {\n        // Avoid potential race conditions between ourselves and StopAsync, in case it has already made its attempt to stop the scheduler\n        if (applicationLifetime.ApplicationStopping.IsCancellationRequested)\n        {\n            return;\n        }\n\n        foreach (var hosted in schedulers)\n        {\n            // Tested before the two settings that say *when* to start, because AutoStart says whether\n            // to at all: the scheduler was created and bound by CreateSchedulers, and that is all this\n            // service does for it. The application presses start.\n            if (!hosted.Options.AutoStart)\n            {\n                continue;\n            }\n\n            if (hosted.Options.AwaitApplicationStarted != waitForApplicationStarted)\n            {\n                continue;\n            }\n\n            if (hosted.Options.StartDelay.HasValue)\n            {\n                await hosted.Scheduler.StartDelayed(hosted.Options.StartDelay.Value, cancellationToken).ConfigureAwait(false);\n            }\n            else\n            {\n                await hosted.Scheduler.Start(cancellationToken).ConfigureAwait(false);\n            }\n        }\n    }"
+            }
+          ]
+        },
+        {
+          "id": "flow-host-start.5",
+          "requirement": "StartAsync catches OperationCanceledException without rethrow; other exceptions observed in its try cause ShutdownSchedulers with CancellationToken.None and rethrow. Do not imply this catch observes every later detached startup-task failure or prove runtime execution.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+              "start_line": 108,
+              "end_line": 135,
+              "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+              "excerpt": "            if (schedulers.Exists(static scheduler => scheduler.Options is { AutoStart: true, AwaitApplicationStarted: true }))\n            {\n                startupTask = AwaitStartupCompletionAndStartSchedulers(cancellationToken);\n\n                // If the task completed synchronously, await it in order to bubble potential cancellation/failure to the caller\n                // Otherwise, return, allowing application startup to complete\n                if (startupTask.IsCompleted)\n                {\n                    await startupTask.ConfigureAwait(false);\n                }\n            }\n            else // Legacy mode: start jobs inline\n            {\n                startupTask = StartSchedulers(waitForApplicationStarted: false, cancellationToken);\n                await startupTask.ConfigureAwait(false);\n            }\n        }\n        catch (OperationCanceledException)\n        {\n            // if the operation was canceled, we should not start the scheduler\n        }\n        catch (Exception)\n        {\n            // A scheduler created before the failure is already bound to the repository, so it has to be\n            // shut down rather than left behind by a host that will never call StopAsync.\n            await ShutdownSchedulers(CancellationToken.None).ConfigureAwait(false);\n            throw;\n        }"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "impact-host-shutdown",
+      "prompt": "A change is proposed to how hosted schedulers stop. Identify the coordination points for repeated/concurrent StopAsync calls, startup in progress, dynamically added schedulers, waiting for jobs, and multiple shutdown failures. Bound the analysis to this hosted-service path. Cite precise checked-in source ranges. Describe static behavior and its conditions; do not claim that a scheduler or job actually ran.",
+      "atoms": [
+        {
+          "id": "impact-host-shutdown.1",
+          "requirement": "StopAsync serializes creation of one cached stopTask; subsequent calls join it and do not substitute their token.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+              "start_line": 264,
+              "end_line": 276,
+              "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+              "excerpt": "    public Task StopAsync(CancellationToken cancellationToken)\n    {\n        Task stop;\n        lock (stopGate)\n        {\n            // The second caller's token is deliberately ignored: there is one stop, it runs under the\n            // token of whichever call started it, and a later call waits for that rather than starting\n            // a second shutdown of schedulers the first one is already tearing down.\n            stop = stopTask ??= StopCore(cancellationToken);\n        }\n\n        return stop;\n    }"
+            }
+          ]
+        },
+        {
+          "id": "impact-host-shutdown.2",
+          "requirement": "StopCore returns if its scheduler list is empty; otherwise waits for startupTask or cancellation delay and always calls ShutdownSchedulers in finally.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+              "start_line": 281,
+              "end_line": 302,
+              "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+              "excerpt": "    private async Task StopCore(CancellationToken cancellationToken)\n    {\n        // Stopped without having been started\n        if (Volatile.Read(ref schedulers).Count == 0)\n        {\n            return;\n        }\n\n        try\n        {\n            // Wait until any ongoing startup logic has finished or the graceful shutdown period is over\n            if (startupTask is not null)\n            {\n                await Task.WhenAny(startupTask, Task.Delay(Timeout.Infinite, cancellationToken)).ConfigureAwait(false);\n            }\n        }\n        finally\n        {\n            // we always need to call shutdown to ensure that we unbind the scheduler from global repository\n            await ShutdownSchedulers(cancellationToken).ConfigureAwait(false);\n        }\n    }"
+            }
+          ]
+        },
+        {
+          "id": "impact-host-shutdown.3",
+          "requirement": "ShutdownSchedulers atomically takes the hosted list and adds runtime live schedulers with options fetched by scheduler name.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+              "start_line": 338,
+              "end_line": 347,
+              "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+              "excerpt": "    private async ValueTask ShutdownSchedulers(CancellationToken cancellationToken)\n    {\n        List<HostedScheduler> toShutDown = Interlocked.Exchange(ref schedulers, []);\n\n        // Each under its own name, so AddQuartzHostedService(\"acme\", o => o.WaitForJobsToComplete = true)\n        // configures a tenant that did not exist when that line was written.\n        foreach (IScheduler tenant in serviceProvider.GetService<SchedulerRuntime>()?.TakeLiveSchedulers() ?? [])\n        {\n            toShutDown.Add(new HostedScheduler(tenant, options.Get(tenant.SchedulerName)));\n        }"
+            }
+          ]
+        },
+        {
+          "id": "impact-host-shutdown.4",
+          "requirement": "All shutdown calls are initiated before awaiting their tasks, passing each WaitForJobsToComplete option and common cancellation token; synchronous throws become failed tasks.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+              "start_line": 349,
+              "end_line": 363,
+              "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+              "excerpt": "        // Every shutdown is started before any of them is awaited, so that the waits for running jobs\n        // overlap. A scheduler that throws before it yields is captured rather than left to abandon the\n        // schedulers after it in the list.\n        List<Task> shutdowns = new List<Task>(toShutDown.Count);\n        foreach (HostedScheduler hosted in toShutDown)\n        {\n            try\n            {\n                shutdowns.Add(hosted.Scheduler.Shutdown(hosted.Options.WaitForJobsToComplete, cancellationToken).AsTask());\n            }\n            catch (Exception e)\n            {\n                shutdowns.Add(Task.FromException(e));\n            }\n        }"
+            },
+            {
+              "path": "src/Quartz/Hosting/QuartzHostedServiceOptions.cs",
+              "start_line": 33,
+              "end_line": 37,
+              "raw_sha256": "0ce9ae046f75584215fd854e70fb94495e03a502d3c41bbc641740b9cd5cafa0",
+              "excerpt": "    /// <summary>\n    /// If <see langword=\"true\" /> the scheduler will not allow shutdown process\n    /// to return until all currently executing jobs have completed.\n    /// </summary>\n    public bool WaitForJobsToComplete { get; set; }"
+            }
+          ]
+        },
+        {
+          "id": "impact-host-shutdown.5",
+          "requirement": "Each task is awaited with errors collected, then AggregateException is thrown if any failed. Changes must preserve that attempt-all policy; declarations alone prove no observed shutdown or completion.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Hosting/QuartzHostedService.cs",
+              "start_line": 365,
+              "end_line": 382,
+              "raw_sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab",
+              "excerpt": "        List<Exception>? exceptions = null;\n        foreach (Task shutdown in shutdowns)\n        {\n            try\n            {\n                await shutdown.ConfigureAwait(false);\n            }\n            catch (Exception e)\n            {\n                exceptions ??= [];\n                exceptions.Add(e);\n            }\n        }\n\n        if (exceptions is { Count: > 0 })\n        {\n            throw new AggregateException(\"One or more scheduler shutdowns failed.\", exceptions);\n        }"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "impact-job-cleanup",
+      "prompt": "A change is proposed to job creation and cleanup in MicrosoftDependencyInjectionJobFactory. Review ownership and failure handling for scoped container-resolved jobs, factory-activated jobs, unscoped jobs, and derived factories replacing JobScope.State. What prevents duplicate disposal of its own scope state? Cite precise checked-in source ranges. Describe static behavior and its conditions; do not claim that a scheduler or job actually ran.",
+      "atoms": [
+        {
+          "id": "impact-job-cleanup.1",
+          "requirement": "Scoped creation opens scope, calls ConfigureScope before ResolveJob, and records disposeJob=!fromContainer in ScopeState; container-resolved jobs are owned by the scope.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+              "start_line": 125,
+              "end_line": 135,
+              "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+              "excerpt": "        var scope = serviceProvider.CreateScope();\n\n        try\n        {\n            ConfigureScope(scope, bundle, scheduler);\n            var (job, fromContainer) = ResolveJob(bundle, scope.ServiceProvider);\n\n            // The scope rides along as the job's state so that ReturnJob can tear it down. The job\n            // itself is handed to the scheduler unwrapped, so listeners and the execution context see\n            // the type the user wrote rather than something of ours standing in front of it.\n            return new ValueTask<JobScope>(new JobScope(job, new ScopeState(scope, job, disposeJob: !fromContainer)));"
+            }
+          ]
+        },
+        {
+          "id": "impact-job-cleanup.2",
+          "requirement": "Creation failure disposes the newly created scope before rethrowing through ExceptionDispatchInfo; normal ReturnJob cannot be relied on for this failed creation path.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+              "start_line": 137,
+              "end_line": 149,
+              "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+              "excerpt": "        catch (Exception e)\n        {\n            // ReturnJob is not called when CreateJob throws, so the scope we just opened would be\n            // abandoned - along with every scoped dependency already resolved into it.\n            return DisposeScopeAndRethrow(scope, e);\n        }\n\n        static async ValueTask<JobScope> DisposeScopeAndRethrow(IServiceScope scope, Exception failure)\n        {\n            await DisposeScope(scope).ConfigureAwait(false);\n            ExceptionDispatchInfo.Capture(failure).Throw();\n            return default;\n        }"
+            }
+          ]
+        },
+        {
+          "id": "impact-job-cleanup.3",
+          "requirement": "Unscoped construction returns Unscoped sentinel state; ReturnJob disposes its job directly.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+              "start_line": 106,
+              "end_line": 120,
+              "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+              "excerpt": "        if (FindUnscopedConstructor(bundle) is { } constructor)\n        {\n            IJob job;\n            try\n            {\n                job = (IJob) constructor.Invoke();\n            }\n            catch (Exception e)\n            {\n                // Faulted rather than thrown, which is how a constructor that throws in a scope surfaces.\n                return ValueTask.FromException<JobScope>(e);\n            }\n\n            return new ValueTask<JobScope>(new JobScope(job, Unscoped));\n        }"
+            },
+            {
+              "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+              "start_line": 178,
+              "end_line": 182,
+              "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+              "excerpt": "        if (ReferenceEquals(scope.State, Unscoped))\n        {\n            // Built by this factory with nothing from the container, so nothing else will dispose it.\n            return DisposeIfDisposable(scope.Job, cancellationToken);\n        }"
+            }
+          ]
+        },
+        {
+          "id": "impact-job-cleanup.4",
+          "requirement": "ReturnJob delegates ScopeState disposal to that state, but for replacement state it disposes the replacement and leaves the job alone; derived factories own cascading cleanup or must override ReturnJob.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+              "start_line": 160,
+              "end_line": 187,
+              "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+              "excerpt": "    /// <para>\n    /// A derived factory that overrides <see cref=\"PropertySettingJobFactory.CreateJobInstance\" /> and\n    /// returns state of its own takes over that decision completely: this method will not touch the\n    /// job, and it disposes the replacement state only if that state is itself disposable. The\n    /// replacement's disposal must therefore cascade to the state this factory produced \u2014 wrap it\n    /// rather than discard it; it is <see cref=\"IAsyncDisposable\" /> for exactly that reason. A\n    /// derived factory whose replacement state is not disposable must override this method as well\n    /// and do its own teardown.\n    /// </para>\n    /// </remarks>\n    public override ValueTask ReturnJob(JobScope scope, CancellationToken cancellationToken = default)\n    {\n        if (scope.State is ScopeState state)\n        {\n            // Disposes the job (only when we activated it) and then the scope, once.\n            return state.DisposeAsync();\n        }\n\n        if (ReferenceEquals(scope.State, Unscoped))\n        {\n            // Built by this factory with nothing from the container, so nothing else will dispose it.\n            return DisposeIfDisposable(scope.Job, cancellationToken);\n        }\n\n        // A derived factory replaced the state, so it owns the teardown. Dispose what it gave us and\n        // leave the job alone: we can no longer tell whether the container owns it, and disposing one\n        // it owns would hand user code a second Dispose call.\n        return DisposeIfDisposable(scope.State, cancellationToken);"
+            }
+          ]
+        },
+        {
+          "id": "impact-job-cleanup.5",
+          "requirement": "ScopeState uses Interlocked.Exchange to permit disposal once; disposes only factory-activated jobs and disposes the scope in finally. DisposeScope prefers IAsyncDisposable, falling back to synchronous Dispose.",
+          "evidence": [
+            {
+              "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+              "start_line": 363,
+              "end_line": 385,
+              "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+              "excerpt": "        public async ValueTask DisposeAsync()\n        {\n            // A derived factory may dispose this as well as leaving it to us, and a scope closed\n            // twice throws from the container rather than from anything we control.\n            if (Interlocked.Exchange(ref disposed, 1) != 0)\n            {\n                return;\n            }\n\n            try\n            {\n                // Only a job we activated ourselves; one the container produced is registered with\n                // the scope and disposed by it below.\n                if (disposeJob)\n                {\n                    await DisposeIfDisposable(job).ConfigureAwait(false);\n                }\n            }\n            finally\n            {\n                await DisposeScope(scope).ConfigureAwait(false);\n            }\n        }"
+            },
+            {
+              "path": "src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+              "start_line": 190,
+              "end_line": 199,
+              "raw_sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae",
+              "excerpt": "    private static ValueTask DisposeScope(IServiceScope scope)\n    {\n        if (scope is IAsyncDisposable asyncDisposableScope)\n        {\n            return asyncDisposableScope.DisposeAsync();\n        }\n\n        scope.Dispose();\n        return default;\n    }"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "scoring": {
+    "correctness": "1 explicit correct; 0.5 materially incomplete; 0 absent/wrong",
+    "evidence": "1 precise complete support; 0.5 broad/incomplete; 0 absent/contradictory",
+    "strict": "all atoms correctness/evidence=1, no material unsupported claim, runtime distinction maintained"
+  },
+  "scope": "Selected static paths, not exhaustive impact, end-to-end execution, database behavior or framework-completeness proof. Equivalent precise checked-in source evidence accepted."
+}

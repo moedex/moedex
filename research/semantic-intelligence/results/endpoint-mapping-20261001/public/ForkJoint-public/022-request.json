@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": 22,
+  "method": "tools/call",
+  "params": {
+    "name": "compiler_binding_at",
+    "arguments": {
+      "repo": "Sample-ForkJoint",
+      "path": "src/ForkJoint.Api/Components/ItineraryPlanners/BurgerItineraryPlanner.cs",
+      "byte_offset": 1003,
+      "raw_sha256": "d1f3dd05432cf43ddcb94d8bf80c5a3f26d8af116da46a5308a9bbeeac4b6494",
+      "context_id": "context:1d00bb25d97837ffa499ccf9150190c02044678e7049db0c94fe2f1990109ebb"
+    }
+  }
+}

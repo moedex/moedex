@@ -19,12 +19,14 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"moedex/internal/diskstore"
 	"moedex/internal/embed"
+	"moedex/internal/graph/adjacency"
 	"moedex/internal/graph/artifact"
 	"moedex/internal/graph/candidates"
 	"moedex/internal/graph/cluster"
@@ -40,6 +42,12 @@ import (
 // GraphFileName is the graph adjacency file written next to the corpus token
 // and symbol files.
 const GraphFileName = artifact.GraphFileName
+
+// graphBindingPolicy versions the syntax-only graph binding contract.
+// Including it in every corpus token invalidates graphs built by earlier
+// policies even when the indexed source bytes have not changed.
+// v2 recognizes complete C# raw-string delimiters in Pattern verification.
+const graphBindingPolicy = "scoped-bindings-v2"
 
 const (
 	// DefaultSimilarTopK bounds each definition's semantic neighborhood.
@@ -166,9 +174,22 @@ type GraphBuildReport struct {
 // CandidateUpperBound includes self-definition pairs that generation removes,
 // so it is intentionally a conservative work estimate rather than an edge count.
 type GraphScheduleStats struct {
+	PhysicalSources         uint64
+	SharedTargetSets        uint64
+	SharedTargets           uint64
+	LogicalEdges            uint64
+	TextOccurrences         candidates.TextOccurrenceStats
+	TextScanElapsed         time.Duration
+	RegionCache             graphverify.RegionCacheStats
 	Workers                 int
 	Names                   int
 	Batches                 int
+	SourcesVerified         uint64
+	RetainedPairUpperBound  uint64
+	HeaviestNameSources     int
+	HeaviestNameDefinitions int
+	CandidatePairs          uint64
+	RetainedPairs           uint64
 	CandidateUpperBound     uint64
 	LargestBatchUpperBound  uint64
 	HeaviestName            string
@@ -255,10 +276,7 @@ func BuildGraphWithOptions(dir string, opts GraphBuildOptions) (path string, rep
 
 	path, err = saveGraph(builder, dir)
 	if err == nil {
-		report.Cluster, err = buildClusterSidecar(dir)
-	}
-	if err == nil {
-		report.Counts, err = measureGraphBuildCounts(dir, int(sweep.suppressedRawCandidates.Load()), int(sweep.suppressedCrossRepoPatterns.Load()))
+		report.Cluster, report.Counts, err = finalizeGraph(dir, sweep, nil, int(sweep.suppressedRawCandidates.Load()), int(sweep.suppressedCrossRepoPatterns.Load()))
 	}
 	return path, report, err
 }
@@ -276,7 +294,7 @@ func BuildGraphWithOptions(dir string, opts GraphBuildOptions) (path string, rep
 // two are meant to be identical, and now share the one function that decides
 // what "every edge type" means.
 func (s *graphSweep) buildAllEdges(builder *diskgraph.Builder, emit *graphEmitter, generation uint64, opts GraphBuildOptions) (report GraphBuildReport, err error) {
-	edgeResults, schedule, err := s.computeEdgesParallel(s.names, generation)
+	edgeResults, schedule, err := s.computeFactoredNames(s.names, generation)
 	if err != nil {
 		return report, err
 	}
@@ -284,11 +302,14 @@ func (s *graphSweep) buildAllEdges(builder *diskgraph.Builder, emit *graphEmitte
 
 	crossRelevant := make(map[string]bool)
 	for i, name := range s.names {
-		if edgeResults[i].CrossShard {
+		if edgeResults[i].crossShard {
 			crossRelevant[name] = true
 		}
 	}
-	callGroups := patternCallGroups(edgeResults)
+	var callGroups []patternCallGroup
+	if lspGraphAvailable() {
+		callGroups = factoredPatternCallGroups(edgeResults)
+	}
 	buildCtx := opts.Context
 	if buildCtx == nil {
 		buildCtx = context.Background()
@@ -306,16 +327,19 @@ func (s *graphSweep) buildAllEdges(builder *diskgraph.Builder, emit *graphEmitte
 	if err := s.addDefinitionNodes(builder); err != nil {
 		return report, err
 	}
+	compact := newFactoredEmitter(builder)
 	for i := range s.names {
-		for j := range edgeResults[i].Edges {
-			if reconciliation.prunes(edgeResults[i].Edges[j]) {
+		for _, group := range edgeResults[i].groups {
+			if reconciliation.prunes(group.template()) {
 				continue
 			}
-			if err := emit.Add(edgeResults[i].Edges[j].Key, edgeResults[i].Edges[j].Edge); err != nil {
+			if err := compact.add(group); err != nil {
 				return report, err
 			}
 		}
+		edgeResults[i] = factoredNameResult{}
 	}
+
 	if err := addReconciledLSPCalls(builder, emit.seen, reconciliation, generation); err != nil {
 		return report, err
 	}
@@ -326,10 +350,12 @@ func (s *graphSweep) buildAllEdges(builder *diskgraph.Builder, emit *graphEmitte
 		return report, err
 	}
 
-	report, err = s.addWholeCorpusEdges(builder, emit.seen)
+	whole, err := s.addWholeCorpusEdges(builder, emit.seen)
 	if err != nil {
 		return report, err
 	}
+	whole.Schedule = report.Schedule
+	report = whole
 	report.Nodes = builder.NumNodes()
 	report.Edges = builder.NumEdges()
 	return report, nil
@@ -414,12 +440,22 @@ type blobSite struct {
 // graphSweep is the loaded shard-set view a graph build or refresh runs over:
 // the merged cross-shard symbol index, the per-shard content indices behind it,
 // the eligible name list, and the corpus's blob roster.
+// Retained lexical masks are allocated on demand. The payload budget covers a
+// roughly 442 MB corpus without repeated eviction; entry count also bounds
+// bookkeeping for corpora with many tiny blobs. In-flight worker masks and other
+// graph allocations are separate from this retention budget.
+const graphRegionCacheBytes = 512 * 1024 * 1024
+const graphRegionCacheEntries = 32768
+const graphTextOccurrenceBytes = 512 * 1024 * 1024
+
 type graphSweep struct {
-	corpus  *candidates.Corpus
-	merged  *symbol.Corpus
-	idxs    []*index.Index
-	paths   []string
-	symbols []*symbol.Index
+	verifierRegions *graphverify.RegionCache
+	corpus          *candidates.Corpus
+	baseCorpus      *candidates.Corpus
+	merged          *symbol.Corpus
+	idxs            []*index.Index
+	paths           []string
+	symbols         []*symbol.Index
 
 	names    []string
 	eligible map[string]int
@@ -436,6 +472,9 @@ type graphSweep struct {
 	closers []io.Closer
 	content io.Closer
 
+	sourcesVerified             atomic.Uint64
+	candidatePairs              atomic.Uint64
+	retainedPairs               atomic.Uint64
 	suppressedRawCandidates     atomic.Int64
 	suppressedCrossRepoPatterns atomic.Int64
 }
@@ -452,9 +491,10 @@ func openGraphSweep(dir string) (sweep *graphSweep, err error) {
 		return nil, err
 	}
 	s := &graphSweep{
-		sites:      make(map[string][]blobSite),
-		reposBySHA: make(map[string][]string),
-		paths:      paths,
+		verifierRegions: graphverify.NewRegionCache(graphRegionCacheBytes, graphRegionCacheEntries),
+		sites:           make(map[string][]blobSite),
+		reposBySHA:      make(map[string][]string),
+		paths:           paths,
 	}
 	if contentStore != nil {
 		s.content = contentStore
@@ -501,17 +541,24 @@ func openGraphSweep(dir string) (sweep *graphSweep, err error) {
 	for sha, sites := range s.sites {
 		exts = exts[:0]
 		repoSet := make(map[string]struct{})
+		contextSet := make(map[string]struct{})
 		for _, site := range sites {
 			blob := s.idxs[site.shard].Blob(site.blob)
 			exts = append(exts, blobExtensions(blob))
 			for _, file := range blob.Files {
+				contextSet[strconv.Quote(file.Repo)+":"+strconv.Quote(file.RelPath)] = struct{}{}
 				if file.Repo != "" {
 					repoSet[file.Repo] = struct{}{}
 				}
 			}
 		}
 		sort.Strings(exts)
-		s.identity[sha] = sha + "\x00" + strings.Join(exts, "\x01")
+		contexts := make([]string, 0, len(contextSet))
+		for context := range contextSet {
+			contexts = append(contexts, context)
+		}
+		sort.Strings(contexts)
+		s.identity[sha] = sha + "\x00" + graphBindingPolicy + "\x00extractors=" + strconv.FormatUint(uint64(symbol.ExtractorsVersion), 10) + "\x00" + strings.Join(exts, "\x01") + "\x00" + strings.Join(contexts, "\x01")
 		repos := make([]string, 0, len(repoSet))
 		for repo := range repoSet {
 			repos = append(repos, repo)
@@ -522,6 +569,7 @@ func openGraphSweep(dir string) (sweep *graphSweep, err error) {
 	if s.corpus, err = candidates.NewCorpus(merged, s.idxs...); err != nil {
 		return nil, err
 	}
+	s.baseCorpus = s.corpus
 
 	s.names = make([]string, 0, merged.NumNames())
 	merged.EachName(func(name string) bool {
@@ -540,6 +588,9 @@ func openGraphSweep(dir string) (sweep *graphSweep, err error) {
 
 // Close releases every mmap the sweep opened, innermost first.
 func (s *graphSweep) Close() error {
+	s.verifierRegions = nil
+	s.corpus = nil
+	s.baseCorpus = nil
 	var err error
 	for i := len(s.closers) - 1; i >= 0; i-- {
 		if closeErr := s.closers[i].Close(); err == nil && closeErr != nil {
@@ -614,7 +665,18 @@ func measureGraphBuildCounts(dir string, suppressedRaw, suppressedCrossRepo int)
 			err = closeErr
 		}
 	}()
-	graphFile.EachEdge(func(source diskgraph.Key, edge diskgraph.Edge) bool {
+	return measureGraphBuildCountsFromGraph(graphFile, nodes, suppressedRaw, suppressedCrossRepo), nil
+}
+
+func measureGraphBuildCountsFromGraph(graphFile *diskgraph.Graph, nodes map[diskgraph.Key]offlineNode, suppressedRaw, suppressedCrossRepo int) (counts GraphBuildCounts) {
+	counts = GraphBuildCounts{
+		SourceClassification: make(map[string]int), Confidence: make(map[string]int),
+		EdgeType: make(map[string]int), Enclosing: make(map[string]int),
+		SuppressedRawCandidates: suppressedRaw, SuppressedCrossRepoPattern: suppressedCrossRepo,
+	}
+	graphFile.EachRecord(func(r diskgraph.PhysicalRecord) bool {
+		source, edge := r.Source, r.Edge
+		n := adjacency.RecordCount(graphFile, r)
 		meta := nodes[source]
 		classification := "symbol"
 		enclosing := "resolved"
@@ -625,13 +687,13 @@ func measureGraphBuildCounts(dir string, suppressedRaw, suppressedCrossRepo int)
 			}
 			enclosing = "unresolved"
 		}
-		counts.SourceClassification[classification]++
-		counts.Confidence[edge.Confidence.String()]++
-		counts.EdgeType[edge.Type.String()]++
-		counts.Enclosing[enclosing]++
+		counts.SourceClassification[classification] += n
+		counts.Confidence[edge.Confidence.String()] += n
+		counts.EdgeType[edge.Type.String()] += n
+		counts.Enclosing[enclosing] += n
 		return true
 	})
-	return counts, nil
+	return counts
 }
 
 // graphKeyEdge is a resolved key/edge pair ready for the emitter.
@@ -651,52 +713,104 @@ func (s *graphSweep) computeEdgesForName(name string, generation uint64) ([]grap
 // computeEdgesForPreparedRange verifies and resolves one bounded source slice
 // of a name prepared by candidates.PrepareName.
 func (s *graphSweep) computeEdgesForPreparedRange(name string, prepared *candidates.PreparedName, start, end int, generation uint64) ([]graphKeyEdge, error) {
-	scored := graphverify.Verify(prepared.Generate(start, end))
-	out := make([]graphKeyEdge, 0, len(scored))
-	for _, sc := range scored {
-		sourceBlob := s.corpus.Blob(sc.Source)
-		targetBlob := s.corpus.Blob(sc.Target)
-		if sourceBlob == nil || targetBlob == nil {
-			return nil, fmt.Errorf("server: graph edge %q references an unknown blob", name)
-		}
-		if sc.Source.Start < 0 || sc.Target.Start < 0 {
-			return nil, fmt.Errorf("server: graph edge %q has a negative byte offset", name)
-		}
-		// Cheap regex verification proves the source is code, not which
-		// same-named definition it resolves to. Repository identity is the hard
-		// boundary for Pattern edges: a source with no definition in its own repo
-		// is external/unresolved, not a license to bind to arbitrary corpus code.
-		if sc.Confidence == graphverify.Pattern && !s.blobSHAsShareRepository(sourceBlob.SHA, targetBlob.SHA) {
-			s.suppressedCrossRepoPatterns.Add(1)
-			continue
-		}
-
-		sourceOffset := uint64(sc.Source.Start)
-		resolvedEnclosing := false
-		if enclosing, ok := s.merged.Enclosing(sc.Source.Shard, sc.Source.Blob, sc.Source.Start); ok {
-			if enclosing.NameStart < 0 {
-				return nil, fmt.Errorf("server: enclosing symbol %q has a negative byte offset", enclosing.Name)
-			}
-			sourceOffset = uint64(enclosing.NameStart)
-			resolvedEnclosing = true
-		}
-		if sc.Confidence == graphverify.Candidate && !resolvedEnclosing {
-			s.suppressedRawCandidates.Add(1)
-			continue
-		}
-		out = append(out, graphKeyEdge{
-			Key: diskgraph.Key{BlobSHA: sourceBlob.SHA, SymbolOffset: sourceOffset},
-			Edge: diskgraph.Edge{
-				Type:         graphEdgeType(sc, sourceBlob.Content),
-				TargetBlob:   targetBlob.SHA,
-				TargetOffset: uint64(sc.Target.Start),
-				Confidence:   sc.Confidence,
-				Evidence:     sc.Evidence,
-				Name:         name,
-				Generation:   generation,
-			},
-		})
+	p, err := s.prepareGraphName(prepared)
+	if err != nil {
+		return nil, err
 	}
+	return s.computePreparedGraphRange(name, p, start, end, generation)
+}
+
+type preparedGraphSource struct {
+	scored     graphverify.Edge
+	key        diskgraph.Key
+	typeID     diskgraph.EdgeType
+	suppressed bool
+}
+
+type preparedGraphName struct {
+	*candidates.PreparedName
+	sources []preparedGraphSource
+}
+
+// prepareGraphName scores and resolves each occurrence before the Cartesian
+// product. Verification and enclosing lookup are target-independent. Score one
+// blob at a time; the name session reuses bounded patterns and the sweep cache
+// retains lexical masks within its byte and entry budgets. Worker-held masks
+// and prepared output are additional to that retained-payload budget.
+func (s *graphSweep) prepareGraphName(p *candidates.PreparedName) (*preparedGraphName, error) {
+	result := &preparedGraphName{PreparedName: p}
+	prototypes := p.SourceCandidates()
+	verifier := graphverify.NewSession(s.verifierRegions)
+	result.sources = make([]preparedGraphSource, len(prototypes))
+	for start := 0; start < len(prototypes); {
+		end := start + 1
+		for end < len(prototypes) && prototypes[end].Source.Shard == prototypes[start].Source.Shard && prototypes[end].Source.Blob == prototypes[start].Source.Blob {
+			end++
+		}
+		for i, sc := range verifier.Verify(prototypes[start:end]) {
+			blob := sc.EvidenceBlob()
+			if blob == nil {
+				return nil, fmt.Errorf("server: graph edge %q references an unknown blob", sc.Name)
+			}
+			if sc.Source.Start < 0 {
+				return nil, fmt.Errorf("server: graph edge %q has a negative byte offset", sc.Name)
+			}
+			source := preparedGraphSource{scored: sc, key: diskgraph.Key{BlobSHA: blob.SHA, SymbolOffset: uint64(sc.Source.Start)}}
+			enclosing, ok := s.merged.Enclosing(sc.Source.Shard, sc.Source.Blob, sc.Source.Start)
+			if ok {
+				if enclosing.NameStart < 0 {
+					return nil, fmt.Errorf("server: enclosing symbol %q has a negative byte offset", enclosing.Name)
+				}
+				source.key.SymbolOffset = uint64(enclosing.NameStart)
+			}
+			source.suppressed = sc.Confidence == graphverify.Candidate && !ok
+			source.typeID = graphEdgeType(sc, blob.Content)
+			result.sources[start+i] = source
+		}
+		start = end
+	}
+	s.sourcesVerified.Add(uint64(len(prototypes)))
+	return result, nil
+}
+
+func (s *graphSweep) computePreparedGraphRange(name string, prepared *preparedGraphName, start, end int, generation uint64) ([]graphKeyEdge, error) {
+	if prepared == nil || start >= len(prepared.sources) || end <= 0 || start >= end {
+		return nil, nil
+	}
+	start = max(0, start)
+	end = min(end, len(prepared.sources))
+	var out []graphKeyEdge
+	for _, source := range prepared.sources[start:end] {
+		sc := source.scored
+		pairs := prepared.NumTargets(sc.Source)
+		s.candidatePairs.Add(uint64(pairs))
+		if source.suppressed {
+			s.suppressedRawCandidates.Add(int64(pairs))
+			continue
+		}
+		for i := 0; i < prepared.NumDefinitions(); i++ {
+			target := prepared.DefinitionSite(i)
+			if sc.Source.Shard == target.Shard && sc.Source.Blob == target.Blob && sc.Source.Start == target.Start {
+				continue
+			}
+			targetBlob := s.corpus.Blob(target)
+			if targetBlob == nil {
+				return nil, fmt.Errorf("server: graph edge %q references an unknown blob", name)
+			}
+			if target.Start < 0 {
+				return nil, fmt.Errorf("server: graph edge %q has a negative byte offset", name)
+			}
+			if sc.Confidence == graphverify.Pattern && !s.blobSHAsShareRepository(source.key.BlobSHA, targetBlob.SHA) {
+				s.suppressedCrossRepoPatterns.Add(1)
+				continue
+			}
+			out = append(out, graphKeyEdge{Key: source.key, Edge: diskgraph.Edge{
+				Type: source.typeID, TargetBlob: targetBlob.SHA, TargetOffset: uint64(target.Start),
+				Confidence: sc.Confidence, Evidence: sc.Evidence, Name: name, Generation: generation,
+			}})
+		}
+	}
+	s.retainedPairs.Add(uint64(len(out)))
 	return out, nil
 }
 

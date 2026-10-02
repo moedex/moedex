@@ -1,0 +1,193 @@
+#!/usr/bin/env python3
+"""Readonly routing address witness with matching named activity and formatter types."""
+import argparse
+import json
+import os
+from pathlib import Path
+import subprocess
+
+p = argparse.ArgumentParser(description=__doc__)
+for key in ('dotnet', 'sdk', 'worker', 'packages', 'output'):
+    p.add_argument('--' + key, required=True, type=Path)
+p.add_argument('--expected-worker-version', choices=['18','19','20'], default='20')
+a = p.parse_args()
+a.output.mkdir(parents=True, exist_ok=False)
+source = '''using System;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using MassTransit;
+namespace Fixture {
+class Args {}
+class A:IExecuteActivity<Args> {public Task<ExecutionResult> Execute(ExecuteContext<Args> c)=>null;}
+class B:IExecuteActivity<Args> {public Task<ExecutionResult> Execute(ExecuteContext<Args> c)=>null;}
+class FakeBuilder {public void AddActivity(string name,Uri address,object arguments) {}}
+class Direct {
+ readonly Uri _address;
+ 
+ public Direct(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}");  }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*Direct*/AddActivity(nameof(A),_address,new {}); }
+}
+class Named {
+ readonly Uri _address;
+ 
+ public Named(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}");  }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*Named*/AddActivity(arguments:new {},executeAddress:_address,name:nameof(A)); }
+}
+class Branch {
+ readonly Uri _address;
+ 
+ public Branch(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}");  }
+ void Run(IItineraryBuilder builder,bool enabled) {  if(enabled) builder./*Branch*/AddActivity(nameof(A),_address,new {}); }
+}
+class This {
+ readonly Uri _address;
+ 
+ public This(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}");  }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*This*/AddActivity(nameof(A),this._address,new {}); }
+}
+class SecondField {
+ readonly Uri _address;
+ readonly Uri _other;
+ public SecondField(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}"); _other=new Uri($"exchange:{formatter.ExecuteActivity<B,Args>()}"); }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*SecondField*/AddActivity(nameof(A),_address,new {}); }
+}
+class Mismatch {
+ readonly Uri _address;
+ 
+ public Mismatch(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}");  }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*Mismatch*/AddActivity(nameof(B),_address,new {}); }
+}
+class Literal {
+ readonly Uri _address;
+ 
+ public Literal(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}");  }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*Literal*/AddActivity("A",_address,new {}); }
+}
+class Mutable {
+ Uri _address;
+ 
+ public Mutable(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}");  }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*Mutable*/AddActivity(nameof(A),_address,new {}); }
+}
+class Public {
+ public readonly Uri _address;
+ 
+ public Public(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}");  }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*Public*/AddActivity(nameof(A),_address,new {}); }
+}
+class Initialized {
+ readonly Uri _address=new Uri("exchange:init");
+ 
+ public Initialized(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}");  }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*Initialized*/AddActivity(nameof(A),_address,new {}); }
+}
+class MultipleConstructors {
+ readonly Uri _address;
+ public MultipleConstructors():this(null) {}
+ public MultipleConstructors(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}");  }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*MultipleConstructors*/AddActivity(nameof(A),_address,new {}); }
+}
+class ConditionalAssignment {
+ readonly Uri _address;
+ 
+ public ConditionalAssignment(IEndpointNameFormatter formatter) { if(formatter!=null) _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}");  }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*ConditionalAssignment*/AddActivity(nameof(A),_address,new {}); }
+}
+class RepeatedAssignment {
+ readonly Uri _address;
+ 
+ public RepeatedAssignment(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}"); _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}"); }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*RepeatedAssignment*/AddActivity(nameof(A),_address,new {}); }
+}
+class RefEscape {
+ readonly Uri _address;
+ static void Mutate(ref Uri address) {}
+ public RefEscape(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}"); Mutate(ref _address); }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*RefEscape*/AddActivity(nameof(A),_address,new {}); }
+}
+class Prefix {
+ readonly Uri _address;
+ 
+ public Prefix(IEndpointNameFormatter formatter) { _address=new Uri($"queue:{formatter.ExecuteActivity<A,Args>()}");  }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*Prefix*/AddActivity(nameof(A),_address,new {}); }
+}
+class Formatted {
+ readonly Uri _address;
+ 
+ public Formatted(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>(),10}");  }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*Formatted*/AddActivity(nameof(A),_address,new {}); }
+}
+class Factory {
+ readonly Uri _address;
+ static Uri BuildAddress(IEndpointNameFormatter formatter)=>new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}");
+ public Factory(IEndpointNameFormatter formatter) { _address=BuildAddress(formatter);  }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*Factory*/AddActivity(nameof(A),_address,new {}); }
+}
+class AddressVariable {
+ readonly Uri _address;
+ 
+ public AddressVariable(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}");  }
+ void Run(IItineraryBuilder builder,bool enabled) { var local=_address; builder./*AddressVariable*/AddActivity(nameof(A),local,new {}); }
+}
+class OtherInstance {
+ readonly Uri _address;
+ 
+ public OtherInstance(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}");  }
+ void Run(IItineraryBuilder builder,bool enabled, OtherInstance other) {  builder./*OtherInstance*/AddActivity(nameof(A),other._address,new {}); }
+}
+class NoArguments {
+ readonly Uri _address;
+ 
+ public NoArguments(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}");  }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*NoArguments*/AddActivity(nameof(A),_address); }
+}
+class Dictionary {
+ readonly Uri _address;
+ 
+ public Dictionary(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}");  }
+ void Run(IItineraryBuilder builder,bool enabled) {  builder./*Dictionary*/AddActivity(nameof(A),_address,new Dictionary<string,object>()); }
+}
+class FakeAPI {
+ readonly Uri _address;
+ 
+ public FakeAPI(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}");  }
+ void Run(IItineraryBuilder builder,bool enabled) {  new FakeBuilder()./*FakeAPI*/AddActivity(nameof(A),_address,new {}); }
+}
+}
+'''
+source = source.rsplit('}',1)[0] + 'class StatementLimit {\n readonly Uri _address;\n public StatementLimit(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}"); ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; }\n void Run(IItineraryBuilder builder) {builder./*StatementLimit*/AddActivity(nameof(A),_address,new {});}\n}\nclass NodeLimit {\n readonly Uri _address;\n public NodeLimit(IEndpointNameFormatter formatter) { _address=new Uri($"exchange:{formatter.ExecuteActivity<A,Args>()}"); var values=new int[] {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}; }\n void Run(IItineraryBuilder builder) {builder./*NodeLimit*/AddActivity(nameof(A),_address,new {});}\n}\n}\n'
+(a.output/'Fixture.cs').write_text(source)
+(a.output/'global.json').write_text(json.dumps({'sdk': {'version': a.sdk.name, 'rollForward': 'disable'}}))
+(a.output/'Fixture.csproj').write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup><ItemGroup><FrameworkReference Include="Microsoft.AspNetCore.App"/><PackageReference Include="MassTransit" Version="8.2.1"/></ItemGroup></Project>')
+(a.output/'NuGet.Config').write_text('<configuration><packageSources><clear /></packageSources></configuration>')
+env = dict(os.environ, NUGET_PACKAGES=str(a.packages.resolve()), DOTNET_NOLOGO='1', DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_PROCESSOR_COUNT='2')
+subprocess.run([str(a.dotnet),str(a.sdk/'MSBuild.dll'),'-target:Restore',str(a.output/'Fixture.csproj'),'-p:NuGetAudit=false'], env=env, cwd=a.output, check=True, timeout=120)
+command = [str(a.dotnet),str(a.worker),'--repo','fixture','--root',str(a.output),'--project','Fixture.csproj','--framework','net8.0','--sdk-path',str(a.sdk)]
+result = subprocess.run(command,env=env,capture_output=True,timeout=120)
+(a.output/'capture.jsonl').write_bytes(result.stdout)
+(a.output/'capture.stderr').write_bytes(result.stderr)
+assert result.returncode == 0, (result.returncode,result.stderr)
+rows = list(map(json.loads,result.stdout.splitlines()))
+assert all(r['extractor_version']==a.expected_worker_version and r['compilation_status']=='complete' for r in rows if r['record_type']=='project')
+def at(label):
+    offset=source.index('/*'+label+'*/')+len(label)+4
+    hits=[r for r in rows if r.get('source_path')=='Fixture.cs' and r.get('span',{}).get('byte_offset')==offset and r['record_type']=='reference']
+    assert len(hits)==1,(label,hits)
+    return hits[0]
+expected = {'Direct': {'activity': 'Fixture.A', 'arguments': 'Fixture.Args', 'field': 'Fixture.Direct._address'}, 'Named': {'activity': 'Fixture.A', 'arguments': 'Fixture.Args', 'field': 'Fixture.Named._address'}, 'Branch': {'activity': 'Fixture.A', 'arguments': 'Fixture.Args', 'field': 'Fixture.Branch._address'}, 'This': {'activity': 'Fixture.A', 'arguments': 'Fixture.Args', 'field': 'Fixture.This._address'}, 'SecondField': {'activity': 'Fixture.A', 'arguments': 'Fixture.Args', 'field': 'Fixture.SecondField._address'}}
+negatives = ['Mismatch', 'Literal', 'Mutable', 'Public', 'Initialized', 'MultipleConstructors', 'ConditionalAssignment', 'RepeatedAssignment', 'RefEscape', 'Prefix', 'Formatted', 'Factory', 'AddressVariable', 'OtherInstance', 'NoArguments', 'Dictionary', 'FakeAPI']
+negatives += ['StatementLimit','NodeLimit']
+for label,value in expected.items():
+    facts=at(label).get('domain_facts',[]);assert len(facts)==1,(label,facts)
+    f=facts[0];assert f['kind']=='routing_slip_activity_configuration' and f['rule']=='csharp-routing-slip-v1' and f['evidence_scope']=='compile_time'
+    assert [t['role'] for t in f['targets']]==['activity','arguments','address_field','formatter_api']
+    assert [t['symbol']['descriptor'] for t in f['targets']]==['T:'+value['activity'],'T:'+value['arguments'],'F:'+value['field'],'M:MassTransit.IEndpointNameFormatter.ExecuteActivity``2']
+for label in negatives:assert not at(label).get('domain_facts'),(label,at(label))
+(a.output/'expected.json').write_text(json.dumps({'positive':expected,'negative':negatives},indent=2)+'\n')
+(a.output/'Fixture.cs').write_text(source+'\nclass Broken { MissingType value; }')
+broken=subprocess.run(command,env=env,capture_output=True,timeout=120)
+(a.output/'incomplete.jsonl').write_bytes(broken.stdout)
+assert broken.returncode==2
+assert not any(r.get('domain_facts') or r.get('implementation_facts') for r in map(json.loads,broken.stdout.splitlines()))
+(a.output/'Fixture.cs').write_text(source)
+print('PASS: five routing configurations, nineteen exclusions, incomplete suppression')

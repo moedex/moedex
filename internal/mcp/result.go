@@ -38,15 +38,24 @@ type SnapshotIdentity struct {
 	UnanchoredPaths        []string `json:"unanchored_paths,omitempty"`
 }
 
-// Normalize sorts and deduplicates all identity sets. Unanchored content can
-// never be represented honestly as cacheable.
+// Normalize sorts and deduplicates all identity sets. Unanchored content and
+// conflicting corpus generations can never be represented honestly as cacheable.
 func (s SnapshotIdentity) Normalize() SnapshotIdentity {
 	s.BlobSHAs = sortedUnique(s.BlobSHAs)
 	s.UnanchoredPaths = sortedUnique(s.UnanchoredPaths)
-	if len(s.UnanchoredPaths) > 0 {
+	if len(s.UnanchoredPaths) > 0 || s.HasCorpusConflict() {
 		s.Cacheable = false
 	}
 	return s
+}
+
+// HasCorpusConflict reports a known rank/graph source mismatch. Graph build IDs
+// and generations may change independently while the source corpus stays the
+// same; they are provenance, not a reason to reject compatible annotations.
+// Missing fingerprints on legacy/custom adapters do not establish a conflict.
+func (s SnapshotIdentity) HasCorpusConflict() bool {
+	return s.CorpusFingerprint != "" && s.GraphCorpusFingerprint != "" &&
+		s.CorpusFingerprint != s.GraphCorpusFingerprint
 }
 
 // MergeSnapshotIdentities composes independently acquired rank and graph

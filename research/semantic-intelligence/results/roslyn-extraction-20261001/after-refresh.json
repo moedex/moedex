@@ -1,0 +1,10 @@
+{
+  "sha256": "fcc77570f2f18640264f216d29a54c68cd5253490d34270d5e0fb436efa8d002",
+  "bytes": 763241278,
+  "equals_previous_frozen_graph": true,
+  "cluster_sha256": "2afdec934143991b46702d3d69cfbec3e09966ed352223c541fef8a4c97f7767",
+  "status": "passed",
+  "generation": 1,
+  "counts_identical": true,
+  "cluster_bytes_identical": true
+}

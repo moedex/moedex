@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/Users/zakkeown/Code/moedex/research/semantic-intelligence/agent-journeys/check_framework_bridge.py", line 35, in <module>
+    paths={b['rel_path'] for b in blocks if b['rel_path'].endswith('/'+handler+'.cs')};assert len(paths)==1,paths
+                                                                                              ^^^^^^^^^^^^^
+AssertionError: {'src/Webhooks.API/IntegrationEvents/OrderStatusChangedToPaidIntegrationEventHandler.cs', 'src/WebApp/Services/OrderStatus/IntegrationEvents/EventHandling/OrderStatusChangedToPaidIntegrationEventHandler.cs', 'src/Catalog.API/IntegrationEvents/EventHandling/OrderStatusChangedToPaidIntegrationEventHandler.cs'}

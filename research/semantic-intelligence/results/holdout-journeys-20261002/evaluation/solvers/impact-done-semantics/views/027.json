@@ -1,0 +1,17 @@
+{
+  "ordinal": 27,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"repo\":\"CleanArchitecture\",\"path\":\"src/Domain/Events/TodoItemCompletedEvent.cs\",\"format\":\"text\"}"
+  ],
+  "started_monotonic": 78888.252341,
+  "finished_monotonic": 78888.311841791,
+  "returncode": 0,
+  "stdout_bytes": 1679,
+  "stdout_sha256": "b83450a369b4b43dcff75b25fc2610f15b981b40a0143b4e62c14dda5c6397bb",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

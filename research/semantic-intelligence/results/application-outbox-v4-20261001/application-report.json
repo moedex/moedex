@@ -1,0 +1,1130 @@
+{
+  "audit_facts": 26,
+  "served_facts": 26,
+  "missing_audit_facts": null,
+  "unexpected_served_facts": null,
+  "owner_descriptor_assertions": 11,
+  "owner_unasserted": 4,
+  "observations": [
+    {
+      "observation": {
+        "rule": "csharp-framework-v1",
+        "project": "src/Sample.Api/Sample.Api.csproj",
+        "path": "src/Sample.Api/Program.cs",
+        "byte_offset": 922,
+        "byte_length": 9,
+        "source_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53",
+        "kind": "di_registration",
+        "targets": [
+          {
+            "role": "service",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.IRegistrationService",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          },
+          {
+            "role": "implementation",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.RegistrationService",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "owner": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-Outbox/src/Sample.Api/Sample.Api.csproj",
+          "descriptor": "M:Program.{Main}$(System.String[])",
+          "descriptor_kind": "documentation_comment_id"
+        },
+        "lifetime": "scoped"
+      },
+      "contexts": [
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35"
+      ]
+    },
+    {
+      "observation": {
+        "rule": "csharp-framework-v1",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+        "byte_offset": 158,
+        "byte_length": 9,
+        "source_sha256": "f7ae50324fc1b3c8fa3fec399e233b6e6e977b9458d348b834e5ced0f5fc6184",
+        "kind": "message_consumer",
+        "targets": [
+          {
+            "role": "message",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "owner": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+          "descriptor": "T:Sample.Components.Consumers.AddEventAttendeeConsumer",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ]
+    },
+    {
+      "observation": {
+        "rule": "csharp-framework-v1",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+        "byte_offset": 160,
+        "byte_length": 9,
+        "source_sha256": "5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81",
+        "kind": "message_consumer",
+        "targets": [
+          {
+            "role": "message",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "owner": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+          "descriptor": "T:Sample.Components.Consumers.NotifyRegistrationConsumer",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ]
+    },
+    {
+      "observation": {
+        "rule": "csharp-framework-v1",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+        "byte_offset": 163,
+        "byte_length": 9,
+        "source_sha256": "0e5c8f13aa04dd9b46c488b677fcfef3c9583998a74a98cb4283087326de7592",
+        "kind": "message_consumer",
+        "targets": [
+          {
+            "role": "message",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Contracts.SendRegistrationEmail",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "owner": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+          "descriptor": "T:Sample.Components.Consumers.SendRegistrationEmailConsumer",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ]
+    },
+    {
+      "observation": {
+        "rule": "csharp-framework-v1",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+        "byte_offset": 178,
+        "byte_length": 9,
+        "source_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca",
+        "kind": "message_consumer",
+        "targets": [
+          {
+            "role": "message",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "owner": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+          "descriptor": "T:Sample.Components.Consumers.ValidateRegistrationConsumer",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ]
+    },
+    {
+      "observation": {
+        "rule": "csharp-framework-v1",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/RegistrationService.cs",
+        "byte_offset": 931,
+        "byte_length": 7,
+        "source_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+        "kind": "message_publish",
+        "targets": [
+          {
+            "role": "message",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "owner": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+          "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ]
+    },
+    {
+      "observation": {
+        "rule": "csharp-framework-v1",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+        "byte_offset": 474,
+        "byte_length": 7,
+        "source_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20",
+        "kind": "message_publish",
+        "targets": [
+          {
+            "role": "message",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "owner": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+          "descriptor": "M:Sample.Components.Services.RegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ]
+    },
+    {
+      "observation": {
+        "rule": "csharp-framework-v1",
+        "project": "src/Sample.Worker/Sample.Worker.csproj",
+        "path": "src/Sample.Worker/Program.cs",
+        "byte_offset": 2244,
+        "byte_length": 9,
+        "source_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db",
+        "kind": "di_registration",
+        "targets": [
+          {
+            "role": "service",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Services.IRegistrationValidationService",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          },
+          {
+            "role": "implementation",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Services.RegistrationValidationService",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "owner": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-Outbox/src/Sample.Worker/Sample.Worker.csproj",
+          "descriptor": "M:Program.(Microsoft.Extensions.Hosting.HostBuilderContext,Microsoft.Extensions.DependencyInjection.IServiceCollection)",
+          "descriptor_kind": "documentation_comment_id"
+        },
+        "lifetime": "scoped"
+      },
+      "contexts": [
+        "context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a"
+      ]
+    },
+    {
+      "observation": {
+        "rule": "csharp-framework-v2",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/RegistrationDbContext.cs",
+        "byte_offset": 966,
+        "byte_length": 6,
+        "source_sha256": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef",
+        "kind": "storage_entity_mapping",
+        "targets": [
+          {
+            "role": "entity",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Registration",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "owner": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+          "descriptor": "M:Sample.Components.RegistrationDbContext.MapRegistration(Microsoft.EntityFrameworkCore.ModelBuilder)",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ]
+    },
+    {
+      "observation": {
+        "rule": "csharp-framework-v2",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/RegistrationService.cs",
+        "byte_offset": 855,
+        "byte_length": 3,
+        "source_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+        "kind": "storage_entity_use",
+        "targets": [
+          {
+            "role": "entity",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Registration",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "owner": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+          "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ]
+    },
+    {
+      "observation": {
+        "rule": "csharp-framework-v3",
+        "project": "src/Sample.Api/Sample.Api.csproj",
+        "path": "src/Sample.Api/Program.cs",
+        "byte_offset": 1032,
+        "byte_length": 12,
+        "source_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53",
+        "kind": "storage_context_registration",
+        "targets": [
+          {
+            "role": "service",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.RegistrationDbContext",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          },
+          {
+            "role": "implementation",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.RegistrationDbContext",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "owner": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-Outbox/src/Sample.Api/Sample.Api.csproj",
+          "descriptor": "M:Program.{Main}$(System.String[])",
+          "descriptor_kind": "documentation_comment_id"
+        },
+        "lifetime": "scoped"
+      },
+      "contexts": [
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35"
+      ]
+    },
+    {
+      "observation": {
+        "rule": "csharp-framework-v3",
+        "project": "src/Sample.Worker/Sample.Worker.csproj",
+        "path": "src/Sample.Worker/Program.cs",
+        "byte_offset": 931,
+        "byte_length": 12,
+        "source_sha256": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db",
+        "kind": "storage_context_registration",
+        "targets": [
+          {
+            "role": "service",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.RegistrationDbContext",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          },
+          {
+            "role": "implementation",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.RegistrationDbContext",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "owner": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-Outbox/src/Sample.Worker/Sample.Worker.csproj",
+          "descriptor": "M:Program.(Microsoft.Extensions.Hosting.HostBuilderContext,Microsoft.Extensions.DependencyInjection.IServiceCollection)",
+          "descriptor_kind": "documentation_comment_id"
+        },
+        "lifetime": "scoped"
+      },
+      "contexts": [
+        "context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a"
+      ]
+    },
+    {
+      "observation": {
+        "rule": "csharp-framework-v4",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+        "byte_offset": 1411,
+        "byte_length": 7,
+        "source_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570",
+        "kind": "message_publish_configuration",
+        "targets": [
+          {
+            "role": "message",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "owner": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+          "descriptor": "M:Sample.Components.StateMachines.RegistrationStateMachine.#ctor",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ]
+    },
+    {
+      "observation": {
+        "rule": "csharp-framework-v4",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+        "byte_offset": 268,
+        "byte_length": 5,
+        "source_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570",
+        "kind": "message_event_configuration",
+        "targets": [
+          {
+            "role": "message",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "owner": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+          "descriptor": "M:Sample.Components.StateMachines.RegistrationStateMachine.#ctor",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ]
+    },
+    {
+      "observation": {
+        "rule": "csharp-framework-v4",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+        "byte_offset": 838,
+        "byte_length": 7,
+        "source_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570",
+        "kind": "message_publish_configuration",
+        "targets": [
+          {
+            "role": "message",
+            "symbol": {
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+              "descriptor": "T:Sample.Components.Contracts.SendRegistrationEmail",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          }
+        ],
+        "owner": {
+          "language": "csharp",
+          "namespace_kind": "project",
+          "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+          "descriptor": "M:Sample.Components.StateMachines.RegistrationStateMachine.#ctor",
+          "descriptor_kind": "documentation_comment_id"
+        }
+      },
+      "contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ]
+    }
+  ],
+  "evaluation_completed": true,
+  "gold_sha256": "35744683f93f9ae7fb83ef17455b11da7d38a067951feb26acf0ad415e1d8586",
+  "repo": "Sample-Outbox",
+  "commit": "1ab8e66ebf96e5733e68c2f4d2201276f38ed9c5",
+  "snapshot_id": "application-real",
+  "artifact_sha256": "67589d1f7e65b1b656eede8f54dc8b5dbfc003b4576fa5ab59e585d453263eeb",
+  "corpus_fingerprint": "c73323652c06c76a6ffc25d723a88d1e3fce8be7b223966fb1c39ade09495ba4",
+  "scoring_policy": "Unique source observations; captured context alternatives queried separately and reported separately. Unsupported patterns are coverage gaps, never successful negative recall. Exact qualified identities only; no runtime edges.",
+  "supported_expected": 15,
+  "true_positive": 15,
+  "false_negative": 0,
+  "false_positive": 0,
+  "precision": 1,
+  "recall": 1,
+  "unsupported_patterns": 2,
+  "unsupported_observed": 0,
+  "unsupported_missed": 2,
+  "negative_cases": 2,
+  "negative_violations": 0,
+  "context_expected": 26,
+  "context_observed": 26,
+  "context_missed": 0,
+  "cases": [
+    {
+      "id": "api-service",
+      "classification": "supported",
+      "observed": true,
+      "expected_contexts": [
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35"
+      ],
+      "observed_contexts": [
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35"
+      ],
+      "missing_contexts": null,
+      "binding_statuses": {
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "ok"
+      },
+      "binding_states": {
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "worker-service",
+      "classification": "supported",
+      "observed": true,
+      "expected_contexts": [
+        "context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a"
+      ],
+      "observed_contexts": [
+        "context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a"
+      ],
+      "missing_contexts": null,
+      "binding_statuses": {
+        "context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a": "ok"
+      },
+      "binding_states": {
+        "context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "AddEventAttendee-consumer",
+      "classification": "supported",
+      "observed": true,
+      "expected_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "observed_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "missing_contexts": null,
+      "binding_statuses": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "ok",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "ok"
+      },
+      "binding_states": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": [
+          "resolved"
+        ],
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "NotifyRegistration-consumer",
+      "classification": "supported",
+      "observed": true,
+      "expected_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "observed_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "missing_contexts": null,
+      "binding_statuses": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "ok",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "ok"
+      },
+      "binding_states": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": [
+          "resolved"
+        ],
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "SendRegistrationEmail-consumer",
+      "classification": "supported",
+      "observed": true,
+      "expected_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "observed_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "missing_contexts": null,
+      "binding_statuses": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "ok",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "ok"
+      },
+      "binding_states": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": [
+          "resolved"
+        ],
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "ValidateRegistration-consumer",
+      "classification": "supported",
+      "observed": true,
+      "expected_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "observed_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "missing_contexts": null,
+      "binding_statuses": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "ok",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "ok"
+      },
+      "binding_states": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": [
+          "resolved"
+        ],
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "submitted-publish",
+      "classification": "supported",
+      "observed": true,
+      "expected_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "observed_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "missing_contexts": null,
+      "binding_statuses": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "ok",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "ok"
+      },
+      "binding_states": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": [
+          "resolved"
+        ],
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "validated-publish",
+      "classification": "supported",
+      "observed": true,
+      "expected_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "observed_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "missing_contexts": null,
+      "binding_statuses": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "ok",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "ok"
+      },
+      "binding_states": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": [
+          "resolved"
+        ],
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "fluent-publish-SendRegistrationEmail",
+      "classification": "supported",
+      "observed": true,
+      "expected_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "observed_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "missing_contexts": null,
+      "binding_statuses": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "ok",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "ok"
+      },
+      "binding_states": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": [
+          "resolved"
+        ],
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "fluent-publish-AddEventAttendee",
+      "classification": "supported",
+      "observed": true,
+      "expected_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "observed_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "missing_contexts": null,
+      "binding_statuses": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "ok",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "ok"
+      },
+      "binding_states": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": [
+          "resolved"
+        ],
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "saga-event",
+      "classification": "supported",
+      "observed": true,
+      "expected_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "observed_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "missing_contexts": null,
+      "binding_statuses": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "ok",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "ok"
+      },
+      "binding_states": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": [
+          "resolved"
+        ],
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "controller-wrapper",
+      "classification": "unsupported",
+      "reason": "Private application service wrapper leads to direct publisher in another method; no interprocedural wrapper inference.",
+      "observed": false,
+      "expected_contexts": [
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35"
+      ],
+      "observed_contexts": null,
+      "missing_contexts": [
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35"
+      ],
+      "binding_statuses": {
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "ok"
+      },
+      "binding_states": {
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "validation-wrapper",
+      "classification": "unsupported",
+      "reason": "Private validation service wrapper leads to direct publisher in another method; no interprocedural wrapper inference.",
+      "observed": false,
+      "expected_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "observed_contexts": null,
+      "missing_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "binding_statuses": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "ok",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "ok"
+      },
+      "binding_states": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": [
+          "resolved"
+        ],
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "entity-set",
+      "classification": "supported",
+      "reason": "Former baseline unsupported gap, promoted only for the exact zero-argument generic EF API and concrete named entity. Compile-time entity observation; no table identity, query execution, write, or runtime behavior inferred.",
+      "observed": true,
+      "expected_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "observed_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "missing_contexts": null,
+      "binding_statuses": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "ok",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "ok"
+      },
+      "binding_states": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": [
+          "resolved"
+        ],
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "entity-model",
+      "classification": "supported",
+      "reason": "Former baseline unsupported gap, promoted only for the exact zero-argument generic EF API and concrete named entity. Compile-time entity observation; no table identity, query execution, write, or runtime behavior inferred.",
+      "observed": true,
+      "expected_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "observed_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "missing_contexts": null,
+      "binding_statuses": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "ok",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "ok"
+      },
+      "binding_states": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": [
+          "resolved"
+        ],
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "api-dbcontext",
+      "classification": "supported",
+      "observed": true,
+      "expected_contexts": [
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35"
+      ],
+      "observed_contexts": [
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35"
+      ],
+      "missing_contexts": null,
+      "binding_statuses": {
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "ok"
+      },
+      "binding_states": {
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "worker-dbcontext",
+      "classification": "supported",
+      "observed": true,
+      "expected_contexts": [
+        "context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a"
+      ],
+      "observed_contexts": [
+        "context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a"
+      ],
+      "missing_contexts": null,
+      "binding_statuses": {
+        "context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a": "ok"
+      },
+      "binding_states": {
+        "context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "logging-negative",
+      "classification": "negative",
+      "reason": "Logging is not a publish API; contract values in arguments must not create a publish fact.",
+      "observed": false,
+      "expected_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "observed_contexts": null,
+      "missing_contexts": [
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+      ],
+      "binding_statuses": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "ok",
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "ok"
+      },
+      "binding_states": {
+        "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": [
+          "resolved"
+        ],
+        "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": [
+          "resolved"
+        ]
+      }
+    },
+    {
+      "id": "configuration-negative",
+      "classification": "negative",
+      "reason": "Configuration lookup is not a DI registration API.",
+      "observed": false,
+      "expected_contexts": [
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35"
+      ],
+      "observed_contexts": null,
+      "missing_contexts": [
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35"
+      ],
+      "binding_statuses": {
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "ok"
+      },
+      "binding_states": {
+        "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": [
+          "resolved"
+        ]
+      }
+    }
+  ],
+  "unexpected_observations": null,
+  "outside_reviewed_closure": null,
+  "query_hashes": {
+    "AddEventAttendee-consumer/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "343a93d1e83501052842472b5dff5465446b40814aca57249345e59387125f60",
+    "AddEventAttendee-consumer/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "5d6a0f9017461d46bb5d537378aebb56303f538f0c9db24fa233677f6d5fda9b",
+    "NotifyRegistration-consumer/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "1f9791f887548c4b07eb6335ce6de55e74162e9434c6cf758b04a02232cbe73b",
+    "NotifyRegistration-consumer/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "2df253a73672b715ad5ed60f2ebca8da737c78fad2175edaaf381b6d72cc7ec4",
+    "SendRegistrationEmail-consumer/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "bb1e2544b0da56006b132609a58ee2549fe3e6b72a7027a3149a118470c5a598",
+    "SendRegistrationEmail-consumer/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "bfe2ba82c383d01791d4972745130ebc70511c332fa56fa9fe42389eab22216e",
+    "ValidateRegistration-consumer/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "b21cdede27386925364fbf6563a76227badfa281cc299c6a52a6d788a73aa3f1",
+    "ValidateRegistration-consumer/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "17ada591f27f2c4a26cb19817c96237ffbe6093bd5bde1f981860e43c7c3e1f8",
+    "api-dbcontext/context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "2b38c899b3716415d0b0efbee5db6f5d48486605982a251c36cc3b53eb6b16c3",
+    "api-service/context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "91f4acd47f5e3ac000255ba4a9a0af5737d1a66487065994f71ca432b6d8516b",
+    "configuration-negative/context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "a9d7a68b8a4c4ffd56e1ceb15f3bf967551a0e3b28f034b2bf1facb9bed2570c",
+    "controller-wrapper/context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "d6a04fe19b467643f211d61a5d89bf5b11e3d3cd5d430a621407e10e6912589f",
+    "entity-model/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "090bc366928ebd8c224346c485bfe56833e97b81f945c8b08c68b655c434af22",
+    "entity-model/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "00bbd8a0f67cedece7db8bac8992cbab2e8edc6117defcf91b0006ce91a379ff",
+    "entity-set/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "07a962480201597d30ddfbaf4f183a8ce674b4b5f24b60d609e497c87ea81122",
+    "entity-set/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "8f4e5f1a744e834c6e97640cabac1ef4579e6ecdbcf1243f7c6f71c55b5c6297",
+    "fluent-publish-AddEventAttendee/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "a27243eb6da16b3f08454be79d92335afc60c84d5eda231f10dd4e42569d2b4c",
+    "fluent-publish-AddEventAttendee/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "c6c0a088c908cc49b57ee5860d5b1640b4fd05ea02d3df9c76278c5329ffa882",
+    "fluent-publish-SendRegistrationEmail/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "9b8cbc82cd25679cd0ae5a431f8cbfc73a2bb1f9ba804eedf5518d85f94bca5e",
+    "fluent-publish-SendRegistrationEmail/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "d57ecbd19d37ea102ce51c6518a7807d2a53482e95f750d07a0d9c12e7e4101c",
+    "logging-negative/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "a63a841056b7062c57e994535158a4b8af844108ffa929bfbce9505071975882",
+    "logging-negative/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "36781dcba005134e7712d8a071b8ea607ec32a1f8047b9449589304e8bae7b70",
+    "saga-event/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "df41ccbf9a45791be9db93eb1c1bcc6b73058e91057bdb5ea5f5963ccc568cb1",
+    "saga-event/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "76345c40b624381067dcf370ffe70377a6ba06647c1193d4592ed2d790999cb7",
+    "submitted-publish/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "5c47579004c9a21f3a1dc269b288c42e5f7ccb8cd2105a9cc215b0d8369fc0c5",
+    "submitted-publish/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "21c357d12bf1f3ea53fc67d4b460b7028616fedf0ef1cb2c9a3af41ebffb5411",
+    "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "ad34f784464c6dcec46e3266c5f9b75efaaae682fb2339a0af41a5de07e6393c",
+    "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "caf2c751977f5eca4c0ec730d7e14ab1f87fb07d6e33b58a9de57b230c4586b2",
+    "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374/context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a": "20193982afb2b0448231ef722beb9a060232c2349a5f9125f485ca9bb6463377",
+    "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374/context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "3951d023a4932b1b7fb7a4573c70bc7287e7849a63aadb09cf9c62da59f2d647",
+    "symbol:468fa82b2611897f00f5ab3f29c38e81b579fd7e1bcc03d770823973f343fbdd/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "47a8f65ed61025a8d043077f705abe0a009580c595a0b7245c9629ce69a1dc4f",
+    "symbol:468fa82b2611897f00f5ab3f29c38e81b579fd7e1bcc03d770823973f343fbdd/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "5058aea9bc2d7217b62cc1bb6a71edabea657ec6d1b56fb64cf175047260b342",
+    "symbol:468fa82b2611897f00f5ab3f29c38e81b579fd7e1bcc03d770823973f343fbdd/context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a": "c5cdcca4cb92983b28c58a24b0c70ba1fa6feb44427303ffe5d3af0c0f41689f",
+    "symbol:468fa82b2611897f00f5ab3f29c38e81b579fd7e1bcc03d770823973f343fbdd/context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "19fcd8d78ebacb996413b248a573ed5ce80f2c87a5a18708cd85e54e3194ffb3",
+    "symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "860171735868cb93b03ec939e082bb32b5141d37a1ca65e2d0b3b60456e8aea2",
+    "symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "ee961109eef4415bf0efbe55a4ac661783e2c55358684b9131f5a612c7a303a7",
+    "symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1/context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a": "c13e4551577372ac6b4619b4fd1e7ba4000e4fe1a2c42e6b0edbfffada22a550",
+    "symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1/context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "4ce00d413d6c33d6ff8e4703e837863c0751089b2e809b0e2bc140160d2ef9bf",
+    "symbol:64385607000b61db848c5c4a0f6db1c11aa589d5db7fb84b64de514f0bfacda5/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "94c06188ee77aec13a1434f5ad41f2fbed941da161bf747c1ccd0ac7b256afa1",
+    "symbol:64385607000b61db848c5c4a0f6db1c11aa589d5db7fb84b64de514f0bfacda5/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "25e965182f4e27dda5a1816bbfdee34af67fdbead4274b5d05dafef79934b220",
+    "symbol:64385607000b61db848c5c4a0f6db1c11aa589d5db7fb84b64de514f0bfacda5/context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a": "777717058697d431240deb89d1aed40acbb0a1ac58c0d71d676033d692185842",
+    "symbol:64385607000b61db848c5c4a0f6db1c11aa589d5db7fb84b64de514f0bfacda5/context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "d98bd3965d07e552781a62c3799517f577fd3645f6d6e7538239ca63718d4c1e",
+    "symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "3a690a22be5a1ed5b971561031eb32000596b791d9d2b41421d9feea8092a84a",
+    "symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "1292ad07f96f3b722d55f83fe8b4cde2a960c21953b9faea8cd41404274d4eaf",
+    "symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb/context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a": "22cd143fc874b40b939f7ddbec3053ff1b05c719c8b46e6f77efe68386d115c1",
+    "symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb/context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "7e2411165131e2a8e7032a95eb8d52a9bdf13dd32e0f20e1dec9eaa510ba87d4",
+    "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "d22d7cd685043d5adb9aa8c9eba9592cac8135a66a823760eafa86b62e76631a",
+    "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "9260a4bf85f52895f12af413093f7da261cbc65da19ea3ecc23b463ca790565f",
+    "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf/context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a": "ef3ea9d307b3528a289b9bb1c239eab79f22bb62f9c157ac2d749ce07e8ae5a3",
+    "symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf/context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "3864e10acc34eaf405e99b39ed8008ace78ad44705e856ef95d8e5ba68c72ea2",
+    "symbol:c6cf6aeec6a0be4bb174922e3583e6bff0112a05bba555ae0d57dcbda1eb6d98/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "d010c4c35cec44ab60319d4ced70921c1b857c494f7b0a4aefd3a43a245be2e4",
+    "symbol:c6cf6aeec6a0be4bb174922e3583e6bff0112a05bba555ae0d57dcbda1eb6d98/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "355009a4d55efba06c0edb6367641fe329cb772c466ad3089fdbd806160e0630",
+    "symbol:c6cf6aeec6a0be4bb174922e3583e6bff0112a05bba555ae0d57dcbda1eb6d98/context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a": "88f3eed790ac8fb884216dce311150df26d46c410c0fa4382ddd27c8f4d7c273",
+    "symbol:c6cf6aeec6a0be4bb174922e3583e6bff0112a05bba555ae0d57dcbda1eb6d98/context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "f9f6455c6920f8b40a8aa9f258bef2f23e7eadafedd0ec6ef1b476a405aab5b2",
+    "symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "38feec3e3a224e2019d8233346878f5b6e2ed81518b1c02ac60260191219409e",
+    "symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "b5ea4698001450208b950c4cca57984c6de59fd88cdb88ee0dec0de3ecd6f48e",
+    "symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5/context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a": "191ff427037c2e752acf20a166d8ae54b89ee273fc831d8f96dbc81f046380c6",
+    "symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5/context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "d39e0432ef279422e4e4674ccd62bc0cc7e334022ddcf7677cc746f865e17c5e",
+    "symbol:d704364c8e82d3c7eccd79afb7369ce081441353cb165a8c92f91641253a3519/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "968c7a7055c7694bbc93c1e382efdb1154847ec68d2460ea090d3bed87dfdbc2",
+    "symbol:d704364c8e82d3c7eccd79afb7369ce081441353cb165a8c92f91641253a3519/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "9b1f0ca92dfd5027b4e2268f4ecc562d853e49dd64bda79ef5948fddce017ad5",
+    "symbol:d704364c8e82d3c7eccd79afb7369ce081441353cb165a8c92f91641253a3519/context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a": "41180974047ba26e9a48c64980640dc12b26597be082fa7164fb4da21401156c",
+    "symbol:d704364c8e82d3c7eccd79afb7369ce081441353cb165a8c92f91641253a3519/context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "858acf4de06d12f8b065ec90c797d8316284ab28b47154af4ebf86b1e1ec114e",
+    "symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "5bf1bf256ba82829f8147fec60b8059b57bd919a942ff453b24427ebcdf2c366",
+    "symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "5c1e6be70f9e5eedaa4ca332f14977643000de56f1815c3fa75d07862ba26046",
+    "symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45/context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a": "379638837adfad7b07393916d30b990e76aba9ce03c5ff92fb49109e8fc049c5",
+    "symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45/context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "6ebbc53124ddcb70d0bf34dff5150fae9e17692167778d412390408ad91b1020",
+    "validated-publish/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "31e4650caff6499b4740878f05e4e31d3ac6f76a8590ab8b87bd10f1e3595365",
+    "validated-publish/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "44889dd7944e6b6b34855dec7c8296e98470d69715c3622075498aa203e85761",
+    "validation-wrapper/context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "a7afdb06342d92e851f65e7517fa9d975e25812fda1e4e0ebd4c01756bee785a",
+    "validation-wrapper/context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "694a6aed5bd7bd2f919eff5866507e2908a281c23d7d46af387e1d4089497123",
+    "worker-dbcontext/context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a": "55260e30d93c6db2a94c07f38f2c78e759233ce26a8d15a9533f85cf853bee99",
+    "worker-service/context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a": "7e93ca30a89776bc21c4c9fb85b88cc5582efead8915375ab8c201d5ef24c447"
+  },
+  "context_projects": {
+    "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841": "src/Sample.Components/Sample.Components.csproj",
+    "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a": "src/Sample.Components/Sample.Components.csproj",
+    "context:b09bc629ca6ff8626b8ae04da616f102e74933d1320b31ee84f05f7f59ae383a": "src/Sample.Worker/Sample.Worker.csproj",
+    "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35": "src/Sample.Api/Sample.Api.csproj"
+  }
+}

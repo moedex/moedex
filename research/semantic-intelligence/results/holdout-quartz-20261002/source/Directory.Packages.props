@@ -1,0 +1,254 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+    <!--
+      Aspire ships its AppHost SDK, its hosting packages and its client integrations as one version,
+      so the example pins all four from one property — including the MSBuild SDK, which the AppHost
+      names with the <Sdk> element form for exactly that reason.
+
+      This is the only version in the file that is a property rather than a PackageVersion, and the
+      reason is that the SDK reference is not a PackageReference and so cannot be centrally managed.
+      Note also that `aspire update` does not work in a repository using central package management
+      (microsoft/aspire#15476); move these by hand, or let the `aspire` dependabot group do it.
+    -->
+    <AspireVersion>13.5.4</AspireVersion>
+    <!--
+      The compiler Quartz.Analyzers is written against, and therefore the oldest host that can load it.
+      4.12.0 is the .NET 9 SDK's Roslyn and Visual Studio 17.12's, which is as old as a host that can
+      build a net10.0 consumer gets — an analyzer compiled against a newer Microsoft.CodeAnalysis than
+      the host carries fails to load, and the compiler reports that as a warning nobody reads rather
+      than as the missing diagnostics it is. Raising this raises the floor on every consumer's IDE.
+
+      A property with a VersionOverride at each of the two call sites, rather than a PackageVersion row,
+      and this is the second place in the file where central management cannot express what is meant.
+      CentralPackageTransitivePinningEnabled turns a PackageVersion into a demand on every project that
+      resolves the id at all, and two already resolve Microsoft.CodeAnalysis above 4.12.0 for reasons of
+      their own: BenchmarkDotNet 0.15.8 asks Quartz.Benchmark for >= 4.14.0, and JasperFx.RuntimeCompiler
+      pulls Microsoft.CodeAnalysis 5.0.0 into Quartz.Examples.Wolverine, which pins
+      Microsoft.CodeAnalysis.Common at exactly 5.0.0. A central row at 4.12.0 is NU1109 for the first and
+      NU1107 for the second; a row high enough for both would raise the analyzer's compiler floor, which
+      is the one thing this version is chosen to keep low. So the version is written once, here, the two
+      analyzer projects name it, and no other project's restore graph moves. Nothing ships it: the
+      reference is PrivateAssets=all on both, and Quartz.Analyzers is not a package.
+    -->
+    <MicrosoftCodeAnalysisVersion>4.12.0</MicrosoftCodeAnalysisVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="$(AspireVersion)" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="$(AspireVersion)" />
+    <PackageVersion Include="Aspire.Npgsql" Version="$(AspireVersion)" />
+    <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
+    <PackageVersion Include="AwesomeAssertions.Analyzers" Version="9.0.8" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+    <PackageVersion Include="bunit" Version="2.11.3" />
+    <PackageVersion Include="coverlet.MTP" Version="10.1.0" />
+    <PackageVersion Include="FakeItEasy" Version="9.0.1" />
+    <PackageVersion Include="FirebirdSql.Data.FirebirdClient" Version="10.3.4" />
+    <!--
+      Named here because central package management is on: the F# SDK disables its own implicit
+      FSharp.Core reference when it sees ManagePackageVersionsCentrally, so a project that does not
+      ask for the package builds and then fails at startup with a missing FSharp.Core. Only
+      Quartz.Examples.FSharp references it. Keep it on the version the pinned SDK carries.
+    -->
+    <PackageVersion Include="FSharp.Core" Version="10.1.401" />
+    <!--
+      A test project's reference, not a GlobalPackageReference any more. Under Microsoft.Testing.Platform
+      the reporter registers itself through the entry point the build generates, which names its type and
+      so needs the compile asset a GlobalPackageReference withholds. Directory.Build.props references it.
+    -->
+    <PackageVersion Include="GitHubActionsTestLogger" Version="3.0.5" />
+    <!--
+      Test-only: Quartz.Tests.Integration joins Quartz's tables to a Marten store as a feature schema and
+      checks that Marten's own cleanup leaves them alone. Nothing ships it: Quartz.Weasel.PostgreSQL takes
+      no Marten dependency. Marten, Wolverine and Weasel each floor JasperFx, and the Weasel range below
+      has the highest floor (2.76.0), so the graph under test is the one an application beside Quartz.Weasel
+      resolves.
+    -->
+    <PackageVersion Include="Marten" Version="9.40.0" />
+    <PackageVersion Include="MELT" Version="1.1.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
+    <!--
+      The stable 10.x line. It spent a while on 11.0.0-preview.* - it was moved there while .NET 10 was
+      itself in preview and Dependabot kept it walking that line - which no shipped package took,
+      because only the tests, the examples and the trim canary reference it. PackageDependencyTest is
+      what keeps that true, and it is also why this stays current rather than joining the floors below:
+      nothing inherits it.
+    -->
+    <PackageVersion Include="Microsoft.Data.SQLite" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.1.0" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.Testing" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.CrashDump" Version="2.4.1" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.HangDump" Version="2.4.1" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="2.4.1" />
+    <PackageVersion Include="MySqlConnector" Version="2.6.2" />
+    <PackageVersion Include="NCrontab" Version="3.4.0" />
+    <PackageVersion Include="NLog.Extensions.Logging" Version="6.2.1" />
+    <PackageVersion Include="NSwag.AspNetCore" Version="14.7.1" />
+    <PackageVersion Include="NUnit" Version="5.0.0" />
+    <PackageVersion Include="NUnit.Analyzers" Version="4.15.0" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="6.3.0" />
+    <PackageVersion Include="Npgsql" Version="10.0.3" />
+    <PackageVersion Include="Npgsql.DependencyInjection" Version="10.0.3" />
+    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.19.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.19.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.19.0" />
+    <PackageVersion Include="Oracle.ManagedDataAccess.Core" Version="23.26.301" />
+    <!--
+      The nullable attributes, IsByRefLikeAttribute and the rest of what a netstandard2.0 compilation
+      of the cron parser is missing. Source-only and PrivateAssets=all, so it reaches no nuspec — which
+      is what lets Quartz.Analyzers ride inside Quartz.nupkg without adding a dependency to it.
+    -->
+    <PackageVersion Include="PolySharp" Version="1.16.0" />
+    <PackageVersion Include="PublicApiGenerator" Version="11.5.4" />
+    <PackageVersion Include="Serilog" Version="4.4.0" />
+    <PackageVersion Include="Serilog.Extensions.Hosting" Version="10.0.0" />
+    <PackageVersion Include="Serilog.Extensions.Logging" Version="10.0.0" />
+    <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
+    <PackageVersion Include="Spectre.Console" Version="0.57.2" />
+    <PackageVersion Include="System.Data.SQLite.Core" Version="1.0.119" />
+    <PackageVersion Include="Testcontainers.FirebirdSql" Version="4.15.0" />
+    <PackageVersion Include="Testcontainers.MsSql" Version="4.15.0" />
+    <PackageVersion Include="Testcontainers.MySql" Version="4.15.0" />
+    <PackageVersion Include="Testcontainers.Oracle" Version="4.15.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.15.0" />
+    <PackageVersion Include="Testcontainers.Redis" Version="4.15.0" />
+    <!--
+      32.0.1 is the last Verify without a licence check; .github/dependabot.yml says why it stays there.
+    -->
+    <PackageVersion Include="Verify.NUnit" Version="32.0.1" />
+    <PackageVersion Include="WolverineFx" Version="6.41.0" />
+    <PackageVersion Include="WolverineFx.Postgresql" Version="6.41.0" />
+    <PackageVersion Include="WolverineFx.SqlServer" Version="6.41.0" />
+    <PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.41.0" />
+  </ItemGroup>
+
+  <!--
+    The floors a consumer inherits. Every version below is copied verbatim into a shipped package's
+    nuspec as a minimum, and NuGet resolves a minimum by raising everything else to meet it: an
+    application pinning Microsoft.Extensions.Options at 10.0.10 and referencing Quartz 4.0.0 was told
+    "detected package downgrade" and stopped restoring, because 4.0.0 floored six framework extensions
+    at 10.0.11 — the central version on the day it was built, not a version anything in Quartz needs
+    (#3717). A floor is a demand made of every consumer, so it is the lowest version of its major that
+    still has the API used here rather than the newest one available.
+
+    Everything here therefore compiles against the floor on purpose — one central version per id is what
+    makes "it builds" mean "the floor is real". Raise one only for a security advisory, and then to the
+    fixed version rather than to the newest. Everything else in this file is used only by tests, examples
+    or the build, ships nowhere, and stays current.
+
+    A project that ships nothing does not pin transitively: Directory.Build.targets turns
+    CentralPackageTransitivePinningEnabled off wherever IsPackable is false. When a test package, Aspire,
+    bunit or NSwag asks for a newer patch of one of these ids, that project resolves the newer patch and
+    the floor stays put (#3855) - Microsoft.Extensions.Diagnostics.Testing 10.10.0 asks for 10.0.12 of
+    Microsoft.Extensions.Logging, and Microsoft.AspNetCore.Mvc.Testing 10.0.12 for 10.0.12 of
+    Microsoft.Extensions.Hosting. No project steps over a floor with VersionOverride: Dependabot reads
+    the override as the current version and writes its bump into the floor row. PackageDependencyTest
+    holds both. The price is that a row does not reach such a project transitively: one that needs a
+    newer transitive package names it, as Quartz.Examples.Worker names Serilog.
+
+    Two of the ids here are not floors. Microsoft.Extensions.Hosting and
+    Microsoft.Extensions.Logging.Console ship in nothing and are referenced only by tests and examples.
+    They sit with the floors because dotnet/runtime versions the family in lockstep, so the family stays
+    one line rather than two that disagree.
+
+    Microsoft.Extensions.Logging is a floor that no shipped project names. Quartz references
+    Microsoft.Extensions.Logging.Abstractions instead as of 4.1 (#3730), but Quartz.Aspire reaches the
+    implementation package through OpenTelemetry and Quartz.HttpClient through Microsoft.Extensions.Http,
+    and pinning writes it into both nuspecs.
+
+    That pinning is also why several of these ids reach nuspecs that name none of them: Quartz.Jobs
+    references nothing but Quartz, and carries all six of Quartz's framework extensions as dependencies of
+    its own. A floor is therefore a demand made by every shipped package rather than only by the one that
+    wrote the reference, which is what makes lowering them worth the trouble.
+
+    .github/dependabot.yml carries an ignore entry for each of these ids so a weekly minor or patch is
+    not offered, and PackageDependencyTest fails a Microsoft.* floor that is not x.0.0, so a bump that
+    gets past both still has to argue with a unit test that names this comment.
+  -->
+  <ItemGroup Label="Dependency floors">
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.0" />
+    <!--
+      13.0.2 rather than 13.0.1, which is where the advisory-free 13.x line starts: TimeOnly and
+      DateOnly are reflected over member by member before it, so a job data map holding a TimeOnly
+      round-trips through the Json.NET serializer having quietly lost its seconds.
+      JobDataMapPortabilityTest is what says so, and it said so the first time this floor was set to
+      13.0.1.
+    -->
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.2" />
+    <!--
+      1.15.3 rather than the 1.9.0 the code compiles against: every earlier 1.x drags in an
+      OpenTelemetry.Api with GHSA-g94r-2vxg-569j, and 1.15.3 is the version that fixed it. This is the
+      "raise it for an advisory, to the fixed version" case, written down at the floor rather than
+      discovered by the next person who tries to lower it.
+    -->
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
+    <PackageVersion Include="StackExchange.Redis" Version="3.0.0" />
+    <PackageVersion Include="TimeZoneConverter" Version="7.0.0" />
+    <!--
+      A range rather than a floor, and the only one in the file. The ceiling is there because 9.33.0 broke
+      binary compatibility inside 9.x once already, and Weasel 10 is announced.
+
+      The lower end breaks this group's rule on purpose: it is not the oldest advisory-free release but the
+      oldest one that is correct for Quartz. 9.35.1 brought AddOnlyMigrations, without which an update
+      drops the columns, indexes and foreign keys an application added to Quartz's tables. 9.36.0 is the
+      floor because its SQLite rebuild keeps them too, with their rows (JasperFx/weasel#639), and rolling
+      a rebuild back keeps them as well (#648); Quartz.Weasel.SQLite refused such a rebuild before (#3956).
+      The others follow Weasel.Sqlite so that all of them stay one range; Weasel.MySql and Weasel.Oracle
+      need 9.36.0 in their own right, for the type, index-direction and CREATE fixes that make Quartz's
+      MySQL and Oracle scripts read back unchanged. 9.36.0 floors JasperFx at 2.76.0, so an application
+      beside Marten or Wolverine resolves at least that.
+
+      The Quartz.Weasel packages turn transitive pinning off, so their nuspecs carry exactly this range and
+      nothing of Weasel's own graph. They move together, by hand, when Quartz needs a Weasel fix;
+      .github/dependabot.yml offers no Weasel minor or patch, because each would raise every consumer's floor.
+    -->
+    <PackageVersion Include="Weasel.Core" Version="[9.36.0, 10.0.0)" />
+    <PackageVersion Include="Weasel.MySql" Version="[9.36.0, 10.0.0)" />
+    <PackageVersion Include="Weasel.Oracle" Version="[9.36.0, 10.0.0)" />
+    <PackageVersion Include="Weasel.Postgresql" Version="[9.36.0, 10.0.0)" />
+    <PackageVersion Include="Weasel.Sqlite" Version="[9.36.0, 10.0.0)" />
+    <PackageVersion Include="Weasel.SqlServer" Version="[9.36.0, 10.0.0)" />
+  </ItemGroup>
+
+  <!--
+    The other .NET schedulers Quartz is compared to, referenced by src/Quartz.Benchmark.Competitors and
+    by nothing else. That project is not in Quartz.slnx and packs nothing, so none of these ids reaches a
+    nuspec, a restore graph that ships, or Sonar — PackageDependencyTest walks packable projects, and
+    there is no packable project here to walk.
+
+    They are versions rather than a floating range for the reason every other row is: a published number
+    has to say which build of the other library produced it. They are declared here rather than in the
+    project's own Directory.Packages.props so that Dependabot moves them, which is what keeps the
+    comparison about the current TickerQ and the current Hangfire rather than about the two that happened
+    to be current the day the harness was written. A bump is a re-run, not a merge: the README's tables
+    name the versions they were taken on.
+  -->
+  <ItemGroup Label="Competitor benchmark rows">
+    <PackageVersion Include="Hangfire.Core" Version="1.8.25" />
+    <PackageVersion Include="Hangfire.InMemory" Version="1.0.0" />
+    <PackageVersion Include="Hangfire.PostgreSql" Version="1.21.1" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.12" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageVersion Include="TickerQ" Version="10.4.0" />
+    <PackageVersion Include="TickerQ.EntityFrameworkCore" Version="10.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <GlobalPackageReference Include="Meziantou.Analyzer" Version="3.0.290" />
+  </ItemGroup>
+</Project>

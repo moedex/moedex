@@ -1,0 +1,53 @@
+{
+  "task": "locate-validation-service",
+  "reviewer": "review18_03",
+  "answer_sha256": "212b207c97947e3fd55047a80416d08fd3c265f84cca04397a57a60bdc81c34b",
+  "atoms": [
+    {
+      "id": "locate-validation-service.1",
+      "correctness": 1,
+      "evidence": 0.5,
+      "reason": "Explicitly gives the correct AddScoped interface-to-implementation mapping and lifetime. Answer cites Program.cs:61, which is blank in the pinned source; the registration is line 62. 002.response.raw contains the full supporting Program.cs:26-89 block, so evidence is relevant and retrievable but the supplied single-line citation misses the statement."
+    },
+    {
+      "id": "locate-validation-service.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly identifies the class implementing IRegistrationValidationService and its ValidateRegistration method. Answer citation RegistrationValidationService.cs:7-20 precisely covers declaration and method; 002.response.raw returns 7-21 and the interface at 1-6, matching pinned source."
+    },
+    {
+      "id": "locate-validation-service.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly states constructor injection and storage in _validationService. Answer cites ValidateRegistrationConsumer.cs:9-19, covering constructor lines 15-19; 002.response.raw returns 9-25, matching pinned source."
+    },
+    {
+      "id": "locate-validation-service.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly quotes the awaited call with EventId, MemberId, RegistrationId in order. Answer cites ValidateRegistrationConsumer.cs:21-24, including call at 23; verified in 002.response.raw and pinned source."
+    },
+    {
+      "id": "locate-validation-service.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly limits conclusions to source/configuration and disclaims concrete runtime selection, execution, and delivery. The cited static registration and interface-based consumer call, returned in 002.response.raw, support this distinction; no runtime proof is claimed."
+    }
+  ],
+  "correctness_total": 5,
+  "evidence_total": 4.5,
+  "possible": 5,
+  "unsupported_claims": [
+    {
+      "claim": "The worker registers ValidateRegistrationConsumer with ValidateRegistrationConsumerDefinition at Program.cs:76.",
+      "severity": "minor",
+      "reason": "The registration fact is supported by 002.response.raw Program.cs:26-89 and pinned source line 77, but line 76 registers AddEventAttendeeConsumer. This is a citation location error, not an invented registration or runtime assertion."
+    }
+  ],
+  "strict_success": false,
+  "limitations": [
+    "All four relevant pinned source files match packet raw SHA-256 hashes. Read both logged requests and complete responses plus transcript; 002.response.raw reports truncated=false and clipped=false, and transcript records both responses complete.",
+    "Program.cs citations in answer are one line early (61 vs 62 and 76 vs 77); the main registration evidence receives partial credit for citation precision.",
+    "The run retains public request/response evidence, not an independently auditable transcript of all setup shell reads; the answer isolation note about catalog display truncation was not treated as source evidence. No material unsupported source or runtime claim was found."
+  ]
+}

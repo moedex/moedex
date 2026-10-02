@@ -1,0 +1,93 @@
+{
+  "positive": {
+    "response-init": {
+      "kind": "message_response",
+      "targets": [
+        "Reply"
+      ]
+    },
+    "response-value": {
+      "kind": "message_response",
+      "targets": [
+        "ConcreteReply"
+      ]
+    },
+    "singleton-two": {
+      "kind": "di_registration_if_absent",
+      "targets": [
+        "IService",
+        "Service"
+      ],
+      "lifetime": "singleton"
+    },
+    "scoped-two": {
+      "kind": "di_registration_if_absent",
+      "targets": [
+        "IService",
+        "Service"
+      ],
+      "lifetime": "scoped"
+    },
+    "transient-two": {
+      "kind": "di_registration_if_absent",
+      "targets": [
+        "IService",
+        "Service"
+      ],
+      "lifetime": "transient"
+    },
+    "singleton-one": {
+      "kind": "di_registration_if_absent",
+      "targets": [
+        "Service",
+        "Service"
+      ],
+      "lifetime": "singleton"
+    },
+    "scoped-one": {
+      "kind": "di_registration_if_absent",
+      "targets": [
+        "Service",
+        "Service"
+      ],
+      "lifetime": "scoped"
+    },
+    "transient-one": {
+      "kind": "di_registration_if_absent",
+      "targets": [
+        "Service",
+        "Service"
+      ],
+      "lifetime": "transient"
+    },
+    "static": {
+      "kind": "di_registration_if_absent",
+      "targets": [
+        "IService",
+        "Service"
+      ],
+      "lifetime": "singleton"
+    },
+    "branch": {
+      "kind": "di_registration_if_absent",
+      "targets": [
+        "IService",
+        "Service"
+      ],
+      "lifetime": "singleton"
+    }
+  },
+  "negative": [
+    "response-pipe",
+    "response-untyped",
+    "response-generic",
+    "response-fake",
+    "response-open",
+    "factory",
+    "instance",
+    "runtime-type",
+    "generic",
+    "di-fake",
+    "di-open"
+  ]
+}

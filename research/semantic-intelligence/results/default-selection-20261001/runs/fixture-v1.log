@@ -1,0 +1,4 @@
+  Determining projects to restore...
+  Restored /Users/zakkeown/Code/moedex/.local/default-selection/fixture-v1/Contracts/Contracts.csproj (in 62 ms).
+  Restored /Users/zakkeown/Code/moedex/.local/default-selection/fixture-v1/App/App.csproj (in 65 ms).
+PASS: six class selections, distinct closed arguments, most-specific override, diamond, inherited default, arbitrary body; eight excluded classes/structs; ambiguous compilation suppressed

@@ -1,0 +1,17 @@
+{
+  "ordinal": 8,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"path\":\"src/Domain/Common/BaseEntity.cs\",\"start_line\":11,\"end_line\":30}"
+  ],
+  "started_monotonic": 77900.903095916,
+  "finished_monotonic": 77900.969042083,
+  "returncode": 0,
+  "stdout_bytes": 2235,
+  "stdout_sha256": "4e2ca795e1ff93b28e2e23ab2ac2bc9c1274edad4074eeed88266b92ed1ace15",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

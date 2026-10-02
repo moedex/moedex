@@ -1,0 +1,92 @@
+[
+  {
+    "task": "flow-completion-event",
+    "calls": 19,
+    "response_bytes": 74491,
+    "native_errors": [],
+    "transport_errors": [],
+    "tools": {
+      "search_context": 7,
+      "read_source": 12
+    },
+    "ledger_and_view_hashes_verified": true,
+    "all_rpc_responses_complete": true,
+    "transport_accounting_known": true
+  },
+  {
+    "task": "flow-validation-error",
+    "calls": 16,
+    "response_bytes": 83703,
+    "native_errors": [],
+    "transport_errors": [],
+    "tools": {
+      "list_repos": 1,
+      "search_context": 6,
+      "read_source": 9
+    },
+    "ledger_and_view_hashes_verified": true,
+    "all_rpc_responses_complete": true,
+    "transport_accounting_known": true
+  },
+  {
+    "task": "impact-done-semantics",
+    "calls": 23,
+    "response_bytes": 118626,
+    "native_errors": [
+      19
+    ],
+    "transport_errors": [],
+    "tools": {
+      "search_context": 5,
+      "file_tree": 4,
+      "read_source": 13,
+      "trace_consumers": 1
+    },
+    "ledger_and_view_hashes_verified": true,
+    "all_rpc_responses_complete": true,
+    "transport_accounting_known": true
+  },
+  {
+    "task": "impact-title-uniqueness",
+    "calls": 6,
+    "response_bytes": 23955,
+    "native_errors": [],
+    "transport_errors": [],
+    "tools": {
+      "search_context": 2,
+      "read_source": 4
+    },
+    "ledger_and_view_hashes_verified": true,
+    "all_rpc_responses_complete": true,
+    "transport_accounting_known": true
+  },
+  {
+    "task": "locate-db-wiring",
+    "calls": 23,
+    "response_bytes": 108348,
+    "native_errors": [],
+    "transport_errors": [],
+    "tools": {
+      "search_context": 9,
+      "read_source": 14
+    },
+    "ledger_and_view_hashes_verified": true,
+    "all_rpc_responses_complete": true,
+    "transport_accounting_known": true
+  },
+  {
+    "task": "locate-title-validation",
+    "calls": 1,
+    "response_bytes": 0,
+    "native_errors": [],
+    "transport_errors": [
+      1
+    ],
+    "tools": {
+      "search_context": 1
+    },
+    "ledger_and_view_hashes_verified": true,
+    "all_rpc_responses_complete": false,
+    "transport_accounting_known": false
+  }
+]

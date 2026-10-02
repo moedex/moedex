@@ -1,0 +1,4 @@
+  graph: corpus content unchanged (31987 blob(s)); graph kept at generation 1
+  clusters: status=over_cap eligible=651659/2215076 node(s), 80254679/182844081 edge(s), node_cap=250000, edge_cap=1000000, communities=0, build=534ms
+  graph counts: source={occurrence=47394571, symbol=135449510} confidence={Candidate=72157885, Pattern=110465259, Proven=220937} edge={calls=79068126, candidate=58114794, contains_method=220937, extends=20413, implements=5169, imports=1186553, injects=17, publishes=20817, references=27150955, sibling_definition=14027492, uses_type=3028808} enclosing={resolved=135449510, unresolved=47394571}
+  graph resources: elapsed=17.723s peak_go_runtime=2.15 GiB

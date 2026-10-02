@@ -1,0 +1,1 @@
+Unscored development smoke: verify compiler discovery and definitions.

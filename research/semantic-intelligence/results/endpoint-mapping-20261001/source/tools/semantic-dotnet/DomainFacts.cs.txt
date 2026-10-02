@@ -1,0 +1,172 @@
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Operations;
+
+static partial class Worker
+{
+    // These are compiler-bound API configuration facts, never runtime delivery,
+    // activation, or database-I/O proof. Keep the allowlist deliberately small.
+    static object[]? DomainFacts(State state, SemanticModel model, SimpleNameSyntax name, SyntaxNode bind, ISymbol? bound, out ISymbol? domainOwner)
+    {
+        domainOwner = null;
+        if (!state.Complete || bound is null) return null;
+        if (bind is InvocationExpressionSyntax invocation && bound is IMethodSymbol method)
+        {
+            var endpoint = EndpointFacts(model, invocation, method);
+            if (endpoint is not null) return endpoint;
+            var keyed = KeyedRegistrationFacts(state, model, invocation, method);
+            if (keyed is not null) return keyed;
+            var definition = (method.ReducedFrom ?? method).OriginalDefinition;
+            var args = method.TypeArguments;
+            // Observing an entity-set access or model-builder call does not
+            // establish a DbSet property, table, or executed database operation.
+            if (args.Length == 1 && DomainTarget(args[0]) && definition.Parameters.Length == 0)
+            {
+                if (definition.Name == "Set" && FrameworkType(definition.ContainingType, "Microsoft.EntityFrameworkCore", "DbContext", "Microsoft.EntityFrameworkCore"))
+                    return DomainFact("storage_entity_use", [("entity", args[0])], rule: "csharp-framework-v2");
+                if (definition.Name == "Entity" && FrameworkType(definition.ContainingType, "Microsoft.EntityFrameworkCore", "ModelBuilder", "Microsoft.EntityFrameworkCore"))
+                    return DomainFact("storage_entity_mapping", [("entity", args[0])], rule: "csharp-framework-v2");
+            }
+            // State-machine builders configure future actions/events. They do
+            // not prove that a message was published or a consumer activated.
+            const string configuredPublish = "M:MassTransit.PublishExtensions.Publish``3(MassTransit.EventActivityBinder{``0,``1},MassTransit.EventMessageFactory{``0,``1,``2},System.Action{MassTransit.PublishContext{``2}})";
+            const string configuredEvent = "M:MassTransit.MassTransitStateMachine`1.Event``1(System.Linq.Expressions.Expression{System.Func{MassTransit.Event{``0}}},System.Action{MassTransit.IEventCorrelationConfigurator{`0,``0}})";
+            if (FrameworkType(definition.ContainingType, "MassTransit", "PublishExtensions", "MassTransit")
+                && definition.GetDocumentationCommentId() == configuredPublish && args.Length == 3 && DomainTarget(args[2]))
+                return DomainFact("message_publish_configuration", [("message", args[2])], rule: "csharp-framework-v4");
+            if (FrameworkType(definition.ContainingType, "MassTransit", "MassTransitStateMachine`1", "MassTransit")
+                && definition.GetDocumentationCommentId() == configuredEvent && args.Length == 1 && DomainTarget(args[0]))
+                return DomainFact("message_event_configuration", [("message", args[0])], rule: "csharp-framework-v4");
+            // This fact describes the context service registration only. Options
+            // lifetime and callback contents are not claims about that service.
+            const string addDbContext = "M:Microsoft.Extensions.DependencyInjection.EntityFrameworkServiceCollectionExtensions.AddDbContext``1(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action{Microsoft.EntityFrameworkCore.DbContextOptionsBuilder},Microsoft.Extensions.DependencyInjection.ServiceLifetime,Microsoft.Extensions.DependencyInjection.ServiceLifetime)";
+            if (FrameworkType(definition.ContainingType, "Microsoft.Extensions.DependencyInjection", "EntityFrameworkServiceCollectionExtensions", "Microsoft.EntityFrameworkCore")
+                && definition.GetDocumentationCommentId() == addDbContext && args.Length == 1 && DomainTarget(args[0])
+                && model.GetOperation(invocation) is IInvocationOperation registration)
+            {
+                var contextLifetime = registration.Arguments.SingleOrDefault(a => a.Parameter?.Name == "contextLifetime");
+                if (contextLifetime?.Parameter?.Type is INamedTypeSymbol lifetimeType &&
+                    FrameworkType(lifetimeType, "Microsoft.Extensions.DependencyInjection", "ServiceLifetime", "Microsoft.Extensions.DependencyInjection.Abstractions") &&
+                    lifetimeType.TypeKind == TypeKind.Enum && contextLifetime.Value.ConstantValue is { HasValue: true, Value: int value })
+                {
+                    var lifetime = value switch { 0 => "singleton", 1 => "scoped", 2 => "transient", _ => null };
+                    if (lifetime is not null)
+                        return DomainFact("storage_context_registration", [("service", args[0]), ("implementation", args[0])], lifetime: lifetime, rule: "csharp-framework-v3");
+                }
+            }
+            if (FrameworkType(definition.ContainingType, "Microsoft.Extensions.DependencyInjection", "ServiceCollectionServiceExtensions", "Microsoft.Extensions.DependencyInjection.Abstractions")
+                && definition.Name is "AddSingleton" or "AddScoped" or "AddTransient"
+                && definition.Parameters.Length == 1 && args.Length is 1 or 2 && args.All(DomainTarget))
+            {
+                var lifetime = definition.Name switch { "AddSingleton" => "singleton", "AddScoped" => "scoped", _ => "transient" };
+                return DomainFact("di_registration", [("service", args[0]), ("implementation", args.Length == 2 ? args[1] : args[0])], lifetime: lifetime);
+            }
+            // Record the closed request contract and ordered response alternatives.
+            // This is a call-site configuration, not a route or delivery assertion.
+            if (FrameworkType(definition.ContainingType, "MassTransit", "IRequestClient`1", "MassTransit.Abstractions")
+                && method.ContainingType.TypeArguments.Length == 1 && DomainTarget(method.ContainingType.TypeArguments[0])
+                && args.Length == 2 && args.All(DomainTarget)
+                && definition.GetDocumentationCommentId() is "M:MassTransit.IRequestClient`1.GetResponse``2(`0,System.Threading.CancellationToken,MassTransit.RequestTimeout)" or "M:MassTransit.IRequestClient`1.GetResponse``2(System.Object,System.Threading.CancellationToken,MassTransit.RequestTimeout)")
+                return DomainFact("message_request_configuration", [("request", method.ContainingType.TypeArguments[0]), ("response_1", args[0]), ("response_2", args[1])], rule: "csharp-framework-v6");
+            // Conditional registration is distinct from unconditional Add*: the
+            // call does not prove absence of an earlier registration or activation.
+            if (FrameworkType(definition.ContainingType, "Microsoft.Extensions.DependencyInjection.Extensions", "ServiceCollectionDescriptorExtensions", "Microsoft.Extensions.DependencyInjection.Abstractions")
+                && definition.Name is "TryAddSingleton" or "TryAddScoped" or "TryAddTransient"
+                && args.Length is 1 or 2 && args.All(DomainTarget)
+                && definition.GetDocumentationCommentId() == $"M:Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.{definition.Name}``{args.Length}(Microsoft.Extensions.DependencyInjection.IServiceCollection)")
+            {
+                var lifetime = definition.Name switch { "TryAddSingleton" => "singleton", "TryAddScoped" => "scoped", _ => "transient" };
+                return DomainFact("di_registration_if_absent", [("service", args[0]), ("implementation", args.Length == 2 ? args[1] : args[0])], lifetime: lifetime, rule: "csharp-framework-v5");
+            }
+            // Only the one-argument typed message / object-initializer overloads.
+            // The contract comes from the bound type argument, never payload shape.
+            if (FrameworkType(definition.ContainingType, "MassTransit", "ConsumeContext", "MassTransit.Abstractions")
+                && args.Length == 1 && DomainTarget(args[0])
+                && definition.GetDocumentationCommentId() is "M:MassTransit.ConsumeContext.RespondAsync``1(``0)" or "M:MassTransit.ConsumeContext.RespondAsync``1(System.Object)")
+                return DomainFact("message_response", [("message", args[0])], rule: "csharp-framework-v5");
+            if (FrameworkType(definition.ContainingType, "MassTransit", "IPublishEndpoint", "MassTransit.Abstractions")
+                && definition.Name == "Publish" && args.Length == 1 && DomainTarget(args[0]))
+                return DomainFact("message_publish", [("message", args[0])]);
+            if (FrameworkType(definition.ContainingType, "Microsoft.EntityFrameworkCore", "RelationalEntityTypeBuilderExtensions", "Microsoft.EntityFrameworkCore.Relational")
+                && definition.Name == "ToTable" && args.Length == 1 && DomainTarget(args[0])
+                && model.GetOperation(invocation) is IInvocationOperation operation)
+            {
+                // Only the simple name/schema overloads. No delegates, dynamic
+                // strings, non-generic builders, conventions, or inferred table.
+                var arguments = operation.Arguments.Where(a => a.Parameter?.Name is "name" or "schema").ToArray();
+                var tableArg = arguments.SingleOrDefault(a => a.Parameter?.Name == "name");
+                var schemaArg = arguments.SingleOrDefault(a => a.Parameter?.Name == "schema");
+                bool simple = definition.Parameters.Length is 2 or 3 &&
+                    definition.Parameters.Skip(1).All(p => p.Type.SpecialType == SpecialType.System_String);
+                if (simple && tableArg?.Value.ConstantValue is { HasValue: true, Value: string table } && DomainScalar(table) && !string.IsNullOrWhiteSpace(table) &&
+                    (schemaArg is null || schemaArg.Value.ConstantValue.HasValue && (schemaArg.Value.ConstantValue.Value is null || schemaArg.Value.ConstantValue.Value is string schema && DomainScalar(schema))))
+                    return DomainFact("storage_table", [("entity", args[0])], table: table, schema: schemaArg?.Value.ConstantValue.Value as string);
+            }
+        }
+        if (bound is INamedTypeSymbol type && type.TypeArguments.Length == 1 && DomainTarget(type.TypeArguments[0]))
+        {
+            if (FrameworkType(type, "MassTransit", "IConsumer`1", "MassTransit.Abstractions"))
+            {
+                // A type reference elsewhere does not establish a consumer.
+                var baseType = name.Ancestors().OfType<BaseTypeSyntax>().FirstOrDefault();
+                if (baseType is not null && baseType.Parent?.Parent is TypeDeclarationSyntax declaration &&
+                    model.GetDeclaredSymbol(declaration) is INamedTypeSymbol { TypeKind: TypeKind.Class } owner &&
+                    SymbolEqualityComparer.Default.Equals(model.GetTypeInfo(baseType.Type).Type, type) &&
+                    owner.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, type)))
+                {
+                    // GetEnclosingSymbol at a base-list token returns the outer
+                    // namespace/type, not the class that declares this contract.
+                    domainOwner = owner;
+                    return DomainFact("message_consumer", [("message", type.TypeArguments[0])]);
+                }
+            }
+            if (FrameworkType(type, "Microsoft.EntityFrameworkCore", "DbSet`1", "Microsoft.EntityFrameworkCore"))
+            {
+                var property = name.Ancestors().OfType<PropertyDeclarationSyntax>().FirstOrDefault();
+                if (property is not null && property.Type.Span.Contains(name.Span) &&
+                    model.GetDeclaredSymbol(property) is IPropertySymbol declared &&
+                    SymbolEqualityComparer.Default.Equals(declared.Type, type))
+                    return DomainFact("storage_entity", [("entity", type.TypeArguments[0])]);
+            }
+        }
+        return null;
+    }
+
+    static bool FrameworkType(INamedTypeSymbol type, string ns, string metadataName, string assembly) =>
+        type.ContainingType is null && type.MetadataName == metadataName &&
+        type.ContainingNamespace.ToDisplayString() == ns &&
+        type.ContainingAssembly.Name == assembly && !type.Locations.Any(l => l.IsInSource);
+
+    // OriginalDefinition-based occurrence identities cannot represent constructed
+    // generic targets faithfully. Reject them, including generic containing types,
+    // rather than silently losing their arguments. Interfaces remain valid service
+    // and message contracts; "concrete" here means a resolved named type identity.
+    static bool DomainTarget(ITypeSymbol target)
+    {
+        if (target is not INamedTypeSymbol named || named.TypeKind == TypeKind.Error || named.IsAnonymousType) return false;
+        for (var current = named; current is not null; current = current.ContainingType)
+            if (current.Arity != 0) return false;
+        return true;
+    }
+
+    static bool DomainScalar(string value)
+    {
+        if (value.Contains('\0')) return false;
+        try { return Utf8.GetByteCount(value) <= 1024; }
+        catch (System.Text.EncoderFallbackException) { return false; }
+    }
+
+    static object[] DomainFact(string kind, (string Role, ISymbol Type)[] targets, string? lifetime = null, string? table = null, string? schema = null, string rule = "csharp-framework-v1", string? routePattern = null)
+    {
+        var fact = new Dictionary<string, object?>
+        {
+            ["kind"] = kind, ["rule"] = rule, ["evidence_scope"] = "compile_time",
+            ["targets"] = targets.Select(t => new { t.Role, Symbol = Symbol(t.Type) }).ToArray()
+        };
+        if (routePattern is not null) fact["route_pattern"] = routePattern;
+        if (lifetime is not null) fact["lifetime"] = lifetime;
+        if (table is not null) fact["table"] = table;
+        if (schema is not null) fact["schema"] = schema;
+        return [fact];
+    }
+}

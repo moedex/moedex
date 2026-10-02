@@ -1,0 +1,10 @@
+{
+  "artifact_bytes": 56658037,
+  "payload_bytes": 169213758,
+  "legacy_envelope_bytes_same_payload": 225618473,
+  "reduction_percent": 74.88767819113818,
+  "sha256": "955f50ee6b89e5d07b9deadc1c968a56f534757056152c7e5b8371d268de5042",
+  "payload_sha256": "5aceeead96266c3a1d6acc1f947afb19e9cea79b96e26fd1136bebab4a2b028f",
+  "envelope_version": 2,
+  "payload_version": 1
+}

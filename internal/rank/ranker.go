@@ -2,6 +2,7 @@ package rank
 
 import (
 	"context"
+	"errors"
 	"math"
 	"regexp"
 	"sort"
@@ -10,6 +11,7 @@ import (
 	"moedex/internal/embed"
 	"moedex/internal/index"
 	"moedex/internal/query"
+	"moedex/internal/sourcescope"
 	"moedex/internal/symbol"
 	"moedex/internal/tokenindex"
 )
@@ -185,6 +187,13 @@ type Ranker struct {
 	// come from, not which blobs ultimately score. Default false preserves the
 	// single-index trigram path exactly.
 	tokenCandidates bool
+
+	// Immutable location-only catalog, shared by scoped request views. No source
+	// content or ranking index is rebuilt when applying a scope.
+	scopeByRepo map[string][]uint64
+	scopeAll    []uint64
+	// Non-nil only in a request-local view; contains matching occurrences only.
+	scopeFiles map[uint64][]index.FileRef
 }
 
 // New builds a Ranker. store and emb may both be nil to disable the dense arm.
@@ -192,6 +201,7 @@ type Ranker struct {
 // signature (and existing callers in mcp/eval/tests) are unchanged.
 func New(ix *index.Index, ti *tokenindex.TokenIndex, store *embed.Store, emb embed.Embedder, cfg Config) *Ranker {
 	r := &Ranker{ix: ix, ti: ti, store: store, emb: emb, cfg: cfg.withDefaults()}
+	r.buildScopeCatalog()
 	if r.cfg.PathMinCoverage >= 0 {
 		r.buildPathIndex()
 	}
@@ -284,6 +294,20 @@ type candidate struct {
 // FeatureVector. RRF itself only needs feat.RRFScore; the extra fields are inert
 // under FusionRRF and feed the learned reranker under FusionLinear.
 func (r *Ranker) fuse(ctx context.Context, q string) ([]candidate, error) {
+	candidates, _, err := r.fuseWithStatus(ctx, q, false)
+	return candidates, err
+}
+
+// Status describes request-local degradation; it never exposes backend errors.
+type Status struct {
+	DenseUnavailable bool
+}
+
+func (r *Ranker) fuseWithStatus(ctx context.Context, q string, allowFallback bool) ([]candidate, Status, error) {
+	var status Status
+	if err := ctx.Err(); err != nil {
+		return nil, status, err
+	}
 	terms := tokenindex.Tokenize([]byte(q))
 
 	lex := r.lexicalArm(terms) // sorted desc by BM25
@@ -291,7 +315,20 @@ func (r *Ranker) fuse(ctx context.Context, q string) ([]candidate, error) {
 	if r.denseAllowedFor(q, terms) {
 		var err error
 		if dense, err = r.denseArm(ctx, q); err != nil {
-			return nil, err
+			if ctx.Err() != nil {
+				return nil, status, ctx.Err()
+			}
+			if !allowFallback {
+				return nil, status, err
+			}
+			if errors.Is(err, context.Canceled) {
+				return nil, status, context.Canceled
+			}
+			if errors.Is(err, context.DeadlineExceeded) {
+				return nil, status, context.DeadlineExceeded
+			}
+			status.DenseUnavailable = true
+			dense = nil
 		}
 	}
 	sym := r.symbolArm(terms) // sorted desc by symbol-name match (nil if no arm)
@@ -360,7 +397,7 @@ func (r *Ranker) fuse(ctx context.Context, q string) ([]candidate, error) {
 		a := byBlob[blob]
 		out = append(out, candidate{blob: blob, feat: a.feat, spans: a.spans})
 	}
-	return out, nil
+	return out, status, ctx.Err()
 }
 
 // score turns a candidate's features into its final Score per the active fusion
@@ -376,18 +413,57 @@ func (r *Ranker) score(feat FeatureVector) float64 {
 
 // Rank scores query and returns up to topK results, best fused score first.
 func (r *Ranker) Rank(ctx context.Context, q string, topK int) ([]RankedResult, error) {
-	terms := tokenindex.Tokenize([]byte(q))
-	cands, err := r.fuse(ctx, q)
+	results, _, err := r.rankWithStatus(ctx, q, topK, false)
+	return results, err
+}
+
+// RankWithStatus preserves non-dense retrieval when a dense backend fails. It
+// returns a visible status instead of mutating shared ranker configuration.
+// Cancellation and deadlines remain errors, including wrapped backend-owned
+// cancellation errors when the parent context is still active. Rank and Features
+// remain strict.
+func (r *Ranker) RankWithStatus(ctx context.Context, q string, topK int) ([]RankedResult, Status, error) {
+	return r.rankWithStatus(ctx, q, topK, true)
+}
+
+// RankScopedWithStatus restricts all ranking arms before their ordering/RRF and
+// top-K decisions. BM25 document-frequency statistics remain corpus-global.
+// Shared blobs return matching FileRefs only; excluded paths cannot boost their
+// path score. Empty scope preserves the unscoped path exactly.
+func (r *Ranker) RankScopedWithStatus(ctx context.Context, q string, topK int, scope sourcescope.Scope) ([]RankedResult, Status, error) {
+	if err := scope.Validate(); err != nil {
+		return nil, Status{}, err
+	}
+	if scope.Empty() {
+		return r.RankWithStatus(ctx, q, topK)
+	}
+	view, err := r.scopedView(ctx, scope)
 	if err != nil {
-		return nil, err
+		return nil, Status{}, err
+	}
+	if len(view.scopeFiles) == 0 {
+		return []RankedResult{}, Status{}, ctx.Err()
+	}
+	return view.rankWithStatus(ctx, q, topK, true)
+}
+
+func (r *Ranker) rankWithStatus(ctx context.Context, q string, topK int, allowFallback bool) ([]RankedResult, Status, error) {
+	terms := tokenindex.Tokenize([]byte(q))
+	cands, status, err := r.fuseWithStatus(ctx, q, allowFallback)
+	if err != nil {
+		return nil, status, err
 	}
 
 	results := make([]RankedResult, 0, len(cands))
 	for _, c := range cands {
 		b := r.ix.Blob(c.blob)
+		files := b.Files
+		if r.scopeFiles != nil {
+			files = r.scopeFiles[c.blob]
+		}
 		results = append(results, RankedResult{
 			Blob:    c.blob,
-			Files:   b.Files,
+			Files:   files,
 			Score:   r.score(c.feat),
 			Lexical: c.feat.BM25,
 			Dense:   c.feat.DenseCosine,
@@ -412,7 +488,10 @@ func (r *Ranker) Rank(ctx context.Context, q string, topK int) ([]RankedResult, 
 		spans = append(spans, results[i].LineSpans...)
 		results[i].LineSpans = mergeSpans(spans, r.cfg.MaxSpans)
 	}
-	return results, nil
+	if err := ctx.Err(); err != nil {
+		return nil, status, err
+	}
+	return results, status, nil
 }
 
 // Features runs the four arms for q and returns the per-candidate FeatureVector
@@ -446,6 +525,15 @@ type lexScore struct {
 // candidates sorted by descending BM25 score.
 func (r *Ranker) lexicalArm(terms []string) []lexScore {
 	cand := r.candidateBlobs(terms)
+	if r.scopeFiles != nil {
+		kept := cand[:0]
+		for _, id := range cand {
+			if len(r.scopeFiles[id]) > 0 {
+				kept = append(kept, id)
+			}
+		}
+		cand = kept
+	}
 	if len(cand) == 0 {
 		return nil
 	}
@@ -602,7 +690,11 @@ func (r *Ranker) denseArm(ctx context.Context, q string) ([]armScore, error) {
 	if r.store == nil || r.emb == nil {
 		return nil, nil
 	}
-	hits, err := r.store.Search(ctx, r.emb, q, 64)
+	var acceptBlob func(uint64) bool
+	if r.scopeFiles != nil {
+		acceptBlob = func(id uint64) bool { return len(r.scopeFiles[id]) > 0 }
+	}
+	hits, err := r.store.SearchFiltered(ctx, r.emb, q, 64, acceptBlob)
 	if err != nil {
 		return nil, err
 	}

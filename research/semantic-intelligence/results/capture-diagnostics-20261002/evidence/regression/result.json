@@ -1,0 +1,61 @@
+[
+  {
+    "fixture": "tuple",
+    "returncode": 0,
+    "summary": {
+      "schema": "moedex.semantic-worker.v1",
+      "record_type": "stream_summary",
+      "projects": 1,
+      "compilation_status": "complete",
+      "declarations": 6,
+      "references": 45
+    },
+    "workspace_diagnostics": []
+  },
+  {
+    "fixture": "warning",
+    "returncode": 2,
+    "summary": {
+      "schema": "moedex.semantic-worker.v1",
+      "record_type": "stream_summary",
+      "projects": 1,
+      "compilation_status": "incomplete",
+      "declarations": 6,
+      "references": 45
+    },
+    "workspace_diagnostics": [
+      {
+        "schema": "moedex.semantic-worker.v1",
+        "record_type": "diagnostic",
+        "project": "Probe.csproj",
+        "build_context": "e26752928df08d17bec30d08d79ef779bad5ba750a108f04777c675851152cb6",
+        "code": "workspace",
+        "severity": "error",
+        "message": "[Failure] Msbuild failed when processing the file '/Users/zakkeown/Code/moedex/.local/workspace-diagnostics/regression-final/warning/Probe.csproj' with message: synthetic compatibility warning"
+      }
+    ]
+  },
+  {
+    "fixture": "error",
+    "returncode": 2,
+    "summary": {
+      "schema": "moedex.semantic-worker.v1",
+      "record_type": "stream_summary",
+      "projects": 1,
+      "compilation_status": "incomplete",
+      "declarations": 6,
+      "references": 45
+    },
+    "workspace_diagnostics": [
+      {
+        "schema": "moedex.semantic-worker.v1",
+        "record_type": "diagnostic",
+        "project": "Probe.csproj",
+        "build_context": "0cf63d9d3aad835c9c69ecce736287d4fe5c3e4aa763dbdac0e8a12e3ef9f06a",
+        "code": "workspace",
+        "severity": "error",
+        "message": "[Failure] Msbuild failed when processing the file '/Users/zakkeown/Code/moedex/.local/workspace-diagnostics/regression-final/error/Probe.csproj' with message: synthetic load failure"
+      }
+    ]
+  }
+]

@@ -1,0 +1,23 @@
+test_exact_identity_is_only_owner_level (test_score_codegraph_component.Scoring.test_exact_identity_is_only_owner_level) ... ok
+test_node_range_is_not_exact_callsite (test_score_codegraph_component.Scoring.test_node_range_is_not_exact_callsite) ... ok
+test_overload_and_namespace_never_erased (test_score_codegraph_component.Scoring.test_overload_and_namespace_never_erased) ... ok
+test_same_owner_wrong_message_is_not_negative_violation (test_score_codegraph_component.Scoring.test_same_owner_wrong_message_is_not_negative_violation) ... ok
+test_scoped_service_assertion_retains_line_only (test_score_codegraph_component.Scoring.test_scoped_service_assertion_retains_line_only) ... ok
+test_target_project_collision_stays_ambiguous (test_score_codegraph_component.Scoring.test_target_project_collision_stays_ambiguous) ... ok
+test_type_implementation_is_partial (test_score_codegraph_component.Scoring.test_type_implementation_is_partial) ... ok
+test_unresolved_call_not_promoted (test_score_codegraph_component.Scoring.test_unresolved_call_not_promoted) ... ok
+test_wrong_project_not_repaired (test_score_codegraph_component.Scoring.test_wrong_project_not_repaired) ... ok
+test_additional_fact_on_matched_binding_stays_unscored (test_score_moedex_component.Scoring.test_additional_fact_on_matched_binding_stays_unscored) ... ok
+test_exact_native_evidence (test_score_moedex_component.Scoring.test_exact_native_evidence) ... ok
+test_implementation_requires_exact_member_and_type (test_score_moedex_component.Scoring.test_implementation_requires_exact_member_and_type) ... ok
+test_missing_variant_evidence_is_incomplete (test_score_moedex_component.Scoring.test_missing_variant_evidence_is_incomplete) ... ok
+test_negative_requires_native_site_in_every_context (test_score_moedex_component.Scoring.test_negative_requires_native_site_in_every_context) ... ok
+test_source_coverage_must_exist_in_native_context (test_score_moedex_component.Scoring.test_source_coverage_must_exist_in_native_context) ... ok
+test_wrapper_must_not_be_promoted_to_direct_publish (test_score_moedex_component.Scoring.test_wrapper_must_not_be_promoted_to_direct_publish) ... ok
+test_wrong_identity_scope_and_span_do_not_match (test_score_moedex_component.Scoring.test_wrong_identity_scope_and_span_do_not_match) ... ok
+test_wrong_lifetime_rejected (test_score_moedex_component.Scoring.test_wrong_lifetime_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 0.004s
+
+OK

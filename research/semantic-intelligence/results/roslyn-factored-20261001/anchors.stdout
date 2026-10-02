@@ -1,0 +1,4 @@
+=== RUN   TestPinnedRoslynGraphLiteralDefinitions
+    public_roslyn_test.go:52: real Main declaration has no sibling relationships
+--- FAIL: TestPinnedRoslynGraphLiteralDefinitions (1.42s)
+FAIL

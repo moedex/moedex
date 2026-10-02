@@ -1,0 +1,921 @@
+{
+  "classification": "source_authored_development_baseline_not_independent_solver_score",
+  "gold_sha256": "4bcc066510c14d7a842e4420f8422a12751e0b3350136fc7e6cd923a05adb6eb",
+  "repo": "Sample-ForkJoint",
+  "commit": "a0aa87647ea9124cb6d4051760e5f3908fb1ce91",
+  "identity": [
+    "independent-project",
+    "b99fbfef3da5f4b1f0d77c55e291aa1761dda1378604666851686c38f6a3d1ae"
+  ],
+  "calls": [
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 824
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 3026
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 826
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 3036
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 824
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 2214
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 839
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 2267
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 795
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 1822
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 796
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 1823
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 796
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 2673
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 803
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 2589
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 800
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 2445
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 800
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 2943
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 840
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 1808
+    }
+  ],
+  "response_bytes": 35589,
+  "expectations": [
+    {
+      "id": "fry-consumer",
+      "claim": "IConsumer<CookFry> implementation",
+      "layer": "implementation",
+      "binding_resolved": true,
+      "fact_present": true,
+      "facts": [
+        {
+          "kind": "interface_method_implementation",
+          "rule": "csharp-interface-closed-v1",
+          "evidence_scope": "compile_time",
+          "interface_symbol_id": "symbol:0a33da6fa6b789494a8defa76dbbaf811d9e28901c37f28207206b332927f404",
+          "implementing_type_symbol_id": "symbol:2a038ee279847ffc50d7802064d1f0e42a2a2280a876307afa20d2cdb221c717"
+        }
+      ],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:1262cd38fe6a63ee644d1bbcb66eed02ed2a48606fe5daa392ab1d4c81adbdca",
+          "binding_status": "resolved",
+          "reference_kind": "declaration",
+          "role": "declaration",
+          "repo": "Sample-ForkJoint",
+          "path": "src/ForkJoint.Api/Components/Consumers/CookFryConsumer.cs",
+          "raw_sha256": "7c3fc91a8decd7d16ffa3653a3965b12a577b3a2fe7f4550d4249e730a5d84fb",
+          "source_id": "source:5b22991026153bfa9374c6cf8b1d0a712d3797ac7f572e04d280080f6f3ceeb9",
+          "source_snapshot_id": "snapshot:07f5d4370ed08996091c67fa1ec6deb7180da553bbf18dbbb7556477efd48002",
+          "context_id": "context:f27f29b2f381afee1061f33eeb78fa3d12b02f49b10acabfec632c7a57512b1e",
+          "project": "src/ForkJoint.Api/ForkJoint.Api.csproj",
+          "byte_offset": 316,
+          "byte_length": 7,
+          "symbol": {
+            "id": "symbol:7aee7e05acc161743857f92712bc1e8e69347bd42212ba2da5725354da558d43",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-ForkJoint/src/ForkJoint.Api/ForkJoint.Api.csproj",
+            "descriptor": "M:ForkJoint.Api.Components.Consumers.CookFryConsumer.Consume(MassTransit.ConsumeContext{ForkJoint.Contracts.CookFry})",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "15",
+          "implementation_facts": [
+            {
+              "kind": "interface_method_implementation",
+              "rule": "csharp-interface-closed-v1",
+              "evidence_scope": "compile_time",
+              "interface_symbol_id": "symbol:0a33da6fa6b789494a8defa76dbbaf811d9e28901c37f28207206b332927f404",
+              "implementing_type_symbol_id": "symbol:2a038ee279847ffc50d7802064d1f0e42a2a2280a876307afa20d2cdb221c717"
+            }
+          ],
+          "implementation_symbols": [
+            {
+              "id": "symbol:0a33da6fa6b789494a8defa76dbbaf811d9e28901c37f28207206b332927f404",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "MassTransit.Abstractions, Version=8.2.1.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+              "descriptor": "{\"definition\":\"M:MassTransit.IConsumer\\u00601.Consume(MassTransit.ConsumeContext{\\u00600})\",\"arguments\":[{\"descriptor\":\"T:ForkJoint.Contracts.CookFry\",\"descriptor_kind\":\"documentation_comment_id\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-ForkJoint/src/ForkJoint.Contracts/ForkJoint.Contracts.csproj\",\"language\":\"csharp\"}]}",
+              "descriptor_kind": "constructed_interface_method_v1"
+            },
+            {
+              "id": "symbol:2a038ee279847ffc50d7802064d1f0e42a2a2280a876307afa20d2cdb221c717",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-ForkJoint/src/ForkJoint.Api/ForkJoint.Api.csproj",
+              "descriptor": "T:ForkJoint.Api.Components.Consumers.CookFryConsumer",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shake-consumer",
+      "claim": "IConsumer<PourShake> implementation",
+      "layer": "implementation",
+      "binding_resolved": true,
+      "fact_present": true,
+      "facts": [
+        {
+          "kind": "interface_method_implementation",
+          "rule": "csharp-interface-closed-v1",
+          "evidence_scope": "compile_time",
+          "interface_symbol_id": "symbol:d4e088acab2b60d10b1a1eff32f4c53d9c77cb752f5e3d5fbb99bdc4e80b437a",
+          "implementing_type_symbol_id": "symbol:5939bda3bb9b318206acb6faafda64ae16e0ac322ea050be6d25fa46c9ae2590"
+        }
+      ],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:680668ef24814d4c94e16f1067a4cdc4343470b3ed3f4ac2e5bfeb41785a39f7",
+          "binding_status": "resolved",
+          "reference_kind": "declaration",
+          "role": "declaration",
+          "repo": "Sample-ForkJoint",
+          "path": "src/ForkJoint.Api/Components/Consumers/PourShakeConsumer.cs",
+          "raw_sha256": "d31ed4253706bf378c611407f4eb6e12eb3df81cf5c304fd35181c6a977edbf8",
+          "source_id": "source:11f69e6b1dfb59a55fab54d163c1965f999700d95d61e9179ed1f48dad93533c",
+          "source_snapshot_id": "snapshot:07f5d4370ed08996091c67fa1ec6deb7180da553bbf18dbbb7556477efd48002",
+          "context_id": "context:f27f29b2f381afee1061f33eeb78fa3d12b02f49b10acabfec632c7a57512b1e",
+          "project": "src/ForkJoint.Api/ForkJoint.Api.csproj",
+          "byte_offset": 364,
+          "byte_length": 7,
+          "symbol": {
+            "id": "symbol:7ea2e688825f93629ea1ebba71c31b1409af6535596c1e3933ec383da4c297a7",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-ForkJoint/src/ForkJoint.Api/ForkJoint.Api.csproj",
+            "descriptor": "M:ForkJoint.Api.Components.Consumers.PourShakeConsumer.Consume(MassTransit.ConsumeContext{ForkJoint.Contracts.PourShake})",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "15",
+          "implementation_facts": [
+            {
+              "kind": "interface_method_implementation",
+              "rule": "csharp-interface-closed-v1",
+              "evidence_scope": "compile_time",
+              "interface_symbol_id": "symbol:d4e088acab2b60d10b1a1eff32f4c53d9c77cb752f5e3d5fbb99bdc4e80b437a",
+              "implementing_type_symbol_id": "symbol:5939bda3bb9b318206acb6faafda64ae16e0ac322ea050be6d25fa46c9ae2590"
+            }
+          ],
+          "implementation_symbols": [
+            {
+              "id": "symbol:5939bda3bb9b318206acb6faafda64ae16e0ac322ea050be6d25fa46c9ae2590",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-ForkJoint/src/ForkJoint.Api/ForkJoint.Api.csproj",
+              "descriptor": "T:ForkJoint.Api.Components.Consumers.PourShakeConsumer",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            {
+              "id": "symbol:d4e088acab2b60d10b1a1eff32f4c53d9c77cb752f5e3d5fbb99bdc4e80b437a",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "MassTransit.Abstractions, Version=8.2.1.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+              "descriptor": "{\"definition\":\"M:MassTransit.IConsumer\\u00601.Consume(MassTransit.ConsumeContext{\\u00600})\",\"arguments\":[{\"descriptor\":\"T:ForkJoint.Contracts.PourShake\",\"descriptor_kind\":\"documentation_comment_id\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-ForkJoint/src/ForkJoint.Contracts/ForkJoint.Contracts.csproj\",\"language\":\"csharp\"}]}",
+              "descriptor_kind": "constructed_interface_method_v1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fry-response",
+      "claim": "MassTransit typed response FryReady",
+      "layer": "domain",
+      "binding_resolved": true,
+      "fact_present": true,
+      "facts": [
+        {
+          "kind": "message_response",
+          "rule": "csharp-framework-v5",
+          "evidence_scope": "compile_time",
+          "targets": [
+            {
+              "role": "message",
+              "symbol": {
+                "id": "symbol:90c981930c5ed3eae0caedf53420610118ea7af03293da032d0ccc47c60cd68d",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "Sample-ForkJoint/src/ForkJoint.Contracts/ForkJoint.Contracts.csproj",
+                "descriptor": "T:ForkJoint.Contracts.FryReady",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            }
+          ]
+        }
+      ],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:9aae942e4bc1005489487ea76bdf53a2fccc2f63ae592f1a5ad5d763599cf64b",
+          "binding_status": "resolved",
+          "reference_kind": "invocation",
+          "role": "reference",
+          "repo": "Sample-ForkJoint",
+          "path": "src/ForkJoint.Api/Components/Consumers/CookFryConsumer.cs",
+          "raw_sha256": "7c3fc91a8decd7d16ffa3653a3965b12a577b3a2fe7f4550d4249e730a5d84fb",
+          "source_id": "source:5b22991026153bfa9374c6cf8b1d0a712d3797ac7f572e04d280080f6f3ceeb9",
+          "source_snapshot_id": "snapshot:07f5d4370ed08996091c67fa1ec6deb7180da553bbf18dbbb7556477efd48002",
+          "context_id": "context:f27f29b2f381afee1061f33eeb78fa3d12b02f49b10acabfec632c7a57512b1e",
+          "project": "src/ForkJoint.Api/ForkJoint.Api.csproj",
+          "byte_offset": 438,
+          "byte_length": 12,
+          "symbol": {
+            "id": "symbol:d495d142378be201a3bfb7009a36da283680de212888144c5d39b63f86916f50",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.1.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "M:MassTransit.ConsumeContext.RespondAsync``1(System.Object)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "enclosing_symbol_id": "symbol:7aee7e05acc161743857f92712bc1e8e69347bd42212ba2da5725354da558d43",
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "15",
+          "domain_facts": [
+            {
+              "kind": "message_response",
+              "rule": "csharp-framework-v5",
+              "evidence_scope": "compile_time",
+              "targets": [
+                {
+                  "role": "message",
+                  "symbol": {
+                    "id": "symbol:90c981930c5ed3eae0caedf53420610118ea7af03293da032d0ccc47c60cd68d",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "Sample-ForkJoint/src/ForkJoint.Contracts/ForkJoint.Contracts.csproj",
+                    "descriptor": "T:ForkJoint.Contracts.FryReady",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "onion-publish",
+      "claim": "conditional MassTransit publish OrderOnionRings; delivery unproved",
+      "layer": "domain",
+      "binding_resolved": true,
+      "fact_present": true,
+      "facts": [
+        {
+          "kind": "message_publish",
+          "rule": "csharp-framework-v1",
+          "evidence_scope": "compile_time",
+          "targets": [
+            {
+              "role": "message",
+              "symbol": {
+                "id": "symbol:ac7df17ac19b2467dfeafdc81e302f802dfcaa53cb2c73cd73fbca278a362165",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "Sample-ForkJoint/src/ForkJoint.Contracts/ForkJoint.Contracts.csproj",
+                "descriptor": "T:ForkJoint.Contracts.OrderOnionRings",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            }
+          ]
+        }
+      ],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:a12ed957e4d3a0c04b42504987de82392f33669b837487a4256070b92469cf87",
+          "binding_status": "resolved",
+          "reference_kind": "invocation",
+          "role": "reference",
+          "repo": "Sample-ForkJoint",
+          "path": "src/ForkJoint.Api/Components/ItineraryPlanners/BurgerItineraryPlanner.cs",
+          "raw_sha256": "d1f3dd05432cf43ddcb94d8bf80c5a3f26d8af116da46a5308a9bbeeac4b6494",
+          "source_id": "source:01319baaef201f6dfdd2f3ca18dda75fb86607988045a5f570c18ca779814687",
+          "source_snapshot_id": "snapshot:07f5d4370ed08996091c67fa1ec6deb7180da553bbf18dbbb7556477efd48002",
+          "context_id": "context:f27f29b2f381afee1061f33eeb78fa3d12b02f49b10acabfec632c7a57512b1e",
+          "project": "src/ForkJoint.Api/ForkJoint.Api.csproj",
+          "byte_offset": 1340,
+          "byte_length": 7,
+          "symbol": {
+            "id": "symbol:5d8312e49fcc0690bbadcfaa95a2d4081b68f6ef43191e6b043bb4c74ad2b0f6",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.1.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(System.Object,System.Threading.CancellationToken)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "enclosing_symbol_id": "symbol:c6a387ead51441066f01bb8a30adf51a6c724d2d10651ad23e0c80055130cfca",
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "15",
+          "domain_facts": [
+            {
+              "kind": "message_publish",
+              "rule": "csharp-framework-v1",
+              "evidence_scope": "compile_time",
+              "targets": [
+                {
+                  "role": "message",
+                  "symbol": {
+                    "id": "symbol:ac7df17ac19b2467dfeafdc81e302f802dfcaa53cb2c73cd73fbca278a362165",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "Sample-ForkJoint/src/ForkJoint.Contracts/ForkJoint.Contracts.csproj",
+                    "descriptor": "T:ForkJoint.Contracts.OrderOnionRings",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "consumer-scan",
+      "claim": "consumer namespace scanning configuration; does not prove runtime registration",
+      "layer": "domain",
+      "binding_resolved": true,
+      "fact_present": false,
+      "facts": [],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:14206d5c7627c207c4216448abcf4d3b102c87a92a8818e86bd29fa75002e0e0",
+          "binding_status": "resolved",
+          "reference_kind": "invocation",
+          "role": "reference",
+          "repo": "Sample-ForkJoint",
+          "path": "src/ForkJoint.Api/Startup.cs",
+          "raw_sha256": "791dd61d4fc07062799ff3eab8e9d7345f666f64d016d73c36cedb8592ae268d",
+          "source_id": "source:ff1842f509d53c7052123ff1700a5edcd1b6568317d0bf15d3acaac71903f1b6",
+          "source_snapshot_id": "snapshot:07f5d4370ed08996091c67fa1ec6deb7180da553bbf18dbbb7556477efd48002",
+          "context_id": "context:f27f29b2f381afee1061f33eeb78fa3d12b02f49b10acabfec632c7a57512b1e",
+          "project": "src/ForkJoint.Api/ForkJoint.Api.csproj",
+          "byte_offset": 6298,
+          "byte_length": 35,
+          "symbol": {
+            "id": "symbol:8907549d0a43baa810f6549b9967113d6151ef7d81c4cc53df13f7ffa017ffdb",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit, Version=8.2.1.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "M:MassTransit.RegistrationExtensions.AddConsumersFromNamespaceContaining``1(MassTransit.IRegistrationConfigurator,System.Func{System.Type,System.Boolean})",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "enclosing_symbol_id": "symbol:879c02fcf543af6af5447a3c7371f18616d21b323942f3e2335b3bcca2b9654f",
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "15"
+        }
+      ]
+    },
+    {
+      "id": "activity-scan",
+      "claim": "activity namespace scanning configuration",
+      "layer": "domain",
+      "binding_resolved": true,
+      "fact_present": false,
+      "facts": [],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:34d24d0fd5162a54b6c549e89afdd0fc99ebabe4f44e43ea21fc8abbfca45697",
+          "binding_status": "resolved",
+          "reference_kind": "invocation",
+          "role": "reference",
+          "repo": "Sample-ForkJoint",
+          "path": "src/ForkJoint.Api/Startup.cs",
+          "raw_sha256": "791dd61d4fc07062799ff3eab8e9d7345f666f64d016d73c36cedb8592ae268d",
+          "source_id": "source:ff1842f509d53c7052123ff1700a5edcd1b6568317d0bf15d3acaac71903f1b6",
+          "source_snapshot_id": "snapshot:07f5d4370ed08996091c67fa1ec6deb7180da553bbf18dbbb7556477efd48002",
+          "context_id": "context:f27f29b2f381afee1061f33eeb78fa3d12b02f49b10acabfec632c7a57512b1e",
+          "project": "src/ForkJoint.Api/ForkJoint.Api.csproj",
+          "byte_offset": 6376,
+          "byte_length": 36,
+          "symbol": {
+            "id": "symbol:d79fb608d8d4bb446024aee2d52b4cb0b08fe09184069544dbf6feaa7813e5fc",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit, Version=8.2.1.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "M:MassTransit.RegistrationExtensions.AddActivitiesFromNamespaceContaining``1(MassTransit.IRegistrationConfigurator,System.Func{System.Type,System.Boolean})",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "enclosing_symbol_id": "symbol:879c02fcf543af6af5447a3c7371f18616d21b323942f3e2335b3bcca2b9654f",
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "15"
+        }
+      ]
+    },
+    {
+      "id": "fryer-registration",
+      "claim": "conditional singleton registration IFryer to Fryer",
+      "layer": "domain",
+      "binding_resolved": true,
+      "fact_present": true,
+      "facts": [
+        {
+          "kind": "di_registration_if_absent",
+          "rule": "csharp-framework-v5",
+          "evidence_scope": "compile_time",
+          "targets": [
+            {
+              "role": "service",
+              "symbol": {
+                "id": "symbol:82d26a01ae1565165ee585d4dadf93acc48ddac770ccc48885a30e011f7721ac",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "Sample-ForkJoint/src/ForkJoint.Api/ForkJoint.Api.csproj",
+                "descriptor": "T:ForkJoint.Api.Services.IFryer",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            },
+            {
+              "role": "implementation",
+              "symbol": {
+                "id": "symbol:408a6e96c8f0a95e4b31ae236ff780b7e130be374d6e9e2b66f90bb578413571",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "Sample-ForkJoint/src/ForkJoint.Api/ForkJoint.Api.csproj",
+                "descriptor": "T:ForkJoint.Api.Services.Fryer",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            }
+          ],
+          "lifetime": "singleton"
+        }
+      ],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:f4e6c92ae8b5a34997e8c255af914ef1107fea72da21cc7f073982e5b80c43db",
+          "binding_status": "resolved",
+          "reference_kind": "invocation",
+          "role": "reference",
+          "repo": "Sample-ForkJoint",
+          "path": "src/ForkJoint.Api/Startup.cs",
+          "raw_sha256": "791dd61d4fc07062799ff3eab8e9d7345f666f64d016d73c36cedb8592ae268d",
+          "source_id": "source:ff1842f509d53c7052123ff1700a5edcd1b6568317d0bf15d3acaac71903f1b6",
+          "source_snapshot_id": "snapshot:07f5d4370ed08996091c67fa1ec6deb7180da553bbf18dbbb7556477efd48002",
+          "context_id": "context:f27f29b2f381afee1061f33eeb78fa3d12b02f49b10acabfec632c7a57512b1e",
+          "project": "src/ForkJoint.Api/ForkJoint.Api.csproj",
+          "byte_offset": 1562,
+          "byte_length": 15,
+          "symbol": {
+            "id": "symbol:90b2f49d7a6d13ae6aef733e61054ee530aba87e3394bb429e9367acd8e31823",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+            "descriptor": "M:Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddSingleton``2(Microsoft.Extensions.DependencyInjection.IServiceCollection)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "enclosing_symbol_id": "symbol:66e4414184353bd4e5ffaa46143fe40f94dfa7882a92431d46f5e2d56a645202",
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "15",
+          "domain_facts": [
+            {
+              "kind": "di_registration_if_absent",
+              "rule": "csharp-framework-v5",
+              "evidence_scope": "compile_time",
+              "targets": [
+                {
+                  "role": "service",
+                  "symbol": {
+                    "id": "symbol:82d26a01ae1565165ee585d4dadf93acc48ddac770ccc48885a30e011f7721ac",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "Sample-ForkJoint/src/ForkJoint.Api/ForkJoint.Api.csproj",
+                    "descriptor": "T:ForkJoint.Api.Services.IFryer",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                },
+                {
+                  "role": "implementation",
+                  "symbol": {
+                    "id": "symbol:408a6e96c8f0a95e4b31ae236ff780b7e130be374d6e9e2b66f90bb578413571",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "Sample-ForkJoint/src/ForkJoint.Api/ForkJoint.Api.csproj",
+                    "descriptor": "T:ForkJoint.Api.Services.Fryer",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                }
+              ],
+              "lifetime": "singleton"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fryer-implementation",
+      "claim": "IFryer.CookFry implemented by Fryer",
+      "layer": "implementation",
+      "binding_resolved": true,
+      "fact_present": true,
+      "facts": [
+        {
+          "kind": "interface_method_implementation",
+          "rule": "csharp-interface-v1",
+          "evidence_scope": "compile_time",
+          "interface_symbol_id": "symbol:720368111c512a8dfc46577014892dbff19950d5c758d655101cb10020605a7f",
+          "implementing_type_symbol_id": "symbol:408a6e96c8f0a95e4b31ae236ff780b7e130be374d6e9e2b66f90bb578413571"
+        }
+      ],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:ee873ac2384d7e211baeab3997a3e1416c0c9e2fc729af9914971e278f13ee47",
+          "binding_status": "resolved",
+          "reference_kind": "declaration",
+          "role": "declaration",
+          "repo": "Sample-ForkJoint",
+          "path": "src/ForkJoint.Api/Services/Fryer.cs",
+          "raw_sha256": "29daef1412d16c27a5b7f972aae8ba985211714c30a34c33b16c37e5b9887715",
+          "source_id": "source:cbcbb75d76f1be5d07c10c38199ddf35af4467aff214ffbe3aced15370bde680",
+          "source_snapshot_id": "snapshot:07f5d4370ed08996091c67fa1ec6deb7180da553bbf18dbbb7556477efd48002",
+          "context_id": "context:f27f29b2f381afee1061f33eeb78fa3d12b02f49b10acabfec632c7a57512b1e",
+          "project": "src/ForkJoint.Api/ForkJoint.Api.csproj",
+          "byte_offset": 236,
+          "byte_length": 7,
+          "symbol": {
+            "id": "symbol:f4bbed382fff50df37f61c7a0b2d0f75d5c662fee4fc7d34702b8b99ec96c366",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-ForkJoint/src/ForkJoint.Api/ForkJoint.Api.csproj",
+            "descriptor": "M:ForkJoint.Api.Services.Fryer.CookFry(ForkJoint.Contracts.Size)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "15",
+          "implementation_facts": [
+            {
+              "kind": "interface_method_implementation",
+              "rule": "csharp-interface-v1",
+              "evidence_scope": "compile_time",
+              "interface_symbol_id": "symbol:720368111c512a8dfc46577014892dbff19950d5c758d655101cb10020605a7f",
+              "implementing_type_symbol_id": "symbol:408a6e96c8f0a95e4b31ae236ff780b7e130be374d6e9e2b66f90bb578413571"
+            }
+          ],
+          "implementation_symbols": [
+            {
+              "id": "symbol:408a6e96c8f0a95e4b31ae236ff780b7e130be374d6e9e2b66f90bb578413571",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-ForkJoint/src/ForkJoint.Api/ForkJoint.Api.csproj",
+              "descriptor": "T:ForkJoint.Api.Services.Fryer",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            {
+              "id": "symbol:720368111c512a8dfc46577014892dbff19950d5c758d655101cb10020605a7f",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "Sample-ForkJoint/src/ForkJoint.Api/ForkJoint.Api.csproj",
+              "descriptor": "M:ForkJoint.Api.Services.IFryer.CookFry(ForkJoint.Contracts.Size)",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "route-post",
+      "claim": "POST /order configuration to local SubmitOrder method",
+      "layer": "domain",
+      "binding_resolved": true,
+      "fact_present": true,
+      "facts": [
+        {
+          "kind": "endpoint_post_configuration",
+          "rule": "csharp-endpoint-v1",
+          "evidence_scope": "compile_time",
+          "targets": [
+            {
+              "role": "handler",
+              "symbol": {
+                "id": "symbol:0568563050291f783535b3c9a6a51489eabd2cdaa473763668ec4883321ef182",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "Sample-ForkJoint/src/ForkJoint.Api/ForkJoint.Api.csproj",
+                "descriptor": "M:ForkJoint.Api.OrderRoutes.SubmitOrder(ForkJoint.Api.OrderRoutes.Order,MassTransit.IRequestClient{ForkJoint.Contracts.SubmitOrder},System.Threading.CancellationToken)",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            }
+          ],
+          "route_pattern": "/order"
+        }
+      ],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:bed301023d11a1f04c502689a5cc7cebebc5f565864910fc7362d208531ee93a",
+          "binding_status": "resolved",
+          "reference_kind": "invocation",
+          "role": "reference",
+          "repo": "Sample-ForkJoint",
+          "path": "src/ForkJoint.Api/OrderRoutes.cs",
+          "raw_sha256": "2c7345b54fc91c7dce711e10c741ba7a1dc948b254893b5ba809f9a393c090c0",
+          "source_id": "source:73b9e93d67fec24542563e149af390cf18fd9e85a31247665af0e05a01a10a27",
+          "source_snapshot_id": "snapshot:07f5d4370ed08996091c67fa1ec6deb7180da553bbf18dbbb7556477efd48002",
+          "context_id": "context:f27f29b2f381afee1061f33eeb78fa3d12b02f49b10acabfec632c7a57512b1e",
+          "project": "src/ForkJoint.Api/ForkJoint.Api.csproj",
+          "byte_offset": 448,
+          "byte_length": 7,
+          "symbol": {
+            "id": "symbol:724391f55d9feaf6f3bd8b473bebbfea4281a303857656f3d94086435fea44a5",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Microsoft.AspNetCore.Routing, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+            "descriptor": "M:Microsoft.AspNetCore.Builder.EndpointRouteBuilderExtensions.MapPost(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder,System.String,System.Delegate)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "enclosing_symbol_id": "symbol:d2730066902c437b4845efdbc2eaacd56f6d4e770698aad39e36b0f3fe9f57b5",
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "15",
+          "domain_facts": [
+            {
+              "kind": "endpoint_post_configuration",
+              "rule": "csharp-endpoint-v1",
+              "evidence_scope": "compile_time",
+              "targets": [
+                {
+                  "role": "handler",
+                  "symbol": {
+                    "id": "symbol:0568563050291f783535b3c9a6a51489eabd2cdaa473763668ec4883321ef182",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "Sample-ForkJoint/src/ForkJoint.Api/ForkJoint.Api.csproj",
+                    "descriptor": "M:ForkJoint.Api.OrderRoutes.SubmitOrder(ForkJoint.Api.OrderRoutes.Order,MassTransit.IRequestClient{ForkJoint.Contracts.SubmitOrder},System.Threading.CancellationToken)",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                }
+              ],
+              "route_pattern": "/order"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "request-response",
+      "claim": "IRequestClient<SubmitOrder> request with two response contracts",
+      "layer": "domain",
+      "binding_resolved": true,
+      "fact_present": true,
+      "facts": [
+        {
+          "kind": "message_request_configuration",
+          "rule": "csharp-framework-v6",
+          "evidence_scope": "compile_time",
+          "targets": [
+            {
+              "role": "request",
+              "symbol": {
+                "id": "symbol:f9f7428de40ae214367041e4d5c99ca3a454f5562eb1964c678ef1e1f589ca58",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "Sample-ForkJoint/src/ForkJoint.Contracts/ForkJoint.Contracts.csproj",
+                "descriptor": "T:ForkJoint.Contracts.SubmitOrder",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            },
+            {
+              "role": "response_1",
+              "symbol": {
+                "id": "symbol:dc9e065bb18b52ac031e40b41184fea80630171dc9d0e9549317c5b2b7bb0318",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "Sample-ForkJoint/src/ForkJoint.Contracts/ForkJoint.Contracts.csproj",
+                "descriptor": "T:ForkJoint.Contracts.OrderCompleted",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            },
+            {
+              "role": "response_2",
+              "symbol": {
+                "id": "symbol:2111bfe710bebc0344d5724c3d47c8ac2fd251b6857c74bdf3d758ff2433eddf",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "Sample-ForkJoint/src/ForkJoint.Contracts/ForkJoint.Contracts.csproj",
+                "descriptor": "T:ForkJoint.Contracts.OrderFaulted",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            }
+          ]
+        }
+      ],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:7d4f92669e22df1e75e499caf35d9bde209777d395043ac5cb58b4aeb3da2356",
+          "binding_status": "resolved",
+          "reference_kind": "invocation",
+          "role": "reference",
+          "repo": "Sample-ForkJoint",
+          "path": "src/ForkJoint.Api/OrderRoutes.cs",
+          "raw_sha256": "2c7345b54fc91c7dce711e10c741ba7a1dc948b254893b5ba809f9a393c090c0",
+          "source_id": "source:73b9e93d67fec24542563e149af390cf18fd9e85a31247665af0e05a01a10a27",
+          "source_snapshot_id": "snapshot:07f5d4370ed08996091c67fa1ec6deb7180da553bbf18dbbb7556477efd48002",
+          "context_id": "context:f27f29b2f381afee1061f33eeb78fa3d12b02f49b10acabfec632c7a57512b1e",
+          "project": "src/ForkJoint.Api/ForkJoint.Api.csproj",
+          "byte_offset": 714,
+          "byte_length": 11,
+          "symbol": {
+            "id": "symbol:76e4ffbd155e68837ce514a1434e7ea12c53f55388eda25fdfcd2c60a9a3e772",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.1.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "M:MassTransit.IRequestClient`1.GetResponse``2(System.Object,System.Threading.CancellationToken,MassTransit.RequestTimeout)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "enclosing_symbol_id": "symbol:0568563050291f783535b3c9a6a51489eabd2cdaa473763668ec4883321ef182",
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "15",
+          "domain_facts": [
+            {
+              "kind": "message_request_configuration",
+              "rule": "csharp-framework-v6",
+              "evidence_scope": "compile_time",
+              "targets": [
+                {
+                  "role": "request",
+                  "symbol": {
+                    "id": "symbol:f9f7428de40ae214367041e4d5c99ca3a454f5562eb1964c678ef1e1f589ca58",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "Sample-ForkJoint/src/ForkJoint.Contracts/ForkJoint.Contracts.csproj",
+                    "descriptor": "T:ForkJoint.Contracts.SubmitOrder",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                },
+                {
+                  "role": "response_1",
+                  "symbol": {
+                    "id": "symbol:dc9e065bb18b52ac031e40b41184fea80630171dc9d0e9549317c5b2b7bb0318",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "Sample-ForkJoint/src/ForkJoint.Contracts/ForkJoint.Contracts.csproj",
+                    "descriptor": "T:ForkJoint.Contracts.OrderCompleted",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                },
+                {
+                  "role": "response_2",
+                  "symbol": {
+                    "id": "symbol:2111bfe710bebc0344d5724c3d47c8ac2fd251b6857c74bdf3d758ff2433eddf",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "Sample-ForkJoint/src/ForkJoint.Contracts/ForkJoint.Contracts.csproj",
+                    "descriptor": "T:ForkJoint.Contracts.OrderFaulted",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "routing-slip",
+      "claim": "routing-slip activity using formatter-computed exchange address; deployment reachability unproved",
+      "layer": "domain",
+      "binding_resolved": true,
+      "fact_present": false,
+      "facts": [],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:1c489beed783bd7950120fada9b819bfe025971d3f0299bc77cad4d3734aef6f",
+          "binding_status": "resolved",
+          "reference_kind": "invocation",
+          "role": "reference",
+          "repo": "Sample-ForkJoint",
+          "path": "src/ForkJoint.Api/Components/ItineraryPlanners/BurgerItineraryPlanner.cs",
+          "raw_sha256": "d1f3dd05432cf43ddcb94d8bf80c5a3f26d8af116da46a5308a9bbeeac4b6494",
+          "source_id": "source:01319baaef201f6dfdd2f3ca18dda75fb86607988045a5f570c18ca779814687",
+          "source_snapshot_id": "snapshot:07f5d4370ed08996091c67fa1ec6deb7180da553bbf18dbbb7556477efd48002",
+          "context_id": "context:f27f29b2f381afee1061f33eeb78fa3d12b02f49b10acabfec632c7a57512b1e",
+          "project": "src/ForkJoint.Api/ForkJoint.Api.csproj",
+          "byte_offset": 1003,
+          "byte_length": 11,
+          "symbol": {
+            "id": "symbol:4bf2f044bfa49c1d7a1bbf8df89fd8a23e6392617846dd4718a5d6615b782cc7",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.1.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "M:MassTransit.IItineraryBuilder.AddActivity(System.String,System.Uri,System.Object)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "enclosing_symbol_id": "symbol:c6a387ead51441066f01bb8a30adf51a6c724d2d10651ad23e0c80055130cfca",
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "15"
+        }
+      ]
+    }
+  ]
+}

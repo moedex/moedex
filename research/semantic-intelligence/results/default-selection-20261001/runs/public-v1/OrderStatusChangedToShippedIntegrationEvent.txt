@@ -1,0 +1,1 @@
+Find the compiler-selected default body for OrderStatusChangedToShippedIntegrationEventHandler and inspect its forwarding boundary.

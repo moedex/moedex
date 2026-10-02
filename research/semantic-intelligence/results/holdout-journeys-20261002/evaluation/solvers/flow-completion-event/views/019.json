@@ -1,0 +1,17 @@
+{
+  "ordinal": 19,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"path\":\"src/Domain/Common/BaseAuditableEntity.cs\",\"start_line\":1,\"end_line\":12}"
+  ],
+  "started_monotonic": 78061.061295708,
+  "finished_monotonic": 78061.165720875,
+  "returncode": 0,
+  "stdout_bytes": 1839,
+  "stdout_sha256": "c99e2c1feea7be1685e6b498a35f33de953a43dd95ae5b99025d4d388e815039",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

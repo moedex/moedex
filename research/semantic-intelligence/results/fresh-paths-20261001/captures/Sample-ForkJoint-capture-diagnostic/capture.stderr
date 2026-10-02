@@ -1,0 +1,47 @@
+          
+   ERROR  
+          
+  Semantic capture: worker: semanticrun: process output limit exceeded: semantic-git-projection-                      
+  2138995337/source/src/ForkJoint.Api/ForkJoint.Api.csproj: (0, 0): Serilog.Sinks.Grafana.Loki 8.3.0 depends on       
+  System.Text.Json (>= 4.7.0) but System.Text.Json 4.7.0 was not found. An approximate best match of System.Text.Json 
+  8.0.0 was resolved."}, {"schema": "moedex.semantic-worker.v1", "record_type": "diagnostic", "project":              
+  "src/ForkJoint.Api/ForkJoint.Api.csproj", "build_context":                                                          
+  "b2dba34c69b510cb2fe77f52aaca1ebb83b9d93e0feb3104e562a554b2f14809", "code": "workspace", "severity": "error",       
+  "message": "Msbuild failed when processing the file '/Users/zakkeown/Code/moedex/.local/fresh-paths/Sample-         
+  ForkJoint-capture-diagnostic/workspace/semantic-git-projection-                                                     
+  2138995337/source/src/ForkJoint.Api/ForkJoint.Api.csproj' with message: /Users/zakkeown/Code/moedex/.local/fresh-   
+  paths/Sample-ForkJoint-capture-diagnostic/workspace/semantic-git-projection-                                        
+  2138995337/source/src/ForkJoint.Api/ForkJoint.Api.csproj: (0, 0): System.Diagnostics.PerformanceCounter 6.0.0       
+  depends on System.Configuration.ConfigurationManager (>= 6.0.0) but System.Configuration.ConfigurationManager 6.0.0 
+  was not found. An approximate best match of System.Configuration.ConfigurationManager 6.0.1 was resolved."},        
+  {"schema": "moedex.semantic-worker.v1", "record_type": "diagnostic", "project":                                     
+  "src/ForkJoint.Api/ForkJoint.Api.csproj", "build_context":                                                          
+  "b2dba34c69b510cb2fe77f52aaca1ebb83b9d93e0feb3104e562a554b2f14809", "code": "workspace", "severity": "error",       
+  "message": "Msbuild failed when processing the file '/Users/zakkeown/Code/moedex/.local/fresh-paths/Sample-         
+  ForkJoint-capture-diagnostic/workspace/semantic-git-projection-                                                     
+  2138995337/source/src/ForkJoint.Api/ForkJoint.Api.csproj' with message: /Users/zakkeown/Code/moedex/.local/fresh-   
+  paths/Sample-ForkJoint-capture-diagnostic/workspace/semantic-git-projection-                                        
+  2138995337/source/src/ForkJoint.Api/ForkJoint.Api.csproj: (0, 0): System.IO.FileSystem.AccessControl 4.7.0 depends  
+  on System.Security.AccessControl (>= 4.7.0) but System.Security.AccessControl 4.7.0 was not found. An approximate   
+  best match of System.Security.AccessControl 6.0.0 was resolved."}, {"schema": "moedex.semantic-worker.v1",          
+  "record_type": "diagnostic", "project": "src/ForkJoint.Api/ForkJoint.Api.csproj", "build_context":                  
+  "b2dba34c69b510cb2fe77f52aaca1ebb83b9d93e0feb3104e562a554b2f14809", "code": "workspace", "severity": "error",       
+  "message": "Msbuild failed when processing the file '/Users/zakkeown/Code/moedex/.local/fresh-paths/Sample-         
+  ForkJoint-capture-diagnostic/workspace/semantic-git-projection-                                                     
+  2138995337/source/src/ForkJoint.Api/ForkJoint.Api.csproj' with message: /Users/zakkeown/Code/moedex/.local/fresh-   
+  paths/Sample-ForkJoint-capture-diagnostic/workspace/semantic-git-projection-                                        
+  2138995337/source/src/ForkJoint.Api/ForkJoint.Api.csproj: (0, 0): System.IO.FileSystem.AccessControl 4.7.0 depends  
+  on System.Security.Principal.Windows (>= 4.7.0) but System.Security.Principal.Windows 4.7.0 was not found. An       
+  approximate best match of System.Security.Principal.Windows 5.0.0 was resolved."}, {"schema": "moedex.semantic-     
+  worker.v1", "record_type": "summary", "project": "src/ForkJoint.Api/ForkJoint.Api.csproj", "build_context":         
+  "b2dba34c69b510cb2fe77f52aaca1ebb83b9d93e0feb3104e562a554b2f14809", "compilation_status": "incomplete",             
+  "declarations": 369, "references": 2278, "errors": 67}, {"schema": "moedex.semantic-worker.v1", "record_type":      
+  "diagnostic", "project": "src/ForkJoint.Contracts/ForkJoint.Contracts.csproj", "build_context":                     
+  "924a9fed4bcda4e2494c6f90d12335a7d3d620753d1d9a7c6a562e8210d9c655", "code": "CS8019", "severity": "hidden",         
+  "message": "Unnecessary using directive.", "source_path":                                                           
+  "src/ForkJoint.Contracts/obj/Debug/net8.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs", "span": {"byte_offset":  
+  22, "byte_length": 13}}, {"schema": "moedex.semantic-worker.v1", "record_type": "diagnostic", "project":            
+  "src/ForkJoint.Contracts/ForkJoint.Contracts.csproj", "build_context":                                              
+  "924a9fed4bcda4e2494c6f90d12335a7d3d620753d1d9a7c6a562e8210d9c655", "code": "CS8019", "severity": "hidden",         
+  "message": "Unnecessary using directive.", "sour.                                                                   
+

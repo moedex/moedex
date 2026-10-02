@@ -1,0 +1,13 @@
+=== RUN   TestPublicApplicationWrapperPaths
+server: token index loaded from cache
+server: symbol index loaded from cache
+2026/10/01 11:41:13 INFO graph artifact absent; preparing source-only serving snapshot
+    application_paths_public_test.go:216: wrapper_path_queries=8 static_paths_expected=4
+--- PASS: TestPublicApplicationWrapperPaths (0.43s)
+=== RUN   TestPublicWebhooksHoldout
+server: token index loaded from cache
+server: symbol index loaded from cache
+2026/10/01 11:41:14 INFO graph artifact absent; preparing source-only serving snapshot
+--- PASS: TestPublicWebhooksHoldout (0.82s)
+PASS
+ok  	moedex/internal/app/servecmd	2.538s

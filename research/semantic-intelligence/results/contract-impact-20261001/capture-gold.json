@@ -1,0 +1,30 @@
+{
+  "status": "passed",
+  "worker_sha256": "373308a0630f2510fd3840bdd8e5a79ac92ba09ea2956f703004e268efd70b56",
+  "reports": {
+    "Debug": {
+      "contexts": {
+        "Aggregate/Aggregate.csproj": "74d3dc439642f8e22d40dcc0358e811829150c9319a9cdb8292948d4c3f23bf0",
+        "Consumer/Consumer.csproj": "50ff7c40e15431ae9be409586a3be109e83e17323fb485d12504d920e6713659",
+        "Contracts/Contracts.csproj": "61c897f41f3cbef2380402402034c05c1aca3c2125183d3694a0487577a01ca0",
+        "Distractor/Distractor.csproj": "19c08233a293eac6a1136bcce1b3157a7e1e13e6ed4d6b3500eb6343efca6699",
+        "Publisher/Publisher.csproj": "d813dfd6c785208eb015dbbccc42720e3b0dbcabfd408535268be8e85e32ffcd",
+        "Storage/Storage.csproj": "483f09822f55859ffc2f5ac68aff940ac97889ba0c7865475f83ad1573638259"
+      },
+      "facts": 5,
+      "stream_sha256": "1f47f6f0fe22690cdb2961ab10f29ca4622dc5db7499f1cc83093688283767bd"
+    },
+    "Release": {
+      "contexts": {
+        "Aggregate/Aggregate.csproj": "85e57aa58081d80efda96286d588d70b237e950bd22c2be354e6badbbb11094b",
+        "Consumer/Consumer.csproj": "79100a77baeca288e0dba25fcf1252733b399247837e2c798e8eaa34474d9415",
+        "Contracts/Contracts.csproj": "a825a52497c8f7b25bd16a5b6cea9d2d710f6ee7f5334d9d5bb49be88b9ea5f6",
+        "Distractor/Distractor.csproj": "72a34b8253bea0de8dbaff9fb4762064196d4954888d7f7c268045cb91e8f441",
+        "Publisher/Publisher.csproj": "de785b47717f6b0e5aa2ebc230611fad049a3ab86e588ab83ea6153dbce357ad",
+        "Storage/Storage.csproj": "59c91e295159b07036fe8b27c3db531fbe31e84ca999a35c997964b5a0485376"
+      },
+      "facts": 5,
+      "stream_sha256": "f2a9ffa9ce4118dbcaa3e9fdba7ad7df47a26ed3ab592bec591cb90c66bf9753"
+    }
+  }
+}

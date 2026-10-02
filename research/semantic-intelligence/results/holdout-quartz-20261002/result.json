@@ -1,0 +1,294 @@
+{
+  "classification": "source-first holdout preparation and environment readiness; NOT an independently reviewed oracle or product quality score",
+  "repository": "https://github.com/quartznet/quartznet",
+  "commit": "15d90a9c2681cd9e273dcd3901c0fbbdbdc5fe90",
+  "tracked_files": 2713,
+  "tasks": 6,
+  "atoms": 30,
+  "source_evidence_ranges": 38,
+  "gold_source_files": 7,
+  "upstream_build": "pass: Debug/net10.0, SDK10.0.401, zero warnings/errors",
+  "offline_build": "pass: fresh checkout and copied dependencies with package feeds cleared",
+  "harness_tests": 24,
+  "independent_oracle_review": "pending authorization under user single-threaded/no-subagents instruction",
+  "product_capture": "not attempted",
+  "product_queries": 0,
+  "scored_solvers": 0,
+  "codegraph_paired": "not executed; setup readiness remains open",
+  "gpu_used": false,
+  "subagents_used": 0,
+  "prior_archives_verified": [
+    {
+      "path": "research/semantic-intelligence/results/build-event-severity-20261002/result.json",
+      "sha256": "69b110a8a45e96f8c187418cb42c032832c4296b01ba1f758668771e88e6b038",
+      "verified_files": 325
+    },
+    {
+      "path": "research/semantic-intelligence/results/capture-diagnostics-20261002/result.json",
+      "sha256": "e49433226271f91ef1f30b568da8ba6411bc518a415444c214265aba22bd9964",
+      "verified_files": 151
+    },
+    {
+      "path": "research/semantic-intelligence/results/holdout-journeys-20261002/result.json",
+      "sha256": "c0abef1b8b406ab92cf748342b26d1916cefbba5d9c2e4770ef69be3eb2cbf08",
+      "verified_files": 637
+    }
+  ],
+  "files": [
+    {
+      "path": "build.log",
+      "bytes": 332,
+      "sha256": "ef87703629c2d02371dd298f6f33b9774d441557417dbb7e8d0a357651b72c3f"
+    },
+    {
+      "path": "check-offline.py",
+      "bytes": 1752,
+      "sha256": "d8ce7696d7ac525e33b0394cc8eaaafcf4788ee423327cc610b103d66600af0b"
+    },
+    {
+      "path": "dependency-manifest.json",
+      "bytes": 421279,
+      "sha256": "33f901720193c0360e6301977f2fb86b81b5df594999134b350b55e786dcb731"
+    },
+    {
+      "path": "environment.json",
+      "bytes": 1307,
+      "sha256": "9bb211d6d7f06719f30f0eb1699a500e1a2216ffa4267ff80f20dc81d5ac0812"
+    },
+    {
+      "path": "flow-cron-misfire.txt",
+      "bytes": 350,
+      "sha256": "a49f810c09621c40bd33b5f353a8159f4adb644a8ebcb17518cd9cc63fad8f33"
+    },
+    {
+      "path": "flow-host-start.txt",
+      "bytes": 346,
+      "sha256": "0d8b4fc6f749a94658a2a5bbcf9fbdb70a8bbc8e0bb1e5eac42c0b7545cd6bb6"
+    },
+    {
+      "path": "freeze.py",
+      "bytes": 3220,
+      "sha256": "8726939fd20cbe075f2905b3c5b395e4f7a90a3591afd9422c8d207d6dba617a"
+    },
+    {
+      "path": "harness/README.md",
+      "bytes": 6623,
+      "sha256": "4f13f5b8a3ff5e53e93dba126b58605112f05b6887741b48c1c62b004a92dda8"
+    },
+    {
+      "path": "harness/browse.py",
+      "bytes": 6237,
+      "sha256": "4b9310844d31a5e1b5ecab80b65f7a410c9fd46ce06fbf2890d277e287dd495c"
+    },
+    {
+      "path": "harness/client.py",
+      "bytes": 10398,
+      "sha256": "6e2934d7f16a8f87ba961d716899a8f298c8abf9feea367cce2b9e2fc00c36a1"
+    },
+    {
+      "path": "harness/prepare.py",
+      "bytes": 5713,
+      "sha256": "1ed8763d260db4bea74ef41ceb8423c1dd01f2331c342f76122c1a4111f12afd"
+    },
+    {
+      "path": "harness/test_view.py",
+      "bytes": 3110,
+      "sha256": "b767fdfa792521e2d9ee2a6b4e28dd6ef91669d4e2337bce22c499de97cc5996"
+    },
+    {
+      "path": "harness/view.py",
+      "bytes": 1953,
+      "sha256": "c47e482ed9be9016e79722e0854696acb8331bab84baed3a8b23bd28c93c7fc3"
+    },
+    {
+      "path": "harness-tests.log",
+      "bytes": 123,
+      "sha256": "406d76f917ca359ac2423aa6f2f19698eedfa3395cf2e8ceaee95a3deaf59839"
+    },
+    {
+      "path": "impact-host-shutdown.txt",
+      "bytes": 410,
+      "sha256": "91f3c34633b9d0e14f95f5029a21cc266c64035fb54cb701c5189caa2bfa9871"
+    },
+    {
+      "path": "impact-job-cleanup.txt",
+      "bytes": 445,
+      "sha256": "7ffed8b742cd910653f49bb365425282c7390cedcad59cb0189e3413741d6364"
+    },
+    {
+      "path": "launch-plan.json",
+      "bytes": 2057,
+      "sha256": "f9a3239e7d046345f15e42719e6ee4ec45fdf9ed0add25f92c45771807b8380a"
+    },
+    {
+      "path": "locate-host-options.txt",
+      "bytes": 344,
+      "sha256": "1720c216959a578af60c6bd1a7348f3bae9271ee9df967920dd008555a483e89"
+    },
+    {
+      "path": "locate-job-resolution.txt",
+      "bytes": 325,
+      "sha256": "89a106016b92d6e491e5c14b3078cedc7a3e86e3c3563ded8d8545ab3f3e77b8"
+    },
+    {
+      "path": "offline-build.log",
+      "bytes": 336,
+      "sha256": "f0ed76b3b39184dd90d1ec63b17ee2efeec98250d282c45d83f1578b2db6f7cd"
+    },
+    {
+      "path": "offline-environment.json",
+      "bytes": 1062,
+      "sha256": "48d6688dc8a99508c9a6dfbbd093f41cf0733a01e6961f60ba75171670de2c58"
+    },
+    {
+      "path": "offline-restore.log",
+      "bytes": 953,
+      "sha256": "d9c194a050b0f8a73fd35ad663893ebfd985dfceec2d66bcc6faf007d8c906a5"
+    },
+    {
+      "path": "offline.config",
+      "bytes": 132,
+      "sha256": "61474f566c8b123fc1f99b04c78530cd1b3042a51bc58d2768be4811c67570d9"
+    },
+    {
+      "path": "oracle-reviewer.txt",
+      "bytes": 928,
+      "sha256": "05230f548ca69205ee6262fef6c0ff94d4f59958c8feeb756bb85321d61adf2f"
+    },
+    {
+      "path": "prepare-environment.py",
+      "bytes": 1581,
+      "sha256": "f660773f68c02ac0ab27769becee736bc622066dd9c1c7aedaca8ebb55675060"
+    },
+    {
+      "path": "prepare-packet.py",
+      "bytes": 11431,
+      "sha256": "0f9e76a548d54e28b1f64519ae4c10ada731ab18607eb18ff8e9f1d135b3b597"
+    },
+    {
+      "path": "product-manifest.json",
+      "bytes": 25058,
+      "sha256": "c2a48cee54e8b060f24fb5c54ddecb02f23d967ffc0b73c96418438f06b2bc07"
+    },
+    {
+      "path": "protocol.json",
+      "bytes": 5029,
+      "sha256": "1bab06e4c4a8f5283540925b8ece7a974bea8f7fe46c3f5c08ddb92eb95b1693"
+    },
+    {
+      "path": "restore.log",
+      "bytes": 955,
+      "sha256": "9da3ed5e91b51e1e37ae77bf7a8928ced8368088f8ad10f19f864dfe2b904264"
+    },
+    {
+      "path": "sdk.log",
+      "bytes": 9,
+      "sha256": "93c11b5221b72e0032ab2d9f93d28c2c9b7a0bb2557effffcdfef45ab739a0da"
+    },
+    {
+      "path": "seal.py",
+      "bytes": 3663,
+      "sha256": "1c1dde106452aff5014a6dd122c0382bd9d175e8f8b895032e2bb7d987d3f1bb"
+    },
+    {
+      "path": "selection.json",
+      "bytes": 652,
+      "sha256": "3d23918b53bd959a3435ea1cc317f24ff938a1e06d6b8162ca351f7fa4bebdca"
+    },
+    {
+      "path": "solver-template.txt",
+      "bytes": 1442,
+      "sha256": "0e168715cc6d886a30b6072add4b893b8408e2cfcba3c39fd70a150d7e0a04fa"
+    },
+    {
+      "path": "source/Directory.Build.props",
+      "bytes": 8358,
+      "sha256": "fda670b4c941baa29b9e4b760574b782af62b2a1d463cfa265cca3fa9901895c"
+    },
+    {
+      "path": "source/Directory.Build.targets",
+      "bytes": 2938,
+      "sha256": "61bb20bebb8733447f8921b9a1a3a9cb03c89eea90e90f21727fd3596341853d"
+    },
+    {
+      "path": "source/Directory.Packages.props",
+      "bytes": 17820,
+      "sha256": "6e9a3ba913a425e498a5530e860528a2a5577329adb6aa59a9b4ca1baeb0208f"
+    },
+    {
+      "path": "source/LICENSE.txt",
+      "bytes": 11341,
+      "sha256": "00e9a450180b721349dc5519f3ed9e98e4f1d38e5d212ca9f9fcb1ec1103b0bf"
+    },
+    {
+      "path": "source/NuGet.Config",
+      "bytes": 216,
+      "sha256": "dcad4ed7f6bb0424b014350f98da127f707756b05c8f6aa6d76ed030f137c2e7"
+    },
+    {
+      "path": "source/global.json",
+      "bytes": 139,
+      "sha256": "9740bf6f00b68e3aa860f6b5e22a0c7d4944081d943ead40c1c33f76f75cef5c"
+    },
+    {
+      "path": "source/src/Quartz/CronScheduleBuilder.cs",
+      "bytes": 13795,
+      "sha256": "aa8acfdbf84b987676896d0fd18cf10196786550951b52d55865278f5e9b68e3"
+    },
+    {
+      "path": "source/src/Quartz/CronTriggerMisfireInstruction.cs",
+      "bytes": 2459,
+      "sha256": "30b633b6f998082d7cf595b8dffec85b372cc8ba86afaea4e1bc28eecb39e691"
+    },
+    {
+      "path": "source/src/Quartz/Hosting/QuartzHostedService.cs",
+      "bytes": 17821,
+      "sha256": "03f44b65e11b79e3334ccb6d3830c7c57c7c113cb76e604c44023a3f23550eab"
+    },
+    {
+      "path": "source/src/Quartz/Hosting/QuartzHostedServiceOptions.cs",
+      "bytes": 3176,
+      "sha256": "0ce9ae046f75584215fd854e70fb94495e03a502d3c41bbc641740b9cd5cafa0"
+    },
+    {
+      "path": "source/src/Quartz/Hosting/QuartzServiceCollectionExtensions.cs",
+      "bytes": 6147,
+      "sha256": "42189591f9dfc651b872df17aad896976506b3f2d434cca021fcbbcbcf51f16b"
+    },
+    {
+      "path": "source/src/Quartz/Impl/MicrosoftDependencyInjectionJobFactory.cs",
+      "bytes": 17662,
+      "sha256": "cd64fc8823f29fb1959b23b09ffa8351a823e9e6d2ed91682d5d96633f6644ae"
+    },
+    {
+      "path": "source/src/Quartz/Impl/Triggers/CronTriggerImpl.cs",
+      "bytes": 25834,
+      "sha256": "21540bfd8da58479c35ac74a5aee887f864a6c9f08deeb934da5c1c0d8abdf62"
+    },
+    {
+      "path": "source/src/Quartz/Quartz.csproj",
+      "bytes": 8533,
+      "sha256": "035032115c3295aed4567d109d4156bb6480b99f8587c0083965f51a66105778"
+    },
+    {
+      "path": "source/src/Quartz.Analyzers/Quartz.Analyzers.csproj",
+      "bytes": 5325,
+      "sha256": "255e12242ad998f2318a65a22291e476577f1e78fa27b58bb874baacb5687d1d"
+    },
+    {
+      "path": "source-gold.json",
+      "bytes": 51513,
+      "sha256": "9403ff94e9d220611dc38c40d19c84b34ce0d1bd3bf816bbef780d8c7aea5e4c"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 516453,
+      "sha256": "ce089e007af8d8a0ce7ee72ed12c36f8a3df9ab1c9f67790c7b42b6d24bf8808"
+    },
+    {
+      "path": "toolchain-manifest.json",
+      "bytes": 1113662,
+      "sha256": "59cb7d2a8c4e42175f45f7536761e5c0c9fc4a98c856e6650008a548213ad23a"
+    }
+  ]
+}

@@ -1,0 +1,715 @@
+{
+  "rows": [
+    {
+      "case_id": "api-service",
+      "family": "domain_observation",
+      "outcome": "not_represented",
+      "evidence": [],
+      "contexts": [],
+      "provenance": "none"
+    },
+    {
+      "case_id": "worker-service",
+      "family": "domain_observation",
+      "outcome": "not_represented",
+      "evidence": [],
+      "contexts": [],
+      "provenance": "none"
+    },
+    {
+      "case_id": "AddEventAttendee-consumer",
+      "family": "domain_observation",
+      "outcome": "supported_owner_level",
+      "evidence": [
+        {
+          "result_index": 34,
+          "edge_index": 2,
+          "native": {
+            "sourceQN": "Sample.Components.Consumers.AddEventAttendeeConsumer",
+            "targetQN": "Sample.Components.Contracts.AddEventAttendee",
+            "type": "CONSUMES",
+            "properties": {
+              "confidence_band": "high"
+            }
+          }
+        }
+      ],
+      "contexts": [
+        "Sample.Components"
+      ],
+      "provenance": "owner_declaration_lines_only_no_native_edge_callsite"
+    },
+    {
+      "case_id": "NotifyRegistration-consumer",
+      "family": "domain_observation",
+      "outcome": "supported_owner_level",
+      "evidence": [
+        {
+          "result_index": 33,
+          "edge_index": 2,
+          "native": {
+            "sourceQN": "Sample.Components.Consumers.NotifyRegistrationConsumer",
+            "targetQN": "Sample.Components.Contracts.RegistrationSubmitted",
+            "type": "CONSUMES",
+            "properties": {
+              "confidence_band": "high"
+            }
+          }
+        }
+      ],
+      "contexts": [
+        "Sample.Components"
+      ],
+      "provenance": "owner_declaration_lines_only_no_native_edge_callsite"
+    },
+    {
+      "case_id": "SendRegistrationEmail-consumer",
+      "family": "domain_observation",
+      "outcome": "supported_owner_level",
+      "evidence": [
+        {
+          "result_index": 31,
+          "edge_index": 2,
+          "native": {
+            "sourceQN": "Sample.Components.Consumers.SendRegistrationEmailConsumer",
+            "targetQN": "Sample.Components.Contracts.SendRegistrationEmail",
+            "type": "CONSUMES",
+            "properties": {
+              "confidence_band": "high"
+            }
+          }
+        }
+      ],
+      "contexts": [
+        "Sample.Components"
+      ],
+      "provenance": "owner_declaration_lines_only_no_native_edge_callsite"
+    },
+    {
+      "case_id": "ValidateRegistration-consumer",
+      "family": "domain_observation",
+      "outcome": "supported_owner_level",
+      "evidence": [
+        {
+          "result_index": 30,
+          "edge_index": 2,
+          "native": {
+            "sourceQN": "Sample.Components.Consumers.ValidateRegistrationConsumer",
+            "targetQN": "Sample.Components.Contracts.AddEventAttendee",
+            "type": "CONSUMES",
+            "properties": {
+              "confidence_band": "high"
+            }
+          }
+        }
+      ],
+      "contexts": [
+        "Sample.Components"
+      ],
+      "provenance": "owner_declaration_lines_only_no_native_edge_callsite"
+    },
+    {
+      "case_id": "submitted-publish",
+      "family": "domain_observation",
+      "outcome": "supported_owner_level",
+      "evidence": [
+        {
+          "result_index": 21,
+          "edge_index": 7,
+          "native": {
+            "sourceQN": "Sample.Components.RegistrationService.SubmitRegistration(string, string, decimal)",
+            "targetQN": "Sample.Components.Contracts.RegistrationSubmitted",
+            "type": "PUBLISHES",
+            "properties": {
+              "confidence_band": "high"
+            }
+          }
+        }
+      ],
+      "contexts": [
+        "Sample.Components"
+      ],
+      "provenance": "owner_declaration_lines_only_no_native_edge_callsite"
+    },
+    {
+      "case_id": "validated-publish",
+      "family": "domain_observation",
+      "outcome": "supported_owner_level",
+      "evidence": [
+        {
+          "result_index": 19,
+          "edge_index": 4,
+          "native": {
+            "sourceQN": "Sample.Components.Services.RegistrationValidationService.ValidateRegistration(string, string, System.Guid)",
+            "targetQN": "Sample.Components.Consumers.RegistrationValidated",
+            "type": "PUBLISHES",
+            "properties": {
+              "confidence_band": "high"
+            }
+          }
+        }
+      ],
+      "contexts": [
+        "Sample.Components"
+      ],
+      "provenance": "owner_declaration_lines_only_no_native_edge_callsite"
+    },
+    {
+      "case_id": "fluent-publish-SendRegistrationEmail",
+      "family": "domain_observation",
+      "outcome": "not_represented",
+      "evidence": [],
+      "contexts": [],
+      "provenance": "none",
+      "reason": "No corresponding native semantic relation/property in this extractor schema; generic CALLS is not the required domain assertion."
+    },
+    {
+      "case_id": "fluent-publish-AddEventAttendee",
+      "family": "domain_observation",
+      "outcome": "not_represented",
+      "evidence": [],
+      "contexts": [],
+      "provenance": "none",
+      "reason": "No corresponding native semantic relation/property in this extractor schema; generic CALLS is not the required domain assertion."
+    },
+    {
+      "case_id": "saga-event",
+      "family": "domain_observation",
+      "outcome": "not_represented",
+      "evidence": [],
+      "contexts": [],
+      "provenance": "none",
+      "reason": "No corresponding native semantic relation/property in this extractor schema; generic CALLS is not the required domain assertion."
+    },
+    {
+      "case_id": "entity-set",
+      "family": "domain_observation",
+      "outcome": "not_represented",
+      "evidence": [],
+      "contexts": [],
+      "provenance": "none",
+      "reason": "No corresponding native semantic relation/property in this extractor schema; generic CALLS is not the required domain assertion."
+    },
+    {
+      "case_id": "entity-model",
+      "family": "domain_observation",
+      "outcome": "not_represented",
+      "evidence": [],
+      "contexts": [],
+      "provenance": "none",
+      "reason": "No corresponding native semantic relation/property in this extractor schema; generic CALLS is not the required domain assertion."
+    },
+    {
+      "case_id": "api-dbcontext",
+      "family": "domain_observation",
+      "outcome": "not_represented",
+      "evidence": [],
+      "contexts": [],
+      "provenance": "none",
+      "reason": "No corresponding native semantic relation/property in this extractor schema; generic CALLS is not the required domain assertion."
+    },
+    {
+      "case_id": "worker-dbcontext",
+      "family": "domain_observation",
+      "outcome": "not_represented",
+      "evidence": [],
+      "contexts": [],
+      "provenance": "none",
+      "reason": "No corresponding native semantic relation/property in this extractor schema; generic CALLS is not the required domain assertion."
+    },
+    {
+      "case_id": "controller-wrapper-interface-call",
+      "family": "resolved_call",
+      "outcome": "supported_owner_level",
+      "evidence": [
+        {
+          "result_index": 11,
+          "edge_index": 5,
+          "native": {
+            "sourceQN": "Sample.Api.Controllers.RegistrationController.Submit(Sample.Api.RegistrationModel)",
+            "targetQN": "Sample.Components.IRegistrationService.SubmitRegistration(string, string, decimal)",
+            "type": "CALLS",
+            "properties": {
+              "confidence": 1,
+              "confidence_band": "high"
+            }
+          }
+        }
+      ],
+      "contexts": [
+        "Sample.Api"
+      ],
+      "provenance": "owner_declaration_lines_only_no_native_edge_callsite"
+    },
+    {
+      "case_id": "controller-wrapper-method-implementation",
+      "family": "method_implementation",
+      "outcome": "partial_native_evidence",
+      "evidence": [
+        {
+          "result_index": 21,
+          "edge_index": 0,
+          "native": {
+            "sourceQN": "Sample.Components.RegistrationService",
+            "targetQN": "Sample.Components.IRegistrationService",
+            "type": "IMPLEMENTS",
+            "properties": null
+          }
+        }
+      ],
+      "contexts": [],
+      "provenance": "type_implementation_only",
+      "reason": "Native type IMPLEMENTS does not identify the implementing method or interface member."
+    },
+    {
+      "case_id": "validation-wrapper-interface-call",
+      "family": "resolved_call",
+      "outcome": "supported_owner_level",
+      "evidence": [
+        {
+          "result_index": 30,
+          "edge_index": 5,
+          "native": {
+            "sourceQN": "Sample.Components.Consumers.ValidateRegistrationConsumer.Consume(MassTransit.ConsumeContext<Sample.Components.Contracts.AddEventAttendee>)",
+            "targetQN": "Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(string, string, System.Guid)",
+            "type": "CALLS",
+            "properties": {
+              "confidence": 1,
+              "confidence_band": "high"
+            }
+          }
+        }
+      ],
+      "contexts": [
+        "Sample.Components"
+      ],
+      "provenance": "owner_declaration_lines_only_no_native_edge_callsite"
+    },
+    {
+      "case_id": "validation-wrapper-method-implementation",
+      "family": "method_implementation",
+      "outcome": "partial_native_evidence",
+      "evidence": [
+        {
+          "result_index": 19,
+          "edge_index": 0,
+          "native": {
+            "sourceQN": "Sample.Components.Services.RegistrationValidationService",
+            "targetQN": "Sample.Components.Services.IRegistrationValidationService",
+            "type": "IMPLEMENTS",
+            "properties": null
+          }
+        }
+      ],
+      "contexts": [],
+      "provenance": "type_implementation_only",
+      "reason": "Native type IMPLEMENTS does not identify the implementing method or interface member."
+    }
+  ],
+  "negative_controls": [
+    {
+      "case_id": "logging-negative",
+      "outcome": "attribution_unavailable",
+      "evidence": [],
+      "reason": "Native edges lack callsite positions; declaration ranges cannot attribute a domain assertion to this individual negative invocation."
+    },
+    {
+      "case_id": "configuration-negative",
+      "outcome": "attribution_unavailable",
+      "evidence": [],
+      "reason": "Native edges lack callsite positions; declaration ranges cannot attribute a domain assertion to this individual negative invocation."
+    },
+    {
+      "case_id": "controller-wrapper-not-direct-publish",
+      "outcome": "no_forbidden_assertion_observed",
+      "evidence": []
+    },
+    {
+      "case_id": "validation-wrapper-not-direct-publish",
+      "outcome": "no_forbidden_assertion_observed",
+      "evidence": []
+    }
+  ],
+  "outcome_counts": {
+    "not_represented": 9,
+    "supported_owner_level": 8,
+    "partial_native_evidence": 2
+  },
+  "raw_inventory": {
+    "nodes": 99,
+    "pending_edges": 138,
+    "unresolved_calls": 0
+  },
+  "unscored_extra_candidates": [
+    {
+      "result_index": 9,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Api.RecreateDatabaseHostedService<TDbContext>",
+        "targetQN": "Microsoft.Extensions.Hosting.IHostedService",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 15,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateMap",
+        "targetQN": "MassTransit.EntityFrameworkCoreIntegration.ISagaClassMap<Sample.Components.StateMachines.RegistrationState>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 15,
+      "edge_index": 2,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateMap",
+        "targetQN": "MassTransit.EntityFrameworkCoreIntegration.ISagaClassMap",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 16,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateMachine",
+        "targetQN": "MassTransit.SagaStateMachine<Sample.Components.StateMachines.RegistrationState>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 16,
+      "edge_index": 2,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateMachine",
+        "targetQN": "MassTransit.StateMachine<Sample.Components.StateMachines.RegistrationState>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 16,
+      "edge_index": 3,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateMachine",
+        "targetQN": "MassTransit.StateMachine",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 16,
+      "edge_index": 4,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateMachine",
+        "targetQN": "MassTransit.IVisitable",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 16,
+      "edge_index": 5,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateMachine",
+        "targetQN": "MassTransit.IProbeSite",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 17,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateDefinition",
+        "targetQN": "MassTransit.ISagaDefinition<Sample.Components.StateMachines.RegistrationState>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 17,
+      "edge_index": 2,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateDefinition",
+        "targetQN": "MassTransit.ISagaDefinition",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 17,
+      "edge_index": 3,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationStateDefinition",
+        "targetQN": "MassTransit.IDefinition",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 18,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationState",
+        "targetQN": "MassTransit.SagaStateMachineInstance",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 18,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.StateMachines.RegistrationState",
+        "targetQN": "MassTransit.ISaga",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 22,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.RegistrationDbContext",
+        "targetQN": "Microsoft.EntityFrameworkCore.Infrastructure.IInfrastructure<System.IServiceProvider>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 22,
+      "edge_index": 2,
+      "native": {
+        "sourceQN": "Sample.Components.RegistrationDbContext",
+        "targetQN": "Microsoft.EntityFrameworkCore.Internal.IDbContextDependencies",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 22,
+      "edge_index": 3,
+      "native": {
+        "sourceQN": "Sample.Components.RegistrationDbContext",
+        "targetQN": "Microsoft.EntityFrameworkCore.Internal.IDbSetCache",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 22,
+      "edge_index": 4,
+      "native": {
+        "sourceQN": "Sample.Components.RegistrationDbContext",
+        "targetQN": "Microsoft.EntityFrameworkCore.Internal.IDbContextPoolable",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 22,
+      "edge_index": 5,
+      "native": {
+        "sourceQN": "Sample.Components.RegistrationDbContext",
+        "targetQN": "Microsoft.EntityFrameworkCore.Infrastructure.IResettableService",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 22,
+      "edge_index": 6,
+      "native": {
+        "sourceQN": "Sample.Components.RegistrationDbContext",
+        "targetQN": "System.IDisposable",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 22,
+      "edge_index": 7,
+      "native": {
+        "sourceQN": "Sample.Components.RegistrationDbContext",
+        "targetQN": "System.IAsyncDisposable",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 25,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.DuplicateRegistrationException",
+        "targetQN": "System.Runtime.Serialization.ISerializable",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 26,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.Contracts.SendRegistrationEmail",
+        "targetQN": "System.IEquatable<Sample.Components.Contracts.SendRegistrationEmail>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 27,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.Contracts.RegistrationSubmitted",
+        "targetQN": "System.IEquatable<Sample.Components.Contracts.RegistrationSubmitted>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 28,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.Contracts.AddEventAttendee",
+        "targetQN": "System.IEquatable<Sample.Components.Contracts.AddEventAttendee>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 29,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.ValidateRegistrationConsumerDefinition",
+        "targetQN": "MassTransit.IConsumerDefinition<Sample.Components.Consumers.ValidateRegistrationConsumer>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 29,
+      "edge_index": 2,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.ValidateRegistrationConsumerDefinition",
+        "targetQN": "MassTransit.IConsumerDefinition",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 29,
+      "edge_index": 3,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.ValidateRegistrationConsumerDefinition",
+        "targetQN": "MassTransit.IDefinition",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 30,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.ValidateRegistrationConsumer",
+        "targetQN": "MassTransit.IConsumer<Sample.Components.Contracts.AddEventAttendee>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 30,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.ValidateRegistrationConsumer",
+        "targetQN": "MassTransit.IConsumer",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 31,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.SendRegistrationEmailConsumer",
+        "targetQN": "MassTransit.IConsumer<Sample.Components.Contracts.SendRegistrationEmail>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 31,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.SendRegistrationEmailConsumer",
+        "targetQN": "MassTransit.IConsumer",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 32,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.RegistrationValidated",
+        "targetQN": "System.IEquatable<Sample.Components.Consumers.RegistrationValidated>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 33,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.NotifyRegistrationConsumer",
+        "targetQN": "MassTransit.IConsumer<Sample.Components.Contracts.RegistrationSubmitted>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 33,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.NotifyRegistrationConsumer",
+        "targetQN": "MassTransit.IConsumer",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 34,
+      "edge_index": 0,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.AddEventAttendeeConsumer",
+        "targetQN": "MassTransit.IConsumer<Sample.Components.Contracts.AddEventAttendee>",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    },
+    {
+      "result_index": 34,
+      "edge_index": 1,
+      "native": {
+        "sourceQN": "Sample.Components.Consumers.AddEventAttendeeConsumer",
+        "targetQN": "MassTransit.IConsumer",
+        "type": "IMPLEMENTS",
+        "properties": null
+      }
+    }
+  ],
+  "unscored_service_nodes": [],
+  "limitations": [
+    "Selected developmental component observations; not full product/MCP or agent task performance.",
+    "Native project.Name plus exact file/owner attribution does not provide Moedex build-context or assembly identity guarantees.",
+    "Owner-level semantic coverage never becomes exact source-occurrence provenance.",
+    "Unmatched extra candidates require independent source review; they are not automatically false positives."
+  ],
+  "protocol_sha256": "c249d3d5f8eb4101c9c0f68cd1739847afd2251be72ece43e1b89a4c96bfb644",
+  "native_extraction_sha256": "13ea63efb70d961299e2d366f3c71c09cb13610d60a0ba40580b50323c8f7b96",
+  "capture_status": "complete-reviewed"
+}

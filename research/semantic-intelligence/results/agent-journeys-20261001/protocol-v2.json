@@ -1,0 +1,149 @@
+{
+  "status": "execution_frozen_before_first_solver",
+  "classification": "single_product_development_agent_journey_pilot",
+  "repo": "https://github.com/MassTransit/Sample-Outbox",
+  "commit": "1ab8e66ebf96e5733e68c2f4d2201276f38ed9c5",
+  "tasks": [
+    {
+      "id": "locate-duplicate",
+      "journey": "locate_behavior",
+      "prompt": "Where does the application enforce uniqueness of an event/member registration, and how does a duplicate reach the HTTP response? Cite the relevant code."
+    },
+    {
+      "id": "locate-retry",
+      "journey": "locate_behavior",
+      "prompt": "Find the deliberately intermittent registration-processing failure. State its exact payment and retry conditions, with source evidence."
+    },
+    {
+      "id": "locate-validation-service",
+      "journey": "locate_behavior",
+      "prompt": "Which implementation is registered for registration validation, with what lifetime, and where is it called? Distinguish configured registration from runtime instance selection."
+    },
+    {
+      "id": "locate-persistence",
+      "journey": "locate_behavior",
+      "prompt": "Locate creation, entity insertion, publication, and persistence of a new registration. Describe their source order without claiming a runtime transaction guarantee."
+    },
+    {
+      "id": "flow-notification",
+      "journey": "explain_cross_service",
+      "prompt": "Trace a submitted registration from the HTTP action to the recorded RegistrationSubmitted publisher and notification consumer. Explain where interface dispatch remains a static candidate."
+    },
+    {
+      "id": "flow-email",
+      "journey": "explain_cross_service",
+      "prompt": "Explain how registration submission configures a registration-email action and where that email message is consumed. Separate state-machine configuration from proof of delivery."
+    },
+    {
+      "id": "flow-validation",
+      "journey": "explain_cross_service",
+      "prompt": "Trace AddEventAttendee consumption through validation to RegistrationValidated publication. Cite the interface/implementation step and state what execution is not proven."
+    },
+    {
+      "id": "flow-runtime-proof",
+      "journey": "explain_cross_service",
+      "prompt": "Does this checked-in source prove that every successful registration request delivers exactly one email in the running system? Give the strongest supported answer and identify the missing evidence."
+    },
+    {
+      "id": "impact-submitted",
+      "journey": "contract_impact",
+      "prompt": "Assess the source impact of changing RegistrationSubmitted.RegistrationId. Identify producer, consumer, and saga-correlation references, separating compile-time references from runtime routing."
+    },
+    {
+      "id": "impact-validation-signature",
+      "journey": "contract_impact",
+      "prompt": "If the registration-validation method signature changes, identify the interface, implementation, callers, and registration configuration that need review. Cite source."
+    },
+    {
+      "id": "impact-entity-uniqueness",
+      "journey": "contract_impact",
+      "prompt": "If registration uniqueness changes from event-plus-member to registration identifier, identify the entity mapping and duplicate-handling code to review. Do not invent a physical table name."
+    },
+    {
+      "id": "impact-attendee",
+      "journey": "contract_impact",
+      "prompt": "Which checked-in classes and state-machine actions should be reviewed if AddEventAttendee changes? Distinguish consumer declarations, configured consumers, configured publication, and runtime activation."
+    }
+  ],
+  "arms": [
+    "Moedex production HTTP MCP, CPU only, persisted Outbox v5 snapshot"
+  ],
+  "competitive_comparison": false,
+  "repetitions_per_task": 1,
+  "initial_solver_information": [
+    "Identical task prompt",
+    "Repository label and source commit",
+    "Product public tool catalog and published tool usage instructions",
+    "No source-gold labels, symbol/context/occurrence IDs, file paths, byte spans, audit files, or prior solver transcript"
+  ],
+  "budgets": {
+    "attempted_tool_calls": 24,
+    "complete_serialized_tool_return_bytes": 131072,
+    "wall_seconds": 600,
+    "model_tokens": null,
+    "model_tokens_status": "unavailable; original proposed 64000 token budget not enforceable or claimed"
+  },
+  "budget_policy": "Initial public catalog is setup information, uncharged. All tools/call requests and optional later tools/list requests, including errors and retries, count. Retain and deliver complete response crossing byte budget, then block further requests. Stop before call 25. Record 600 second wall deadline; harness bounds request time, solver instructed to finish by deadline. Root records completion time separately.",
+  "isolation": "Fresh subagent per task, fork_turns=none. Instructed to use only logged wrapper for repository evidence, without filesystem/source/gold/web/prior transcripts. Host filesystem and other tools remain technically accessible; this is instruction-enforced isolation, not an OS security boundary. Inspect solver activity and record any deviation.",
+  "model": "Inherited current Codex session default for all solvers; exact model build, seed, randomness, and token accounting not exposed. No reproducible model-version or token-budget claim.",
+  "scoring": "Source-authored atomic requirements frozen before execution; root independently reviews rubric. Source correctness, evidence support, completeness, uncertainty/runtime distinction and unsupported claims recorded. Inspect actual returned evidence, not merely plausible final answer. Independent second reviewer scores final answers with source rubric.",
+  "deviations_from_proposal": [
+    "One product only; native CodeGraph production dependency blocker persists.",
+    "One developmental run per task, no five-repeat latency comparison.",
+    "Instruction-only isolation, not host-tool sandbox.",
+    "No available model version/randomness controls or token counters; no token compliance claim."
+  ],
+  "claims_excluded": [
+    "competitive product or agent win",
+    "heldout quality",
+    "PROGRAM30 completion",
+    "controlled latency benchmark",
+    "GPU or dense retrieval validation"
+  ],
+  "frozen_at_utc": "2026-10-01T18:18:54.924949+00:00",
+  "local_cli_errors": "Local argument parse errors recorded separately; MCP budget counts attempted RPC requests. Argparse usage failures inventoried from solver disclosure.",
+  "frozen_inputs": {
+    "research/semantic-intelligence/results/agent-journeys-20261001/source-rubric.json": {
+      "sha256": "52e70223e4f285049c6273753dbaa974b2d755fd7d038b9e3be1861b99d83e8c",
+      "bytes": 59448
+    },
+    "research/semantic-intelligence/results/agent-journeys-20261001/rubric-review.json": {
+      "sha256": "cf5180834b1a4e5dc378d1785fb2dc4545dcaf15d81b85b3a6b5b44d084b359f",
+      "bytes": 982
+    },
+    "research/semantic-intelligence/agent-journeys/client.py": {
+      "sha256": "6e2934d7f16a8f87ba961d716899a8f298c8abf9feea367cce2b9e2fc00c36a1",
+      "bytes": 10398
+    },
+    ".local/application-impact/agent-journeys/solver-catalog.json": {
+      "sha256": "f78b27da012a0491e1093bfff6aba30b681e13dce979f079d2c05888141a6aff",
+      "bytes": 21052
+    },
+    ".local/application-impact/agent-journeys/catalog-response.json": {
+      "sha256": "f7473a2acfee5ac32d503d5276bb861e42b4abc8c9c4f59b8b31900ae9986b30",
+      "bytes": 75921
+    },
+    ".local/application-impact/agent-journeys/moedex": {
+      "sha256": "f7b31d93e7a5eb5ec9ce493eac777703551383f604aebade97fb1019b274b95f",
+      "bytes": 32709810
+    },
+    "research/semantic-intelligence/results/agent-journeys-20261001/solver-instructions-v2.txt": {
+      "sha256": "d91410c2839587b08a47b67845aa1a4fd2d3d22a390911b68851a81780b09e1f",
+      "bytes": 3030
+    }
+  },
+  "server": {
+    "endpoint": "http://127.0.0.1:19381/mcp",
+    "snapshot": "reverse-outbox",
+    "index": ".local/application-impact/reverse-v1/outbox/index",
+    "embeddings": "none",
+    "graph": "absent, source-only snapshot",
+    "mcp_max_concurrency": 1,
+    "native_semantic_artifact_sha256": "24a95f5ad7307d6f3fdaf151e230b26e5cf72d2fec41971476fc4f7135cdac70",
+    "owner": "root session6830",
+    "stdout": ".local/application-impact/agent-journeys/server-root.stdout",
+    "stderr": ".local/application-impact/agent-journeys/server-root.stderr"
+  },
+  "successor_of_sha256": "b5072a162977d667b823508c56a204528204cfb8e645a49fcb0fe99beb5dfc36",
+  "infrastructure_amendment": "Three initial attempts failed at sandbox loopback access before any response; preserved. Original subagent-owned server also exited after owner finished, producing an unscored root connection-refused smoke. Root now owns server session6830, same binary/index/flags; escalated catalog-only smoke passed. Mandatory escalation instruction clarified; fresh solvers/runs, unchanged tasks/rubric/budgets/product."
+}

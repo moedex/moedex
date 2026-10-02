@@ -1,0 +1,17 @@
+{
+  "ordinal": 18,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"repo\":\"CleanArchitecture\",\"path\":\"src/Domain/Entities/TodoItem.cs\",\"start_line\":13,\"end_line\":26,\"format\":\"text\"}"
+  ],
+  "started_monotonic": 78775.121551708,
+  "finished_monotonic": 78775.183837916,
+  "returncode": 0,
+  "stdout_bytes": 1786,
+  "stdout_sha256": "581ca461ba3784b6977d8345829f7a50f0140be59ce9349354b64f4ae5384b91",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

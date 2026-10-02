@@ -1,0 +1,36 @@
+{
+  "schema": "codegraph-portable-pdb-audit-v1",
+  "checkout": "/Users/zakkeown/Code/moedex/.local/codegraph-native-provenance/transport-controls",
+  "binary_directory": "/Users/zakkeown/Code/moedex/.local/codegraph-native-provenance/transport-controls/src/Fixture/bin/Debug/net10.0",
+  "assemblies": [
+    {
+      "assembly": "TC.CodeGraphFixture.dll",
+      "sha256": "8f4654860fe9b940a5f125e14968412346d67bd1a4d32478ed71a2bc903c5a1d",
+      "pdb_sha256": "c0234004e4dfba4d58cd200e110c169fcd9b67ad514efd03244203842ed0eee1",
+      "pdb_linked": false,
+      "documents": [
+        {
+          "document": "/Users/zakkeown/Code/moedex/.local/codegraph-native-provenance/transport-probe/Program.cs",
+          "status": "unmapped"
+        },
+        {
+          "document": "/Users/zakkeown/Code/moedex/.local/codegraph-native-provenance/transport-probe/obj/Debug/net10.0/Provenance.GlobalUsings.g.cs",
+          "status": "unmapped"
+        },
+        {
+          "document": "/Users/zakkeown/Code/moedex/.local/codegraph-native-provenance/transport-probe/obj/Debug/net10.0/.NETCoreApp,Version=v10.0.AssemblyAttributes.cs",
+          "status": "unmapped"
+        },
+        {
+          "document": "/Users/zakkeown/Code/moedex/.local/codegraph-native-provenance/transport-probe/obj/Debug/net10.0/Provenance.AssemblyInfo.cs",
+          "status": "unmapped"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "PDB identity linkage and document hashes are consistency evidence, not trusted build attestation.",
+    "No host execution, runtime closure, private dependency provenance or service readiness is established.",
+    "Documents absent from a PDB require separate source-roster review."
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/dotnet",
+    "build",
+    "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/build-source/src/Web/Web.csproj",
+    "--no-restore",
+    "-p:OpenApiGenerateDocuments=false",
+    "-m:2",
+    "-v:minimal"
+  ],
+  "returncode": 0,
+  "seconds": 3.9260892500024056
+}

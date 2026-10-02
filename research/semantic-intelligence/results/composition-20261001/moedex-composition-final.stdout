@@ -1,0 +1,30 @@
+=== RUN   TestComposedSemanticMultiRepoPublication
+published snapshot composed: 1 shard(s), 6 file(s), 2 repo(s); CURRENT advanced atomically
+--- PASS: TestComposedSemanticMultiRepoPublication (0.90s)
+PASS
+ok  	moedex/internal/app/indexcmd	1.456s
+=== RUN   TestPublicComposedContractLeasedMCP
+server: token index loaded from cache
+server: symbol index loaded from cache
+2026/10/01 08:53:11 INFO graph artifact absent; preparing source-only serving snapshot
+    composition_public_test.go:89: leased_mcp=discovery snapshot=composed-real paths=0 status=context_required structured_sha256=8b22c8191ed9796f258b807c18e80ef224163d9d38b58ed21d2074bc9a9133c8
+    composition_public_test.go:89: leased_mcp=selected snapshot=composed-real paths=4 status=ok structured_sha256=8fb3bdbe9a6c7ef7f3ff2fc1cb55e44bf8d0c7640b4bd2cc59a004f54cc81ce2
+    composition_public_test.go:89: leased_mcp=conflicting-variants snapshot=composed-real paths=0 status=invalid_context_selection structured_sha256=5a1000095a8abde8f766deeb8db39db28c600ba88de67178022fdebd196fb9cb
+--- PASS: TestPublicComposedContractLeasedMCP (0.01s)
+PASS
+ok  	moedex/internal/app/servecmd	0.561s
+=== RUN   TestPublicContractImpact
+    contract_public_test.go:145: contract_query=discover status=context_required paths=0 contexts=6 truncated=false structured_sha256=bd87f0526988d7237906b0a019797bd82859f1b1165acc6aa83179e1cb26b674
+    contract_public_test.go:164: contract_query=discovery-limit status=context_required paths=0 contexts=1 truncated=true structured_sha256=062abf4a85dac79878726b4ff075250f0c3098193d325afde5441ca0a4986454
+    contract_public_test.go:169: contract_query=selected-projects status=ok paths=4 contexts=0 truncated=false structured_sha256=d3c401ec793ecff97a0ef732a05050ab863dc0ea824456a5052feb0a786f1efd
+    contract_public_test.go:206: contract_query=publisher-Debug status=ok paths=1 contexts=0 truncated=false structured_sha256=f355b66ffb3457d9414a4b5a18f1907f5c63d8339cd1337f208e8d936b392717
+    contract_public_test.go:206: contract_query=publisher-Release status=ok paths=1 contexts=0 truncated=false structured_sha256=27b18431e102c4c63bf409bb051babf5a88b8a0fd0680ad574a721437bb53129
+    contract_public_test.go:211: contract_query=same-name-distractor status=ok paths=1 contexts=0 truncated=false structured_sha256=2fea81a0e72945a3228451ebe17cd0d77037ed5008f12ff8736085fd1b036822
+    contract_public_test.go:215: contract_query=no-same-name-join status=no_recorded_evidence paths=0 contexts=0 truncated=false structured_sha256=0108077d47c39434ae74ce519e8130d92b6abda88e7618a2e862c17b1505ddd1
+    contract_public_test.go:219: contract_query=path-limit status=ok paths=1 contexts=0 truncated=true structured_sha256=cd01509c2e1555015829f9f5e82f4cebed6128f60f80d348c13df24c802dc7b6
+    contract_public_test.go:223: contract_query=conflicting-variants status=invalid_context_selection paths=0 contexts=0 truncated=false structured_sha256=c2915932c779ed0b82bfe0e08719c5050e8abe97ddd73fb9f952e1af45247669
+    contract_public_test.go:227: contract_query=duplicate-scope status=invalid_arguments paths=0 contexts=0 truncated=false structured_sha256=c74b4163fb3cf4be429cb23aa41739d29e977c56146a8f5e2518312da98b2bf6
+    contract_public_test.go:231: contract_query=unknown-context status=invalid_context_selection paths=0 contexts=0 truncated=false structured_sha256=b759ac2897e8e47cc7192c6704f09ac7cfc2bbab39a8a7d7fdb577cef7519441
+--- PASS: TestPublicContractImpact (0.14s)
+PASS
+ok  	moedex/internal/semanticimport	0.689s

@@ -1,0 +1,70 @@
+{
+  "classification": "scripted_capability_and_presentation_regression_not_agent_score",
+  "passed": true,
+  "calls": [
+    {
+      "name": "list_repos",
+      "arguments": {},
+      "bytes": 409
+    },
+    {
+      "name": "read_source",
+      "arguments": {
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Worker/Program.cs"
+      },
+      "bytes": 8346
+    },
+    {
+      "name": "read_source",
+      "arguments": {
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Worker/Program.cs",
+        "format": "structured"
+      },
+      "bytes": 4292
+    },
+    {
+      "name": "read_source",
+      "arguments": {
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Worker/Program.cs",
+        "format": "structured",
+        "start_line": 62,
+        "end_line": 62
+      },
+      "bytes": 746
+    },
+    {
+      "name": "trace_calls",
+      "arguments": {
+        "symbol": "SubmitRegistration"
+      },
+      "bytes": 464
+    },
+    {
+      "name": "compiler_symbols",
+      "arguments": {
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Components/Services/IRegistrationValidationService.cs"
+      },
+      "bytes": 13265
+    },
+    {
+      "name": "read_source",
+      "arguments": {
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Worker/Program.cs",
+        "start_line": 77,
+        "end_line": 62
+      },
+      "bytes": 456
+    }
+  ],
+  "full_source_response_bytes": 8346,
+  "compact_source_response_bytes": 4292,
+  "saved_bytes": 4054,
+  "reduction_percent": 48.57,
+  "structured_source_and_provenance_equal": true,
+  "graph_false_with_compiler_available": true
+}

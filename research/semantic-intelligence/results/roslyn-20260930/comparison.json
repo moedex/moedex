@@ -1,0 +1,18 @@
+{
+  "corpus_commit": "36d26c5466e4d25940657ccb8d5b9557ccaf7be1",
+  "source_roster_sha256": "fc874eb88c8372a37d27bc42d2197da8532f6c40ecb795c6c59385674d654b9b",
+  "eligible_files": 34791,
+  "queries": 1052,
+  "query_batteries_equal": true,
+  "per_query_match_counts_equal": true,
+  "query_battery_sha256": "ff30ccf0ff2efdae940fab8a49ce47c335da4d45cacc4be9ef53e6b4121f8cab",
+  "external_evidence_root": "/private/tmp/moedex-public-oracle",
+  "sha256": {
+    "moedex": "56535d148abd253c689e810b38e3186ac9fefd1851a89373a30329c671bf6c44",
+    "moedex-bounded": "421e23a19e0081406c9d3b98775798dd98f2dcf60576e6a4e84a21a57686fd32",
+    "PARITY-REPORT.md": "da2630add875566249d4cc94435da50c6e7682aa8d2ab17880d62a30c324e889",
+    "PARITY-BOUNDED-REPORT.md": "e894b70366d2cfff92ccaef69da2ab514f1134c912e9545ea74c8fd6196cb291",
+    "latency.csv": "3faed3746ee16e847bac405ba8a2cb3064e48da7b2558f2c344d2b550dfee8c2",
+    "latency-bounded.csv": "f01ba25da2d387d43f4ba965b97dcb0f4eb08ab4c64e655a2cabeeec6d4638c3"
+  }
+}

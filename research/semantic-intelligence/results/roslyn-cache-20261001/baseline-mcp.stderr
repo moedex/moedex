@@ -1,0 +1,2 @@
+2026/10/01 07:40:08 server: graph path index elapsed=2.66s paths=64610
+2026/10/01 07:40:08 server: graph open validation=370ms symbols=8.43s identity=413ms catalog=7.069s total=16.283s nodes=2225451 records=6619555 logical_edges=182844081

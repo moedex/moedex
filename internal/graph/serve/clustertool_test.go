@@ -339,3 +339,50 @@ func writeClusterPair(t *testing.T) string {
 	}
 	return dir
 }
+
+func TestClusterBuildOverEdgeCapReportsUnavailable(t *testing.T) {
+	dir := writeClusterPair(t)
+	g, err := diskgraph.Open(GraphPath(dir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := diskgraph.NewBuilder()
+	for _, key := range g.Keys() {
+		if err := b.AddNode(key); err != nil {
+			t.Fatal(err)
+		}
+	}
+	g.EachExplicitEdge(func(source diskgraph.Key, edge diskgraph.Edge) bool {
+		for i := 0; i < 2; i++ {
+			if err := b.AddEdge(source, edge); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return true
+	})
+	g.Close()
+	if err := b.Save(GraphPath(dir)); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("MOEDEX_GRAPH_CLUSTER_MAX_EDGES", "1")
+	report, err := graphbuild.BuildClusterSidecar(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Status != cluster.StatusOverEdgeCap || report.EligibleEdges != 2 || report.EdgeCap != 1 || report.Clusters != 0 {
+		t.Fatalf("edge cap report %+v", report)
+	}
+	tools, err := OpenGraphTools(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tools.Close()
+	result, err := graphHandler(t, tools, "list_clusters").Call(context.Background(), json.RawMessage(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	unavailable, ok := result["structuredContent"].(clusterUnavailableResult)
+	if !ok || unavailable.Available || unavailable.Status != cluster.StatusOverEdgeCap || unavailable.EdgeCap != 1 || !strings.Contains(unavailable.Guidance, "MOEDEX_GRAPH_CLUSTER_MAX_EDGES") {
+		t.Fatalf("unavailable response %#v", result)
+	}
+}

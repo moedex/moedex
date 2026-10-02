@@ -1,0 +1,17 @@
+{
+  "ordinal": 6,
+  "argv": [
+    "call",
+    "--name",
+    "search_context",
+    "--arguments",
+    "{\"query\":\"TodoItemCompletedEvent\",\"repo\":\"CleanArchitecture\",\"top_k\":8,\"token_budget\":4500,\"graph_depth\":0}"
+  ],
+  "started_monotonic": 78631.57489575,
+  "finished_monotonic": 78631.6316255,
+  "returncode": 0,
+  "stdout_bytes": 8192,
+  "stdout_sha256": "3f148ba34653c04da501aedaacb62c8a0280f4f827621de5fb91e01508ebba8c",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

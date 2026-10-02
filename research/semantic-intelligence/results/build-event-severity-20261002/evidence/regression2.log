@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/Users/zakkeown/Code/moedex/tools/semantic-dotnet/test_workspace_diagnostics.py", line 64, in <module>
+    assert result.returncode == expected, (name, result.returncode, result.stderr)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('missing_reference', 1, b"semantic worker failed: FileNotFoundException: Project file not found: '/Users/zakkeown/Code/moedex/.local/build-event-severity/regression2/missing_reference/Missing.csproj'\n")

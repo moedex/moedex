@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"compiler_definitions","arguments":{"symbol_id":"symbol:adf1c1d8f828d00765b141ba5326800bf69e86d6c722a5d5a91ec123cae202d4","context_id":"context:d0445a6133671386e94f8643478899e0519f342b0650b436bd1e75dc734d82f9","repo":"Fixture"}}}

@@ -1,0 +1,173 @@
+{
+  "status": "verified_public_projection_successor_not_new_holdout",
+  "date": "2026-10-01",
+  "baseline_manifest": "../eshop-webhooks-holdout-20261001/result.json",
+  "baseline_manifest_sha256": "bfd406f2aadd35746af021415721595bd0abab6d77e95e1ef1ff8760b8d0f940",
+  "artifact_sha256": "0690938d31c51740216d456cdaa6ce079f2133c08323988bef78ff52b0cf76bf",
+  "gold_sha256": "8d703f654a091d8c803b173612d3af4401b7e1034a1eb2ba20d34d3f00ac4f62",
+  "worker_changed": false,
+  "index_format_changed": false,
+  "artifact_recaptured": false,
+  "public_change": "Optional implementation fact IDs and deduplicated qualified symbol table on compiler binding/definition responses; malformed evidence fails closed.",
+  "webhooks": {
+    "supported_public_assertions": 9,
+    "first_holdout_public_assertions": 6,
+    "native_only_implementation_cases_remaining": 0,
+    "explicit_gaps": 5,
+    "negative_controls": 2,
+    "normal_race_equal": true,
+    "queries": 35,
+    "complete_response_bytes": 54575,
+    "query_scope": "16 discovery,16 selected binding,3 matching definition calls; observed regression cost, no paired efficiency claim"
+  },
+  "outbox": {
+    "queries": 8,
+    "positive_path_queries": 4,
+    "negative_path_queries": 4,
+    "normal_race_equal": true,
+    "complete_response_bytes": 81030
+  },
+  "checks": [
+    {
+      "argv": [
+        "go",
+        "test",
+        "./..."
+      ],
+      "result": "passed",
+      "log": "full-test.log"
+    },
+    {
+      "argv": [
+        "go",
+        "vet",
+        "./..."
+      ],
+      "result": "passed",
+      "log": "vet.log"
+    },
+    {
+      "argv": [
+        "go",
+        "build",
+        "./..."
+      ],
+      "result": "passed",
+      "log": "build.log"
+    },
+    {
+      "argv": [
+        "go",
+        "test",
+        "./internal/mcp",
+        "-count=1"
+      ],
+      "result": "passed",
+      "log": "implementation-mcp-all.log"
+    },
+    {
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "./internal/mcp",
+        "-run",
+        "Compiler",
+        "-count=1"
+      ],
+      "result": "passed",
+      "log": "implementation-mcp-race.log"
+    }
+  ],
+  "public_replay": {
+    "argv": [
+      "go",
+      "test",
+      "./internal/app/servecmd",
+      "-run",
+      "^(TestPublicWebhooksHoldout|TestPublicApplicationWrapperPaths)$",
+      "-count=1",
+      "-v"
+    ],
+    "race": "same with -race",
+    "env": {
+      "MOEDEX_WEBHOOKS_INDEX": ".local/application-impact/independent/webhooks-capture-v3/index",
+      "MOEDEX_WEBHOOKS_SOURCE": ".local/application-impact/independent/eShop",
+      "MOEDEX_WEBHOOKS_REPORT": "<fresh report output>",
+      "MOEDEX_APPLICATION_INDEX": ".local/application-impact/run-wrapper-v1/index",
+      "MOEDEX_APPLICATION_SOURCE_ROOT": ".local/application-impact/Sample-Outbox",
+      "MOEDEX_APPLICATION_PATH_REPORT": "<fresh path report output>"
+    },
+    "path_note": "Use absolute environment paths; Go tests run in package directory.",
+    "normal_log": "public.log",
+    "race_log": "public-race.log"
+  },
+  "review": {
+    "independent_review": "passed after required symbol text validation fix",
+    "adversarial_cases": "Missing/duplicate/orphan symbols, recomputed invalid IDs/text, source/context/project mismatches, wrong worker/role, fact bounds and oversized descriptors; legacy omission and slice ownership."
+  },
+  "limitations": [
+    "Successor replay on already observed source; preserve first independent holdout baseline and require fresh held-out evaluation for new generalization claims.",
+    "Known implementation declaration lookup only; reverse interface-to-implementation discovery is not provided.",
+    "Generic/inherited/default/static-interface support unchanged; compile-time evidence does not prove runtime dispatch.",
+    "No agent-task, performance, deployment or full CodeGraph product win claimed."
+  ],
+  "files": {
+    "webhooks-public.json": {
+      "sha256": "30a06e7cc523549dc7837845e4e2bfbfc5fd560d587cd4deccd95c144c0c0384",
+      "bytes": 73013
+    },
+    "webhooks-public-race.json": {
+      "sha256": "30a06e7cc523549dc7837845e4e2bfbfc5fd560d587cd4deccd95c144c0c0384",
+      "bytes": 73013
+    },
+    "outbox-paths.json": {
+      "sha256": "04fdef2647d11cfa1f9018b3b38f206935fd7e6a0fe7714665c08b6db39f6aba",
+      "bytes": 113921
+    },
+    "outbox-paths-race.json": {
+      "sha256": "04fdef2647d11cfa1f9018b3b38f206935fd7e6a0fe7714665c08b6db39f6aba",
+      "bytes": 113921
+    },
+    "full-test.log": {
+      "sha256": "c20119a5eb3db676d2601fad4415aaf776cc9743ba8c207cbde4c3108bde0b67",
+      "bytes": 2664
+    },
+    "pre-change-full-test.log": {
+      "sha256": "d64c07187c743a0130fbb27037f013c8aecb8200e8bc8e643cd607c203b4d688",
+      "bytes": 2679
+    },
+    "vet.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "build.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "public.log": {
+      "sha256": "b85afa2648b06ee93732d9585b1a4d020df88b5901697d19453b66a5cb45abd8",
+      "bytes": 639
+    },
+    "public-race.log": {
+      "sha256": "7058e03781d493db9ba10b381bb3f77cfd95fca5360d2887877f92a6a7211403",
+      "bytes": 639
+    },
+    "implementation-mcp-all.log": {
+      "sha256": "6df6884f8e2f2130e912c415a02856e3145d6da8bbb9dccc13b04bcd20640c41",
+      "bytes": 32
+    },
+    "implementation-mcp-race.log": {
+      "sha256": "9141ddb168a6583365741993a838209e280de45597d595d119c889fbdad90d3c",
+      "bytes": 32
+    },
+    "source-hashes.json": {
+      "sha256": "8588de9133e06949a6cfb3bd19c63898f00939105c582ed0e335558c34d35538",
+      "bytes": 907
+    },
+    "webhooks_holdout_public_test.go.txt": {
+      "sha256": "b94a7e2e2c8dea65a1894424d65583fc1d459e01f9923cb540742f789179dd37",
+      "bytes": 11561
+    }
+  }
+}

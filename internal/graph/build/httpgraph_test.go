@@ -1,6 +1,7 @@
 package graphbuild
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -13,7 +14,7 @@ import (
 
 // TestBuildGraphPersistsHTTPCallEdges is the phase-10 end-to-end proof at the
 // persistence layer: two shards that share no symbol at all — a C# client and a
-// Go route table — produce a served HTTP_CALLS edge because one's URL matches
+// Go route table — produce a route-compatible HTTP_CALLS edge because one's URL matches
 // the other's route template.
 func TestBuildGraphPersistsHTTPCallEdges(t *testing.T) {
 	dir := t.TempDir()
@@ -86,8 +87,8 @@ public class OrderClient
 	if got.TargetOffset != handlerOffset {
 		t.Errorf("TargetOffset = %d, want %d", got.TargetOffset, handlerOffset)
 	}
-	if got.Confidence != graph.Verified {
-		t.Errorf("Confidence = %s, want Verified", got.Confidence)
+	if got.Confidence != graph.Pattern {
+		t.Errorf("Confidence = %s, want Pattern", got.Confidence)
 	}
 	if got.Evidence.ByteOffset != evidenceStart {
 		t.Errorf("Evidence.ByteOffset = %d, want %d", got.Evidence.ByteOffset, evidenceStart)
@@ -100,5 +101,75 @@ public class OrderClient
 		if edge.Type == diskgraph.EdgeHTTPCalls {
 			t.Errorf("/api/users produced an HTTP edge: %#v", edge)
 		}
+	}
+}
+
+func TestHTTPRouteCollisionRefreshMatchesCleanBuild(t *testing.T) {
+	dir := t.TempDir()
+	caller := "public class Client {\n public void Run() { http.GetAsync(\"/api/orders/42\"); http.PostAsync(\"/api/orders/42\", body); }\n}\n"
+	handler := func(method, name string) string {
+		return fmt.Sprintf("package api\nfunc Register() { mux.HandleFunc(%q, %s) }\nfunc %s() {}\n", method+" /api/orders/{id}", name, name)
+	}
+	files := []graphFile{
+		{repo: "client", path: "Client.cs", content: caller},
+		{repo: "orders", path: "get.go", content: handler("GET", "Read")},
+		{repo: "writer", path: "post.go", content: handler("POST", "Write")},
+	}
+	writeGraphShards(t, dir, files, 1)
+	if _, _, err := BuildGraph(dir); err != nil {
+		t.Fatal(err)
+	}
+	check := func(path string, patterns, candidates int) {
+		t.Helper()
+		gotPatterns, gotCandidates := 0, 0
+		for _, record := range readGraph(t, path) {
+			if record.edge.Type != diskgraph.EdgeHTTPCalls {
+				continue
+			}
+			switch record.edge.Confidence {
+			case graph.Pattern:
+				gotPatterns++
+			case graph.Candidate:
+				gotCandidates++
+			default:
+				t.Errorf("route-only HTTP binding overpromoted: %+v", record)
+			}
+			if record.edge.Evidence.BlobSHA != diskstore.GitBlobSHA1([]byte(caller)) {
+				t.Fatalf("wrong evidence blob: %+v", record)
+			}
+			evidence, ok := record.edge.Evidence.Bytes([]byte(caller))
+			if !ok || string(evidence) != `"/api/orders/42"` {
+				t.Fatalf("invalid HTTP evidence: %q, %+v", evidence, record)
+			}
+		}
+		if gotPatterns != patterns || gotCandidates != candidates {
+			t.Fatalf("HTTP tiers: Pattern=%d Candidate=%d, want %d/%d", gotPatterns, gotCandidates, patterns, candidates)
+		}
+	}
+	check(GraphPath(dir), 2, 0)
+	files = append(files, graphFile{repo: "decoy", path: "get.go", content: handler("GET", "ReadDecoy")})
+	for _, remove := range []bool{false, true} {
+		if remove {
+			files = files[:len(files)-1]
+		}
+		writeGraphShards(t, dir, files, 1)
+		path, stats, err := RefreshGraph(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if stats.Unchanged {
+			t.Fatal("HTTP destination change did not refresh")
+		}
+		if remove {
+			check(path, 2, 0)
+		} else {
+			check(path, 1, 2)
+		}
+		cleanDir := copyShards(t, dir)
+		cleanPath, _, err := BuildGraph(cleanDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		requireSameGraph(t, "HTTP collision refresh", withoutGenerations(readGraph(t, path)), withoutGenerations(readGraph(t, cleanPath)))
 	}
 }

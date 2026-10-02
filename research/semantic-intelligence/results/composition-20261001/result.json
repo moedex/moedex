@@ -1,0 +1,125 @@
+{
+  "date": "2026-10-01",
+  "status": "passed",
+  "scope": "local production composition, snapshot publication and leased MCP; generated real-framework fixture, not held-out application quality",
+  "source_capture_evidence": {
+    "path": "research/semantic-intelligence/results/contract-impact-20261001/result.json",
+    "sha256": "35c8de44672a34dcad20b7668dcc078002bf26bd198a6cabdcd2e897c7d0fab7"
+  },
+  "artifacts": {
+    "Debug.semantic": {
+      "bytes": 1046413,
+      "sha256": "df826a3a4537f1a543fc8a165c48a2c1303f67bb96b791617c39f13d939154be"
+    },
+    "Release.semantic": {
+      "bytes": 1047669,
+      "sha256": "aa245a66a6c0eecf465c299e512fdd343d0c3e9e19f5b4e3a19099617723a097"
+    },
+    "composed.semantic": {
+      "bytes": 2067433,
+      "sha256": "a558647d0b63ff470030ff3e99aac23d5f0857f7506f1ecaab51392519363a46"
+    }
+  },
+  "compiled_cli_reversed_inputs": {
+    "sha256": "a558647d0b63ff470030ff3e99aac23d5f0857f7506f1ecaab51392519363a46",
+    "matches_published_artifact": true
+  },
+  "checks": [
+    {
+      "command": "go test ./...",
+      "status": "passed"
+    },
+    {
+      "command": "go vet ./...",
+      "status": "passed",
+      "evidence": "observed exit0, transcribed"
+    },
+    {
+      "command": "go build ./...",
+      "status": "passed",
+      "evidence": "observed exit0, transcribed"
+    },
+    {
+      "command": "go test -race ./internal/semantic ./internal/semanticimport ./internal/app/semanticcmd ./internal/cli ./internal/app/indexcmd ./internal/app/servecmd ./internal/snapshot",
+      "status": "passed"
+    },
+    {
+      "command": "go test -tags lsp ./internal/mcp ./internal/app/servecmd -run 'Compiler|Composed' -count=1",
+      "status": "passed"
+    }
+  ],
+  "files": {
+    "expected.json": {
+      "bytes": 1542,
+      "sha256": "7895ea7a1d09c93dc20b04922e3f2bde5b410bf62dc7cd1223de61b66f83c330"
+    },
+    "moedex-compose-cli.stdout": {
+      "bytes": 1023,
+      "sha256": "6266f3638c294c15fb93fd85c3d6d3b5035296769570c1f3c6dab87b1b642702"
+    },
+    "moedex-compose-full-test.log": {
+      "bytes": 2655,
+      "sha256": "b6dffe1f8310aa0196e5d881760b2646a22f43ea4f4793d56edaa0dbfa70b34e"
+    },
+    "moedex-compose-lsp.log": {
+      "bytes": 73,
+      "sha256": "4cc3c7bcf76fb48932ba9b71c9bafbbda900fe272836634442182c15096f4dff"
+    },
+    "moedex-compose-race.log": {
+      "bytes": 278,
+      "sha256": "44c6c4d9a7447013a470050ed9fe06780b54a5a76995926c3ed80acf89c6049a"
+    },
+    "moedex-composition-final-race.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "moedex-composition-final-race.stdout": {
+      "bytes": 125,
+      "sha256": "916627522a388993d055ef5a0129237aa4ca3386ee5826b27ab3c968bf2556e2"
+    },
+    "moedex-composition-final.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "moedex-composition-final.stdout": {
+      "bytes": 3491,
+      "sha256": "f603cde1296421b1391e9da44cc34ca4ea565dcf1ba6b918871d3baa2d715276"
+    },
+    "moedex-composition-publication-race.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "moedex-composition-publication-race.stdout": {
+      "bytes": 1475,
+      "sha256": "b81275867b210d0b95214beefd9d969e94842915c55e37fdaa3c2f5db56a83f4"
+    },
+    "moedex-composition-publication.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "moedex-composition-publication.stdout": {
+      "bytes": 1455,
+      "sha256": "ac9f3b5b880c4b2c81b7ff140a4a7b9393b0bbbf2d054676a20269457f676814"
+    },
+    "moedex-composition-race.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "moedex-composition-race.stdout": {
+      "bytes": 125,
+      "sha256": "3584da4e37c15e74cb03b23766f9719e53417e101a94f4fd9d8bc4aed083284c"
+    },
+    "published-snapshot.json": {
+      "bytes": 2772,
+      "sha256": "f839554c00bd2f6732bf2f4ba1a5fff1a7779889002720efcf3b23ef9964bac6"
+    },
+    "sources.json": {
+      "bytes": 10289,
+      "sha256": "69f4afd8c86ab15fa831a87e317bf53749a7dabdc8deff10466733c38ab6b3a2"
+    }
+  },
+  "fresh_publication_race": {
+    "command": "MOEDEX_CONTRACT_CAPTURE_DIR=/private/tmp/moedex-contract-gold-20261001 MOEDEX_COMPOSITION_OUTPUT=/private/tmp/moedex-composition-gold-race-20261001 go test -race ./internal/app/indexcmd -run TestPublicComposedContractPublication -count=1 -v",
+    "status": "passed"
+  }
+}

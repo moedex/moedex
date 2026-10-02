@@ -1,0 +1,37 @@
+{
+  "classification": "fresh upstream restore/build using copied bundle and cleared feeds, no product queries",
+  "commands": [
+    {
+      "name": "offline-restore",
+      "argv": [
+        "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/dotnet",
+        "restore",
+        "src/Quartz/Quartz.csproj",
+        "--configfile",
+        "/Users/zakkeown/Code/moedex/.local/holdout-quartz/offline.config",
+        "--packages",
+        "/Users/zakkeown/Code/moedex/.local/holdout-quartz/offline-packages",
+        "--disable-parallel",
+        "-p:NuGetAudit=false"
+      ],
+      "returncode": 0,
+      "seconds": 0.5111747920018388
+    },
+    {
+      "name": "offline-build",
+      "argv": [
+        "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/dotnet",
+        "build",
+        "src/Quartz/Quartz.csproj",
+        "--no-restore",
+        "-c",
+        "Debug",
+        "-m:1",
+        "-p:UseSharedCompilation=false",
+        "--nologo"
+      ],
+      "returncode": 0,
+      "seconds": 5.5086955839942675
+    }
+  ]
+}

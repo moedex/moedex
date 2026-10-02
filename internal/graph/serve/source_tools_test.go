@@ -1,0 +1,130 @@
+package graphserve
+
+import (
+	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"moedex/internal/contextwin"
+	"moedex/internal/diskstore"
+	"moedex/internal/graph"
+	"moedex/internal/index"
+	"moedex/internal/mcp"
+)
+
+func TestSourceToolsWithoutGraph(t *testing.T) {
+	dir := t.TempDir()
+	live := filepath.Join(dir, "README.md")
+	ix := index.New()
+	ix.AddFile("sample", "README.md", live, "readme-sha", []byte("immutable indexed documentation\n"))
+	ix.AddFile("sample", "main.go", filepath.Join(dir, "main.go"), "code-sha", []byte("package main\nfunc Entry() {}\n"))
+	if err := diskstore.Save(ix, filepath.Join(dir, "shard-0000.idx")); err != nil {
+		t.Fatal(err)
+	}
+	tools, err := OpenSourceTools(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { tools.Close() })
+	if tools.Available() || tools.CorpusFingerprint() == "" {
+		t.Fatal("incorrect source-only availability or identity")
+	}
+	assertIdentity := func(result map[string]interface{}, cacheable bool) {
+		t.Helper()
+		identity := result["_meta"].(map[string]interface{})[mcp.SnapshotMetaKey].(mcp.SnapshotIdentity)
+		if identity.CorpusFingerprint != tools.CorpusFingerprint() || identity.GraphGeneration != 0 || identity.GraphBuildID != "" || identity.Cacheable != cacheable {
+			t.Fatalf("source identity: %+v", identity)
+		}
+	}
+	for _, data := range []struct{ name, args, want string }{
+		{"list_repos", `{}`, "sample"},
+		{"file_tree", `{"repo":"sample"}`, "README.md"},
+		{"list_symbols", `{"repo":"sample"}`, "Entry"},
+		{"read_source", `{"repo":"sample","path":"README.md"}`, "immutable indexed documentation"},
+	} {
+		got := callTool(t, tools, data.name, data.args)
+		assertIdentity(got, true)
+		raw, _ := json.Marshal(got)
+		if got["isError"] == true || !strings.Contains(string(raw), data.want) {
+			t.Fatalf("%s: %s", data.name, raw)
+		}
+	}
+	listed, _ := json.Marshal(callTool(t, tools, "list_repos", `{}`)["structuredContent"])
+	if !strings.Contains(string(listed), `"graph_available":false`) {
+		t.Fatalf("source-only graph availability: %s", listed)
+	}
+	for _, remove := range []bool{false, true} {
+		if !remove {
+			err = os.WriteFile(live, []byte("modified live bytes"), 0600)
+		} else {
+			err = os.Remove(live)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := callTool(t, tools, "read_source", `{"repo":"sample","path":"README.md"}`)
+		raw, _ := json.Marshal(got)
+		if got["isError"] == true || !strings.Contains(string(raw), "immutable indexed documentation") || strings.Contains(string(raw), "modified live bytes") {
+			t.Fatal(string(raw))
+		}
+	}
+	for _, tool := range tools.Tools() {
+		switch tool.Name() {
+		case "list_repos", "read_source", "file_tree", "list_symbols":
+			continue
+		}
+		got, err := tool.Call(context.Background(), json.RawMessage(`{}`))
+		raw, _ := json.Marshal(got)
+		assertIdentity(got, false)
+		if err != nil || got["isError"] != true || !strings.Contains(string(raw), "graph_unavailable") {
+			t.Fatalf("%s: %s %v", tool.Name(), raw, err)
+		}
+	}
+	result, err := tools.NeighborsWithSnapshot(context.Background(), []contextwin.ContextBlock{{BlobSHA: "code-sha"}}, 1, graph.Proven)
+	if err != nil || len(result.Neighbors) != 0 {
+		t.Fatalf("annotations=%+v err=%v", result, err)
+	}
+	if err := tools.Close(); err != nil {
+		t.Fatal(err)
+	}
+	got := callTool(t, tools, "list_repos", `{}`)
+	raw, _ := json.Marshal(got)
+	if got["isError"] != true || !strings.Contains(string(raw), "tools are closed") {
+		t.Fatal(string(raw))
+	}
+}
+
+func TestRepositoryGraphCapabilityFollowsAcquiredGeneration(t *testing.T) {
+	fixture := newGraphFixture(t)
+	// The graph exists on disk, but source-only tools have not loaded it.
+	tools, err := OpenSourceTools(fixture.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { tools.Close() })
+	check := func(want bool) {
+		t.Helper()
+		for _, args := range []string{`{}`, `{"filter":"no-matching-repository"}`} {
+			got := callTool(t, tools, "list_repos", args)
+			raw, _ := json.Marshal(got["structuredContent"])
+			var result struct {
+				Available *bool `json:"graph_available"`
+			}
+			if err := json.Unmarshal(raw, &result); err != nil || result.Available == nil || *result.Available != want {
+				t.Fatalf("graph_available want %t, result %s, err %v", want, raw, err)
+			}
+		}
+	}
+	check(false)
+	if openErr, closeErr := tools.Reload(fixture.dir); openErr != nil || closeErr != nil {
+		t.Fatalf("reload: %v %v", openErr, closeErr)
+	}
+	check(true)
+	if openErr, _ := tools.Reload(t.TempDir()); openErr == nil {
+		t.Fatal("expected failed reload")
+	}
+	check(true)
+}

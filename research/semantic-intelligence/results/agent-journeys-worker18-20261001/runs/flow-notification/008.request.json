@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"search_context","arguments":{"repo":"Sample-Outbox","query":"AddScoped IRegistrationService NotifyRegistrationConsumer UseBusOutbox","token_budget":4000,"top_k":4}}}

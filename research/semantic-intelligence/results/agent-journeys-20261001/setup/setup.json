@@ -1,0 +1,33 @@
+{
+  "endpoint": "http://127.0.0.1:19381/mcp",
+  "transport": "stateless JSON-RPC 2.0 POST; application/json response",
+  "headers": {
+    "Content-Type": "application/json",
+    "Accept": "application/json, text/event-stream"
+  },
+  "auth": "none; loopback only",
+  "server_exec_session": 24111,
+  "working_directory": "/Users/zakkeown/Code/moedex",
+  "build_command": "go build -o .local/application-impact/agent-journeys/moedex ./cmd/moedex",
+  "server_command": "MOEDEX_AUTH_TOKEN='' MOEDEX_HTTP_ADDR='' MOEDEX_SHARD_DIR='' .local/application-impact/agent-journeys/moedex serve --index-dir \"$PWD/.local/application-impact/reverse-v1/outbox/index\" --mcp-http 127.0.0.1:19381 --embed none --mcp-max-concurrency 1",
+  "cli_sha256": "f7b31d93e7a5eb5ec9ce493eac777703551383f604aebade97fb1019b274b95f",
+  "snapshot_id": "reverse-outbox",
+  "snapshot_manifest_sha256": "cc1e73bcce7641f9d9e19a0cd821026886e388a646677465333990b9894c48ef",
+  "corpus_fingerprint": "d1e5ff21fe935680df220d8b00cebc44e27d05b6b2c2897b8c8e950e898781cc",
+  "source_roster_sha256": "01c1eff0928ded2174418e38c8b8aed2b270fc0ac0b8418ce84f07c0cd42fa18",
+  "embeddings": "none",
+  "dense_chunks": 0,
+  "docs": 40,
+  "graph": "absent, source-only serving snapshot",
+  "catalog_tools": 20,
+  "raw_catalog_sha256": "f7473a2acfee5ac32d503d5276bb861e42b4abc8c9c4f59b8b31900ae9986b30",
+  "solver_catalog_sha256": "f78b27da012a0491e1093bfff6aba30b681e13dce979f079d2c05888141a6aff",
+  "solver_catalog_derivation": "Read result.tools from raw catalog response preserving order; retain exactly name, description, inputSchema; JSON indent=2 with trailing newline.",
+  "setup_requests_only": [
+    "initialize",
+    "tools/list"
+  ],
+  "task_queries_made": 0,
+  "initial_launch_failure": "sandbox denied listening socket; preserved server.stderr. Escalated launch succeeded.",
+  "localhost_client_requires_escalation": true
+}

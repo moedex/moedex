@@ -1,0 +1,28 @@
+{
+  "classification": "synthetic SDK/worker smoke; no holdout product queries",
+  "argv": [
+    "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/dotnet",
+    "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/worker-source/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+    "--repo",
+    "SDKProbe",
+    "--root",
+    "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/sdk-probe",
+    "--project",
+    "Probe.csproj",
+    "--framework",
+    "net10.0",
+    "--sdk-path",
+    "/Users/zakkeown/Code/moedex/.local/holdout-cleanarchitecture/dotnet/sdk/10.0.401"
+  ],
+  "summary": {
+    "schema": "moedex.semantic-worker.v1",
+    "record_type": "stream_summary",
+    "projects": 1,
+    "compilation_status": "complete",
+    "declarations": 4,
+    "references": 35
+  },
+  "compiler_version": "5.9.0.0",
+  "extractor_version": "18",
+  "source_hash_verified": true
+}

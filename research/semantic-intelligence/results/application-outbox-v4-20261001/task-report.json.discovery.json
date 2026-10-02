@@ -1,0 +1,221 @@
+[
+  {
+    "task": "submitted-message",
+    "baseline": {
+      "calls": 1,
+      "complete_response_bytes": 1647,
+      "structured_content_bytes": 1334,
+      "evidence": null,
+      "definitions": null
+    },
+    "candidate": {
+      "calls": 1,
+      "complete_response_bytes": 2281,
+      "structured_content_bytes": 1927,
+      "evidence": null,
+      "definitions": null
+    },
+    "baseline_contexts": [
+      {
+        "generated": false,
+        "context_id": "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Components/RegistrationService.cs",
+        "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+      },
+      {
+        "generated": false,
+        "context_id": "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Components/RegistrationService.cs",
+        "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+      }
+    ],
+    "candidate_contexts": [
+      {
+        "generated": false,
+        "context_id": "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Components/RegistrationService.cs",
+        "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+      },
+      {
+        "generated": false,
+        "context_id": "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Components/RegistrationService.cs",
+        "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+      }
+    ],
+    "definition_only_contexts": null
+  },
+  {
+    "task": "attendee-message",
+    "baseline": {
+      "calls": 1,
+      "complete_response_bytes": 1680,
+      "structured_content_bytes": 1367,
+      "evidence": null,
+      "definitions": null
+    },
+    "candidate": {
+      "calls": 1,
+      "complete_response_bytes": 2314,
+      "structured_content_bytes": 1960,
+      "evidence": null,
+      "definitions": null
+    },
+    "baseline_contexts": [
+      {
+        "generated": false,
+        "context_id": "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+        "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+      },
+      {
+        "generated": false,
+        "context_id": "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+        "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+      }
+    ],
+    "candidate_contexts": [
+      {
+        "generated": false,
+        "context_id": "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+        "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+      },
+      {
+        "generated": false,
+        "context_id": "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+        "raw_sha256": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570"
+      }
+    ],
+    "definition_only_contexts": null
+  },
+  {
+    "task": "registration-entity",
+    "baseline": {
+      "calls": 1,
+      "complete_response_bytes": 1630,
+      "structured_content_bytes": 1317,
+      "evidence": null,
+      "definitions": null
+    },
+    "candidate": {
+      "calls": 1,
+      "complete_response_bytes": 2264,
+      "structured_content_bytes": 1910,
+      "evidence": null,
+      "definitions": null
+    },
+    "baseline_contexts": [
+      {
+        "generated": false,
+        "context_id": "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Components/RegistrationService.cs",
+        "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+      },
+      {
+        "generated": false,
+        "context_id": "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Components/RegistrationDbContext.cs",
+        "raw_sha256": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef"
+      }
+    ],
+    "candidate_contexts": [
+      {
+        "generated": false,
+        "context_id": "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Components/RegistrationService.cs",
+        "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+      },
+      {
+        "generated": false,
+        "context_id": "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Components/RegistrationDbContext.cs",
+        "raw_sha256": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef"
+      }
+    ],
+    "definition_only_contexts": null
+  },
+  {
+    "task": "registration-service",
+    "baseline": {
+      "calls": 1,
+      "complete_response_bytes": 1279,
+      "structured_content_bytes": 966,
+      "evidence": null,
+      "definitions": null
+    },
+    "candidate": {
+      "calls": 1,
+      "complete_response_bytes": 2563,
+      "structured_content_bytes": 2209,
+      "evidence": null,
+      "definitions": null
+    },
+    "baseline_contexts": [
+      {
+        "generated": false,
+        "context_id": "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35",
+        "project": "src/Sample.Api/Sample.Api.csproj",
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Api/Program.cs",
+        "raw_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53"
+      }
+    ],
+    "candidate_contexts": [
+      {
+        "generated": false,
+        "context_id": "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Components/IRegistrationService.cs",
+        "raw_sha256": "c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71"
+      },
+      {
+        "generated": false,
+        "context_id": "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a",
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Components/IRegistrationService.cs",
+        "raw_sha256": "c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71"
+      },
+      {
+        "generated": false,
+        "context_id": "context:f3087011312a8aad8d1a17b1af95ac6329e0f6c280471a3723d28d2670961b35",
+        "project": "src/Sample.Api/Sample.Api.csproj",
+        "repo": "Sample-Outbox",
+        "path": "src/Sample.Api/Program.cs",
+        "raw_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53"
+      }
+    ],
+    "definition_only_contexts": [
+      "context:4ef5bad1a7b86d3b8f7081cab11b0902370b79c698c89c82c3feddc80ecf4841",
+      "context:5b1f1fbca3f46f61f9c25ba7787407e26cbe523a606f581cb32b7050ee14909a"
+    ]
+  }
+]

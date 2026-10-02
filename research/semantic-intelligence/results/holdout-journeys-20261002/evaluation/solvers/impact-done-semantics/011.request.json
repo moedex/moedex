@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"read_source","arguments":{"repo":"CleanArchitecture","path":"src/Application/TodoItems/Commands/UpdateTodoItem/UpdateTodoItem.cs","start_line":5,"end_line":35,"format":"text"}}}

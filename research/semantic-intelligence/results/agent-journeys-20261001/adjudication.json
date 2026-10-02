@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "status": "two_source_reviewers_adjudicated",
+  "reviewed_at_utc": "2026-10-01T18:23:59.952728+00:00",
+  "rubric_sha256": "52e70223e4f285049c6273753dbaa974b2d755fd7d038b9e3be1861b99d83e8c",
+  "reviews": {
+    "review-root.json": "458bd52221befcaaf14c15692ecf503d72ba4c3dd2290ba4c992cf6f59e44905",
+    "review-evaluation.json": "6b33e88f78f79740d61d409fcd83cb1b6c796cbc875de00f2fa5f328380d66e7"
+  },
+  "disagreements": [
+    {
+      "atom_id": "locate-validation-service.1",
+      "evaluation_evidence": 1,
+      "root_evidence": 0.5,
+      "final_correctness": 1,
+      "final_evidence": 0.5,
+      "reason": "Exact quotation establishes correctness, but the final source citation spans Program.cs lines26\u201389 for one statement at line62. Apply frozen partial-credit rule for unnecessarily broad citations. Independent reviews preserved unchanged."
+    }
+  ],
+  "aggregate_completed_only": {
+    "executed_tasks": 3,
+    "planned_tasks": 12,
+    "unexecuted_tasks": 9,
+    "correctness_earned": 14,
+    "correctness_possible": 14,
+    "evidence_earned": 13.5,
+    "evidence_possible": 14,
+    "strict_task_successes": 2,
+    "unsupported_claims": 0,
+    "attempted_public_calls": 8,
+    "complete_response_bytes": 66410,
+    "public_tool_errors": 4
+  },
+  "task_results": [
+    {
+      "id": "locate-duplicate",
+      "correctness": 4,
+      "evidence": 4,
+      "possible": 4,
+      "strict_success": true
+    },
+    {
+      "id": "locate-retry",
+      "correctness": 5,
+      "evidence": 5,
+      "possible": 5,
+      "strict_success": true
+    },
+    {
+      "id": "locate-validation-service",
+      "correctness": 5,
+      "evidence": 4.5,
+      "possible": 5,
+      "strict_success": false
+    }
+  ],
+  "scope": "Only completed locate-behavior tasks scored. Missing tasks receive no inferred quality score. No comparative, heldout, compiler-API-benefit, controlled-latency or OS-isolation claim."
+}

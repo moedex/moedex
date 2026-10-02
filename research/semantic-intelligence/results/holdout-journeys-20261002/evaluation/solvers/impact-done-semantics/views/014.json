@@ -1,0 +1,17 @@
+{
+  "ordinal": 14,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"repo\":\"CleanArchitecture\",\"path\":\"src/Application/DependencyInjection.cs\",\"format\":\"text\"}"
+  ],
+  "started_monotonic": 78728.734304416,
+  "finished_monotonic": 78728.793264416,
+  "returncode": 0,
+  "stdout_bytes": 3331,
+  "stdout_sha256": "604c92afb6e6a80ee9d6e468990b57b85abb094f6facf2fa9ee06a3e7363a38b",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

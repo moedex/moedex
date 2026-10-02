@@ -1,0 +1,11 @@
+> serve      started
+moedex-serve: snapshot reverse-outbox -> /Users/zakkeown/Code/moedex/.local/application-impact/reverse-v1/outbox/index/snapshots/reverse-outbox/serve
+moedex-serve: dense arm disabled; ranking lexical+symbol
+server: token index loaded from cache
+server: symbol index loaded from cache
+moedex-serve: corpus ranker ready — 40 blobs, 40 docs, 24 symbol blobs, 0 dense chunks (none) in 4ms
+{"time":"2026-10-01T12:10:43.519503-06:00","level":"INFO","msg":"graph artifact absent; preparing source-only serving snapshot"}
+{"time":"2026-10-01T12:10:43.523252-06:00","level":"INFO","msg":"boot","mode":"mcp-http","blobs":40,"symbol_blobs":24,"dense_chunks":0,"requested_addr":"127.0.0.1:19381","effective_addr":"127.0.0.1:19381","tls":false}
+{"time":"2026-10-01T12:10:43.523281-06:00","level":"WARN","msg":"no auth token configured; /mcp is open (loopback bind)"}
+{"time":"2026-10-01T12:10:43.527467-06:00","level":"INFO","msg":"listening","addr":"127.0.0.1:19381","endpoint":"/mcp","tls":false,"auth":false}
+moedex-serve: listen tcp 127.0.0.1:19381: bind: operation not permitted

@@ -1,0 +1,111 @@
+{
+  "case": "OrderStatusChangedToPaidIntegrationEvent",
+  "classification": "source_authored_public_workflow_not_independent_agent_score",
+  "passed": true,
+  "calls": 14,
+  "response_bytes": 62697,
+  "compiler_identity": [
+    "independent-project",
+    "fecd3b53d7d2af58297fdf3cda103685c2643a34825481d178ebe16ff0ae33a8"
+  ],
+  "evidence": {
+    "interface_symbol": {
+      "id": "symbol:86970a76b18295423269e0d4de938ca51a20618cd3d1603e99928148159018ce",
+      "language": "csharp",
+      "namespace_kind": "project",
+      "namespace": "eShop/src/EventBus/EventBus.csproj",
+      "descriptor": "{\"definition\":\"M:eShop.EventBus.Abstractions.IIntegrationEventHandler\\u00601.Handle(\\u00600)\",\"arguments\":[{\"descriptor\":\"T:Webhooks.API.IntegrationEvents.OrderStatusChangedToPaidIntegrationEvent\",\"descriptor_kind\":\"documentation_comment_id\",\"namespace_kind\":\"project\",\"namespace\":\"eShop/src/Webhooks.API/Webhooks.API.csproj\",\"language\":\"csharp\"}]}",
+      "descriptor_kind": "constructed_interface_method_v1"
+    },
+    "implementation": {
+      "id": "symbol:35dbe9947d2e01bfa1bf0f173d3618dd0814fca3edbc528fb92d81b0c46cea11",
+      "language": "csharp",
+      "namespace_kind": "project",
+      "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+      "descriptor": "M:Webhooks.API.IntegrationEvents.OrderStatusChangedToPaidIntegrationEventHandler.Handle(Webhooks.API.IntegrationEvents.OrderStatusChangedToPaidIntegrationEvent)",
+      "descriptor_kind": "documentation_comment_id"
+    },
+    "configuration": {
+      "kind": "di_keyed_registration_configuration",
+      "rule": "csharp-keyed-di-v1",
+      "evidence_scope": "compile_time",
+      "targets": [
+        {
+          "role": "service",
+          "symbol": {
+            "id": "symbol:f5bfe0e35eed27debb796dfcef218a368d615b9415e9b5d2fdfa37b089fcd377",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/EventBus/EventBus.csproj",
+            "descriptor": "T:eShop.EventBus.Abstractions.IIntegrationEventHandler",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        },
+        {
+          "role": "implementation",
+          "symbol": {
+            "id": "symbol:62a252d9cceed56f091fab62880408e9e3ac913175d51016a5036515fa3bf9bb",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+            "descriptor": "T:Webhooks.API.IntegrationEvents.OrderStatusChangedToPaidIntegrationEventHandler",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        },
+        {
+          "role": "key_type",
+          "symbol": {
+            "id": "symbol:dc195ea58e7da004596a63acee09bf83e68a059ca843836281ccac087bb1d521",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShop/src/Webhooks.API/Webhooks.API.csproj",
+            "descriptor": "T:Webhooks.API.IntegrationEvents.OrderStatusChangedToPaidIntegrationEvent",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        },
+        {
+          "role": "registration_api",
+          "symbol": {
+            "id": "symbol:78eff79e14295e0d9b91574fc4d72c46a282a5e5a6945417edc07a091a7861af",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+            "descriptor": "M:Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddKeyedTransient``2(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Object)",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      ],
+      "lifetime": "transient"
+    },
+    "helper_definition": {
+      "generated": false,
+      "occurrence_id": "occurrence:78a81005758f83ceb8913e9eb79b6e5695599d8d7e967c5626cae706e1fca19b",
+      "binding_status": "resolved",
+      "reference_kind": "declaration",
+      "role": "declaration",
+      "repo": "eShop",
+      "path": "src/EventBus/Extensions/EventBusBuilderExtensions.cs",
+      "raw_sha256": "99bb3f570d572ac5101804b1cdd936d98697cdcf9ed9c1c7c89faf1a63313f6a",
+      "source_id": "source:d3a17d95e527b08424f301df13725f0065451d724971d8dbad1ef48d5460c8a6",
+      "source_snapshot_id": "snapshot:d1700498c55dc6e42cb0d994f9453b68b5663a47f48f157a18da4d0205fa589b",
+      "context_id": "context:c5b05502676bd47671466561c494b244fdd9ca2308b6820ced92b6760ec39a03",
+      "project": "src/EventBus/EventBus.csproj",
+      "byte_offset": 597,
+      "byte_length": 15,
+      "symbol": {
+        "id": "symbol:62d72dbdb3764ceee013fba9f4be9cbe075a944bb1302613d31c2224a83f0ca4",
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "eShop/src/EventBus/EventBus.csproj",
+        "descriptor": "M:Microsoft.Extensions.DependencyInjection.EventBusBuilderExtensions.AddSubscription``2(Microsoft.Extensions.DependencyInjection.IEventBusBuilder)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "candidates": [],
+      "method": "roslyn-semantic-model",
+      "extractor": "msbuild-roslyn",
+      "extractor_version": "7"
+    },
+    "configuration_offset": 996,
+    "verified_bom_bytes": 3
+  }
+}

@@ -172,20 +172,34 @@ Semantic similarity edges are Pattern-tier, so the default graph floor exposes
 them, while their exact cosine remains separate in `similarity`. Cheap
 name-based Pattern edges are constrained to repositories shared by source and
 target; a missing same-repository definition is treated as external/unresolved,
-not bound to an arbitrary corpus symbol. Verified EF query edges additionally
-require a unique same-repository type/table target consistent with the source's
-C# namespace/import scope. The v2 mmap sidecar interns the
+not bound to an arbitrary corpus symbol. Syntax-only hierarchy, DI, EF query,
+Angular rendering, and HTTP route relationships are at most Pattern. Type
+bindings require a compatible language and repository context; shared-content
+or ambiguous bindings remain Candidate where diagnostic targets are retained.
+EF query hints narrow targets by C# namespace/import scope and cannot override an
+explicit namespace mismatch. Route-shape equality does not establish service
+identity. The scoped binding policy and repository/path occurrence roster force
+old graphs to refresh even when bytes have not changed. See the
+[semantic intelligence program](plans/semantic-intelligence/PROGRAM.md).
+The mmap sidecar interns the
 evidence blob SHA and stores its 64-bit byte offset and length; graph MCP results
 render confidence as `{tier, score}` and evidence as
 `{blob_sha, byte_offset, byte_length}`.
 
 ### Graph-quality gate
 
-`make health` includes a checked-in multi-language graph corpus whose gold records
-invoke production MCP handlers, score their emitted node and edge order (Recall,
+`make health` includes a checked-in multi-language graph corpus with manually
+constructed edges whose gold records invoke production MCP handlers and score
+their emitted node and edge order (Recall,
 Precision, MRR, NDCG, and UDCG), group edge precision by confidence tier, and run a
 paired `search_context` budget case for every record. `make graph-eval` runs that
-hermetic tier directly. The self-hosted tier uses `make graph-eval-private` with
+hermetic tier directly, together with a separate source-to-extraction-to-MCP
+gate that tests C# hierarchy/DI, cross-repository homonyms, exact evidence and
+refresh/clean-build equivalence. The hand-built adjacency gate establishes
+traversal behavior; only the source-driven gate exercises extraction. These small
+fixtures do not establish fleet precision or competitive superiority. See the
+[benchmark contract](plans/semantic-intelligence/benchmark.md).
+The self-hosted tier uses `make graph-eval-private` with
 `MOEDEX_GRAPH_EVAL_SHARDS` and a reviewed, mounted `MOEDEX_GRAPH_GOLD` file containing
 at least 30 queries, explicit coverage tags for the required graph scenarios,
 reviewed hard-distractor labels, and mechanically derived floors. Duplicate

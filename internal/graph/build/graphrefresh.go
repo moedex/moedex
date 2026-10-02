@@ -11,8 +11,9 @@ package graphbuild
 //
 //	E(name) is unchanged  <=  no blob holding an occurrence of name was added or removed
 //
-// Content is addressed by SHA, so "unchanged blob" means byte-identical content,
-// which means identical occurrences and identical verification.
+// The corpus roster also includes repository/path contexts and the type-binding
+// policy version. Byte-identical content can bind differently after a move or
+// when copied into another repository, so those changes must invalidate it too.
 //
 // # Where the two halves of the dirty set come from
 //
@@ -38,6 +39,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -136,10 +138,7 @@ func RefreshGraphWithOptions(dir string, opts GraphBuildOptions) (path string, s
 		stats.Generation = previous.Generation()
 		stats.NamesCarried = len(sweep.names)
 		stats.EdgesCarried = previous.NumEdges()
-		stats.Cluster, err = ensureClusterSidecar(dir, previous.Generation())
-		if err == nil {
-			stats.Counts, err = measureGraphBuildCounts(dir, 0, 0)
-		}
+		stats.Cluster, stats.Counts, err = finalizeGraph(dir, sweep, previous, 0, 0)
 		return GraphPath(dir), stats, err
 	}
 	if legacyQualityEdges {
@@ -149,72 +148,90 @@ func RefreshGraphWithOptions(dir string, opts GraphBuildOptions) (path string, s
 	dirty := sweep.dirtyNames(previous, added, removed)
 	stats.Generation = previous.Generation() + 1
 
-	carried := make(map[string][]carriedGraphEdge)
-	var carriedUnnamed []carriedGraphEdge
-	for node := 0; node < previous.NumNodes(); node++ {
-		key, first, count, ok := previous.NodeAt(node)
-		if !ok {
-			break
+	carried := make(map[string][]carriedGraphRecord)
+	var carriedUnnamed []carriedGraphRecord
+	imported := newImportedTargetSets(previous)
+	previous.EachRecord(func(record diskgraph.PhysicalRecord) bool {
+		key, edge := record.Source, record.Edge
+		count := 1
+		if record.Factored {
+			count = previous.TargetCount(record.Targets)
+			if record.Exclude >= 0 {
+				count--
+			}
 		}
-		for i := first; i < first+count; i++ {
-			name := previous.EdgeName(i)
-			if name != "" {
-				// A per-name edge from the candidates.GenerateCandidates sweep:
-				// carry it forward unless the delta marked its name dirty, or the
-				// name no longer exists anywhere in the corpus to regenerate.
-				if _, stale := dirty[name]; stale {
-					continue
+		if edge.Name != "" {
+			if _, stale := dirty[edge.Name]; stale {
+				return true
+			}
+			if _, eligible := sweep.eligible[edge.Name]; !eligible {
+				stats.EdgesDropped += count
+				return true
+			}
+			if edge.Confidence == graph.Candidate && !sweep.sourceResolvesToSymbol(key) {
+				stats.EdgesDropped += count
+				sweep.suppressedRawCandidates.Add(int64(count))
+				return true
+			}
+			if record.Factored {
+				targets := imported.get(record.Targets)
+				if edge.Confidence == graph.Pattern {
+					signature := "repos:" + strings.Join(sweep.reposBySHA[key.BlobSHA], "\x00")
+					targets = imported.scoped(record.Targets, signature, func(target diskgraph.Key) bool { return sweep.blobSHAsShareRepository(key.BlobSHA, target.BlobSHA) })
 				}
-				if _, ok := sweep.eligible[name]; !ok {
-					stats.EdgesDropped++
-					continue
+				group := imported.source(record, targets)
+				dropped := count - group.count()
+				stats.EdgesDropped += dropped
+				sweep.suppressedCrossRepoPatterns.Add(int64(dropped))
+				if group.count() > 0 {
+					carried[edge.Name] = append(carried[edge.Name], carriedGraphRecord{group: &group})
 				}
-				edge, ok := previous.EdgeAt(i)
-				if !ok {
-					continue
-				}
-				if edge.Confidence == graph.Candidate && !sweep.sourceResolvesToSymbol(key) {
-					stats.EdgesDropped++
-					sweep.suppressedRawCandidates.Add(1)
-					continue
-				}
+			} else {
 				if edge.Confidence == graph.Pattern && !sweep.blobSHAsShareRepository(key.BlobSHA, edge.TargetBlob) {
 					stats.EdgesDropped++
 					sweep.suppressedCrossRepoPatterns.Add(1)
-					continue
+					return true
 				}
-				carried[name] = append(carried[name], carriedGraphEdge{node: uint32(node), edge: uint32(i)})
-				continue
+				carried[edge.Name] = append(carried[edge.Name], carriedGraphRecord{source: key, edge: edge})
 			}
-			// An edge from one of the whole-corpus passes (HTTP, manifest,
-			// hierarchy, injection, queries, renders, legacy unnamed LSP calls,
-			// similarity) —
-			// none of these have a symbol name, so the per-name dirty/eligible
-			// check above can never keep them. The six tag-independent passes
-			// are always regenerated fresh below (see addWholeCorpusEdges), so
-			// their previous copies are neither carried nor dropped here: they
-			// are simply superseded. Legacy unnamed LSP-call and SIMILAR_TO edges
-			// cannot be attributed to a dirty name, so they are carried forward, but only
-			// when neither endpoint's blob was removed by this delta — an
-			// unmodified pair of blobs cannot have produced a different edge.
-			edge, ok := previous.EdgeAt(i)
-			if !ok {
-				continue
-			}
-			if edge.Type != diskgraph.EdgeCalls && edge.Type != diskgraph.EdgeSimilarTo {
-				continue
-			}
-			if _, gone := removed[key.BlobSHA]; gone {
-				stats.EdgesDropped++
-				continue
-			}
-			if _, gone := removed[edge.TargetBlob]; gone {
-				stats.EdgesDropped++
-				continue
-			}
-			carriedUnnamed = append(carriedUnnamed, carriedGraphEdge{node: uint32(node), edge: uint32(i)})
+			return true
 		}
-	}
+		if edge.Type != diskgraph.EdgeCalls && edge.Type != diskgraph.EdgeSimilarTo {
+			return true
+		}
+		_, sourceChanged := removed[key.BlobSHA]
+		if edge.Type == diskgraph.EdgeSimilarTo {
+			sourceChanged = len(sweep.sites[key.BlobSHA]) == 0
+		}
+		if sourceChanged {
+			stats.EdgesDropped += count
+			return true
+		}
+		if edge.Type == diskgraph.EdgeSimilarTo && edge.Confidence == graph.Candidate {
+			edge.Confidence = graph.Pattern
+			record.Edge = edge
+		}
+		keep := func(target diskgraph.Key) bool {
+			if edge.Type == diskgraph.EdgeSimilarTo {
+				return len(sweep.sites[target.BlobSHA]) > 0
+			}
+			_, gone := removed[target.BlobSHA]
+			return !gone
+		}
+		if record.Factored {
+			targets := imported.scoped(record.Targets, fmt.Sprintf("removed:%d", edge.Type), keep)
+			group := imported.source(record, targets)
+			stats.EdgesDropped += count - group.count()
+			if group.count() > 0 {
+				carriedUnnamed = append(carriedUnnamed, carriedGraphRecord{group: &group})
+			}
+		} else if keep(diskgraph.Key{BlobSHA: edge.TargetBlob, SymbolOffset: edge.TargetOffset}) {
+			carriedUnnamed = append(carriedUnnamed, carriedGraphRecord{source: key, edge: edge})
+		} else {
+			stats.EdgesDropped++
+		}
+		return true
+	})
 
 	var dirtyNames []string
 	for _, name := range sweep.names {
@@ -223,18 +240,18 @@ func RefreshGraphWithOptions(dir string, opts GraphBuildOptions) (path string, s
 		}
 	}
 
-	recomputed, schedule, err := sweep.computeEdgesParallel(dirtyNames, stats.Generation)
+	recomputed, schedule, err := sweep.computeFactoredNames(dirtyNames, stats.Generation)
 	if err != nil {
 		return "", stats, err
 	}
 	stats.Schedule = schedule
-	recomputedByName := make(map[string][]graphKeyEdge, len(dirtyNames))
+	recomputedByName := make(map[string][]factoredSource, len(dirtyNames))
 	for i, name := range dirtyNames {
-		recomputedByName[name] = recomputed[i].Edges
+		recomputedByName[name] = recomputed[i].groups
 	}
 	crossRelevant := make(map[string]bool)
 	for i, name := range dirtyNames {
-		if recomputed[i].CrossShard {
+		if recomputed[i].crossShard {
 			crossRelevant[name] = true
 		}
 	}
@@ -244,10 +261,15 @@ func RefreshGraphWithOptions(dir string, opts GraphBuildOptions) (path string, s
 	}
 	refreshOpts := opts
 	refreshOpts.lspPatternGroupsOnly = true
-	reconciliation, err := collectLSPPatternReconciliation(refreshCtx, sweep.merged, sweep.idxs, patternCallGroups(recomputed), crossRelevant, refreshOpts)
+	var callGroups []patternCallGroup
+	if lspGraphAvailable() {
+		callGroups = factoredPatternCallGroups(recomputed)
+	}
+	reconciliation, err := collectLSPPatternReconciliation(refreshCtx, sweep.merged, sweep.idxs, callGroups, crossRelevant, refreshOpts)
 	if err != nil {
 		return "", stats, err
 	}
+	recomputed = nil
 
 	builder := diskgraph.NewBuilder()
 	builder.SetGeneration(stats.Generation)
@@ -256,58 +278,39 @@ func RefreshGraphWithOptions(dir string, opts GraphBuildOptions) (path string, s
 		return "", stats, err
 	}
 	emit := newGraphEmitter(builder)
+	compact := newFactoredEmitter(builder)
 	for _, name := range sweep.names {
-		if edges, stale := recomputedByName[name]; stale {
+		if groups, stale := recomputedByName[name]; stale {
 			stats.NamesRecomputed++
 			before := builder.NumEdges()
-			for i := range edges {
-				if reconciliation.prunes(edges[i]) {
+			for _, group := range groups {
+				if reconciliation.prunes(group.template()) {
 					continue
 				}
-				if err := emit.Add(edges[i].Key, edges[i].Edge); err != nil {
+				if err := compact.add(group); err != nil {
 					return "", stats, err
 				}
 			}
 			stats.EdgesRecomputed += int(builder.NumEdges() - before)
+			delete(recomputedByName, name)
 			continue
 		}
 		stats.NamesCarried++
-		for _, c := range carried[name] {
-			key, _, _, ok := previous.NodeAt(int(c.node))
-			if !ok {
-				return "", stats, fmt.Errorf("server: graph refresh lost node %d of the previous graph", c.node)
-			}
-			edge, ok := previous.EdgeAt(int(c.edge))
-			if !ok {
-				return "", stats, fmt.Errorf("server: graph refresh lost edge %d of the previous graph", c.edge)
-			}
-			if err := emit.Add(key, edge); err != nil {
+		for _, record := range carried[name] {
+			if err := record.add(emit, compact); err != nil {
 				return "", stats, err
 			}
-			stats.EdgesCarried++
+			stats.EdgesCarried += record.count()
 		}
+		delete(carried, name)
 	}
-
-	// Carry forward the LSP-call / SIMILAR_TO edges whose endpoints this delta
-	// left untouched — see the loop above for why these two families alone are
-	// carried rather than regenerated.
-	for _, c := range carriedUnnamed {
-		key, _, _, ok := previous.NodeAt(int(c.node))
-		if !ok {
-			return "", stats, fmt.Errorf("server: graph refresh lost node %d of the previous graph", c.node)
-		}
-		edge, ok := previous.EdgeAt(int(c.edge))
-		if !ok {
-			return "", stats, fmt.Errorf("server: graph refresh lost edge %d of the previous graph", c.edge)
-		}
-		if edge.Type == diskgraph.EdgeSimilarTo && edge.Confidence == graph.Candidate {
-			edge.Confidence = graph.Pattern
-		}
-		if err := emit.Add(key, edge); err != nil {
+	for _, record := range carriedUnnamed {
+		if err := record.add(emit, compact); err != nil {
 			return "", stats, err
 		}
-		stats.EdgesCarried++
+		stats.EdgesCarried += record.count()
 	}
+
 	if err := addReconciledLSPCalls(builder, emit.seen, reconciliation, stats.Generation); err != nil {
 		return "", stats, err
 	}
@@ -328,10 +331,7 @@ func RefreshGraphWithOptions(dir string, opts GraphBuildOptions) (path string, s
 
 	path, err = saveGraph(builder, dir)
 	if err == nil {
-		stats.Cluster, err = buildClusterSidecar(dir)
-	}
-	if err == nil {
-		stats.Counts, err = measureGraphBuildCounts(dir, int(sweep.suppressedRawCandidates.Load()), int(sweep.suppressedCrossRepoPatterns.Load()))
+		stats.Cluster, stats.Counts, err = finalizeGraph(dir, sweep, nil, int(sweep.suppressedRawCandidates.Load()), int(sweep.suppressedCrossRepoPatterns.Load()))
 	}
 	return path, stats, err
 }
@@ -352,16 +352,31 @@ func (s *graphSweep) hasLegacyQualityEdges(previous *diskgraph.Graph) bool {
 	resolved := make(map[diskgraph.Key]bool)
 	checked := make(map[diskgraph.Key]bool)
 	found := false
-	previous.EachEdge(func(source diskgraph.Key, edge diskgraph.Edge) bool {
+	imported := newImportedTargetSets(previous)
+	previous.EachRecord(func(record diskgraph.PhysicalRecord) bool {
+		source, edge := record.Source, record.Edge
 		if edge.Type == diskgraph.EdgeSimilarTo && edge.Confidence == graph.Candidate {
 			found = true
 			return false
 		}
-		if edge.Confidence == graph.Pattern && edge.Name != "" && !s.blobSHAsShareRepository(source.BlobSHA, edge.TargetBlob) {
-			found = true
-			return false
+		if edge.Confidence == graph.Pattern && edge.Name != "" {
+			if record.Factored {
+				signature := "repos:" + strings.Join(s.reposBySHA[source.BlobSHA], "\x00")
+				original := imported.get(record.Targets)
+				filtered := imported.scoped(record.Targets, signature, func(target diskgraph.Key) bool { return s.blobSHAsShareRepository(source.BlobSHA, target.BlobSHA) })
+				if len(filtered.keys) != len(original.keys) {
+					found = true
+					return false
+				}
+			} else if !s.blobSHAsShareRepository(source.BlobSHA, edge.TargetBlob) {
+				found = true
+				return false
+			}
 		}
-		if edge.Confidence != graph.Candidate {
+		// Whole-corpus type passes intentionally retain ambiguous bindings as
+		// unnamed Candidate edges, including top-level DI registration sites.
+		// Only the per-name candidate sweep's raw occurrences are legacy noise.
+		if edge.Confidence != graph.Candidate || edge.Name == "" {
 			return true
 		}
 		if !checked[source] {
@@ -436,10 +451,7 @@ func (s *graphSweep) rebuildAll(dir string, stats *GraphRefreshStats, opts Graph
 	stats.BlobsAdded = len(s.identity)
 	path, err := saveGraph(builder, dir)
 	if err == nil {
-		stats.Cluster, err = buildClusterSidecar(dir)
-	}
-	if err == nil {
-		stats.Counts, err = measureGraphBuildCounts(dir, int(s.suppressedRawCandidates.Load()), int(s.suppressedCrossRepoPatterns.Load()))
+		stats.Cluster, stats.Counts, err = finalizeGraph(dir, s, nil, int(s.suppressedRawCandidates.Load()), int(s.suppressedCrossRepoPatterns.Load()))
 	}
 	return path, err
 }
@@ -496,9 +508,36 @@ func (s *graphSweep) computeEdgesParallel(names []string, generation uint64) ([]
 func (s *graphSweep) computeEdgesParallelBatched(names []string, generation uint64, maxBatchEdges int) ([]graphNameResult, GraphScheduleStats, error) {
 	workers := runtime.GOMAXPROCS(0)
 	stats := GraphScheduleStats{Workers: workers, Names: len(names)}
+	sourcesBefore, pairsBefore, retainedBefore := s.sourcesVerified.Load(), s.candidatePairs.Load(), s.retainedPairs.Load()
 	prepareStart := time.Now()
-	prepared, err := computeParallel(names, workers, func(name string) (*candidates.PreparedName, error) {
-		return candidates.PrepareName(s.corpus, name), nil
+	// Build the complete text arm once for the names this build/refresh needs.
+	// Always start from the original corpus so a repeated preparation releases
+	// the prior table and a budget fallback cannot retain a stale table budget.
+	if s.baseCorpus == nil {
+		s.baseCorpus = s.corpus
+	}
+	s.corpus = s.baseCorpus
+	log.Printf("server: graph occurrence scan started names=%d budget_bytes=%d", len(names), graphTextOccurrenceBytes)
+	scanStart := time.Now()
+	s.corpus, stats.TextOccurrences = candidates.WithTextOccurrences(s.baseCorpus, names, graphTextOccurrenceBytes)
+	stats.TextScanElapsed = time.Since(scanStart)
+	log.Printf("server: graph occurrence scan complete built=%t names=%d/%d blobs=%d content_bytes=%d occurrences=%d retained_bytes=%d budget_bytes=%d fallback=%q elapsed=%s",
+		stats.TextOccurrences.Built, stats.TextOccurrences.IndexedNames, stats.TextOccurrences.RequestedNames,
+		stats.TextOccurrences.BlobsScanned, stats.TextOccurrences.ContentBytes, stats.TextOccurrences.Occurrences,
+		stats.TextOccurrences.RetainedBytes, stats.TextOccurrences.BudgetBytes, stats.TextOccurrences.FallbackReason, stats.TextScanElapsed.Round(time.Millisecond))
+	var preparedNames atomic.Int64
+	var preparationLogTime atomic.Int64
+	preparationLogTime.Store(time.Now().UnixNano())
+	prepared, err := computeParallel(names, workers, func(name string) (*preparedGraphName, error) {
+		result, err := s.prepareGraphName(candidates.PrepareName(s.corpus, name))
+		completed := preparedNames.Add(1)
+		now := time.Now().UnixNano()
+		previous := preparationLogTime.Load()
+		if now-previous >= int64(30*time.Second) && preparationLogTime.CompareAndSwap(previous, now) {
+			log.Printf("server: graph preparation progress %d/%d names complete; sources_verified=%d elapsed=%s",
+				completed, len(names), s.sourcesVerified.Load()-sourcesBefore, time.Since(prepareStart).Round(time.Second))
+		}
+		return result, err
 	})
 	stats.PreparationElapsed = time.Since(prepareStart)
 	if err != nil {
@@ -508,16 +547,26 @@ func (s *graphSweep) computeEdgesParallelBatched(names []string, generation uint
 	results := make([]graphNameResult, len(names))
 	parts := make([][][]graphKeyEdge, len(names))
 	var tasks []graphBatchTask
+	var plannedPairs uint64
 	for nameIndex, p := range prepared {
 		if p == nil {
 			continue
 		}
 		results[nameIndex].CrossShard = p.CrossShard()
+		for _, source := range p.sources {
+			pairs := uint64(p.NumTargets(source.scored.Source))
+			plannedPairs += pairs
+			if !source.suppressed {
+				stats.RetainedPairUpperBound += pairs
+			}
+		}
 		ranges := candidateSourceBatches(p.NumSources(), p.NumDefinitions(), maxBatchEdges)
 		parts[nameIndex] = make([][]graphKeyEdge, len(ranges))
 		nameUpperBound := uint64(p.NumSources()) * uint64(p.NumDefinitions())
 		if nameUpperBound > stats.HeaviestNameUpperBound {
 			stats.HeaviestName = names[nameIndex]
+			stats.HeaviestNameSources = p.NumSources()
+			stats.HeaviestNameDefinitions = p.NumDefinitions()
 			stats.HeaviestNameUpperBound = nameUpperBound
 			stats.HeaviestNameBatches = len(ranges)
 		}
@@ -533,14 +582,18 @@ func (s *graphSweep) computeEdgesParallelBatched(names []string, generation uint
 			})
 		}
 	}
+	stats.RegionCache = s.verifierRegions.Stats()
+	stats.SourcesVerified = s.sourcesVerified.Load() - sourcesBefore
 	stats.Batches = len(tasks)
 	if stats.Workers > stats.Batches {
 		stats.Workers = stats.Batches
 	}
 	if stats.HeaviestName != "" {
-		log.Printf("server: graph schedule prepared %d names as %d bounded batches on %d workers; heaviest=%q upper_bound=%d batches=%d prepare=%s",
+		log.Printf("server: graph schedule prepared %d names as %d bounded batches on %d workers; heaviest=%q sources=%d definitions=%d upper_bound=%d batches=%d prepare=%s",
 			stats.Names, stats.Batches, stats.Workers, stats.HeaviestName,
-			stats.HeaviestNameUpperBound, stats.HeaviestNameBatches, stats.PreparationElapsed.Round(time.Millisecond))
+			stats.HeaviestNameSources, stats.HeaviestNameDefinitions, stats.HeaviestNameUpperBound, stats.HeaviestNameBatches, stats.PreparationElapsed.Round(time.Millisecond))
+		log.Printf("server: graph source verification complete: sources=%d candidate_pairs=%d retained_pair_upper_bound=%d (before repository filtering and dedup)", stats.SourcesVerified, plannedPairs, stats.RetainedPairUpperBound)
+		log.Printf("server: graph region cache hits=%d misses=%d waits=%d evictions=%d entries=%d bytes=%d budget=%d", stats.RegionCache.Hits, stats.RegionCache.Misses, stats.RegionCache.Waits, stats.RegionCache.Evictions, stats.RegionCache.Entries, stats.RegionCache.Bytes, stats.RegionCache.MaxBytes)
 	}
 
 	// Longest batches enter the shared queue first. Stable identity tie-breaks
@@ -561,6 +614,10 @@ func (s *graphSweep) computeEdgesParallelBatched(names []string, generation uint
 		return nil, stats, err
 	}
 	stats.CandidateComputeElapsed = time.Since(computeStart)
+	stats.SourcesVerified = s.sourcesVerified.Load() - sourcesBefore
+	stats.CandidatePairs = s.candidatePairs.Load() - pairsBefore
+	stats.RetainedPairs = s.retainedPairs.Load() - retainedBefore
+	log.Printf("server: graph fanout verified %d sources; %d candidate pairs, %d retained before dedup", stats.SourcesVerified, stats.CandidatePairs, stats.RetainedPairs)
 
 	for nameIndex := range results {
 		var total int
@@ -575,7 +632,7 @@ func (s *graphSweep) computeEdgesParallelBatched(names []string, generation uint
 	return results, stats, nil
 }
 
-func (s *graphSweep) computeGraphBatchTasks(names []string, prepared []*candidates.PreparedName, tasks []graphBatchTask, parts [][][]graphKeyEdge, generation uint64, workers int) error {
+func (s *graphSweep) computeGraphBatchTasks(names []string, prepared []*preparedGraphName, tasks []graphBatchTask, parts [][][]graphKeyEdge, generation uint64, workers int) error {
 	if len(tasks) == 0 {
 		return nil
 	}
@@ -640,7 +697,7 @@ func (s *graphSweep) computeGraphBatchTasks(names []string, prepared []*candidat
 				active[workerID] = label
 				activeMu.Unlock()
 				edges, err := runRecovered(label, func() ([]graphKeyEdge, error) {
-					return s.computeEdgesForPreparedRange(name, prepared[task.nameIndex], task.start, task.end, generation)
+					return s.computePreparedGraphRange(name, prepared[task.nameIndex], task.start, task.end, generation)
 				})
 				activeMu.Lock()
 				active[workerID] = ""
@@ -805,16 +862,33 @@ func (s *graphSweep) dirtyNames(previous *diskgraph.Graph, added []string, remov
 		}
 	}
 	if len(removed) > 0 {
-		previous.EachEdge(func(key diskgraph.Key, edge diskgraph.Edge) bool {
-			if _, gone := removed[key.BlobSHA]; gone {
-				mark(edge.Name)
+		checked := make(map[diskgraph.TargetSetID]bool)
+		targetGone := make(map[diskgraph.TargetSetID]bool)
+		previous.EachRecord(func(record diskgraph.PhysicalRecord) bool {
+			if _, gone := removed[record.Source.BlobSHA]; gone {
+				mark(record.Edge.Name)
 				return true
 			}
-			if _, gone := removed[edge.TargetBlob]; gone {
-				mark(edge.Name)
+			if record.Factored {
+				if !checked[record.Targets] {
+					checked[record.Targets] = true
+					previous.EachTarget(record.Targets, func(target diskgraph.Key) bool {
+						if _, gone := removed[target.BlobSHA]; gone {
+							targetGone[record.Targets] = true
+							return false
+						}
+						return true
+					})
+				}
+				if targetGone[record.Targets] {
+					mark(record.Edge.Name)
+				}
+			} else if _, gone := removed[record.Edge.TargetBlob]; gone {
+				mark(record.Edge.Name)
 			}
 			return true
 		})
 	}
+
 	return dirty
 }

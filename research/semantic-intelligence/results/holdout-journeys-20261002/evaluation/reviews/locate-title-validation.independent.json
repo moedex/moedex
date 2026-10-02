@@ -1,0 +1,123 @@
+{
+  "task": "locate-title-validation",
+  "answer_sha256": "1ad2372ff025bf6ab235bb4e286ab19152f0ec0232d9dc80273382ba38046e85",
+  "atoms": [
+    {
+      "id": "locate-title-validation.1",
+      "correctness": 0,
+      "evidence": 0,
+      "reason": "The answer explicitly abstains and supplies no validator type, command relationship, or context dependency. Pinned source lines 5\u201311 confirm the oracle, but no such source was displayed to the solver.",
+      "answer_citations": [],
+      "inspected_evidence": [
+        {
+          "path": "src/Application/TodoLists/Commands/CreateTodoList/CreateTodoListCommandValidator.cs",
+          "start_line": 5,
+          "end_line": 11,
+          "raw_sha256": "05660428247c4b96daa8fa5f1af10ff99d6d3d87c4d6373c86f87ee6eeb927c9",
+          "source_hash_verified": true,
+          "displayed_to_solver": false
+        },
+        {
+          "views": [
+            "001.stdout",
+            "002.stdout",
+            "003.stdout",
+            "004.stderr"
+          ],
+          "finding": "Catalog names and schema only, followed by PermissionError and stopped-wrapper transport failure; no source ranges displayed."
+        }
+      ]
+    },
+    {
+      "id": "locate-title-validation.2",
+      "correctness": 0,
+      "evidence": 0,
+      "reason": "The answer supplies neither nonempty nor maximum-length rules. Pinned source lines 13\u201315 confirm both; displayed views contain no source evidence.",
+      "answer_citations": [],
+      "inspected_evidence": [
+        {
+          "path": "src/Application/TodoLists/Commands/CreateTodoList/CreateTodoListCommandValidator.cs",
+          "start_line": 13,
+          "end_line": 15,
+          "raw_sha256": "05660428247c4b96daa8fa5f1af10ff99d6d3d87c4d6373c86f87ee6eeb927c9",
+          "source_hash_verified": true,
+          "displayed_to_solver": false
+        },
+        {
+          "views": [
+            "001.stdout",
+            "002.stdout",
+            "003.stdout",
+            "004.stderr"
+          ],
+          "finding": "Catalog names and schema only, followed by PermissionError and stopped-wrapper transport failure; no source ranges displayed."
+        }
+      ]
+    },
+    {
+      "id": "locate-title-validation.3",
+      "correctness": 0,
+      "evidence": 0,
+      "reason": "The answer supplies no async uniqueness predicate, cancellation handling, or Unique error code. Pinned source lines 16\u201324 confirm all clauses; none appeared in solver views.",
+      "answer_citations": [],
+      "inspected_evidence": [
+        {
+          "path": "src/Application/TodoLists/Commands/CreateTodoList/CreateTodoListCommandValidator.cs",
+          "start_line": 16,
+          "end_line": 24,
+          "raw_sha256": "05660428247c4b96daa8fa5f1af10ff99d6d3d87c4d6373c86f87ee6eeb927c9",
+          "source_hash_verified": true,
+          "displayed_to_solver": false
+        },
+        {
+          "views": [
+            "001.stdout",
+            "002.stdout",
+            "003.stdout",
+            "004.stderr"
+          ],
+          "finding": "Catalog names and schema only, followed by PermissionError and stopped-wrapper transport failure; no source ranges displayed."
+        }
+      ]
+    },
+    {
+      "id": "locate-title-validation.4",
+      "correctness": 0,
+      "evidence": 0,
+      "reason": "The answer supplies no validator assembly scan or open MediatR validation behavior registration. Pinned dependency-injection lines 14\u201322 confirm both; solver views contain no supporting source.",
+      "answer_citations": [],
+      "inspected_evidence": [
+        {
+          "path": "src/Application/DependencyInjection.cs",
+          "start_line": 14,
+          "end_line": 22,
+          "raw_sha256": "55deb255ce0c1f774d42964b1362c1d7b6aeaf7e93d7f78e95b96eb936b396da",
+          "source_hash_verified": true,
+          "displayed_to_solver": false
+        },
+        {
+          "views": [
+            "001.stdout",
+            "002.stdout",
+            "003.stdout",
+            "004.stderr"
+          ],
+          "finding": "Catalog names and schema only, followed by PermissionError and stopped-wrapper transport failure; no source ranges displayed."
+        }
+      ]
+    }
+  ],
+  "material_unsupported_claims": [],
+  "minor_issues": [
+    "The statement that no budget was exceeded is stronger than the available transport accounting: call count and elapsed time are within limits, but response accounting is explicitly unknown. The answer also acknowledges that uncertainty.",
+    "The view log supports the stated evidence-access account, but cannot independently verify every negative access assertion, OS-enforced isolation, or model attention."
+  ],
+  "runtime_distinction_preserved": true,
+  "strict_success": false,
+  "budget_compliance": {
+    "calls_within_limit": true,
+    "deadline_met": true,
+    "response_bytes_compliance": "unknown due to transport failure"
+  },
+  "independence_attestation": "Worked alone. Read only the assigned review prompt and packet, specified answer, its displayed view records, and the two pinned source files. Verified the answer SHA and both source SHAs. Did not inspect other reviews, task answers, coordinator scores, product implementation, or query products. This review does not claim OS-enforced isolation or knowledge of model attention. Missing task evidence following recorded transport failure is scored as absent answer coverage, not fabrication."
+}

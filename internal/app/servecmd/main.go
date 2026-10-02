@@ -28,6 +28,7 @@ package servecmd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -42,7 +43,6 @@ import (
 
 	"moedex/internal/app/navtools"
 	"moedex/internal/embed"
-	graphserve "moedex/internal/graph/serve"
 	"moedex/internal/mcp"
 	"moedex/internal/search"
 	server "moedex/internal/serve"
@@ -96,12 +96,14 @@ func Main() {
 		fmt.Fprintln(os.Stderr, "moedex-serve: -index-dir and -shard-dir are mutually exclusive")
 		os.Exit(2)
 	}
+	var bootResolved *indexsnapshot.Resolved
 	if *indexDir != "" {
 		resolved, err := indexsnapshot.Resolve(*indexDir)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "moedex-serve: resolve -index-dir: %v\n", err)
 			os.Exit(1)
 		}
+		bootResolved = &resolved
 		*shardDir = resolved.ShardDir()
 		fmt.Fprintf(os.Stderr, "moedex-serve: snapshot %s -> %s\n", resolved.ID, *shardDir)
 		if *mcpMode || *mcpHTTPAddr != "" {
@@ -158,7 +160,7 @@ func Main() {
 	}
 
 	if *mcpMode {
-		if err := runMCP(*shardDir, *indexDir, *topK, *embedKind, *onnxRuntime, onnxOptions); err != nil {
+		if err := runMCPResolved(*shardDir, *indexDir, *topK, *embedKind, *onnxRuntime, onnxOptions, bootResolved); err != nil {
 			fmt.Fprintf(os.Stderr, "moedex-serve: %v\n", err)
 			os.Exit(1)
 		}
@@ -167,6 +169,7 @@ func Main() {
 
 	if *mcpHTTPAddr != "" {
 		cfg := mcpHTTPConfig{
+			resolved:       bootResolved,
 			addr:           *mcpHTTPAddr,
 			shardDir:       *shardDir,
 			indexDir:       *indexDir,
@@ -204,6 +207,7 @@ func Main() {
 	cfg := httpConfig{
 		addr:                 *httpAddr,
 		shardDir:             *shardDir,
+		indexDir:             *indexDir,
 		token:                authTok,
 		tlsCert:              *tlsCert,
 		tlsKey:               *tlsKey,
@@ -360,76 +364,58 @@ func percent(done, total int) float64 {
 }
 
 func runMCP(shardDir, indexDir string, topK int, embedKind, onnxRuntime string, onnxOptions embed.ONNXOptions) error {
+	return runMCPResolved(shardDir, indexDir, topK, embedKind, onnxRuntime, onnxOptions, nil)
+}
+
+func runMCPResolved(shardDir, indexDir string, topK int, embedKind, onnxRuntime string, onnxOptions embed.ONNXOptions, resolved *indexsnapshot.Resolved) error {
+	if resolved == nil && indexDir != "" {
+		r, err := indexsnapshot.Resolve(indexDir)
+		if err != nil {
+			return err
+		}
+		resolved = &r
+	}
+	if resolved != nil {
+		shardDir = resolved.ShardDir()
+	}
 	ctx := context.Background()
 	rc, cfg, err := openRankCorpus(ctx, shardDir, topK, embedKind, onnxRuntime, onnxOptions)
 	if err != nil {
 		return err
 	}
 
-	// Serve through a hot-swappable holder so a SIGHUP can rebuild the ranked
-	// corpus (reusing the embedder; the persisted embedding sidecar makes warm
-	// reloads cheap, and a refreshed shard set re-embeds) without dropping a
-	// request. A failed reload keeps the current ranker.
-	holder := newRankHolder(rc)
-	graphTools, err := graphserve.OpenGraphTools(shardDir)
+	graphs, err := openServingGraph(shardDir)
 	if err != nil {
-		_ = rc.Close()
-		return err
+		return errors.Join(err, rc.Close())
 	}
-	defer graphTools.Close()
-	hup := make(chan os.Signal, 1)
-	signal.Notify(hup, syscall.SIGHUP)
-	go func() {
-		for range hup {
-			t0 := time.Now()
-			fmt.Fprintln(os.Stderr, "moedex-serve: SIGHUP — rebuilding ranked corpus")
-			reloadDir, resolveErr := resolveReloadDir(indexDir, shardDir, cfg.Emb != nil)
-			if resolveErr != nil {
-				fmt.Fprintf(os.Stderr, "moedex-serve: snapshot resolve failed (%v); keeping current generation\n", resolveErr)
-				continue
-			}
-			nrc, _, rankErr := openRankOrDegrade(ctx, reloadDir, cfg)
-			if rankErr != nil {
-				fmt.Fprintf(os.Stderr, "moedex-serve: reload failed (%v); keeping current ranker\n", rankErr)
-			}
-
-			// Attempted regardless of the rank-corpus outcome above: rankHolder
-			// and GraphToolset are independently refcounted and hot-swappable, so
-			// a rank-corpus rebuild failure must not skip an unrelated,
-			// otherwise-successful graph-sidecar refresh (F-21).
-			if indexDir != "" && rankErr != nil {
-				continue // do not reload the graph when the rank half cannot open
-			}
-			if openErr, closeErr := graphTools.Reload(reloadDir); openErr != nil {
-				fmt.Fprintf(os.Stderr, "moedex-serve: graph reload failed (%v); keeping current graph\n", openErr)
-				if indexDir != "" {
-					_ = nrc.Close()
-					continue // do not commit the rank half when graph open failed
-				}
-			} else if closeErr != nil {
-				fmt.Fprintf(os.Stderr, "moedex-serve: graph reload succeeded but releasing the previous generation failed (%v)\n", closeErr)
-			}
-
-			if rankErr != nil {
-				continue
-			}
-			old := holder.swap(nrc)
-			go old.retire()
-			fmt.Fprintf(os.Stderr, "moedex-serve: reloaded ranker — %d blobs, %d symbol blobs, %d dense chunks (%s) in %s\n",
-				nrc.NumBlobs(), nrc.NumSymbolBlobs(), nrc.DenseChunks(), denseSource(nrc), time.Since(t0).Round(time.Millisecond))
+	holder, err := newServingHolderResolved(rc, graphs, resolved)
+	if err != nil {
+		return errors.Join(err, closeServingComponents(graphs, rc))
+	}
+	defer func() { logRetireCloseErr("serving_snapshot", holder.Close()) }()
+	stopReloads := startServingReloads(ctx, func(reloadCtx context.Context) {
+		started := time.Now()
+		replacement, err := resolveReloadSnapshot(indexDir, shardDir, cfg.Emb != nil)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "moedex-serve: snapshot resolve failed (%v); keeping current generation\n", err)
+			return
 		}
-	}()
+		openErr, closeErr := holder.ReloadResolved(reloadCtx, replacement, cfg)
+		if openErr != nil {
+			fmt.Fprintf(os.Stderr, "moedex-serve: snapshot reload failed (%v); keeping current generation\n", openErr)
+			return
+		}
+		logRetireCloseErr("serving_snapshot", closeErr)
+		fmt.Fprintf(os.Stderr, "moedex-serve: reloaded source and graph snapshot in %s\n", time.Since(started).Round(time.Millisecond))
+	})
+	defer stopReloads()
 
 	navHandlers, navClose := navtools.NavTools()
 	defer navClose()
-	tools := append(navHandlers, graphTools.Tools()...)
+	tools := append(navHandlers, holder.Tools()...)
 	srv := mcp.NewServer(holder,
 		mcp.WithTools(tools...),
 		mcp.WithCorpusRoot(rc.CorpusRoot()),
-		// Graph-fused search: every search_context block carries its graph
-		// neighborhood, so an agent never needs a second tool call to learn what
-		// calls a hit or what it depends on. graph_depth=0 opts out per call.
-		mcp.WithGraphAnnotator(graphTools),
 	)
 	fmt.Fprintln(os.Stderr, "moedex-serve: MCP ready on stdio (SIGHUP to reload)")
 	return srv.Serve(ctx, os.Stdin, os.Stdout)
@@ -437,6 +423,7 @@ func runMCP(shardDir, indexDir string, topK int, embedKind, onnxRuntime string, 
 
 // mcpHTTPConfig carries the resolved -mcp-http settings into runMCPHTTP.
 type mcpHTTPConfig struct {
+	resolved       *indexsnapshot.Resolved
 	addr           string
 	shardDir       string
 	indexDir       string
@@ -473,18 +460,30 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 		os.Exit(2)
 	}
 
+	if cfg.resolved == nil && cfg.indexDir != "" {
+		r, err := indexsnapshot.Resolve(cfg.indexDir)
+		if err != nil {
+			return err
+		}
+		cfg.resolved = &r
+	}
+	if cfg.resolved != nil {
+		cfg.shardDir = cfg.resolved.ShardDir()
+	}
 	ctx := context.Background()
 	rc, rankCfg, err := openRankCorpus(ctx, cfg.shardDir, cfg.topK, cfg.embedKind, cfg.onnxRuntime, cfg.onnxOptions)
 	if err != nil {
 		return err
 	}
-	holder := newRankHolder(rc)
-	graphTools, err := graphserve.OpenGraphTools(cfg.shardDir)
+	graphs, err := openServingGraph(cfg.shardDir)
 	if err != nil {
-		_ = rc.Close()
-		return err
+		return errors.Join(err, rc.Close())
 	}
-	defer graphTools.Close()
+	holder, err := newServingHolderResolved(rc, graphs, cfg.resolved)
+	if err != nil {
+		return errors.Join(err, closeServingComponents(graphs, rc))
+	}
+	defer func() { logRetireCloseErr("serving_snapshot", holder.Close()) }()
 	m := newMetrics()
 
 	effAddr := resolveAddr(cfg.addr, cfg.token)
@@ -503,11 +502,10 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 	if len(navHandlers) > 0 {
 		slog.Info("lsp navigation tools enabled", "count", len(navHandlers))
 	}
-	tools := append(navHandlers, graphTools.Tools()...)
+	tools := append(navHandlers, holder.Tools()...)
 	mcpSrv := mcp.NewServer(holder,
 		mcp.WithTools(tools...),
 		mcp.WithCorpusRoot(rc.CorpusRoot()),
-		mcp.WithGraphAnnotator(graphTools),
 	)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -541,56 +539,29 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 	}()
 	slog.Info("listening", "addr", effAddr, "endpoint", "/mcp", "tls", tls, "auth", cfg.token != "")
 
-	// SIGHUP -> rebuild the ranked corpus and hot-swap it under live traffic; the
-	// daemon keeps answering on the old generation during the ~40s rebuild, then
-	// swaps atomically (see reload.go). A failed reload keeps the current ranker.
-	hup := make(chan os.Signal, 1)
-	signal.Notify(hup, syscall.SIGHUP)
-	go func() {
-		for range hup {
-			start := time.Now()
-			slog.Info("reload requested (SIGHUP)")
-			reloadDir, resolveErr := resolveReloadDir(cfg.indexDir, cfg.shardDir, rankCfg.Emb != nil)
-			if resolveErr != nil {
-				slog.Error("snapshot resolve failed; keeping current generation", "err", resolveErr.Error())
-				continue
-			}
-			nrc, _, rankErr := openRankOrDegrade(ctx, reloadDir, rankCfg)
-			if rankErr != nil {
-				m.incReload("fail")
-				slog.Error("rank corpus reload failed; keeping current ranker", "err", rankErr.Error())
-			}
-
-			// Attempted regardless of the rank-corpus outcome above: rankHolder
-			// and GraphToolset are independently refcounted and hot-swappable, so
-			// a rank-corpus rebuild failure must not skip an unrelated,
-			// otherwise-successful graph-sidecar refresh (F-21).
-			if cfg.indexDir != "" && rankErr != nil {
-				continue
-			}
-			if openErr, closeErr := graphTools.Reload(reloadDir); openErr != nil {
-				slog.Error("graph reload failed; keeping current graph", "err", openErr.Error())
-				if cfg.indexDir != "" {
-					_ = nrc.Close()
-					continue
-				}
-			} else if closeErr != nil {
-				slog.Error("graph reload succeeded but releasing the previous generation failed", "err", closeErr.Error())
-			}
-
-			if rankErr != nil {
-				continue
-			}
-			old := holder.swap(nrc)
-			go old.retire()
-			m.incReload("ok")
-			slog.Info("reloaded", "blobs", nrc.NumBlobs(), "symbol_blobs", nrc.NumSymbolBlobs(),
-				"dense_chunks", nrc.DenseChunks(), "elapsed_ms", time.Since(start).Milliseconds())
+	stopReloads := startServingReloads(ctx, func(reloadCtx context.Context) {
+		started := time.Now()
+		replacement, err := resolveReloadSnapshot(cfg.indexDir, cfg.shardDir, rankCfg.Emb != nil)
+		if err != nil {
+			m.incReload("fail")
+			slog.Error("snapshot resolve failed; keeping current generation", "err", err.Error())
+			return
 		}
-	}()
+		openErr, closeErr := holder.ReloadResolved(reloadCtx, replacement, rankCfg)
+		if openErr != nil {
+			m.incReload("fail")
+			slog.Error("snapshot reload failed; keeping current generation", "err", openErr.Error())
+			return
+		}
+		logRetireCloseErr("serving_snapshot", closeErr)
+		m.incReload("ok")
+		slog.Info("reloaded source and graph snapshot", "elapsed_ms", time.Since(started).Milliseconds())
+	})
+	defer stopReloads()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(stop)
 	select {
 	case err := <-errCh:
 		return err
@@ -602,25 +573,43 @@ func runMCPHTTP(cfg mcpHTTPConfig) error {
 	}
 }
 
-func resolveReloadDir(indexDir, legacyShardDir string, requireDense bool) (string, error) {
-	if indexDir == "" {
-		return legacyShardDir, nil
+// openHTTPReload prepares a source-only replacement without changing the active
+// holder. Resolve must succeed (including optional attachment integrity) before
+// opening the replacement; the caller swaps only after this function succeeds.
+func openHTTPReload(cfg httpConfig) (*server.Corpus, error) {
+	dir, err := resolveReloadDir(cfg.indexDir, cfg.shardDir, false)
+	if err != nil {
+		return nil, err
 	}
-	resolved, err := indexsnapshot.Resolve(indexDir)
+	return server.Open(dir)
+}
+
+func resolveReloadDir(indexDir, legacyShardDir string, requireDense bool) (string, error) {
+	resolved, err := resolveReloadSnapshot(indexDir, legacyShardDir, requireDense)
 	if err != nil {
 		return "", err
 	}
-	shardDir := resolved.ShardDir()
-	if requireDense {
-		info, err := server.InspectShardDir(shardDir)
+	return resolved.ShardDir(), nil
+}
+func resolveReloadSnapshot(indexDir, legacyShardDir string, requireDense bool) (indexsnapshot.Resolved, error) {
+	resolved := indexsnapshot.Resolved{Root: legacyShardDir, Legacy: true}
+	if indexDir != "" {
+		var err error
+		resolved, err = indexsnapshot.Resolve(indexDir)
 		if err != nil {
-			return "", err
-		}
-		if !info.StoreFresh {
-			return "", fmt.Errorf("snapshot %q has no fresh dense component", resolved.ID)
+			return indexsnapshot.Resolved{}, err
 		}
 	}
-	return shardDir, nil
+	if requireDense {
+		info, err := server.InspectShardDir(resolved.ShardDir())
+		if err != nil {
+			return indexsnapshot.Resolved{}, err
+		}
+		if !info.StoreFresh {
+			return indexsnapshot.Resolved{}, fmt.Errorf("snapshot %q has no fresh dense component", resolved.ID)
+		}
+	}
+	return resolved, nil
 }
 
 // configureDenseArm picks the dense embedder per `kind` and wires it (plus the
@@ -700,6 +689,7 @@ func runOneShot(c *server.Corpus, pattern string, isRegex bool, limit int) {
 // httpConfig carries the resolved -http settings into runHTTP so the boot-line
 // reporting and server wiring stay in one place.
 type httpConfig struct {
+	indexDir             string
 	addr                 string
 	shardDir             string
 	token                string
@@ -743,7 +733,7 @@ func newHTTPMux(holder *corpusHolder, m *metrics, searchMaxConcurrency int) *htt
 }
 
 // runHTTP serves the corpus over a minimal JSON API until SIGINT/SIGTERM. A
-// SIGHUP re-opens shardDir and hot-swaps the served corpus without dropping any
+// SIGHUP resolves CURRENT (or reopens a legacy shardDir) and swaps the corpus without dropping any
 // in-flight request (see reload.go); a failed reload keeps the current corpus.
 //
 // The mux is wrapped with the hardening chain (recover/log/timeout/auth — see
@@ -805,7 +795,7 @@ func runHTTP(c *server.Corpus, cfg httpConfig) error {
 		for range hup {
 			start := time.Now()
 			slog.Info("reload requested (SIGHUP)")
-			nc, err := server.Open(cfg.shardDir)
+			nc, err := openHTTPReload(cfg)
 			if err != nil {
 				m.incReload("fail")
 				slog.Error("reload failed; keeping current corpus", "err", err.Error())

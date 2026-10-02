@@ -1,0 +1,27 @@
+{
+  "case": "bom",
+  "classification": "scripted_public_declaration_discovery_not_independent_agent_run",
+  "calls": 3,
+  "response_bytes": 39397,
+  "discovered_evidence": [
+    {
+      "path": "src/Sample.Components/RegistrationDbContext.cs",
+      "context_id": "context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f",
+      "raw_sha256": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef",
+      "raw_byte_offset": 230,
+      "symbol_id": "symbol:d704364c8e82d3c7eccd79afb7369ce081441353cb165a8c92f91641253a3519"
+    },
+    {
+      "path": "src/Sample.Components/RegistrationDbContext.cs",
+      "context_id": "context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f",
+      "raw_sha256": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef",
+      "raw_byte_offset": 230,
+      "symbol_id": "symbol:d704364c8e82d3c7eccd79afb7369ce081441353cb165a8c92f91641253a3519"
+    }
+  ],
+  "compiler_identity": [
+    "reverse-outbox",
+    "24a95f5ad7307d6f3fdaf151e230b26e5cf72d2fec41971476fc4f7135cdac70"
+  ],
+  "passed": true
+}

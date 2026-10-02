@@ -1,0 +1,1 @@
+Find the deliberately intermittent registration-processing failure. State its exact payment and retry conditions, with source evidence.

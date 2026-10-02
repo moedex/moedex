@@ -1,0 +1,26 @@
+{
+  "classification": "development_successor_not_holdout",
+  "frozen_at": "2026-10-01T19:21:48.111410+00:00",
+  "predecessor": "research/semantic-intelligence/results/eshop-webhooks-holdout-20261001/source-gold-v2.json",
+  "commit": "f2369529433374a01b864b6fa1499ad894756f53",
+  "expected": [
+    "Three exact handler method correspondences to distinct closed generic interface members.",
+    "One source default explicit implementation of the nongeneric interface member; keep generic template and runtime dispatch distinct.",
+    "Three closed AddSubscription call-site keyed registration configurations from the checked-in source helper, each keyed by its event type.",
+    "Preserve all nine prior supported assertions and both HTTP negative controls."
+  ],
+  "boundaries": [
+    "Only closed nongeneric named interface arguments; no erased type identities.",
+    "One source wrapper level; first top-level statement must be a recognized two-type keyed registration with typeof key.",
+    "No factory, conditional/nested body, open type substitution, lookalike API, recursive helper or runtime delivery inference.",
+    "Callback Entity and Aspire registration gaps remain outside this cycle."
+  ],
+  "source_sha256": {
+    "src/EventBus/Abstractions/IIntegrationEventHandler.cs": "0f44de6ed21466c4a9c4c4df2891b88c7b763a8a3be77f5869666d1e873c699e",
+    "src/EventBus/Extensions/EventBusBuilderExtensions.cs": "99bb3f570d572ac5101804b1cdd936d98697cdcf9ed9c1c7c89faf1a63313f6a",
+    "src/Webhooks.API/Extensions/Extensions.cs": "978b4e1bbd0146ed43f9db92dda29c599a8685e0f4efcec4102e713c0ac7faeb",
+    "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToPaidIntegrationEventHandler.cs": "38d724d35f0a05e29d995dea3137b7a0c8f4a9cabe2ce23f87dd2dbaa4370abd",
+    "src/Webhooks.API/IntegrationEvents/OrderStatusChangedToShippedIntegrationEventHandler.cs": "4681e880deb3cdb5c8639c6fa630d808bf602c765feed42c5c1a10b11da0db98",
+    "src/Webhooks.API/IntegrationEvents/ProductPriceChangedIntegrationEventHandler.cs": "036a9666fc43c56e9a6c353bb83598225883243a13235992430362d7ba136c4b"
+  }
+}

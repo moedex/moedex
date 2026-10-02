@@ -1,0 +1,12 @@
+{
+  "source_files_verified": 40,
+  "source_unchanged": true,
+  "complete_contexts": 4,
+  "worker_version": "18",
+  "compiler_version": "5.0.0.0",
+  "composed_sha256": "acc29d4e10e577dc2947327c682120a3a554bbfe98f1bcafebef46bac0398431",
+  "cli_sha256": "5d345043efea5b4a7c30465dfd31c30231aec25b94f810ee323c4794fbf5e7b0",
+  "worker_sha256": "ff8cbfd34de0eaa4f98b9a0bfbf50e4199036dd066bc687476b29256742efecb",
+  "failed_attempt": "Pinned Roslyn4.11 worker with SDK10 failed MissingMethodException in Microsoft.NET.StringTools; failure retained. Successful capture uses source-identical SDK-matched default worker.",
+  "source_verification": "All 40 tracked hashes exactly match the frozen independent rubric, and capture left source unchanged."
+}

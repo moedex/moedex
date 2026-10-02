@@ -1,0 +1,96 @@
+Manual protobuf interpretation; CPU sample weights, not wall-clock phase timings.
+Source: /private/tmp/moedex-result-baseline.cpu
+Sample types: [('samples', 'count'), ('cpu', 'nanoseconds')]
+Total sampled CPU: 0.450 s
+
+Flat
+    0.050s  11.11% runtime.kevent
+    0.040s   8.89% path.(*lazybuf).append
+    0.030s   6.67% runtime.madvise
+    0.030s   6.67% runtime.pthread_kill
+    0.030s   6.67% internal/bytealg.IndexByteString
+    0.020s   4.44% moedex/internal/graph/serve.graphLocationProximity
+    0.020s   4.44% runtime.tryDeferToSpanScan
+    0.020s   4.44% runtime.pthread_cond_wait
+    0.020s   4.44% runtime.usleep
+    0.020s   4.44% runtime.memequal
+    0.020s   4.44% internal/stringslite.Index
+    0.010s   2.22% strings.genSplit
+    0.010s   2.22% path.Clean
+    0.010s   2.22% runtime.(*mspan).nextFreeIndex
+    0.010s   2.22% runtime.findObject
+    0.010s   2.22% runtime.mallocgcSmallScanNoHeaderSC4
+    0.010s   2.22% runtime.pthread_cond_signal
+    0.010s   2.22% internal/bytealg.CountString
+    0.010s   2.22% runtime.getMCache
+    0.010s   2.22% runtime.readvarint
+    0.010s   2.22% internal/runtime/atomic.(*UnsafePointer).Load
+    0.010s   2.22% runtime.mallocgcSmallScanNoHeaderSC6
+    0.010s   2.22% runtime.pcvalue
+    0.010s   2.22% path.Split
+    0.010s   2.22% runtime.scanblock
+    0.010s   2.22% path.Dir
+
+Cumulative (overlapping)
+    0.260s  57.78% sort.Slice
+    0.260s  57.78% moedex/internal/graph/serve.(*graphSnapshot).makeResult
+    0.260s  57.78% testing.(*B).run1.func1
+    0.260s  57.78% moedex/internal/graph/serve.(*graphSnapshot).makeResult.func1
+    0.260s  57.78% moedex/internal/graph/serve.BenchmarkGraphMakeResultManyRoots
+    0.260s  57.78% testing.(*B).runN
+    0.260s  57.78% sort.pdqsort_func
+    0.260s  57.78% moedex/internal/graph/serve.graphLocationProximity
+    0.230s  51.11% moedex/internal/graph/serve.sharedDirectoryPrefixDepth
+    0.220s  48.89% sort.partition_func
+    0.180s  40.00% runtime.systemstack
+    0.150s  33.33% strings.genSplit
+    0.150s  33.33% strings.Split
+    0.070s  15.56% path.Dir
+    0.070s  15.56% runtime.mallocgc
+    0.070s  15.56% runtime.makeslice
+    0.060s  13.33% runtime.mallocgcSmallScanNoHeaderSC6
+    0.060s  13.33% runtime.gcBgMarkWorker.func2
+    0.060s  13.33% runtime.gcDrain
+    0.050s  11.11% runtime.startTheWorldWithSema
+    0.050s  11.11% runtime.netpoll
+    0.050s  11.11% runtime.kevent
+    0.050s  11.11% runtime.gcStart.func4
+    0.050s  11.11% path.Clean
+    0.050s  11.11% runtime.gcDrainMarkWorkerDedicated
+    0.050s  11.11% internal/stringslite.Index
+    0.050s  11.11% strings.Index
+    0.040s   8.89% path.(*lazybuf).append
+    0.040s   8.89% sort.insertionSort_func
+    0.030s   6.67% runtime.sysUsedOS
+    0.030s   6.67% runtime.sysUsed
+    0.030s   6.67% runtime.(*mheap).allocSpan
+    0.030s   6.67% runtime.madvise
+    0.030s   6.67% runtime.(*mheap).alloc.func1
+    0.030s   6.67% runtime.preemptone
+    0.030s   6.67% runtime.pthread_kill
+    0.030s   6.67% runtime.signalM
+    0.030s   6.67% runtime.preemptM
+    0.030s   6.67% runtime.mcall
+    0.030s   6.67% runtime.schedule
+
+Top complete stacks (innermost first)
+0.050s runtime.kevent <- runtime.netpoll <- runtime.startTheWorldWithSema <- runtime.gcStart.func4 <- runtime.systemstack
+0.030s runtime.madvise <- runtime.sysUsedOS <- runtime.sysUsed <- runtime.(*mheap).allocSpan <- runtime.(*mheap).alloc.func1 <- runtime.systemstack
+0.020s moedex/internal/graph/serve.graphLocationProximity <- moedex/internal/graph/serve.(*graphSnapshot).makeResult.func1 <- sort.partition_func <- sort.pdqsort_func <- sort.Slice <- moedex/internal/graph/serve.(*graphSnapshot).makeResult <- moedex/internal/graph/serve.BenchmarkGraphMakeResultManyRoots <- testing.(*B).runN <- testing.(*B).run1.func1
+0.020s path.(*lazybuf).append <- path.Clean <- path.Dir <- moedex/internal/graph/serve.sharedDirectoryPrefixDepth <- moedex/internal/graph/serve.graphLocationProximity <- moedex/internal/graph/serve.(*graphSnapshot).makeResult.func1 <- sort.partition_func <- sort.pdqsort_func <- sort.pdqsort_func <- sort.pdqsort_func <- sort.Slice <- moedex/internal/graph/serve.(*graphSnapshot).makeResult <- moedex/internal/graph/serve.BenchmarkGraphMakeResultManyRoots <- testing.(*B).runN <- testing.(*B).run1.func1
+0.020s runtime.pthread_cond_wait <- runtime.semasleep <- runtime.notesleep <- runtime.mPark <- runtime.stopm <- runtime.findRunnable <- runtime.schedule <- runtime.park_m <- runtime.mcall
+0.020s internal/bytealg.IndexByteString <- internal/stringslite.IndexByte <- internal/stringslite.Index <- strings.Index <- strings.genSplit <- strings.Split <- moedex/internal/graph/serve.sharedDirectoryPrefixDepth <- moedex/internal/graph/serve.graphLocationProximity <- moedex/internal/graph/serve.(*graphSnapshot).makeResult.func1 <- sort.partition_func <- sort.pdqsort_func <- sort.pdqsort_func <- sort.pdqsort_func <- sort.Slice <- moedex/internal/graph/serve.(*graphSnapshot).makeResult <- moedex/internal/graph/serve.BenchmarkGraphMakeResultManyRoots <- testing.(*B).runN <- testing.(*B).run1.func1
+0.020s internal/stringslite.Index <- strings.Index <- strings.genSplit <- strings.Split <- moedex/internal/graph/serve.sharedDirectoryPrefixDepth <- moedex/internal/graph/serve.graphLocationProximity <- moedex/internal/graph/serve.(*graphSnapshot).makeResult.func1 <- sort.partition_func <- sort.pdqsort_func <- sort.pdqsort_func <- sort.Slice <- moedex/internal/graph/serve.(*graphSnapshot).makeResult <- moedex/internal/graph/serve.BenchmarkGraphMakeResultManyRoots <- testing.(*B).runN <- testing.(*B).run1.func1
+0.010s runtime.tryDeferToSpanScan <- runtime.wbBufFlush1 <- runtime.wbBufFlush.func1 <- runtime.systemstack <- runtime.wbBufFlush <- gcWriteBarrier <- strings.genSplit <- strings.Split <- moedex/internal/graph/serve.sharedDirectoryPrefixDepth <- moedex/internal/graph/serve.graphLocationProximity <- moedex/internal/graph/serve.(*graphSnapshot).makeResult.func1 <- sort.partition_func <- sort.pdqsort_func <- sort.Slice <- moedex/internal/graph/serve.(*graphSnapshot).makeResult <- moedex/internal/graph/serve.BenchmarkGraphMakeResultManyRoots <- testing.(*B).runN <- testing.(*B).run1.func1
+0.010s strings.genSplit <- strings.Split <- moedex/internal/graph/serve.sharedDirectoryPrefixDepth <- moedex/internal/graph/serve.graphLocationProximity <- moedex/internal/graph/serve.(*graphSnapshot).makeResult.func1 <- sort.partition_func <- sort.pdqsort_func <- sort.pdqsort_func <- sort.Slice <- moedex/internal/graph/serve.(*graphSnapshot).makeResult <- moedex/internal/graph/serve.BenchmarkGraphMakeResultManyRoots <- testing.(*B).runN <- testing.(*B).run1.func1
+0.010s path.Clean <- path.Dir <- moedex/internal/graph/serve.sharedDirectoryPrefixDepth <- moedex/internal/graph/serve.graphLocationProximity <- moedex/internal/graph/serve.(*graphSnapshot).makeResult.func1 <- sort.partition_func <- sort.pdqsort_func <- sort.pdqsort_func <- sort.pdqsort_func <- sort.Slice <- moedex/internal/graph/serve.(*graphSnapshot).makeResult <- moedex/internal/graph/serve.BenchmarkGraphMakeResultManyRoots <- testing.(*B).runN <- testing.(*B).run1.func1
+0.010s runtime.pthread_kill <- runtime.signalM <- runtime.preemptM <- runtime.preemptone <- runtime.preemptall <- runtime.stopTheWorldWithSema <- runtime.gcMarkDone.func2 <- runtime.systemstack
+0.010s runtime.(*mspan).nextFreeIndex <- runtime.(*mcache).nextFree <- runtime.mallocgcSmallScanNoHeaderSC6 <- runtime.mallocgc <- runtime.makeslice <- strings.genSplit <- strings.Split <- moedex/internal/graph/serve.sharedDirectoryPrefixDepth <- moedex/internal/graph/serve.graphLocationProximity <- moedex/internal/graph/serve.(*graphSnapshot).makeResult.func1 <- sort.partition_func <- sort.pdqsort_func <- sort.pdqsort_func <- sort.pdqsort_func <- sort.Slice <- moedex/internal/graph/serve.(*graphSnapshot).makeResult <- moedex/internal/graph/serve.BenchmarkGraphMakeResultManyRoots <- testing.(*B).runN <- testing.(*B).run1.func1
+0.010s path.(*lazybuf).append <- path.Clean <- path.Dir <- moedex/internal/graph/serve.sharedDirectoryPrefixDepth <- moedex/internal/graph/serve.graphLocationProximity <- moedex/internal/graph/serve.(*graphSnapshot).makeResult.func1 <- sort.partition_func <- sort.pdqsort_func <- sort.pdqsort_func <- sort.Slice <- moedex/internal/graph/serve.(*graphSnapshot).makeResult <- moedex/internal/graph/serve.BenchmarkGraphMakeResultManyRoots <- testing.(*B).runN <- testing.(*B).run1.func1
+0.010s runtime.findObject <- runtime.scanObject <- runtime.gcDrain <- runtime.gcDrainMarkWorkerDedicated <- runtime.gcBgMarkWorker.func2 <- runtime.systemstack <- runtime.gcBgMarkWorker
+0.010s runtime.usleep <- runtime.osyield <- runtime.lock2 <- runtime.lockWithRank <- runtime.lock <- runtime.findRunnable <- runtime.schedule <- runtime.park_m <- runtime.mcall
+0.010s runtime.memequal <- moedex/internal/graph/serve.graphLocationProximity <- moedex/internal/graph/serve.(*graphSnapshot).makeResult.func1 <- sort.partition_func <- sort.pdqsort_func <- sort.Slice <- moedex/internal/graph/serve.(*graphSnapshot).makeResult <- moedex/internal/graph/serve.BenchmarkGraphMakeResultManyRoots <- testing.(*B).runN <- testing.(*B).run1.func1
+0.010s runtime.mallocgcSmallScanNoHeaderSC4 <- runtime.mallocgc <- runtime.makeslice <- strings.genSplit <- strings.Split <- moedex/internal/graph/serve.sharedDirectoryPrefixDepth <- moedex/internal/graph/serve.graphLocationProximity <- moedex/internal/graph/serve.(*graphSnapshot).makeResult.func1 <- sort.partition_func <- sort.pdqsort_func <- sort.Slice <- moedex/internal/graph/serve.(*graphSnapshot).makeResult <- moedex/internal/graph/serve.BenchmarkGraphMakeResultManyRoots <- testing.(*B).runN <- testing.(*B).run1.func1
+0.010s runtime.pthread_cond_signal <- runtime.semawakeup <- runtime.notewakeup <- runtime.startm <- runtime.wakep <- runtime.(*gcControllerState).enlistWorker <- runtime.gcDrain <- runtime.gcDrainMarkWorkerDedicated <- runtime.gcBgMarkWorker.func2 <- runtime.systemstack
+0.010s internal/bytealg.CountString <- strings.Count <- strings.genSplit <- strings.Split <- moedex/internal/graph/serve.sharedDirectoryPrefixDepth <- moedex/internal/graph/serve.graphLocationProximity <- moedex/internal/graph/serve.(*graphSnapshot).makeResult.func1 <- sort.partition_func <- sort.pdqsort_func <- sort.pdqsort_func <- sort.pdqsort_func <- sort.Slice <- moedex/internal/graph/serve.(*graphSnapshot).makeResult <- moedex/internal/graph/serve.BenchmarkGraphMakeResultManyRoots <- testing.(*B).runN <- testing.(*B).run1.func1
+0.010s runtime.usleep <- runtime.osyield <- runtime.lock2 <- runtime.lockWithRank <- runtime.lock <- runtime.goschedImpl <- runtime.gopreempt_m <- runtime.newstack <- runtime.morestack

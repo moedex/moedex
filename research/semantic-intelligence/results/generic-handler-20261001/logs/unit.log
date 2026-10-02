@@ -1,0 +1,5 @@
+# moedex/internal/semanticimport_test [moedex/internal/semanticimport.test]
+internal/semanticimport/generic_handler_public_test.go:121:14: binding.Kind undefined (type semantic.Binding has no field or method Kind)
+ok  	moedex/internal/semantic	0.269s
+FAIL	moedex/internal/semanticimport [build failed]
+FAIL

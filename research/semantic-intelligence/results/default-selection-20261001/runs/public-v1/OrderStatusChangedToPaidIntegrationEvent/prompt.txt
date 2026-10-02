@@ -1,0 +1,1 @@
+Find the compiler-selected default body for OrderStatusChangedToPaidIntegrationEventHandler and inspect its forwarding boundary.

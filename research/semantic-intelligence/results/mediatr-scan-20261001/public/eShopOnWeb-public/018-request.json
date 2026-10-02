@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": 18,
+  "method": "tools/call",
+  "params": {
+    "name": "compiler_binding_at",
+    "arguments": {
+      "repo": "eShopOnWeb",
+      "path": "src/ApplicationCore/Services/OrderService.cs",
+      "byte_offset": 1097,
+      "raw_sha256": "1401534b700196e7ca52051f2dda35da0c6e84d0757b5ab9d0580af0cbeabc3f",
+      "context_id": "context:d2f6b24e9ba19c3236b2c03546019bfd477f7ae5e516c63ecf45ce6375a2395e"
+    }
+  }
+}

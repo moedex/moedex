@@ -1,0 +1,17 @@
+{
+  "ordinal": 3,
+  "argv": [
+    "call",
+    "--name",
+    "list_repos",
+    "--arguments",
+    "{}"
+  ],
+  "started_monotonic": 78250.082026458,
+  "finished_monotonic": 78250.148147291,
+  "returncode": 0,
+  "stdout_bytes": 919,
+  "stdout_sha256": "ad0e5f0c00bbd67cdfeedf1024e69a6f361f38a55e0de475449dcf22388c4d8b",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

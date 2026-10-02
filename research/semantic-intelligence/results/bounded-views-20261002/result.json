@@ -1,0 +1,105 @@
+{
+  "classification": "Scripted bounded presentation and accounting regression; not independent agent quality",
+  "files": [
+    {
+      "path": "source/docs/plans/semantic-intelligence/DELIVERY.md.txt",
+      "bytes": 74454,
+      "sha256": "8b8e22b19736e504a6c987b20418afedbd3531b491fe7148b7d0e473b8c5efac"
+    },
+    {
+      "path": "source/docs/plans/semantic-intelligence/PROGRAM.md.txt",
+      "bytes": 34768,
+      "sha256": "f9e9a094dc9c5007b3ee88c6aa74402ce97da2f72bb3b7e71ab5ddbe447c9b81"
+    },
+    {
+      "path": "source/research/semantic-intelligence/BOUNDED-VIEWS-ACCEPTANCE.md.txt",
+      "bytes": 2112,
+      "sha256": "6b86e1bdac4c2188c69c1846ae8fbc8e00c2e46b0971e2905bc7367da02c541e"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/README.md.txt",
+      "bytes": 4557,
+      "sha256": "6725d00b787d9cf0c144779adf1d0d4528779f1a74d8ce6c982dd531933c010d"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/browse.py.txt",
+      "bytes": 5935,
+      "sha256": "6db7e0ad19f02e4d45d20cd5b8131a6aa70e81f5ed6085a9d33e3057154d5532"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/client.py.txt",
+      "bytes": 10398,
+      "sha256": "6e2934d7f16a8f87ba961d716899a8f298c8abf9feea367cce2b9e2fc00c36a1"
+    },
+    {
+      "path": "source/research/semantic-intelligence/agent-journeys/test_browse.py.txt",
+      "bytes": 3769,
+      "sha256": "edb5f1241006bde77627c8940809275cf9dbc679d968e3ceb0e80d0a0a17552b"
+    },
+    {
+      "path": "validation/archive.py",
+      "bytes": 1955,
+      "sha256": "b5a266acb623f4c3bf06f55a996c9df0ee6318519a852dc3fd4678f174625fe2"
+    },
+    {
+      "path": "validation/check.py",
+      "bytes": 1700,
+      "sha256": "b3f8f60a850150eecf29b1772b3e9b14f321701b6c500905468580545cc1ccbe"
+    },
+    {
+      "path": "validation/live-report.json",
+      "bytes": 202,
+      "sha256": "2ff2e94328530d19fe13f62132fb45977d8ad5b836e9046401a7a63a91ce9af4"
+    },
+    {
+      "path": "validation/live-run/001.request.json",
+      "bytes": 194,
+      "sha256": "c5c1f433d8bcd171902d30ea392f43184485bea399f6181cd9fd05bdfd6f0037"
+    },
+    {
+      "path": "validation/live-run/001.response.raw",
+      "bytes": 13265,
+      "sha256": "cd7335e6f88b30eb4bd7c7cd263d3cbd989919167b28782a52807225592604f6"
+    },
+    {
+      "path": "validation/live-run/catalog.json",
+      "bytes": 97229,
+      "sha256": "b96e4a0e347d9b1fb1105967efdd735feddd6ea138d658daa78efbc1412ff837"
+    },
+    {
+      "path": "validation/live-run/prompt.txt",
+      "bytes": 49,
+      "sha256": "bf8078d71b4f0f5e2c4c61284bfd8ab8334d8e7e93b1a04f97a645c2b81ee1f3"
+    },
+    {
+      "path": "validation/live-run/state.json",
+      "bytes": 1156,
+      "sha256": "3b0d8007bef97e3df14b0e588b26070b36c920a9d538f2fa0ae9991761d94b05"
+    },
+    {
+      "path": "validation/live-run/transcript.jsonl",
+      "bytes": 720,
+      "sha256": "0e7793995875e73f9213be9529ac65a32b566a8feca32acfe6cf31436da2040a"
+    },
+    {
+      "path": "validation/live-views.json",
+      "bytes": 16887,
+      "sha256": "fa3ac61685b5b75b434fa91d95f3a62041affcfa42472f784fc673c2d2f23e32"
+    },
+    {
+      "path": "validation/live.py",
+      "bytes": 2029,
+      "sha256": "4bacb50d8cca56e7a8aad0eeb0497114cee3248a2bf2c0aa629e82960a6efc3f"
+    },
+    {
+      "path": "validation/replay.json",
+      "bytes": 16948,
+      "sha256": "968b3f6c8ef01e7cdd6186688331da9848ab434fa46e045501c5272a7a280e08"
+    },
+    {
+      "path": "validation/tests.log",
+      "bytes": 116,
+      "sha256": "315a9428005119864209125606be672dc33e49b885e6c2a9d7f8c266e2239459"
+    }
+  ]
+}

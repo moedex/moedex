@@ -168,6 +168,7 @@ type Index struct {
 	byBlob     map[uint64][]Symbol
 	refsByBlob map[uint64][]Occurrence
 	byName     map[string][]Ref
+	deferNames bool // private bulk construction; finalized before publication
 }
 
 // NewIndex returns an empty symbol index.
@@ -231,6 +232,9 @@ func (ix *Index) SetRefs(blob uint64, occs []Occurrence) {
 // definitions (from byBlob) and references (from refsByBlob). This keeps byName
 // consistent under repeated Set/SetRefs without a full rebuild over all blobs.
 func (ix *Index) rebuildName(blob uint64) {
+	if ix.deferNames {
+		return
+	}
 	if ix.byName == nil {
 		ix.byName = map[string][]Ref{}
 	}
@@ -248,7 +252,26 @@ func (ix *Index) rebuildName(blob uint64) {
 			ix.byName[name] = kept
 		}
 	}
-	// Re-add definitions.
+	ix.appendNames(blob)
+}
+
+// rebuildNames constructs the inverted view once after bulk construction or
+// decoding. Unlike repeated rebuildName calls, it visits each occurrence once.
+func (ix *Index) rebuildNames() {
+	ix.deferNames = false
+	ix.byName = make(map[string][]Ref)
+	for blob := range ix.byBlob {
+		ix.appendNames(blob)
+	}
+	for blob := range ix.refsByBlob {
+		if _, exists := ix.byBlob[blob]; !exists {
+			ix.appendNames(blob)
+		}
+	}
+}
+
+func (ix *Index) appendNames(blob uint64) {
+	// Add definitions.
 	for _, s := range ix.byBlob[blob] {
 		if s.Name == "" {
 			continue // unnamed (func literals) carry no name to look up

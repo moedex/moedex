@@ -9,6 +9,7 @@ package graphbuild
 import (
 	"bytes"
 	"regexp"
+	"sort"
 	"strings"
 
 	"moedex/internal/graph"
@@ -25,207 +26,186 @@ type RenderReport struct {
 	UnresolvedTags     int
 }
 
-// componentEntry maps an Angular selector to the component that declares it.
+// componentEntry preserves both source identity and the repository/path context
+// in which a selector was observed. The existing graph format folds contexts by
+// content, so shared-content bindings can only be diagnostic Candidates.
 type componentEntry struct {
-	blobSHA      string
-	symbolOffset uint64
-	className    string
+	blobSHA           string
+	symbolOffset      uint64
+	context           renderContext
+	uniqueDeclaration bool
 }
 
-// addRenderEdges iterates every blob in the shard set, extracts Angular
-// component selectors and template tag usage, and emits EdgeRenders edges
-// into the in-progress graph build.
-func addRenderEdges(
-	builder *diskgraph.Builder,
-	sweep *graphSweep,
-	seen map[persistedGraphEdge]struct{},
-) (RenderReport, error) {
+type renderContext struct{ repo, path string }
+
+func renderContexts(sweep *graphSweep, sha string) []renderContext {
+	seen := make(map[renderContext]bool)
+	for _, site := range sweep.sites[sha] {
+		blob := sweep.idxs[site.shard].Blob(site.blob)
+		if blob == nil {
+			continue
+		}
+		for _, file := range blob.Files {
+			if file.Repo != "" && file.RelPath != "" {
+				seen[renderContext{file.Repo, file.RelPath}] = true
+			}
+		}
+	}
+	out := make([]renderContext, 0, len(seen))
+	for context := range seen {
+		out = append(out, context)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].repo != out[j].repo {
+			return out[i].repo < out[j].repo
+		}
+		return out[i].path < out[j].path
+	})
+	return out
+}
+
+// addRenderEdges preserves every selector match without treating a filename or
+// selector convention as Angular module/import resolution. Exact local owners
+// and unique local selectors reach Pattern at most; ambiguity and name-derived
+// fallbacks remain Candidate. Iteration order cannot select a winner.
+func addRenderEdges(builder *diskgraph.Builder, sweep *graphSweep, seen map[persistedGraphEdge]struct{}) (RenderReport, error) {
 	var report RenderReport
-	processed := make(map[string]bool, len(sweep.sites))
-
-	// Pass 1: build selector → component registry from .component.ts blobs.
-	registry := make(map[string]componentEntry)
-	// Also build a path→(blobSHA, symbolOffset) map for resolving template owners.
-	type ownerKey struct {
-		blobSHA      string
-		symbolOffset uint64
+	registry := make(map[string][]componentEntry)
+	ownerByPath := make(map[renderContext][]componentEntry)
+	shas := make([]string, 0, len(sweep.sites))
+	for sha := range sweep.sites {
+		shas = append(shas, sha)
 	}
-	ownerByPath := make(map[string]ownerKey)
+	sort.Strings(shas)
 
-	for sha, sites := range sweep.sites {
-		if processed[sha] {
-			continue
-		}
-		processed[sha] = true
-
-		site := sites[0]
+	for _, sha := range shas {
+		site := sweep.sites[sha][0]
 		blob := sweep.idxs[site.shard].Blob(site.blob)
 		if blob == nil || len(blob.Content) == 0 {
 			continue
 		}
-
-		ext := blobPrimaryExtension(blob)
-		if ext != ".ts" {
+		contexts := renderContexts(sweep, sha)
+		var componentContexts []renderContext
+		for _, context := range contexts {
+			if strings.HasSuffix(context.path, ".component.ts") {
+				componentContexts = append(componentContexts, context)
+			}
+		}
+		if len(componentContexts) == 0 {
 			continue
 		}
-		relPath := ""
-		if len(blob.Files) > 0 {
-			relPath = blob.Files[0].RelPath
-		}
-		if relPath == "" || !strings.HasSuffix(relPath, ".component.ts") {
+		decorators := componentDecoratorRE.FindAllIndex(blob.Content, -1)
+		if len(decorators) == 0 {
 			continue
 		}
-
-		syms := sweep.symbols[site.shard].Symbols(site.blob)
-		if len(syms) == 0 {
+		var types []symbol.Symbol
+		for _, sym := range sweep.symbols[site.shard].Symbols(site.blob) {
+			if sym.Kind == symbol.Type {
+				types = append(types, sym)
+			}
+		}
+		if len(types) == 0 {
 			continue
 		}
-
 		report.ComponentsScanned++
-
 		selectors := extractAngularSelectors(blob.Content)
-		if len(selectors) == 0 {
-			continue
-		}
-
-		typeSym := findFirstTypeSymbol(syms)
-		if typeSym == nil {
-			continue
-		}
-
-		className := string(blob.Content[typeSym.NameStart:typeSym.NameEnd])
-
-		for _, sel := range selectors {
-			registry[sel] = componentEntry{
-				blobSHA:      blob.SHA,
-				symbolOffset: uint64(typeSym.NameStart),
-				className:    className,
+		report.SelectorsExtracted += len(selectors)
+		for _, context := range componentContexts {
+			for _, typ := range types {
+				entry := componentEntry{blobSHA: sha, symbolOffset: uint64(typ.NameStart), context: context, uniqueDeclaration: len(types) == 1 && len(decorators) == 1}
+				ownerByPath[context] = append(ownerByPath[context], entry)
+				for _, selector := range selectors {
+					// A comma-list may repeat a selector. Do not turn duplicate
+					// spelling of one declaration into artificial ambiguity.
+					duplicate := false
+					for _, old := range registry[selector] {
+						if old == entry {
+							duplicate = true
+							break
+						}
+					}
+					if !duplicate {
+						registry[selector] = append(registry[selector], entry)
+					}
+				}
 			}
-			report.SelectorsExtracted++
-		}
-
-		ownerByPath[relPath] = ownerKey{
-			blobSHA:      blob.SHA,
-			symbolOffset: uint64(typeSym.NameStart),
 		}
 	}
 
-	if len(registry) == 0 {
-		return report, nil
-	}
-
-	// Pass 2: scan .component.html blobs for custom element tags.
-	processed2 := make(map[string]bool, len(sweep.sites))
-	for sha, sites := range sweep.sites {
-		if processed2[sha] {
-			continue
-		}
-		processed2[sha] = true
-
-		site := sites[0]
+	for _, sha := range shas {
+		site := sweep.sites[sha][0]
 		blob := sweep.idxs[site.shard].Blob(site.blob)
 		if blob == nil || len(blob.Content) == 0 {
 			continue
 		}
-
-		ext := blobPrimaryExtension(blob)
-		if ext != ".html" {
-			continue
-		}
-		relPath := ""
-		if len(blob.Files) > 0 {
-			relPath = blob.Files[0].RelPath
-		}
-		if relPath == "" || !strings.HasSuffix(relPath, ".component.html") {
-			continue
-		}
-
-		report.TemplatesScanned++
-
-		// Resolve owning component via path convention.
-		ownerPath := strings.TrimSuffix(relPath, ".component.html") + ".component.ts"
-		owner, ok := ownerByPath[ownerPath]
-		if !ok {
-			continue
-		}
-
-		tags := extractTemplateTags(blob.Content)
-		for _, tag := range tags {
-			target, found := registry[tag.name]
-			if !found {
-				// Try cross-shard fallback: convert tag name to PascalCase
-				// class name and look up in merged symbol corpus.
-				className := selectorToClassName(tag.name)
-				if className == "" {
-					report.UnresolvedTags++
-					continue
-				}
-				defs := sweep.merged.Definitions(className)
-				if len(defs) == 0 {
-					report.UnresolvedTags++
-					continue
-				}
-				// Use first definition as target.
-				def := defs[0]
-				if def.Shard < 0 || def.Shard >= len(sweep.idxs) {
-					report.UnresolvedTags++
-					continue
-				}
-				targetBlob := sweep.idxs[def.Shard].Blob(def.Blob)
-				if targetBlob == nil || targetBlob.SHA == "" || def.Start < 0 {
-					report.UnresolvedTags++
-					continue
-				}
-				target = componentEntry{
-					blobSHA:      targetBlob.SHA,
-					symbolOffset: uint64(def.Start),
-					className:    className,
-				}
-			}
-
-			// Don't self-reference.
-			if owner.blobSHA == target.blobSHA && owner.symbolOffset == target.symbolOffset {
+		counted := false
+		for _, context := range renderContexts(sweep, sha) {
+			if !strings.HasSuffix(context.path, ".component.html") {
 				continue
 			}
-
-			evidenceLen := uint64(len(tag.name))
-			if evidenceLen == 0 {
-				evidenceLen = 1
+			if !counted {
+				report.TemplatesScanned++
+				counted = true
 			}
-
-			record := persistedGraphEdge{
-				sourceBlob:     owner.blobSHA,
-				sourceOffset:   owner.symbolOffset,
-				typeID:         diskgraph.EdgeRenders,
-				targetBlob:     target.blobSHA,
-				targetOffset:   target.symbolOffset,
-				confidence:     uint64(graph.Verified),
-				evidenceBlob:   blob.SHA,
-				evidence:       uint64(tag.offset),
-				evidenceLength: evidenceLen,
-			}
-			if _, dup := seen[record]; dup {
+			ownerPath := renderContext{context.repo, strings.TrimSuffix(context.path, ".component.html") + ".component.ts"}
+			owners := ownerByPath[ownerPath]
+			if len(owners) == 0 {
 				continue
 			}
-			seen[record] = struct{}{}
-
-			if err := builder.Add(owner.blobSHA, owner.symbolOffset, diskgraph.Edge{
-				Type:         diskgraph.EdgeRenders,
-				TargetBlob:   target.blobSHA,
-				TargetOffset: target.symbolOffset,
-				Confidence:   graph.Verified,
-				Evidence: graph.Evidence{
-					BlobSHA:    blob.SHA,
-					ByteOffset: uint64(tag.offset),
-					ByteLength: evidenceLen,
-				},
-			}); err != nil {
-				return report, err
+			for _, tag := range extractTemplateTags(blob.Content) {
+				targets := registry[tag.name]
+				fallback := len(targets) == 0
+				if fallback {
+					// Class-name resemblance is only a diagnostic hint. Never
+					// pick the first definition or promote this to Pattern.
+					for _, match := range scopedTypeTargets(sweep, owners[0].blobSHA, selectorToClassName(tag.name)) {
+						ref := match.ref
+						targetBlob := sweep.idxs[ref.Shard].Blob(ref.Blob)
+						if typeContextLanguage(sweep, targetBlob.SHA) != "typescript" {
+							continue
+						}
+						for _, targetContext := range renderContexts(sweep, targetBlob.SHA) {
+							targets = append(targets, componentEntry{blobSHA: targetBlob.SHA, symbolOffset: uint64(ref.Start), context: targetContext})
+						}
+					}
+				}
+				if len(targets) == 0 {
+					report.UnresolvedTags++
+					continue
+				}
+				localTargets := 0
+				for _, target := range targets {
+					if target.context.repo == context.repo {
+						localTargets++
+					}
+				}
+				for _, owner := range owners {
+					for _, target := range targets {
+						if owner.blobSHA == target.blobSHA && owner.symbolOffset == target.symbolOffset {
+							continue
+						}
+						tier := graph.Candidate
+						_, ownerUnique := singleTypeContext(sweep, owner.blobSHA)
+						_, targetUnique := singleTypeContext(sweep, target.blobSHA)
+						_, templateUnique := singleTypeContext(sweep, sha)
+						if !fallback && len(owners) == 1 && localTargets == 1 && target.context.repo == context.repo && owner.uniqueDeclaration && target.uniqueDeclaration && ownerUnique && targetUnique && templateUnique {
+							tier = graph.Pattern
+						}
+						evidence := graph.Evidence{BlobSHA: sha, ByteOffset: uint64(tag.offset), ByteLength: uint64(len(tag.name))}
+						record := persistedGraphEdge{sourceBlob: owner.blobSHA, sourceOffset: owner.symbolOffset, typeID: diskgraph.EdgeRenders, targetBlob: target.blobSHA, targetOffset: target.symbolOffset, confidence: uint64(tier), evidenceBlob: sha, evidence: evidence.ByteOffset, evidenceLength: evidence.ByteLength}
+						if _, duplicate := seen[record]; duplicate {
+							continue
+						}
+						seen[record] = struct{}{}
+						if err := builder.Add(owner.blobSHA, owner.symbolOffset, diskgraph.Edge{Type: diskgraph.EdgeRenders, TargetBlob: target.blobSHA, TargetOffset: target.symbolOffset, Confidence: tier, Evidence: evidence}); err != nil {
+							return report, err
+						}
+						report.RendersEdges++
+					}
+				}
 			}
-			report.RendersEdges++
 		}
 	}
-
 	return report, nil
 }
 
@@ -440,16 +420,6 @@ func selectorToClassName(selector string) string {
 	}
 	b.WriteString("Component")
 	return b.String()
-}
-
-// findFirstTypeSymbol returns the first Type symbol in the list, or nil.
-func findFirstTypeSymbol(syms []symbol.Symbol) *symbol.Symbol {
-	for i := range syms {
-		if syms[i].Kind == symbol.Type {
-			return &syms[i]
-		}
-	}
-	return nil
 }
 
 // ---------------------------------------------------------------------------

@@ -4,8 +4,9 @@ package graphbuild
 // registrations. It runs as a supplemental pass in BuildGraphWithOptions,
 // scanning each blob for AddScoped/AddTransient/AddSingleton<IFoo, Foo>()
 // patterns and emitting EdgeInjects edges from the registration site to
-// the resolved implementation. Two-argument registrations also emit
-// EdgeImplements when the hierarchy pass didn't already capture the binding.
+// possible implementation types. Two-argument registrations also emit
+// EdgeImplements candidates. Syntax-only bindings are at most Pattern, never
+// Verified: observing a registration does not prove its target identity.
 
 import (
 	"regexp"
@@ -28,7 +29,7 @@ var diRegistrationRE = regexp.MustCompile(`\bAdd(?:Scoped|Transient|Singleton)\s
 
 // addInjectionEdges iterates every .cs blob in the shard set, extracts DI
 // service registrations, and emits EdgeInjects edges from the enclosing
-// method/type at the registration site to the resolved implementation type.
+// method/type at the registration site to possible implementation types.
 // Two-argument registrations also emit EdgeImplements from the
 // implementation to the interface when the hierarchy pass didn't capture it.
 func addInjectionEdges(
@@ -228,8 +229,8 @@ func findEnclosingOffset(syms []symbol.Symbol, off int) uint64 {
 	return 0
 }
 
-// emitInjectionEdge resolves targetName via the merged symbol corpus and
-// emits an edge of the given type from sourceBlobSHA at sourceOffset.
+// emitInjectionEdge classifies targetName matches in the source context and
+// emits edges at their binding confidence, separately from the observed syntax.
 func emitInjectionEdge(
 	builder *diskgraph.Builder,
 	sweep *graphSweep,
@@ -242,14 +243,15 @@ func emitInjectionEdge(
 	edgeType diskgraph.EdgeType,
 	report *InjectionReport,
 ) error {
-	defs := sweep.merged.Definitions(targetName)
+	defs := scopedTypeTargets(sweep, sourceBlobSHA, targetName)
 	if len(defs) == 0 {
 		report.UnresolvedTypes++
 		return nil
 	}
 
 	emitted := false
-	for _, def := range defs {
+	for _, target := range defs {
+		def := target.ref
 		if def.Shard < 0 || def.Shard >= len(sweep.idxs) {
 			continue
 		}
@@ -267,7 +269,7 @@ func emitInjectionEdge(
 			typeID:         edgeType,
 			targetBlob:     targetBlob.SHA,
 			targetOffset:   uint64(def.Start),
-			confidence:     uint64(graph.Verified),
+			confidence:     uint64(target.confidence),
 			evidenceBlob:   sourceBlobSHA,
 			evidence:       uint64(evidenceStart),
 			evidenceLength: evidenceLen,
@@ -281,7 +283,7 @@ func emitInjectionEdge(
 			Type:         edgeType,
 			TargetBlob:   targetBlob.SHA,
 			TargetOffset: uint64(def.Start),
-			Confidence:   graph.Verified,
+			Confidence:   target.confidence,
 			Evidence: graph.Evidence{
 				BlobSHA:    sourceBlobSHA,
 				ByteOffset: uint64(evidenceStart),
@@ -303,9 +305,9 @@ func emitInjectionEdge(
 	return nil
 }
 
-// emitImplementsFromDI emits EdgeImplements from the implementation type to
-// the interface type, capturing DI evidence that the hierarchy pass may have
-// missed (e.g. when the class declaration doesn't explicitly list the interface).
+// emitImplementsFromDI retains possible implementation/interface pairs from DI
+// syntax. A pair is no stronger than its weakest target binding; registration
+// syntax alone does not establish that either type actually resolves.
 func emitImplementsFromDI(
 	builder *diskgraph.Builder,
 	sweep *graphSweep,
@@ -316,13 +318,14 @@ func emitImplementsFromDI(
 	evidenceLen uint64,
 	report *InjectionReport,
 ) error {
-	implDefs := sweep.merged.Definitions(implName)
-	ifaceDefs := sweep.merged.Definitions(ifaceName)
+	implDefs := scopedTypeTargets(sweep, sourceBlobSHA, implName)
+	ifaceDefs := scopedTypeTargets(sweep, sourceBlobSHA, ifaceName)
 	if len(implDefs) == 0 || len(ifaceDefs) == 0 {
 		return nil
 	}
 
-	for _, implDef := range implDefs {
+	for _, implTarget := range implDefs {
+		implDef := implTarget.ref
 		if implDef.Shard < 0 || implDef.Shard >= len(sweep.idxs) {
 			continue
 		}
@@ -331,7 +334,9 @@ func emitImplementsFromDI(
 			continue
 		}
 
-		for _, ifaceDef := range ifaceDefs {
+		for _, ifaceTarget := range ifaceDefs {
+			ifaceDef := ifaceTarget.ref
+			confidence := min(implTarget.confidence, ifaceTarget.confidence)
 			if ifaceDef.Shard < 0 || ifaceDef.Shard >= len(sweep.idxs) {
 				continue
 			}
@@ -346,7 +351,7 @@ func emitImplementsFromDI(
 				typeID:         diskgraph.EdgeImplements,
 				targetBlob:     ifaceBlob.SHA,
 				targetOffset:   uint64(ifaceDef.Start),
-				confidence:     uint64(graph.Verified),
+				confidence:     uint64(confidence),
 				evidenceBlob:   sourceBlobSHA,
 				evidence:       uint64(evidenceStart),
 				evidenceLength: evidenceLen,
@@ -360,7 +365,7 @@ func emitImplementsFromDI(
 				Type:         diskgraph.EdgeImplements,
 				TargetBlob:   ifaceBlob.SHA,
 				TargetOffset: uint64(ifaceDef.Start),
-				Confidence:   graph.Verified,
+				Confidence:   confidence,
 				Evidence: graph.Evidence{
 					BlobSHA:    sourceBlobSHA,
 					ByteOffset: uint64(evidenceStart),

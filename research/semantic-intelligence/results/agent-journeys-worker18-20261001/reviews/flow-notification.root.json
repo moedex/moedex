@@ -1,0 +1,50 @@
+{
+  "task": "flow-notification",
+  "reviewer": "root",
+  "reviewed_utc": "2026-10-02T02:06:37.617869+00:00",
+  "answer_sha256": "937a1fc221e1578ee791ec48e5aa01030a002aebf4d87fc16f809752f583d55a",
+  "atoms": [
+    {
+      "id": "flow-notification.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "HTTP call and model arguments cited; response 009 and compiler caller span in 007 support."
+    },
+    {
+      "id": "flow-notification.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Scoped mapping cited at API line 30 (response 008); implementation correspondence explicitly backed by response 007."
+    },
+    {
+      "id": "flow-notification.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Direct publisher accurately identified with source lines 34-41 and precise compiler publish span; responses 002/005/007."
+    },
+    {
+      "id": "flow-notification.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Exact message-consumer declaration plus logging body and return cited; responses 002/005."
+    },
+    {
+      "id": "flow-notification.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Worker consumer registration and RabbitMQ endpoint configuration cited at 72-87, present in response 008."
+    },
+    {
+      "id": "flow-notification.6",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Static candidate, configuration and absence of observed delivery/DI dispatch explicitly separated, including tool limitations."
+    }
+  ],
+  "correctness": 6,
+  "evidence": 6,
+  "possible": 6,
+  "unsupported_claims": [],
+  "strict_success": true,
+  "isolation_audit": "Solver attestation and logged RPCs available; full model/tool activity not exposed to root, so host isolation is not independently verified."
+}

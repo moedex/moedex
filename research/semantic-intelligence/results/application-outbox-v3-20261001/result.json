@@ -1,0 +1,274 @@
+{
+  "date": "2026-10-01",
+  "status": "passed",
+  "scope": "Pinned external application EF context-registration extension. Original frozen paired internal API tasks rerun as regression only; not a new task gold or CodeGraph comparison.",
+  "repo": "https://github.com/MassTransit/Sample-Outbox",
+  "commit": "1ab8e66ebf96e5733e68c2f4d2201276f38ed9c5",
+  "gold_sha256": "29848c766c675f261ef2204eaf93ab74753432705da5622c4f46f6f57f26cece",
+  "gold_path": "../application-outbox-20261001/source-gold-v3.json",
+  "task_gold_sha256": "12742046b0c89b8cd2e85de55e9fb76390c6679d3d006c6ab0219bcef3467d21",
+  "predecessor_preserved": "../application-outbox-v2-20261001/result.json",
+  "metrics": {
+    "supported_expected": 12,
+    "true_positive": 12,
+    "false_negative": 0,
+    "false_positive": 0,
+    "context_expected": 20,
+    "context_observed": 20,
+    "context_missed": 0,
+    "audit_facts": 20,
+    "served_facts": 20,
+    "negative_cases": 2,
+    "negative_violations": 0,
+    "unsupported_patterns": 5
+  },
+  "normal_race_reports_equal": true,
+  "paired_tasks": {
+    "source_authored_tasks": 4,
+    "selected_context_variants": 8,
+    "all_equivalent": true,
+    "selected_context_execution": {
+      "baseline": {
+        "calls": 32,
+        "complete_response_bytes": 71670,
+        "structured_content_bytes": 63214
+      },
+      "candidate": {
+        "calls": 8,
+        "complete_response_bytes": 51704,
+        "structured_content_bytes": 48872
+      }
+    },
+    "discovery_separately": {
+      "baseline": {
+        "calls": 4,
+        "complete_response_bytes": 6234,
+        "structured_content_bytes": 4982
+      },
+      "candidate": {
+        "calls": 4,
+        "complete_response_bytes": 9420,
+        "structured_content_bytes": 8004
+      }
+    },
+    "discovery_inclusive_amortized_once_per_contract": {
+      "baseline": {
+        "calls": 36,
+        "complete_response_bytes": 77904,
+        "structured_content_bytes": 68196
+      },
+      "candidate": {
+        "calls": 12,
+        "complete_response_bytes": 61124,
+        "structured_content_bytes": 56876
+      }
+    },
+    "discovery_definition_only_contexts": {
+      "registration-service": [
+        "context:1c3647e167057cc1536d3da09818ad439a53c54d8310fe7b07dff4fc66311709",
+        "context:d943c3bd7b1a41d86a0803d5b134e65adf48f02b8f638b1fb5650d7f25da1996"
+      ]
+    },
+    "limitations": [
+      "Context selections use source-project expectations and captured IDs. Discovery measured separately; amortized once per contract over two variants.",
+      "API bytes are serialized tool return bytes, not transport framing, token counts, latency, or user answer quality.",
+      "Existing four task labels use immutable v2gold; new EFregistration target is covered by full application audit/MCP gate.",
+      "Five selected MassTransit/wrapper coverage gaps remain; no runtime activation, options-lifetime, database, or interprocedural claims."
+    ]
+  },
+  "artifacts": {
+    "Api.semantic": {
+      "sha256": "adb2e74a33b6f842d60c1e7f18b77bb55cda4829bb6650e63d8ab91085f93b6d",
+      "bytes": 1679525
+    },
+    "composed.semantic": {
+      "sha256": "f49e9581fe398b4d6d559638ec9f463e2f767335409b0458d291d108feca2eb7",
+      "bytes": 2926465
+    },
+    "Worker.semantic": {
+      "sha256": "b1eedaa685dba95f6269fad041dbabe48caba4288cd3030e56ab87e1a79955c0",
+      "bytes": 1403537
+    }
+  },
+  "checks": [
+    {
+      "command": "go test ./internal/app/servecmd -run 'Test(PublicApplication|Application)' -count=1 -v",
+      "status": "passed",
+      "log": "normal.log"
+    },
+    {
+      "command": "go test -race ./internal/app/servecmd -run 'Test(PublicApplication|Application)' -count=1 -v",
+      "status": "passed",
+      "log": "race.log"
+    },
+    {
+      "command": "go test ./...",
+      "status": "passed",
+      "log": "v3-full-test.log"
+    },
+    {
+      "command": "go vet ./...",
+      "status": "passed",
+      "log": "v3-vet.log"
+    },
+    {
+      "command": "go build ./...",
+      "status": "passed",
+      "log": "v3-build.log"
+    },
+    {
+      "command": "go test -race ./internal/semantic ./internal/semanticimport",
+      "status": "passed",
+      "log": "v3-version-race.log"
+    },
+    {
+      "check": "Independent producer/schema review",
+      "status": "no defects reported by reviewing agent/root"
+    },
+    {
+      "check": "Worker adversarial context-registration gate",
+      "status": "passed 7 positive and10 excluded",
+      "log": "domain-v3-confirmed-test.log"
+    },
+    {
+      "check": "Prior entity rules regression underworker4",
+      "status": "passed2positive and8excluded",
+      "log": "domain-v2-worker4-test.log"
+    }
+  ],
+  "fixture_correction": "Initial negative no-argument AddDbContext call bound the supported optional Action overload; fixture changed to explicit positional ServiceLifetime.Scoped to select the excluded lifetime-only overload. Frozen real-application gold unchanged.",
+  "files": {
+    "application-report.json": {
+      "sha256": "900582a64e94b74170ddd31583969cdaf48c801e31c547b226d613bd13ce29fa",
+      "bytes": 52803
+    },
+    "capture-capture-Api.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "capture-capture-Api.stdout": {
+      "sha256": "77eba533ef84b6ddd6afed9b47a403ca3523053cc6ae74ce3cd13ff06dae4ac1",
+      "bytes": 625
+    },
+    "capture-capture-Worker.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "capture-capture-Worker.stdout": {
+      "sha256": "6367ff8b62af57c673006b9ede34715dbf2fad873b5900ebddf86667a18113b6",
+      "bytes": 629
+    },
+    "capture-clone-publication.stderr": {
+      "sha256": "3605cc27438dbd34d7636561d136035643ca8958f30770bf2d0351ad26999d18",
+      "bytes": 106
+    },
+    "capture-clone-publication.stdout": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "capture-commands.json": {
+      "sha256": "c9af6421f49e18ed7093519f05beeaa32956f21ee9338f012892de914ba2a24e",
+      "bytes": 3984
+    },
+    "capture-compose.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "capture-compose.stdout": {
+      "sha256": "7bf7cd1ec65d82b173d4f150aa96dbfe5f3a231f73f57f29bfa7ae07636d84d3",
+      "bytes": 1020
+    },
+    "capture-inputs.json": {
+      "sha256": "16004f5af4a578dfef96fa5bbf54198006714194f5307f2b395a5c5f1f444e34",
+      "bytes": 5221
+    },
+    "capture-publish.stderr": {
+      "sha256": "e6e2ca017a9e4ba96a0e8a666e26cb1ea42e89bce36e7c30aec3db1e0d3ffa96",
+      "bytes": 211
+    },
+    "capture-publish.stdout": {
+      "sha256": "5ce667f2d48ee84eeaee9c946c6797723c7d5786a16e05d3a5c01d91837efe33",
+      "bytes": 100
+    },
+    "capture-roots.json": {
+      "sha256": "2575e88823e4261728e188bf9a6d14e57f6fc50a1893d4d05c3fc46228388cb9",
+      "bytes": 404
+    },
+    "domain-v2-worker4-test.log": {
+      "sha256": "bd25cf1097bb554a24e2d1db369c3196c322f3c09bf001d59c4acec5e7b9a109",
+      "bytes": 228
+    },
+    "domain-v3-confirmed-test.log": {
+      "sha256": "13658a2a638ee8ed5385d1d56eafed148e10d8c9aea3c93245647c5f94cfc7b8",
+      "bytes": 259
+    },
+    "normal.log": {
+      "sha256": "5eb16344b1e5939b92729b1bca255900478e3b692da560037fce534e0c931877",
+      "bytes": 6390
+    },
+    "published-snapshot.json": {
+      "sha256": "0ca7d0d2dba19b77a64fb1f0d66e3cd2071c6ece95bddc5a3f8a8f3323a7ed71",
+      "bytes": 2777
+    },
+    "race-report.json": {
+      "sha256": "900582a64e94b74170ddd31583969cdaf48c801e31c547b226d613bd13ce29fa",
+      "bytes": 52803
+    },
+    "race.log": {
+      "sha256": "5925374673d7d44ab0b209408ac09049f02127824354f7e3bfc8c7a11573748b",
+      "bytes": 6390
+    },
+    "sources.json": {
+      "sha256": "8a243f6a208f8f954e66fa8d093a376e513a3ff2d2dbbbde7dd8b45b490459b7",
+      "bytes": 6354
+    },
+    "task-race-report.json": {
+      "sha256": "0b71eb614e0f6a7da70a5dba986c950afaa07f76a57f0f5ccc15987b77e6f1e0",
+      "bytes": 190507
+    },
+    "task-race-report.json.discovery.json": {
+      "sha256": "d314c225d1c6778a1c601aa56521021c7c677a6288f13d6a29053f2690466382",
+      "bytes": 8516
+    },
+    "task-report.json": {
+      "sha256": "0b71eb614e0f6a7da70a5dba986c950afaa07f76a57f0f5ccc15987b77e6f1e0",
+      "bytes": 190507
+    },
+    "task-report.json.discovery.json": {
+      "sha256": "d314c225d1c6778a1c601aa56521021c7c677a6288f13d6a29053f2690466382",
+      "bytes": 8516
+    },
+    "v3-build.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "v3-full-test.log": {
+      "sha256": "1e637ba54578b1500c21415a4dd01d401c8d47da10111823d3d62eafbe88b284",
+      "bytes": 2672
+    },
+    "v3-version-race.log": {
+      "sha256": "d0176b79a02026bdec06b238222c810c02c46e0ecdf12f6dd155c761370afc14",
+      "bytes": 80
+    },
+    "v3-vet.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "worker-v4-build.log": {
+      "sha256": "88dab230cfcf1818713548ffb301e76fb357a8d0861716a4ba1d8dd82f3f2661",
+      "bytes": 457
+    },
+    "worker-v4-inputs.json": {
+      "sha256": "6d744bc00e37cc0fa098e2e766757e1e3fac7e195e2384ba07342586f4bf9c35",
+      "bytes": 579
+    },
+    "worker-v4-tests.log": {
+      "sha256": "a7b7d3108d734c299d7af651a39f1576f63cb6a7eaf0875058cbcd19ccb212fb",
+      "bytes": 400
+    },
+    "evaluation-commands.json": {
+      "sha256": "21c52eecdbfb848a48139587d6b7d9c24927537801f5419e8bf591155ea9fca8",
+      "bytes": 1304
+    }
+  }
+}

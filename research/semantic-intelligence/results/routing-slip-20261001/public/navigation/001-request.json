@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "compiler_definitions",
+    "arguments": {
+      "symbol_id": "symbol:8f486d647e926e573dffae26bd272658668042490b841b8eca2e7d9045b1ba2c",
+      "repo": "Sample-ForkJoint"
+    }
+  }
+}

@@ -1,0 +1,402 @@
+{
+  "date": "2026-09-30",
+  "source": {
+    "origin": "https://github.com/dotnet/roslyn.git",
+    "commit": "36d26c5466e4d25940657ccb8d5b9557ccaf7be1",
+    "tracked_files": 35115,
+    "tracked_bytes": 456238809
+  },
+  "project": "src/Tools/CompilerGeneratorTools/Source/CSharpErrorFactsGenerator/CSharpErrorFactsGenerator.csproj",
+  "framework": "net10.0",
+  "configuration": "Debug",
+  "sdk": {
+    "version": "11.0.100-rc.1.26425.128",
+    "rid": "osx-arm64",
+    "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/11.0.100-rc.1.26425.128/dotnet-sdk-11.0.100-rc.1.26425.128-osx-arm64.tar.gz",
+    "sha512": "969b6f38a0ebe853dd632dc9ef07dd0690cc96bfe51d6379d09d7a405f471602ab5e5e09c505f937836fa9ee9717a0807a8c828599c87865528fd952c8c6958b",
+    "bytes": 197522617,
+    "verified_before_extraction": true
+  },
+  "packages": [
+    {
+      "id": "microsoft.aspnetcore.app.ref",
+      "version": "10.0.12",
+      "source": "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json",
+      "metadata_content_hash": "a/vVj+hE10TBkyank33SfYmUQrQGNEvYZxPM2zfKF/+TVZJzLxJvVoOIZTrI5uTNmVsjd9xw5NT8kU2TEK+GUw==",
+      "archive_byte_size": 7209462,
+      "archive_sha256": "b2cb6e55804cc8cc82ab750b07562866088f667994dbc09e9e46df6ee44aa060",
+      "archive_sha512": "f6698d1ed12ab0bca7ecde871600673336afc628b63be9700872cf8963f0dd88de363124998da21de71a339482174cb0b92272ff9714326fb221c5e46a30b623",
+      "nuget_sha512_verified": true
+    },
+    {
+      "id": "microsoft.codeanalysis.bannedapianalyzers",
+      "version": "5.12.0-1.26477.1",
+      "source": "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json",
+      "metadata_content_hash": "c0S8hL08/i+53D0Ec9heI4av/nWDGTco4avB7PM39l56x1qUg3MtSsdxwlymbHTskghgXzipGcJHaw2O/k6c8w==",
+      "archive_byte_size": 2056966,
+      "archive_sha256": "83487b3295b32839abd52b380b50e21115be1eff840ebea6636dc713dd67406e",
+      "archive_sha512": "e088a26291d94a119a84ecb12ee45567c0f14f0bdea9b2ae97ccb47f15d43d69e5f2a40966f5dbf693ed1715db98c1e21325c1378753b47b6d78bc47d0a3d4c1",
+      "nuget_sha512_verified": true
+    },
+    {
+      "id": "microsoft.codeanalysis.performancesensitiveanalyzers",
+      "version": "3.3.4-beta1.22504.1",
+      "source": "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet7-transport/nuget/v3/index.json",
+      "metadata_content_hash": "2XRlqPAzVke7Sb80+UqaC7o57OwfK+tIr+aIOxrx41RWDMeR2SBUW7kL4sd6hfLFfBNsLo3W5PT+UwfvwPaOzA==",
+      "archive_byte_size": 627663,
+      "archive_sha256": "1d8183b5185481a206e6de15a4eb7764543c9ea2d227a993479f7ae053262b9d",
+      "archive_sha512": "cd4dea1b0fa59a4371b31a10cd0201d86e9e661763d685bb7eb7032fec51ed62e47cfb34ba631b58ffd82935c500acb550c205f26cdb979aa1b38b4e373e0cd5",
+      "nuget_sha512_verified": true
+    },
+    {
+      "id": "microsoft.codeanalysis.publicapianalyzers",
+      "version": "5.12.0-1.26477.1",
+      "source": "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json",
+      "metadata_content_hash": "pNpjidB0qO/bw2quZQvi3ZXfc4FIEgB5L3ys7IEATmfGFwF/A+CH2rrP5p2Y5cOseJhHYqVxtxuXZQHWBfpkFw==",
+      "archive_byte_size": 949712,
+      "archive_sha256": "212753e51402feed43d3ce5338c6725552410f7f7a0436b2b070bd78d63ec4aa",
+      "archive_sha512": "cdfaa4562120c6030337189c28aeffcc122518629501e920d1393884ce997a6aa389746dab629228eb767be1571259f5b19901bcda7d5a4a51d29aa0d89a3bd0",
+      "nuget_sha512_verified": true
+    },
+    {
+      "id": "microsoft.dotnet.arcade.sdk",
+      "version": "12.0.0-beta.26479.3",
+      "source": "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json",
+      "metadata_content_hash": "3D2lSDWrE9NrCOvfJtbfn0mf60IrvSfrVlCOtFEe9Gjam+w5Zu3gjnVUGCPE0i5NwjZOKUVoBLkVbNs53zSpDw==",
+      "archive_byte_size": 1582942,
+      "archive_sha256": "a6fc7f7e73d1ac983483ab1af5d9683c93cfd376213f0cbd69d81d47d8085860",
+      "archive_sha512": "dc3da54835ab13d36b08ebdf26d6df9f499feb422bbd27eb56508eb4511ef468da9bec3966ede08e75541823c4d22e4dc2364e29456804b9156cdb39df34a90f",
+      "nuget_sha512_verified": true
+    },
+    {
+      "id": "microsoft.netcore.app.host.osx-arm64",
+      "version": "10.0.12",
+      "source": "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json",
+      "metadata_content_hash": "dfP2tB1H3fdPipMtSQoDrvEZD321FssDgZonuip97rxPizWZRfSa2zL3bmfn4nLiDIByIwZFTeCCmT4efSabcg==",
+      "archive_byte_size": 4984494,
+      "archive_sha256": "adbd6e6ec1911498f431aa97a2d1bba9d159ff60df0d7744cb8f0445744a1e34",
+      "archive_sha512": "dac601a24c51d3b7fbb97e17c9551992fdc1f37d7d36d25f02ca5fda26aeaa8fc7aeb4eeee3471e5b6b2630c2da2176c4a2ed6e67cc736a8d85bfb765168b7dd",
+      "nuget_sha512_verified": true
+    },
+    {
+      "id": "microsoft.netcore.app.ref",
+      "version": "10.0.12",
+      "source": "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json",
+      "metadata_content_hash": "lfS1w2yc6c2BwjaVRIcTCQxwIAd7Mt8LKP5hSohv/NeqnmPCLHPBtIxVL8NIvr4qxzFtEYd18AKFRjCN8PQHYQ==",
+      "archive_byte_size": 7188850,
+      "archive_sha256": "bf6e0a1fa7b5ce6a9bbfb7191d2c3151c2d6f812eafabee833fd000c1293b872",
+      "archive_sha512": "b8df7c98c76bba344b41d20151dc79e5a4dc764b5fdb893844fdfdb895be05247d31cb4e93452ba668beb2f3f62a3f30ed8b1242e06b7a0c53b11125fc69ba28",
+      "nuget_sha512_verified": true
+    },
+    {
+      "id": "microsoft.visualstudio.threading.analyzers",
+      "version": "18.7.131",
+      "source": "https://pkgs.dev.azure.com/azure-public/vside/_packaging/vssdk/nuget/v3/index.json",
+      "metadata_content_hash": "SXBTyQCLxHkkKhPI7mC5YB1pQ3gU8IRkafXXhzR1ikowQBlqfujPIJ5Optw4DyKnTFKOioCEyG6ulXU1+A3qtA==",
+      "archive_byte_size": 604909,
+      "archive_sha256": "000e2f64eec3c96aa7629496f253f39e3ceeff735875f3da8de2f77089c60fac",
+      "archive_sha512": "52e22437bef282652f75f55026c02386c05c3eddd52a0df0b4b28a84c96f49f37820e62c1179833385e688e1b2722f419afad5d7f3b28de01b2ac26aceefa5cc",
+      "nuget_sha512_verified": true
+    },
+    {
+      "id": "microsoft.windowsdesktop.app.ref",
+      "version": "10.0.12",
+      "source": "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json",
+      "metadata_content_hash": "nMvtgAJ5bx+zC21QX0j6YNQpZR5gLG0W+1UqcTSeYMatfjP0XQ5izMxd4Dolko1H2n/f7dIujB/ygrY8UXvfvw==",
+      "archive_byte_size": 7716539,
+      "archive_sha256": "a26aee1fd30fa8e3454f8dc21a2dff643bb0f1492a229d246614dfabf08caf89",
+      "archive_sha512": "d06814ae255c67978ac769c2dc8e0183035a2e1ffceac15b3b2988ef9e23e14c23ae0c704c33ff4d485458d80a66388a22738057186883404300e3d97acbcbc3",
+      "nuget_sha512_verified": true
+    },
+    {
+      "id": "roslyn.diagnostics.analyzers",
+      "version": "5.12.0-1.26477.1",
+      "source": "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json",
+      "metadata_content_hash": "ryGEwGKLTk0g0jUIe/GFEe9LCFO5arGR3cZxATnpHLqwWAITCMqlbwrQDsM/atJ7PmHjdCR6sT9amrcN+8S5tw==",
+      "archive_byte_size": 2986004,
+      "archive_sha256": "6a33999a427e341ed5e51a3d6ab3b95e45cc4228838af24f5028e839d6d7ef12",
+      "archive_sha512": "9affbc7ca01d08165fa7b06de435b0f1b75d0658a0690fb24a00814320d7534b86a3c764c7173255aada27de6ee50670ad02087de902040236bc01032658ca95",
+      "nuget_sha512_verified": true
+    }
+  ],
+  "dependency_bundle": {
+    "files": 1570,
+    "bytes": 226233999,
+    "manifest_sha256": "88bc84bb4c21f3854107557e425dc53402d1b8569d0111f033299181fc1f44e9"
+  },
+  "capture": {
+    "format": "moedex.semantic",
+    "version": 1,
+    "complete": true,
+    "snapshots": 1,
+    "contexts": 1,
+    "sources": 3,
+    "symbols": 73,
+    "occurrences": 270,
+    "bindings": 270,
+    "diagnostics": 4,
+    "artifact": "/private/tmp/moedex-roslyn-compiler/capture.semantic",
+    "workspace": "/private/tmp/moedex-roslyn-compiler/capture-workspace/semantic-git-projection-2659488801/source",
+    "repo": "roslyn",
+    "commit": "36d26c5466e4d25940657ccb8d5b9557ccaf7be1",
+    "origin": "https://github.com/dotnet/roslyn.git",
+    "project_id": 0,
+    "dependency_bundle_sha256": "88bc84bb4c21f3854107557e425dc53402d1b8569d0111f033299181fc1f44e9",
+    "restore_standard_evaluation": true
+  },
+  "raw_worker_cases": {
+    "passed": 10,
+    "total": 10
+  },
+  "artifact_cases": {
+    "passed": 10,
+    "total": 10
+  },
+  "mcp_cases": {
+    "status": "passed",
+    "passed": 10,
+    "total": 10,
+    "command": [
+      "/private/tmp/moedex-roslyn-compiler/moedex-final",
+      "serve",
+      "-index-dir",
+      "/private/tmp/moedex-roslyn-compiler/index-compiler",
+      "-mcp",
+      "-embed",
+      "none"
+    ],
+    "context_id": "context:574d4dda070e2c58134ddf022aeb65b50e79a05512913a6115900da9b9785bde",
+    "artifact_sha256": "6561b94c7cb4bd4b443e7160a70052d463cdcefbdc8762da36d6673070d4858e",
+    "gold_sha256": "4de2d5ed0c4afe8afe00d29d26092321e3086e4e9e45b613669fcf906b2a2309",
+    "snapshot_id": "20260930T230839Z-1",
+    "server_exit_code": 0,
+    "outcomes": [
+      {
+        "id": "local-generate",
+        "passed": true,
+        "definition_status": "ok"
+      },
+      {
+        "id": "file-read-overload",
+        "passed": true,
+        "definition_status": null
+      },
+      {
+        "id": "generic-select",
+        "passed": true,
+        "definition_status": null
+      },
+      {
+        "id": "lambda-string-trim",
+        "passed": true,
+        "definition_status": null
+      },
+      {
+        "id": "string-comparison-overload",
+        "passed": true,
+        "definition_status": null
+      },
+      {
+        "id": "char-index-overload",
+        "passed": true,
+        "definition_status": null
+      },
+      {
+        "id": "substring-overload",
+        "passed": true,
+        "definition_status": null
+      },
+      {
+        "id": "generic-list-add",
+        "passed": true,
+        "definition_status": null
+      },
+      {
+        "id": "sdk-parameterless-constructor",
+        "passed": true,
+        "definition_status": null
+      },
+      {
+        "id": "encoding-property",
+        "passed": true,
+        "definition_status": null
+      }
+    ],
+    "elapsed_seconds": 6.8574063339983695
+  },
+  "network_profile": "(version 1)(allow default)(deny network-outbound (remote ip \"*:*\"))",
+  "network_check": {
+    "ipv4_errno": 1,
+    "ipv6_errno": 1
+  },
+  "sha256": {
+    "binary": "1c45d9de14f38829adafc66850487cdf1ea884bb35cad6e3a036d16564aeb20a",
+    "worker": "81cc861ee9f5a2a2d6276009bc38df98ea221b55761015d91999c6fd4a7fda01",
+    "artifact": "6561b94c7cb4bd4b443e7160a70052d463cdcefbdc8762da36d6673070d4858e",
+    "gold": "4de2d5ed0c4afe8afe00d29d26092321e3086e4e9e45b613669fcf906b2a2309",
+    "capture_script": "897d3e90c44b2eda72657683a71b848193a90f24a4b0fb9830a17419f5aa63be",
+    "dependency_acquisition": "0c7cae838f5c299265c310fabbe940370aaa9a90c9da076b9edbc92b3d216ee7",
+    "mcp_checker": "338e90510c19ed810fa9066d51f784ecb8d8df37bdbcf789a53a0cf59974fed6",
+    "mcp_transcript": "8ef415d43568a2a0cb35433c1a8a2228a44b32b78269d96fcb73b3d9bf55213a",
+    "mcp_requests": "eadee0f477f48c6ff60c92a912736abe1ce78bf770aea9ef502de1403fc6a81e",
+    "mcp_evaluation": "868621cad14a73b612be126b514b7905b6709cc589a6c55b316deb110433890d",
+    "mcp_stderr": "9d085972dc63da935ab9d4953a3d7eca358b0f7e11755ff77b100287548987c7"
+  },
+  "scope": "One original project and ten selected source-authored cases; no whole-Roslyn semantic coverage, competitive measurement, or production deployment claim.",
+  "snapshot_build_initial_attempt": {
+    "status": "interrupted",
+    "exit_code": 130,
+    "reason": "Native sample confirmed repeated symbol.Index.rebuildName scans during bulk indexing; superseded by corrected run.",
+    "sample_sha256": "3ec413e1b6f4237b5a1c32eeaa88cec73768a9d2527fc047f3b68a709e557d89"
+  },
+  "snapshot_binary_sha256": "865bf03bda4c858fc530a5b14edff2d00002c0cb77018b448ab7a891fad8c9eb",
+  "validation": {
+    "go_test_all": "passed",
+    "go_vet_all": "passed",
+    "go_build": "passed",
+    "symbol_bulk_regressions": "passed",
+    "independent_symbol_review": "no actionable correctness issues",
+    "race_graph_build_and_indexcmd": "passed",
+    "race_symbol": "passed in isolated rerun after stopping the heavy graph build; prior concurrent runs exceeded existing CFExtractor 2-second wall-clock guard",
+    "race_symbol_bulk_regression": "passed",
+    "optional_graph_integration_race": "passed",
+    "optional_graph_independent_review": "no actionable correctness issues",
+    "optional_graph_affected_packages": "passed: app/indexcmd, cli, snapshot, serve",
+    "optional_graph_vet": "passed: app/indexcmd, cli, symbol"
+  },
+  "snapshot_observations": {
+    "symbol_sidecar_bytes": 43057564,
+    "corrected_symbol_sample_sha256": "14d0e059787253372e887407f210ec6fb5fd16b40f6385957c73b3819952069b",
+    "graph_sample_sha256": "7f062362497e1946156d9ec01f32abf591eb05de6007e60ddcf3353a2d6b0781",
+    "graph_sample_hot_path": "candidates.PrepareName -> positionalOccurrences -> index.DecodePostings",
+    "notes": "Single native samples establish active stages, not controlled performance comparisons or peak RSS guarantees.",
+    "corrected_graph_attempt_binary_sha256": "84e63cf7f1b83aaee28e90046f44c038e07e90a3e6d2a8e6a6ed3956c6288940"
+  },
+  "graph_scale_attempt": {
+    "status": "interrupted_scale_failure",
+    "exit_code": 130,
+    "prepared_names": 167750,
+    "bounded_batches": 237535,
+    "workers": 18,
+    "preparation_seconds": 423.234,
+    "heaviest_name": "Main",
+    "heaviest_candidate_pair_upper_bound": 993188595,
+    "heaviest_batches": 43365,
+    "completed_batches_after_30_seconds": 24,
+    "notes": "Candidate upper bounds are not accepted edges. Batching bounded task size but did not make total candidate pair work practical. Retained separately from compiler acceptance.",
+    "completed_batches_after_90_seconds": 47
+  },
+  "snapshot_graph_enabled": false,
+  "snapshot": {
+    "id": "20260930T230839Z-1",
+    "manifest": {
+      "version": 1,
+      "id": "20260930T230839Z-1",
+      "sequence": 1,
+      "created_at": "2026-09-30T23:12:56.195696Z",
+      "producer": {
+        "version": "dev",
+        "commit": "unknown",
+        "go_version": "go1.27.1"
+      },
+      "corpus_fingerprint": "856cb2ffe639a1f3dc2d5170889a110b07e882c0b4b862d13e85e7edae98334c",
+      "serving_root": "serve",
+      "capabilities": [
+        "rank_symbols",
+        "rank_tokens",
+        "search"
+      ],
+      "components": {
+        "legacy_serving_tree": {
+          "format": "moedex-shard-directory",
+          "version": 1,
+          "artifacts": [
+            {
+              "path": "serve/corpus-symbols.sym",
+              "size": 43057564,
+              "sha256": "95685cd19882a834f9528421123e77d6364a1578a0d04dec4b502202b6f0679e"
+            },
+            {
+              "path": "serve/corpus-symbols.sym.meta",
+              "size": 115,
+              "sha256": "94f1d00992d831a24cc1e3152aa563f9dfc2e0542af98d041c857e14b8c7a48e"
+            },
+            {
+              "path": "serve/corpus-tokens.tki",
+              "size": 103192408,
+              "sha256": "87d1e1b7e1402a953fdde3abc7ca1bc4cc570a8c8cd6c26570ad9a8fc6d2b413"
+            },
+            {
+              "path": "serve/corpus-tokens.tki.meta",
+              "size": 100,
+              "sha256": "55acad4c97b9cee19baf033198c65e848c5bdcf9bcbf648e46167ddfea0fb546"
+            },
+            {
+              "path": "serve/manifest.json",
+              "size": 1287,
+              "sha256": "39ba8fe99253f6505fa49d334385486f4f61e97a1e9caf342d4a1d1e64e58a5d"
+            },
+            {
+              "path": "serve/shard-0000.idx",
+              "size": 426353753,
+              "sha256": "c7c1941da48b15d33902954a7733e7d2f83cae01d70f701febe3f353510e7320"
+            },
+            {
+              "path": "serve/shard-0001.idx",
+              "size": 418489359,
+              "sha256": "41fb5b8ceb6d875e656142355cfbce3bf17f1ce3054e897e889ecc761a6c5676"
+            },
+            {
+              "path": "serve/shard-0002.idx",
+              "size": 368739716,
+              "sha256": "c67034c72fcd3fe28cfb05299dcd974181fc6aeb06165e5ed58c2019c971c603"
+            }
+          ]
+        },
+        "semantic": {
+          "format": "moedex.semantic",
+          "version": 1,
+          "input_fingerprint": "856cb2ffe639a1f3dc2d5170889a110b07e882c0b4b862d13e85e7edae98334c",
+          "metadata": {
+            "coverage": "explicit-project-subset",
+            "privacy_fingerprint": "78414b5283cb688bd0af110c0c43154203f07e5f4464f918a90cb95c159e3e7b",
+            "usage": "offline-only"
+          },
+          "artifacts": [
+            {
+              "path": "semantic/artifact.json",
+              "size": 438373,
+              "sha256": "6561b94c7cb4bd4b443e7160a70052d463cdcefbdc8762da36d6673070d4858e"
+            }
+          ]
+        },
+        "semantic_index": {
+          "format": "moedex.semantic-index",
+          "version": 1,
+          "input_fingerprint": "856cb2ffe639a1f3dc2d5170889a110b07e882c0b4b862d13e85e7edae98334c",
+          "metadata": {
+            "query_scope": "recorded-compiler-context",
+            "source_artifact_sha256": "6561b94c7cb4bd4b443e7160a70052d463cdcefbdc8762da36d6673070d4858e"
+          },
+          "artifacts": [
+            {
+              "path": "semantic/index.msi",
+              "size": 103158,
+              "sha256": "087c691a59004b3a9e34602cbd8da15d1d5241b3f6fa1b15b02b926978d24f7f"
+            }
+          ]
+        }
+      }
+    },
+    "shards": 3,
+    "graph_enabled": false,
+    "publication": "Verified CURRENT, published manifest, successful snapshot inspect, and executable MCP; build session exit status unavailable after daemon restart.",
+    "ranker": {
+      "blobs": 31998,
+      "documents": 31998,
+      "symbol_blobs": 17591,
+      "tokens_from_cache": true,
+      "symbols_from_cache": true
+    }
+  }
+}

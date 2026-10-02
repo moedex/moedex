@@ -1,0 +1,265 @@
+{
+  "status": "compact_source_and_graph_capability_verified",
+  "classification": "scripted_development_regression_not_independent_agent_score",
+  "cli_sha256": "b94eff3d2e2ecad8dfce267cd5817ac42ae6a9176897918fdd4328b9f552fcd7",
+  "source_files": [
+    "internal/graph/serve/graphdiscovery.go",
+    "internal/graph/serve/graphdiscovery_test.go",
+    "internal/graph/serve/source_tools_test.go",
+    "internal/mcp/contracts.go",
+    "internal/mcp/contract_test.go",
+    "internal/mcp/sdkserver.go",
+    "docs/adr/0062-source-discovery-capabilities.md",
+    "research/semantic-intelligence/COMPACT-DISCOVERY-ACCEPTANCE.md",
+    "docs/plans/semantic-intelligence/PROGRAM.md",
+    "docs/plans/semantic-intelligence/DELIVERY.md"
+  ],
+  "validation": {
+    "full_go_tests": "passed",
+    "vet": "passed",
+    "focused_race": "passed",
+    "public_http": {
+      "classification": "scripted_capability_and_presentation_regression_not_agent_score",
+      "passed": true,
+      "calls": [
+        {
+          "name": "list_repos",
+          "arguments": {},
+          "bytes": 409
+        },
+        {
+          "name": "read_source",
+          "arguments": {
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Worker/Program.cs"
+          },
+          "bytes": 8346
+        },
+        {
+          "name": "read_source",
+          "arguments": {
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Worker/Program.cs",
+            "format": "structured"
+          },
+          "bytes": 4292
+        },
+        {
+          "name": "read_source",
+          "arguments": {
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Worker/Program.cs",
+            "format": "structured",
+            "start_line": 62,
+            "end_line": 62
+          },
+          "bytes": 746
+        },
+        {
+          "name": "trace_calls",
+          "arguments": {
+            "symbol": "SubmitRegistration"
+          },
+          "bytes": 464
+        },
+        {
+          "name": "compiler_symbols",
+          "arguments": {
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Components/Services/IRegistrationValidationService.cs"
+          },
+          "bytes": 13265
+        },
+        {
+          "name": "read_source",
+          "arguments": {
+            "repo": "Sample-Outbox",
+            "path": "src/Sample.Worker/Program.cs",
+            "start_line": 77,
+            "end_line": 62
+          },
+          "bytes": 456
+        }
+      ],
+      "full_source_response_bytes": 8346,
+      "compact_source_response_bytes": 4292,
+      "saved_bytes": 4054,
+      "reduction_percent": 48.57,
+      "structured_source_and_provenance_equal": true,
+      "graph_false_with_compiler_available": true
+    },
+    "server_stopped": true,
+    "frozen_archives_unchanged": {
+      "agent-journeys-worker18-20261001": "59103873e0233cc7a115ff879954cc217a9939a0d151f006f1dd4c219ce4392c",
+      "citation-lines-20261001": "fe96624364341e6bd991c9487784f1732c109ecc923073330735e9f0f63426b0"
+    },
+    "frozen_index_unchanged": true
+  },
+  "limitations": [
+    "Fixture response-size measurement, not a general compression or agent-quality claim.",
+    "Graph availability does not describe compiler or LSP support and may change after reload.",
+    "Catalog size and large compiler-response displays remain unchanged."
+  ],
+  "files": [
+    {
+      "path": "source/docs/adr/0062-source-discovery-capabilities.md.txt",
+      "sha256": "6d3aa0896b7537f15917bcce29bb4fd73aaf8380ff1e3e1c43cc3abb01e42e8c",
+      "bytes": 2792
+    },
+    {
+      "path": "source/docs/plans/semantic-intelligence/DELIVERY.md.txt",
+      "sha256": "d48c9df5549adf9f8e265e3d27f22b13f9ddb86124b00654ad031057013c9495",
+      "bytes": 73452
+    },
+    {
+      "path": "source/docs/plans/semantic-intelligence/PROGRAM.md.txt",
+      "sha256": "a5d877044c869f3ee8323ca1675b166bf305c711d069d89b23e8db7753c8d19c",
+      "bytes": 34100
+    },
+    {
+      "path": "source/internal/graph/serve/graphdiscovery.go.txt",
+      "sha256": "49df9d2787f8fc5afe54cea03bbe54a61a9a77aee265180d41bf080fc80747a1",
+      "bytes": 21040
+    },
+    {
+      "path": "source/internal/graph/serve/graphdiscovery_test.go.txt",
+      "sha256": "865a64bde8de5bcc50b66e3e99ecfc38165906b0153006edfba9bf5e689148bb",
+      "bytes": 14680
+    },
+    {
+      "path": "source/internal/graph/serve/source_tools_test.go.txt",
+      "sha256": "6e7b0e72406676c37b5c62f9e213e7eda02ad1a469c09a98d6e1b9b92a814cd1",
+      "bytes": 4526
+    },
+    {
+      "path": "source/internal/mcp/contract_test.go.txt",
+      "sha256": "a8cad6eccbcf7f7251cc050644cc5a8f94ae6e425b6db54c510e64884c1725d5",
+      "bytes": 15952
+    },
+    {
+      "path": "source/internal/mcp/contracts.go.txt",
+      "sha256": "c0fdd669fbd5a426f543f0bc69a9a6904a034cc4b33a11bc98e29a501eddd49b",
+      "bytes": 10940
+    },
+    {
+      "path": "source/internal/mcp/sdkserver.go.txt",
+      "sha256": "48b136e2c1bb44842a5e8dc759054e22c2c8a696b4366cfd33d6f37bb2a0b563",
+      "bytes": 11096
+    },
+    {
+      "path": "source/research/semantic-intelligence/COMPACT-DISCOVERY-ACCEPTANCE.md.txt",
+      "sha256": "ee4a92695c8cd4433d57be084bbda291cb38ad18117c5635f2f3147e022756c8",
+      "bytes": 1880
+    },
+    {
+      "path": "validation/001.request.json",
+      "sha256": "397127efd07d024e01fe060e19681ed7575ef40a65e3c4ad7a4138f2db93f98c",
+      "bytes": 125
+    },
+    {
+      "path": "validation/001.response.raw",
+      "sha256": "bff6b9c4c8c7479bf3a2695a53935fc07bf6e52716431bf6b104e9d285e27abd",
+      "bytes": 409
+    },
+    {
+      "path": "validation/002.request.json",
+      "sha256": "ceca45e80c229e6870c9f5fd7117bf9a76aac969f999ecd26a5fe47f282f9caf",
+      "bytes": 207
+    },
+    {
+      "path": "validation/002.response.raw",
+      "sha256": "98b6856f5d92764e01d1a35befa659660b52afa43abec863eea488206ae2e0df",
+      "bytes": 8346
+    },
+    {
+      "path": "validation/003.request.json",
+      "sha256": "c4056017b2deb586aadc83ac21b319d4cf1cc317bd939382afd4ff364a3e1e38",
+      "bytes": 237
+    },
+    {
+      "path": "validation/003.response.raw",
+      "sha256": "f2ec2ff024cdf3a30b746723abdbbca809697c06daf3c19b08b5a8fef3ada989",
+      "bytes": 4292
+    },
+    {
+      "path": "validation/004.request.json",
+      "sha256": "a4ce8e0fdf067fc4e89616cff84bb404344659a4b39ec6942afa7ec9072a3de5",
+      "bytes": 283
+    },
+    {
+      "path": "validation/004.response.raw",
+      "sha256": "c50aa1d398da299316dba44d312cb260d202691de1b6a6e125c123d94db2dab6",
+      "bytes": 746
+    },
+    {
+      "path": "validation/005.request.json",
+      "sha256": "4cbfec8c8787ff1ab6c7f22971257903823bc2344a638620da41f866fdcb6207",
+      "bytes": 168
+    },
+    {
+      "path": "validation/005.response.raw",
+      "sha256": "be82eb6b8665922dbba0f88b33f9a0dec9f9b5b339c84ab3545fec67c801f1eb",
+      "bytes": 464
+    },
+    {
+      "path": "validation/006.request.json",
+      "sha256": "9d8961238c9801f2cad0b64a54dc8cd48d4c4bf6172d59b0215b70254e713f54",
+      "bytes": 248
+    },
+    {
+      "path": "validation/006.response.raw",
+      "sha256": "ee529bd001385a8b7157adf4f66ad832d521f9876799c22cb7192d3df306816a",
+      "bytes": 13265
+    },
+    {
+      "path": "validation/007.request.json",
+      "sha256": "a7415b003513c938318fcb92cd0ce6640841813fcebec707fd4e2fb78f9dbc10",
+      "bytes": 253
+    },
+    {
+      "path": "validation/007.response.raw",
+      "sha256": "8f7bbcc87e6c5a6aa9bfc017cf8dd046180391215c3423cdd86dda888948ae6a",
+      "bytes": 456
+    },
+    {
+      "path": "validation/check.py",
+      "sha256": "58990916829c8b24c81301973fabe406742ab3fe9f25aae29b0ef4f6ea78d0c8",
+      "bytes": 2613
+    },
+    {
+      "path": "validation/check.stdout",
+      "sha256": "2735692a67a82ab04b90d97f7d161b2d0c824e42d02b6f1fb6439869705e03b5",
+      "bytes": 1632
+    },
+    {
+      "path": "validation/go-race.log",
+      "sha256": "0676935983d3119a46ff6194b7316be30cfbd4030fa915578782672d6241bbd3",
+      "bytes": 72
+    },
+    {
+      "path": "validation/go-test.log",
+      "sha256": "b07e42b16eba5da83f710a47c68ad5aaa36ed59158ec88e7089c3118a70b2abf",
+      "bytes": 2677
+    },
+    {
+      "path": "validation/go-vet.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "validation/report.json",
+      "sha256": "644ad507f6a6f8dd505f46c96b080a43bcfdb0f1e48e92d23179997515f3bbe5",
+      "bytes": 1631
+    },
+    {
+      "path": "validation/server.stderr",
+      "sha256": "62be6e33c52bc553cffcb2dd30bdfe12620f650b047b91903a3604f52370a917",
+      "bytes": 2421
+    },
+    {
+      "path": "validation/server.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ]
+}

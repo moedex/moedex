@@ -1,0 +1,83 @@
+{
+  "classification": "root_authored_development_analysis_not_independent_solver_answer",
+  "answer": "The saga correlates RegistrationSubmitted by RegistrationId, copies fields, transitions to Registered and configures publication of SendRegistrationEmail. The worker configures SendRegistrationEmailConsumer. Its Consume method logs information and returns Task.CompletedTask; this code does not demonstrate sending an email.",
+  "evidence": [
+    {
+      "subject": "RegistrationStateMachine",
+      "snippet": "RegistrationSubmitted",
+      "citations": [
+        {
+          "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+          "line": 14,
+          "text": "Event(() => RegistrationSubmitted, x => x.CorrelateById(m => m.Message.RegistrationId));"
+        },
+        {
+          "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+          "line": 17,
+          "text": "When(RegistrationSubmitted)"
+        },
+        {
+          "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+          "line": 47,
+          "text": "public Event<RegistrationSubmitted> RegistrationSubmitted { get; } = null!;"
+        }
+      ]
+    },
+    {
+      "subject": "RegistrationStateMachine",
+      "snippet": "Publish(context => new SendRegistrationEmail",
+      "citations": [
+        {
+          "path": "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+          "line": 26,
+          "text": ".Publish(context => new SendRegistrationEmail"
+        }
+      ]
+    },
+    {
+      "subject": "SendRegistrationEmailConsumer",
+      "snippet": "IConsumer<SendRegistrationEmail>",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+          "line": 9,
+          "text": "IConsumer<SendRegistrationEmail>"
+        }
+      ]
+    },
+    {
+      "subject": "SendRegistrationEmailConsumer",
+      "snippet": "LogInformation",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+          "line": 20,
+          "text": "_logger.LogInformation(\"Notifying Member {MemberId} that they registered for event {EventId} on {RegistrationDate}\", context.Message.MemberId,"
+        }
+      ]
+    },
+    {
+      "subject": "SendRegistrationEmailConsumer",
+      "snippet": "Task.CompletedTask",
+      "citations": [
+        {
+          "path": "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+          "line": 23,
+          "text": "return Task.CompletedTask;"
+        }
+      ]
+    },
+    {
+      "subject": "Program",
+      "snippet": "AddConsumer<SendRegistrationEmailConsumer>",
+      "citations": [
+        {
+          "path": "src/Sample.Worker/Program.cs",
+          "line": 75,
+          "text": "x.AddConsumer<SendRegistrationEmailConsumer>();"
+        }
+      ]
+    }
+  ],
+  "review_note": "Root has prior source-gold knowledge; assertions and analysis are not blind quality scores."
+}

@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"compiler_binding_at","arguments":{"repo":"Sample-Outbox","path":"src/Sample.Components/IRegistrationService.cs","byte_offset":93,"context_id":"context:02442a9012ab09e234a13af373e99a07a2b7ad9556a7b9dfc3c6f866c016165f","raw_sha256":"c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71"}}}

@@ -1,0 +1,44 @@
+{
+  "task": "locate-retry",
+  "reviewer": "root",
+  "reviewed_utc": "2026-10-02T01:58:48.979097+00:00",
+  "answer_sha256": "9aa5cf4353f0f326b2d9625492e59cc4b76d3c7aa1d93954d02aca2052dabfc9",
+  "atoms": [
+    {
+      "id": "locate-retry.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Initial RegistrationSubmitted handler located with exact 16-17 and 33-34 citations; responses 002/003."
+    },
+    {
+      "id": "locate-retry.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Exact conjunctive payment and retry predicate, including payment=50 exclusion, explicitly quoted."
+    },
+    {
+      "id": "locate-retry.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "ApplicationException quoted and deterministic nature distinguished from its random message."
+    },
+    {
+      "id": "locate-retry.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Email-before and attendee-after configured activity order stated and cited at 26-40."
+    },
+    {
+      "id": "locate-retry.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "All eight literal intervals reproduced and supported by response 002 definition lines 12-14."
+    }
+  ],
+  "correctness": 5,
+  "evidence": 5,
+  "possible": 5,
+  "unsupported_claims": [],
+  "strict_success": true,
+  "isolation_audit": "Solver attestation and logged RPCs available; full model/tool activity not exposed to root, so host isolation is not independently verified."
+}

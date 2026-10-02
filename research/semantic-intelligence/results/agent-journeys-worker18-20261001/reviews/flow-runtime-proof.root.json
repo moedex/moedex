@@ -1,0 +1,44 @@
+{
+  "task": "flow-runtime-proof",
+  "reviewer": "root",
+  "reviewed_utc": "2026-10-02T02:15:00.216353+00:00",
+  "answer_sha256": "322dcde71fc1e902f8dab74f514ac81b0a7a877d4085a84676795354e9c5de92",
+  "atoms": [
+    {
+      "id": "flow-runtime-proof.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicit no exactly-one actual-email proof with precise email consumer citation; response 005."
+    },
+    {
+      "id": "flow-runtime-proof.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "HTTP OK after awaited service/save separated from downstream delivery acknowledgment; controller and service responses 003/004 cited."
+    },
+    {
+      "id": "flow-runtime-proof.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Logging-only consumer and CompletedTask accurately described at 18-23."
+    },
+    {
+      "id": "flow-runtime-proof.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "API/worker outbox and retry configuration identified with precise supporting ranges; responses 007-009."
+    },
+    {
+      "id": "flow-runtime-proof.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Deployed configuration, active endpoints, correlated processing and provider delivery evidence explicitly identified as missing, with source limitations supported by consumer/configuration citations."
+    }
+  ],
+  "correctness": 5,
+  "evidence": 5,
+  "possible": 5,
+  "unsupported_claims": [],
+  "strict_success": true,
+  "isolation_audit": "Solver attestation and logged RPCs available; full model/tool activity not exposed to root, so host isolation is not independently verified."
+}

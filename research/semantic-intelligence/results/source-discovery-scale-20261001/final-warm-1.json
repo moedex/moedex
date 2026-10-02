@@ -1,0 +1,32 @@
+{
+  "command": [
+    "/usr/bin/env",
+    "MOEDEX_SOURCE_SCALE_DIR=.local/source-discovery-scale/shards",
+    "MOEDEX_SOURCE_SCALE_REPORT=.local/source-discovery-scale/final-warm-1-report.json",
+    ".local/source-discovery-scale/final.test",
+    "-test.run",
+    "^TestPinnedRoslynSourceScale$",
+    "-test.v"
+  ],
+  "cwd": "/Users/zakkeown/Code/moedex",
+  "environment": {
+    "PATH": "/usr/bin:/bin",
+    "HOME": "/Users/zakkeown/Code/moedex/.local/source-discovery-scale/home",
+    "TMPDIR": "/Users/zakkeown/Code/moedex/.local/source-discovery-scale/tmp",
+    "GOMAXPROCS": "2",
+    "GOMEMLIMIT": "4GiB"
+  },
+  "started_utc": "2026-10-01T18:52:03.812508+00:00",
+  "elapsed_seconds": 3.8121132500000385,
+  "exit_code": 0,
+  "stop_reasons": [],
+  "timeout_seconds": 180,
+  "max_log_bytes": 16777216,
+  "memory_metric": "macos_physical_footprint",
+  "max_memory_bytes": 8589934592,
+  "sampled_peak_memory_bytes": 2906245856,
+  "memory_samples": 15,
+  "sample_interval_seconds": 0.25,
+  "memory_scope": "direct child only",
+  "runner_sha256": "65eedda0b780ec22cf4a948f83c16f05953b176d7bdd0eec8abe20bc242a6e18"
+}

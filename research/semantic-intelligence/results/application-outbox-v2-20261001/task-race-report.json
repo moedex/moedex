@@ -1,0 +1,2354 @@
+[
+  {
+    "task": "submitted-message",
+    "contexts": [
+      "context:f27e60c5fdd6a5b58770d76301e4ee16e6e3195f2c8794e24efb8339d3973870",
+      "context:b7f8978ac9c14984339660f3256f8d1d10aa596d27444e3c32c9e52a8b14f5ea",
+      "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be"
+    ],
+    "baseline": {
+      "calls": 4,
+      "complete_response_bytes": 9577,
+      "structured_content_bytes": 8520,
+      "evidence": {
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:0102901069380fcd7bd7e1d089c24bc05f8afb805146be2c9bcd12532be46516\",\"source_id\":\"source:8390a09eb8108466f2d895b15327dfc0bb1dd84e00fddeffad681e4a7646bfc4\",\"path\":\"src/Sample.Components/RegistrationService.cs\",\"raw_sha256\":\"4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643\",\"byte_offset\":931,\"byte_length\":7,\"generated\":false,\"reference_kind\":\"invocation\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa\",\"descriptor\":\"M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"message\"],\"Fact\":{\"kind\":\"message_publish\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"message\",\"symbol\":{\"id\":\"symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.RegistrationSubmitted\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:0102901069380fcd7bd7e1d089c24bc05f8afb805146be2c9bcd12532be46516",
+            "source_id": "source:8390a09eb8108466f2d895b15327dfc0bb1dd84e00fddeffad681e4a7646bfc4",
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+            "byte_offset": 931,
+            "byte_length": 7,
+            "generated": false,
+            "reference_kind": "invocation",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "message"
+          ],
+          "Fact": {
+            "kind": "message_publish",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        },
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:d7cbac010667161609af4b22b3b5da17b8238b878efcde57c32c9580144f2953\",\"source_id\":\"source:eafc47c8af4f6e3dbb931f49ea7167216f1a9e0a9b65fbe77fb3f53c8b178e22\",\"path\":\"src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs\",\"raw_sha256\":\"5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81\",\"byte_offset\":160,\"byte_length\":9,\"generated\":false,\"reference_kind\":\"name\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa\",\"descriptor\":\"T:MassTransit.IConsumer`1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:90e831cbc7df9fad5491ccde2311dda181134b773c73d014bbab4e13f31fc10e\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Consumers.NotifyRegistrationConsumer\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"message\"],\"Fact\":{\"kind\":\"message_consumer\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"message\",\"symbol\":{\"id\":\"symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.RegistrationSubmitted\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:d7cbac010667161609af4b22b3b5da17b8238b878efcde57c32c9580144f2953",
+            "source_id": "source:eafc47c8af4f6e3dbb931f49ea7167216f1a9e0a9b65fbe77fb3f53c8b178e22",
+            "path": "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+            "raw_sha256": "5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81",
+            "byte_offset": 160,
+            "byte_length": 9,
+            "generated": false,
+            "reference_kind": "name",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "T:MassTransit.IConsumer`1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:90e831cbc7df9fad5491ccde2311dda181134b773c73d014bbab4e13f31fc10e",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Consumers.NotifyRegistrationConsumer",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "message"
+          ],
+          "Fact": {
+            "kind": "message_consumer",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "definitions": {
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:8c138aa4997e9cb7fed78297ba98cc41e82313ff48a59c12c53e9df7f087ab2f\",\"source_id\":\"source:29a57d2ab4e26ea6e45d1ae3babfd43958b305a3d5d914e95a4cfe0ceb799552\",\"path\":\"src/Sample.Components/Contracts/RegistrationSubmitted.cs\",\"raw_sha256\":\"0f659a342b91338f1aca4f547bebebe11e65d42c5606a3b7164f74ce46d63bf0\",\"byte_offset\":54,\"byte_length\":21,\"generated\":false,\"reference_kind\":\"declaration\",\"role\":\"declaration\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"Symbol\":{\"id\":\"symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.RegistrationSubmitted\",\"descriptor_kind\":\"documentation_comment_id\"}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:8c138aa4997e9cb7fed78297ba98cc41e82313ff48a59c12c53e9df7f087ab2f",
+            "source_id": "source:29a57d2ab4e26ea6e45d1ae3babfd43958b305a3d5d914e95a4cfe0ceb799552",
+            "path": "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+            "raw_sha256": "0f659a342b91338f1aca4f547bebebe11e65d42c5606a3b7164f74ce46d63bf0",
+            "byte_offset": 54,
+            "byte_length": 21,
+            "generated": false,
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "Symbol": {
+            "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      }
+    },
+    "candidate": {
+      "calls": 1,
+      "complete_response_bytes": 6862,
+      "structured_content_bytes": 6508,
+      "evidence": {
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:0102901069380fcd7bd7e1d089c24bc05f8afb805146be2c9bcd12532be46516\",\"source_id\":\"source:8390a09eb8108466f2d895b15327dfc0bb1dd84e00fddeffad681e4a7646bfc4\",\"path\":\"src/Sample.Components/RegistrationService.cs\",\"raw_sha256\":\"4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643\",\"byte_offset\":931,\"byte_length\":7,\"generated\":false,\"reference_kind\":\"invocation\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa\",\"descriptor\":\"M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"message\"],\"Fact\":{\"kind\":\"message_publish\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"message\",\"symbol\":{\"id\":\"symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.RegistrationSubmitted\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:0102901069380fcd7bd7e1d089c24bc05f8afb805146be2c9bcd12532be46516",
+            "source_id": "source:8390a09eb8108466f2d895b15327dfc0bb1dd84e00fddeffad681e4a7646bfc4",
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+            "byte_offset": 931,
+            "byte_length": 7,
+            "generated": false,
+            "reference_kind": "invocation",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "message"
+          ],
+          "Fact": {
+            "kind": "message_publish",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        },
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:d7cbac010667161609af4b22b3b5da17b8238b878efcde57c32c9580144f2953\",\"source_id\":\"source:eafc47c8af4f6e3dbb931f49ea7167216f1a9e0a9b65fbe77fb3f53c8b178e22\",\"path\":\"src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs\",\"raw_sha256\":\"5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81\",\"byte_offset\":160,\"byte_length\":9,\"generated\":false,\"reference_kind\":\"name\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa\",\"descriptor\":\"T:MassTransit.IConsumer`1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:90e831cbc7df9fad5491ccde2311dda181134b773c73d014bbab4e13f31fc10e\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Consumers.NotifyRegistrationConsumer\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"message\"],\"Fact\":{\"kind\":\"message_consumer\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"message\",\"symbol\":{\"id\":\"symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.RegistrationSubmitted\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:d7cbac010667161609af4b22b3b5da17b8238b878efcde57c32c9580144f2953",
+            "source_id": "source:eafc47c8af4f6e3dbb931f49ea7167216f1a9e0a9b65fbe77fb3f53c8b178e22",
+            "path": "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+            "raw_sha256": "5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81",
+            "byte_offset": 160,
+            "byte_length": 9,
+            "generated": false,
+            "reference_kind": "name",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "T:MassTransit.IConsumer`1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:90e831cbc7df9fad5491ccde2311dda181134b773c73d014bbab4e13f31fc10e",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Consumers.NotifyRegistrationConsumer",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "message"
+          ],
+          "Fact": {
+            "kind": "message_consumer",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "definitions": {
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:8c138aa4997e9cb7fed78297ba98cc41e82313ff48a59c12c53e9df7f087ab2f\",\"source_id\":\"source:29a57d2ab4e26ea6e45d1ae3babfd43958b305a3d5d914e95a4cfe0ceb799552\",\"path\":\"src/Sample.Components/Contracts/RegistrationSubmitted.cs\",\"raw_sha256\":\"0f659a342b91338f1aca4f547bebebe11e65d42c5606a3b7164f74ce46d63bf0\",\"byte_offset\":54,\"byte_length\":21,\"generated\":false,\"reference_kind\":\"declaration\",\"role\":\"declaration\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"Symbol\":{\"id\":\"symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.RegistrationSubmitted\",\"descriptor_kind\":\"documentation_comment_id\"}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:8c138aa4997e9cb7fed78297ba98cc41e82313ff48a59c12c53e9df7f087ab2f",
+            "source_id": "source:29a57d2ab4e26ea6e45d1ae3babfd43958b305a3d5d914e95a4cfe0ceb799552",
+            "path": "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+            "raw_sha256": "0f659a342b91338f1aca4f547bebebe11e65d42c5606a3b7164f74ce46d63bf0",
+            "byte_offset": 54,
+            "byte_length": 21,
+            "generated": false,
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "Symbol": {
+            "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      }
+    },
+    "equivalent": true
+  },
+  {
+    "task": "submitted-message",
+    "contexts": [
+      "context:f27e60c5fdd6a5b58770d76301e4ee16e6e3195f2c8794e24efb8339d3973870",
+      "context:b7f8978ac9c14984339660f3256f8d1d10aa596d27444e3c32c9e52a8b14f5ea",
+      "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3"
+    ],
+    "baseline": {
+      "calls": 4,
+      "complete_response_bytes": 9577,
+      "structured_content_bytes": 8520,
+      "evidence": {
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:0db28d30958b1de548c173e6ef5614690526c81c45c3ba8baedd12332e22291e\",\"source_id\":\"source:791ba2b0a3f0ddb48aa45325578e8b76fa237c97104e88affc909ad9da0278df\",\"path\":\"src/Sample.Components/RegistrationService.cs\",\"raw_sha256\":\"4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643\",\"byte_offset\":931,\"byte_length\":7,\"generated\":false,\"reference_kind\":\"invocation\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa\",\"descriptor\":\"M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"message\"],\"Fact\":{\"kind\":\"message_publish\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"message\",\"symbol\":{\"id\":\"symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.RegistrationSubmitted\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:0db28d30958b1de548c173e6ef5614690526c81c45c3ba8baedd12332e22291e",
+            "source_id": "source:791ba2b0a3f0ddb48aa45325578e8b76fa237c97104e88affc909ad9da0278df",
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+            "byte_offset": 931,
+            "byte_length": 7,
+            "generated": false,
+            "reference_kind": "invocation",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "message"
+          ],
+          "Fact": {
+            "kind": "message_publish",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        },
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:3ba59feceebda38fff91f54e5ce740711f9cb3d37bd22351eebda2cc1846bc81\",\"source_id\":\"source:a124e8c0936e763dd79d894cbbeefc3bd0da31b872b06a7372063e5b8c30e0a2\",\"path\":\"src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs\",\"raw_sha256\":\"5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81\",\"byte_offset\":160,\"byte_length\":9,\"generated\":false,\"reference_kind\":\"name\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa\",\"descriptor\":\"T:MassTransit.IConsumer`1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:90e831cbc7df9fad5491ccde2311dda181134b773c73d014bbab4e13f31fc10e\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Consumers.NotifyRegistrationConsumer\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"message\"],\"Fact\":{\"kind\":\"message_consumer\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"message\",\"symbol\":{\"id\":\"symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.RegistrationSubmitted\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:3ba59feceebda38fff91f54e5ce740711f9cb3d37bd22351eebda2cc1846bc81",
+            "source_id": "source:a124e8c0936e763dd79d894cbbeefc3bd0da31b872b06a7372063e5b8c30e0a2",
+            "path": "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+            "raw_sha256": "5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81",
+            "byte_offset": 160,
+            "byte_length": 9,
+            "generated": false,
+            "reference_kind": "name",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "T:MassTransit.IConsumer`1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:90e831cbc7df9fad5491ccde2311dda181134b773c73d014bbab4e13f31fc10e",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Consumers.NotifyRegistrationConsumer",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "message"
+          ],
+          "Fact": {
+            "kind": "message_consumer",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "definitions": {
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:cda6407b90298ab3b577196d723021ecd8b6a3cf2e70792226a8bbd4f2f5b2e7\",\"source_id\":\"source:c313e076dd6cf02db97c70c2e5863f2ddbe7ebfc0e4d58f03245d6c5007fda1e\",\"path\":\"src/Sample.Components/Contracts/RegistrationSubmitted.cs\",\"raw_sha256\":\"0f659a342b91338f1aca4f547bebebe11e65d42c5606a3b7164f74ce46d63bf0\",\"byte_offset\":54,\"byte_length\":21,\"generated\":false,\"reference_kind\":\"declaration\",\"role\":\"declaration\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"Symbol\":{\"id\":\"symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.RegistrationSubmitted\",\"descriptor_kind\":\"documentation_comment_id\"}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:cda6407b90298ab3b577196d723021ecd8b6a3cf2e70792226a8bbd4f2f5b2e7",
+            "source_id": "source:c313e076dd6cf02db97c70c2e5863f2ddbe7ebfc0e4d58f03245d6c5007fda1e",
+            "path": "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+            "raw_sha256": "0f659a342b91338f1aca4f547bebebe11e65d42c5606a3b7164f74ce46d63bf0",
+            "byte_offset": 54,
+            "byte_length": 21,
+            "generated": false,
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "Symbol": {
+            "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      }
+    },
+    "candidate": {
+      "calls": 1,
+      "complete_response_bytes": 6862,
+      "structured_content_bytes": 6508,
+      "evidence": {
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:0db28d30958b1de548c173e6ef5614690526c81c45c3ba8baedd12332e22291e\",\"source_id\":\"source:791ba2b0a3f0ddb48aa45325578e8b76fa237c97104e88affc909ad9da0278df\",\"path\":\"src/Sample.Components/RegistrationService.cs\",\"raw_sha256\":\"4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643\",\"byte_offset\":931,\"byte_length\":7,\"generated\":false,\"reference_kind\":\"invocation\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa\",\"descriptor\":\"M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"message\"],\"Fact\":{\"kind\":\"message_publish\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"message\",\"symbol\":{\"id\":\"symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.RegistrationSubmitted\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:0db28d30958b1de548c173e6ef5614690526c81c45c3ba8baedd12332e22291e",
+            "source_id": "source:791ba2b0a3f0ddb48aa45325578e8b76fa237c97104e88affc909ad9da0278df",
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+            "byte_offset": 931,
+            "byte_length": 7,
+            "generated": false,
+            "reference_kind": "invocation",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:4104bf2e3ab6ae706cfdcd5258b7d2c50327b8a8905778129e1a666a0226f487",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "M:MassTransit.IPublishEndpoint.Publish``1(``0,System.Threading.CancellationToken)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "message"
+          ],
+          "Fact": {
+            "kind": "message_publish",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        },
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:3ba59feceebda38fff91f54e5ce740711f9cb3d37bd22351eebda2cc1846bc81\",\"source_id\":\"source:a124e8c0936e763dd79d894cbbeefc3bd0da31b872b06a7372063e5b8c30e0a2\",\"path\":\"src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs\",\"raw_sha256\":\"5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81\",\"byte_offset\":160,\"byte_length\":9,\"generated\":false,\"reference_kind\":\"name\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa\",\"descriptor\":\"T:MassTransit.IConsumer`1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:90e831cbc7df9fad5491ccde2311dda181134b773c73d014bbab4e13f31fc10e\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Consumers.NotifyRegistrationConsumer\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"message\"],\"Fact\":{\"kind\":\"message_consumer\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"message\",\"symbol\":{\"id\":\"symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.RegistrationSubmitted\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:3ba59feceebda38fff91f54e5ce740711f9cb3d37bd22351eebda2cc1846bc81",
+            "source_id": "source:a124e8c0936e763dd79d894cbbeefc3bd0da31b872b06a7372063e5b8c30e0a2",
+            "path": "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+            "raw_sha256": "5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81",
+            "byte_offset": 160,
+            "byte_length": 9,
+            "generated": false,
+            "reference_kind": "name",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "T:MassTransit.IConsumer`1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:90e831cbc7df9fad5491ccde2311dda181134b773c73d014bbab4e13f31fc10e",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Consumers.NotifyRegistrationConsumer",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "message"
+          ],
+          "Fact": {
+            "kind": "message_consumer",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "definitions": {
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:cda6407b90298ab3b577196d723021ecd8b6a3cf2e70792226a8bbd4f2f5b2e7\",\"source_id\":\"source:c313e076dd6cf02db97c70c2e5863f2ddbe7ebfc0e4d58f03245d6c5007fda1e\",\"path\":\"src/Sample.Components/Contracts/RegistrationSubmitted.cs\",\"raw_sha256\":\"0f659a342b91338f1aca4f547bebebe11e65d42c5606a3b7164f74ce46d63bf0\",\"byte_offset\":54,\"byte_length\":21,\"generated\":false,\"reference_kind\":\"declaration\",\"role\":\"declaration\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"Symbol\":{\"id\":\"symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.RegistrationSubmitted\",\"descriptor_kind\":\"documentation_comment_id\"}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:cda6407b90298ab3b577196d723021ecd8b6a3cf2e70792226a8bbd4f2f5b2e7",
+            "source_id": "source:c313e076dd6cf02db97c70c2e5863f2ddbe7ebfc0e4d58f03245d6c5007fda1e",
+            "path": "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+            "raw_sha256": "0f659a342b91338f1aca4f547bebebe11e65d42c5606a3b7164f74ce46d63bf0",
+            "byte_offset": 54,
+            "byte_length": 21,
+            "generated": false,
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "Symbol": {
+            "id": "symbol:3be61a620e67b69fd30411ddb336f1d5f6b09a9e5695ec9f1ae33d86781fb374",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      }
+    },
+    "equivalent": true
+  },
+  {
+    "task": "attendee-message",
+    "contexts": [
+      "context:f27e60c5fdd6a5b58770d76301e4ee16e6e3195f2c8794e24efb8339d3973870",
+      "context:b7f8978ac9c14984339660f3256f8d1d10aa596d27444e3c32c9e52a8b14f5ea",
+      "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be"
+    ],
+    "baseline": {
+      "calls": 4,
+      "complete_response_bytes": 9443,
+      "structured_content_bytes": 8386,
+      "evidence": {
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:0db2c0ae0627caeb1be874a9d3c26a411109b945cc990c8f68d00f263ce44694\",\"source_id\":\"source:7c9bab041d85ec59ddf5b0c72e49cbc9f48f1b625eeb96a99f277f717ddd7115\",\"path\":\"src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs\",\"raw_sha256\":\"f7ae50324fc1b3c8fa3fec399e233b6e6e977b9458d348b834e5ced0f5fc6184\",\"byte_offset\":158,\"byte_length\":9,\"generated\":false,\"reference_kind\":\"name\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa\",\"descriptor\":\"T:MassTransit.IConsumer`1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:3fe7c0ae8f8db8444a913460063c48b72fdc7becc02137e32824772919bfd0f2\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Consumers.AddEventAttendeeConsumer\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"message\"],\"Fact\":{\"kind\":\"message_consumer\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"message\",\"symbol\":{\"id\":\"symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.AddEventAttendee\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:0db2c0ae0627caeb1be874a9d3c26a411109b945cc990c8f68d00f263ce44694",
+            "source_id": "source:7c9bab041d85ec59ddf5b0c72e49cbc9f48f1b625eeb96a99f277f717ddd7115",
+            "path": "src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+            "raw_sha256": "f7ae50324fc1b3c8fa3fec399e233b6e6e977b9458d348b834e5ced0f5fc6184",
+            "byte_offset": 158,
+            "byte_length": 9,
+            "generated": false,
+            "reference_kind": "name",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "T:MassTransit.IConsumer`1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:3fe7c0ae8f8db8444a913460063c48b72fdc7becc02137e32824772919bfd0f2",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Consumers.AddEventAttendeeConsumer",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "message"
+          ],
+          "Fact": {
+            "kind": "message_consumer",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        },
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:80737158a25fc701431af72b06f0a3f0f7ffdc0c5bb8a5e15772f75ecb2e66cc\",\"source_id\":\"source:c1e13ce4c20a689e05368ea294729ffc286ac7ac11ca88b06a92e5e119e45b94\",\"path\":\"src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs\",\"raw_sha256\":\"23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca\",\"byte_offset\":178,\"byte_length\":9,\"generated\":false,\"reference_kind\":\"name\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa\",\"descriptor\":\"T:MassTransit.IConsumer`1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:2400e7686b4a780b343614a3d2ccb19094cd80b97464fb8cf45abf89a2c64045\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Consumers.ValidateRegistrationConsumer\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"message\"],\"Fact\":{\"kind\":\"message_consumer\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"message\",\"symbol\":{\"id\":\"symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.AddEventAttendee\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:80737158a25fc701431af72b06f0a3f0f7ffdc0c5bb8a5e15772f75ecb2e66cc",
+            "source_id": "source:c1e13ce4c20a689e05368ea294729ffc286ac7ac11ca88b06a92e5e119e45b94",
+            "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+            "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca",
+            "byte_offset": 178,
+            "byte_length": 9,
+            "generated": false,
+            "reference_kind": "name",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "T:MassTransit.IConsumer`1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:2400e7686b4a780b343614a3d2ccb19094cd80b97464fb8cf45abf89a2c64045",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Consumers.ValidateRegistrationConsumer",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "message"
+          ],
+          "Fact": {
+            "kind": "message_consumer",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "definitions": {
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:f16093b0c107b3e7c8351b2dae2223097b5c621833aee3ac339132ab424b0b0f\",\"source_id\":\"source:bf445b577002c8256c660434893d022286369a72b9db3a2c8836b905dda421da\",\"path\":\"src/Sample.Components/Contracts/AddEventAttendee.cs\",\"raw_sha256\":\"bd97b1816fc8732ebba2f7cbb5b97cb29e8d878b13330ddf7fa94e55dea987cb\",\"byte_offset\":54,\"byte_length\":16,\"generated\":false,\"reference_kind\":\"declaration\",\"role\":\"declaration\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"Symbol\":{\"id\":\"symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.AddEventAttendee\",\"descriptor_kind\":\"documentation_comment_id\"}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:f16093b0c107b3e7c8351b2dae2223097b5c621833aee3ac339132ab424b0b0f",
+            "source_id": "source:bf445b577002c8256c660434893d022286369a72b9db3a2c8836b905dda421da",
+            "path": "src/Sample.Components/Contracts/AddEventAttendee.cs",
+            "raw_sha256": "bd97b1816fc8732ebba2f7cbb5b97cb29e8d878b13330ddf7fa94e55dea987cb",
+            "byte_offset": 54,
+            "byte_length": 16,
+            "generated": false,
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "Symbol": {
+            "id": "symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      }
+    },
+    "candidate": {
+      "calls": 1,
+      "complete_response_bytes": 6456,
+      "structured_content_bytes": 6102,
+      "evidence": {
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:0db2c0ae0627caeb1be874a9d3c26a411109b945cc990c8f68d00f263ce44694\",\"source_id\":\"source:7c9bab041d85ec59ddf5b0c72e49cbc9f48f1b625eeb96a99f277f717ddd7115\",\"path\":\"src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs\",\"raw_sha256\":\"f7ae50324fc1b3c8fa3fec399e233b6e6e977b9458d348b834e5ced0f5fc6184\",\"byte_offset\":158,\"byte_length\":9,\"generated\":false,\"reference_kind\":\"name\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa\",\"descriptor\":\"T:MassTransit.IConsumer`1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:3fe7c0ae8f8db8444a913460063c48b72fdc7becc02137e32824772919bfd0f2\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Consumers.AddEventAttendeeConsumer\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"message\"],\"Fact\":{\"kind\":\"message_consumer\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"message\",\"symbol\":{\"id\":\"symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.AddEventAttendee\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:0db2c0ae0627caeb1be874a9d3c26a411109b945cc990c8f68d00f263ce44694",
+            "source_id": "source:7c9bab041d85ec59ddf5b0c72e49cbc9f48f1b625eeb96a99f277f717ddd7115",
+            "path": "src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+            "raw_sha256": "f7ae50324fc1b3c8fa3fec399e233b6e6e977b9458d348b834e5ced0f5fc6184",
+            "byte_offset": 158,
+            "byte_length": 9,
+            "generated": false,
+            "reference_kind": "name",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "T:MassTransit.IConsumer`1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:3fe7c0ae8f8db8444a913460063c48b72fdc7becc02137e32824772919bfd0f2",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Consumers.AddEventAttendeeConsumer",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "message"
+          ],
+          "Fact": {
+            "kind": "message_consumer",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        },
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:80737158a25fc701431af72b06f0a3f0f7ffdc0c5bb8a5e15772f75ecb2e66cc\",\"source_id\":\"source:c1e13ce4c20a689e05368ea294729ffc286ac7ac11ca88b06a92e5e119e45b94\",\"path\":\"src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs\",\"raw_sha256\":\"23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca\",\"byte_offset\":178,\"byte_length\":9,\"generated\":false,\"reference_kind\":\"name\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa\",\"descriptor\":\"T:MassTransit.IConsumer`1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:2400e7686b4a780b343614a3d2ccb19094cd80b97464fb8cf45abf89a2c64045\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Consumers.ValidateRegistrationConsumer\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"message\"],\"Fact\":{\"kind\":\"message_consumer\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"message\",\"symbol\":{\"id\":\"symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.AddEventAttendee\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:80737158a25fc701431af72b06f0a3f0f7ffdc0c5bb8a5e15772f75ecb2e66cc",
+            "source_id": "source:c1e13ce4c20a689e05368ea294729ffc286ac7ac11ca88b06a92e5e119e45b94",
+            "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+            "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca",
+            "byte_offset": 178,
+            "byte_length": 9,
+            "generated": false,
+            "reference_kind": "name",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "T:MassTransit.IConsumer`1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:2400e7686b4a780b343614a3d2ccb19094cd80b97464fb8cf45abf89a2c64045",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Consumers.ValidateRegistrationConsumer",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "message"
+          ],
+          "Fact": {
+            "kind": "message_consumer",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "definitions": {
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:f16093b0c107b3e7c8351b2dae2223097b5c621833aee3ac339132ab424b0b0f\",\"source_id\":\"source:bf445b577002c8256c660434893d022286369a72b9db3a2c8836b905dda421da\",\"path\":\"src/Sample.Components/Contracts/AddEventAttendee.cs\",\"raw_sha256\":\"bd97b1816fc8732ebba2f7cbb5b97cb29e8d878b13330ddf7fa94e55dea987cb\",\"byte_offset\":54,\"byte_length\":16,\"generated\":false,\"reference_kind\":\"declaration\",\"role\":\"declaration\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"Symbol\":{\"id\":\"symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.AddEventAttendee\",\"descriptor_kind\":\"documentation_comment_id\"}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:f16093b0c107b3e7c8351b2dae2223097b5c621833aee3ac339132ab424b0b0f",
+            "source_id": "source:bf445b577002c8256c660434893d022286369a72b9db3a2c8836b905dda421da",
+            "path": "src/Sample.Components/Contracts/AddEventAttendee.cs",
+            "raw_sha256": "bd97b1816fc8732ebba2f7cbb5b97cb29e8d878b13330ddf7fa94e55dea987cb",
+            "byte_offset": 54,
+            "byte_length": 16,
+            "generated": false,
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "Symbol": {
+            "id": "symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      }
+    },
+    "equivalent": true
+  },
+  {
+    "task": "attendee-message",
+    "contexts": [
+      "context:f27e60c5fdd6a5b58770d76301e4ee16e6e3195f2c8794e24efb8339d3973870",
+      "context:b7f8978ac9c14984339660f3256f8d1d10aa596d27444e3c32c9e52a8b14f5ea",
+      "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3"
+    ],
+    "baseline": {
+      "calls": 4,
+      "complete_response_bytes": 9443,
+      "structured_content_bytes": 8386,
+      "evidence": {
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:3c33798851140b694d8da29ba27cb2e78b3689d58a42d54baa13cbee9bdf3ed4\",\"source_id\":\"source:d3b3e4a4bb9266e62ae16f0cb39fd08d4c302d877152eb645afb249502f87c73\",\"path\":\"src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs\",\"raw_sha256\":\"23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca\",\"byte_offset\":178,\"byte_length\":9,\"generated\":false,\"reference_kind\":\"name\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa\",\"descriptor\":\"T:MassTransit.IConsumer`1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:2400e7686b4a780b343614a3d2ccb19094cd80b97464fb8cf45abf89a2c64045\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Consumers.ValidateRegistrationConsumer\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"message\"],\"Fact\":{\"kind\":\"message_consumer\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"message\",\"symbol\":{\"id\":\"symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.AddEventAttendee\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:3c33798851140b694d8da29ba27cb2e78b3689d58a42d54baa13cbee9bdf3ed4",
+            "source_id": "source:d3b3e4a4bb9266e62ae16f0cb39fd08d4c302d877152eb645afb249502f87c73",
+            "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+            "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca",
+            "byte_offset": 178,
+            "byte_length": 9,
+            "generated": false,
+            "reference_kind": "name",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "T:MassTransit.IConsumer`1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:2400e7686b4a780b343614a3d2ccb19094cd80b97464fb8cf45abf89a2c64045",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Consumers.ValidateRegistrationConsumer",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "message"
+          ],
+          "Fact": {
+            "kind": "message_consumer",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        },
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:e24f253d3f7f53c0dc73e3441b96404d208bee164a55d059c30147c346cab43b\",\"source_id\":\"source:320e9561adda49cab12906c0da578974920f4713c54a68b97f1ad3d742569937\",\"path\":\"src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs\",\"raw_sha256\":\"f7ae50324fc1b3c8fa3fec399e233b6e6e977b9458d348b834e5ced0f5fc6184\",\"byte_offset\":158,\"byte_length\":9,\"generated\":false,\"reference_kind\":\"name\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa\",\"descriptor\":\"T:MassTransit.IConsumer`1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:3fe7c0ae8f8db8444a913460063c48b72fdc7becc02137e32824772919bfd0f2\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Consumers.AddEventAttendeeConsumer\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"message\"],\"Fact\":{\"kind\":\"message_consumer\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"message\",\"symbol\":{\"id\":\"symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.AddEventAttendee\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:e24f253d3f7f53c0dc73e3441b96404d208bee164a55d059c30147c346cab43b",
+            "source_id": "source:320e9561adda49cab12906c0da578974920f4713c54a68b97f1ad3d742569937",
+            "path": "src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+            "raw_sha256": "f7ae50324fc1b3c8fa3fec399e233b6e6e977b9458d348b834e5ced0f5fc6184",
+            "byte_offset": 158,
+            "byte_length": 9,
+            "generated": false,
+            "reference_kind": "name",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "T:MassTransit.IConsumer`1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:3fe7c0ae8f8db8444a913460063c48b72fdc7becc02137e32824772919bfd0f2",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Consumers.AddEventAttendeeConsumer",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "message"
+          ],
+          "Fact": {
+            "kind": "message_consumer",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "definitions": {
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:f39e4dc4664a4873aefb09c6b61367062e99fbfdc70588167ca5bcf9415278fe\",\"source_id\":\"source:533a4fa16b662d122fecd873f683aa6afd3fd0a7c13a4db547452a011a6e4aa5\",\"path\":\"src/Sample.Components/Contracts/AddEventAttendee.cs\",\"raw_sha256\":\"bd97b1816fc8732ebba2f7cbb5b97cb29e8d878b13330ddf7fa94e55dea987cb\",\"byte_offset\":54,\"byte_length\":16,\"generated\":false,\"reference_kind\":\"declaration\",\"role\":\"declaration\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"Symbol\":{\"id\":\"symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.AddEventAttendee\",\"descriptor_kind\":\"documentation_comment_id\"}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:f39e4dc4664a4873aefb09c6b61367062e99fbfdc70588167ca5bcf9415278fe",
+            "source_id": "source:533a4fa16b662d122fecd873f683aa6afd3fd0a7c13a4db547452a011a6e4aa5",
+            "path": "src/Sample.Components/Contracts/AddEventAttendee.cs",
+            "raw_sha256": "bd97b1816fc8732ebba2f7cbb5b97cb29e8d878b13330ddf7fa94e55dea987cb",
+            "byte_offset": 54,
+            "byte_length": 16,
+            "generated": false,
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "Symbol": {
+            "id": "symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      }
+    },
+    "candidate": {
+      "calls": 1,
+      "complete_response_bytes": 6460,
+      "structured_content_bytes": 6106,
+      "evidence": {
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:3c33798851140b694d8da29ba27cb2e78b3689d58a42d54baa13cbee9bdf3ed4\",\"source_id\":\"source:d3b3e4a4bb9266e62ae16f0cb39fd08d4c302d877152eb645afb249502f87c73\",\"path\":\"src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs\",\"raw_sha256\":\"23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca\",\"byte_offset\":178,\"byte_length\":9,\"generated\":false,\"reference_kind\":\"name\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa\",\"descriptor\":\"T:MassTransit.IConsumer`1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:2400e7686b4a780b343614a3d2ccb19094cd80b97464fb8cf45abf89a2c64045\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Consumers.ValidateRegistrationConsumer\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"message\"],\"Fact\":{\"kind\":\"message_consumer\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"message\",\"symbol\":{\"id\":\"symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.AddEventAttendee\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:3c33798851140b694d8da29ba27cb2e78b3689d58a42d54baa13cbee9bdf3ed4",
+            "source_id": "source:d3b3e4a4bb9266e62ae16f0cb39fd08d4c302d877152eb645afb249502f87c73",
+            "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+            "raw_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca",
+            "byte_offset": 178,
+            "byte_length": 9,
+            "generated": false,
+            "reference_kind": "name",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "T:MassTransit.IConsumer`1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:2400e7686b4a780b343614a3d2ccb19094cd80b97464fb8cf45abf89a2c64045",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Consumers.ValidateRegistrationConsumer",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "message"
+          ],
+          "Fact": {
+            "kind": "message_consumer",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        },
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:e24f253d3f7f53c0dc73e3441b96404d208bee164a55d059c30147c346cab43b\",\"source_id\":\"source:320e9561adda49cab12906c0da578974920f4713c54a68b97f1ad3d742569937\",\"path\":\"src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs\",\"raw_sha256\":\"f7ae50324fc1b3c8fa3fec399e233b6e6e977b9458d348b834e5ced0f5fc6184\",\"byte_offset\":158,\"byte_length\":9,\"generated\":false,\"reference_kind\":\"name\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa\",\"descriptor\":\"T:MassTransit.IConsumer`1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:3fe7c0ae8f8db8444a913460063c48b72fdc7becc02137e32824772919bfd0f2\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Consumers.AddEventAttendeeConsumer\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"message\"],\"Fact\":{\"kind\":\"message_consumer\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"message\",\"symbol\":{\"id\":\"symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.AddEventAttendee\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:e24f253d3f7f53c0dc73e3441b96404d208bee164a55d059c30147c346cab43b",
+            "source_id": "source:320e9561adda49cab12906c0da578974920f4713c54a68b97f1ad3d742569937",
+            "path": "src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+            "raw_sha256": "f7ae50324fc1b3c8fa3fec399e233b6e6e977b9458d348b834e5ced0f5fc6184",
+            "byte_offset": 158,
+            "byte_length": 9,
+            "generated": false,
+            "reference_kind": "name",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:c184dad342410ec97ae97a0eaada1079b377bd2ac7c6cb250dad564816b5c885",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MassTransit.Abstractions, Version=8.2.4.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa",
+            "descriptor": "T:MassTransit.IConsumer`1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:3fe7c0ae8f8db8444a913460063c48b72fdc7becc02137e32824772919bfd0f2",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Consumers.AddEventAttendeeConsumer",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "message"
+          ],
+          "Fact": {
+            "kind": "message_consumer",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "message",
+                "symbol": {
+                  "id": "symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "definitions": {
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:f39e4dc4664a4873aefb09c6b61367062e99fbfdc70588167ca5bcf9415278fe\",\"source_id\":\"source:533a4fa16b662d122fecd873f683aa6afd3fd0a7c13a4db547452a011a6e4aa5\",\"path\":\"src/Sample.Components/Contracts/AddEventAttendee.cs\",\"raw_sha256\":\"bd97b1816fc8732ebba2f7cbb5b97cb29e8d878b13330ddf7fa94e55dea987cb\",\"byte_offset\":54,\"byte_length\":16,\"generated\":false,\"reference_kind\":\"declaration\",\"role\":\"declaration\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"Symbol\":{\"id\":\"symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Contracts.AddEventAttendee\",\"descriptor_kind\":\"documentation_comment_id\"}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:f39e4dc4664a4873aefb09c6b61367062e99fbfdc70588167ca5bcf9415278fe",
+            "source_id": "source:533a4fa16b662d122fecd873f683aa6afd3fd0a7c13a4db547452a011a6e4aa5",
+            "path": "src/Sample.Components/Contracts/AddEventAttendee.cs",
+            "raw_sha256": "bd97b1816fc8732ebba2f7cbb5b97cb29e8d878b13330ddf7fa94e55dea987cb",
+            "byte_offset": 54,
+            "byte_length": 16,
+            "generated": false,
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "Symbol": {
+            "id": "symbol:8bf67262b9c799812bc7ff47f23a42270eb8a40955c676a2fe17ce2f933d29bb",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      }
+    },
+    "equivalent": true
+  },
+  {
+    "task": "registration-entity",
+    "contexts": [
+      "context:f27e60c5fdd6a5b58770d76301e4ee16e6e3195f2c8794e24efb8339d3973870",
+      "context:b7f8978ac9c14984339660f3256f8d1d10aa596d27444e3c32c9e52a8b14f5ea",
+      "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be"
+    ],
+    "baseline": {
+      "calls": 4,
+      "complete_response_bytes": 9460,
+      "structured_content_bytes": 8403,
+      "evidence": {
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:1eaee940a798c97a55499607bcbcf73f02273318ad385f61f71ef5fe4b2fd21c\",\"source_id\":\"source:4c331ce3d93622506f49a5211f4afba65be2b400f13f333fa253d537922f857e\",\"path\":\"src/Sample.Components/RegistrationDbContext.cs\",\"raw_sha256\":\"ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef\",\"byte_offset\":966,\"byte_length\":6,\"generated\":false,\"reference_kind\":\"invocation\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:7907c8a2aaa84590f309a93d4578b8fe516d496bb2da044d3d6e0a9cd98364b3\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60\",\"descriptor\":\"M:Microsoft.EntityFrameworkCore.ModelBuilder.Entity``1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:80d0dd98ca350e24f7395e7742ad9cf33db63c5c23624798064f10782478f78a\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"M:Sample.Components.RegistrationDbContext.MapRegistration(Microsoft.EntityFrameworkCore.ModelBuilder)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"entity\"],\"Fact\":{\"kind\":\"storage_entity_mapping\",\"rule\":\"csharp-framework-v2\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"entity\",\"symbol\":{\"id\":\"symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Registration\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:1eaee940a798c97a55499607bcbcf73f02273318ad385f61f71ef5fe4b2fd21c",
+            "source_id": "source:4c331ce3d93622506f49a5211f4afba65be2b400f13f333fa253d537922f857e",
+            "path": "src/Sample.Components/RegistrationDbContext.cs",
+            "raw_sha256": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef",
+            "byte_offset": 966,
+            "byte_length": 6,
+            "generated": false,
+            "reference_kind": "invocation",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:7907c8a2aaa84590f309a93d4578b8fe516d496bb2da044d3d6e0a9cd98364b3",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+            "descriptor": "M:Microsoft.EntityFrameworkCore.ModelBuilder.Entity``1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:80d0dd98ca350e24f7395e7742ad9cf33db63c5c23624798064f10782478f78a",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.RegistrationDbContext.MapRegistration(Microsoft.EntityFrameworkCore.ModelBuilder)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "entity"
+          ],
+          "Fact": {
+            "kind": "storage_entity_mapping",
+            "rule": "csharp-framework-v2",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "entity",
+                "symbol": {
+                  "id": "symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Registration",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        },
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:cd30f874868a168346d81be40a38b11e02bf965b7e8b4d9d04f26d2d20663935\",\"source_id\":\"source:8390a09eb8108466f2d895b15327dfc0bb1dd84e00fddeffad681e4a7646bfc4\",\"path\":\"src/Sample.Components/RegistrationService.cs\",\"raw_sha256\":\"4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643\",\"byte_offset\":855,\"byte_length\":3,\"generated\":false,\"reference_kind\":\"invocation\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:20c017a4a6cf790156caec30d22ed4beb92eb52da5a7408f63d4f8d0cf5f4493\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60\",\"descriptor\":\"M:Microsoft.EntityFrameworkCore.DbContext.Set``1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"entity\"],\"Fact\":{\"kind\":\"storage_entity_use\",\"rule\":\"csharp-framework-v2\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"entity\",\"symbol\":{\"id\":\"symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Registration\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:cd30f874868a168346d81be40a38b11e02bf965b7e8b4d9d04f26d2d20663935",
+            "source_id": "source:8390a09eb8108466f2d895b15327dfc0bb1dd84e00fddeffad681e4a7646bfc4",
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+            "byte_offset": 855,
+            "byte_length": 3,
+            "generated": false,
+            "reference_kind": "invocation",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:20c017a4a6cf790156caec30d22ed4beb92eb52da5a7408f63d4f8d0cf5f4493",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+            "descriptor": "M:Microsoft.EntityFrameworkCore.DbContext.Set``1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "entity"
+          ],
+          "Fact": {
+            "kind": "storage_entity_use",
+            "rule": "csharp-framework-v2",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "entity",
+                "symbol": {
+                  "id": "symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Registration",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "definitions": {
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:d09b48005fdba80f871b4d97d1b952365c67c37e19e6e10d41d70b71edc878fa\",\"source_id\":\"source:51394c630470b598a11be0f680d63d929b0788b81c1da00af725c4968f3c3ff4\",\"path\":\"src/Sample.Components/Registration.cs\",\"raw_sha256\":\"84db43f9d9292799c5685e2ccb54a2eba4400681f5e87edd5e8b3d5f360ad8b4\",\"byte_offset\":43,\"byte_length\":12,\"generated\":false,\"reference_kind\":\"declaration\",\"role\":\"declaration\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"Symbol\":{\"id\":\"symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Registration\",\"descriptor_kind\":\"documentation_comment_id\"}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:d09b48005fdba80f871b4d97d1b952365c67c37e19e6e10d41d70b71edc878fa",
+            "source_id": "source:51394c630470b598a11be0f680d63d929b0788b81c1da00af725c4968f3c3ff4",
+            "path": "src/Sample.Components/Registration.cs",
+            "raw_sha256": "84db43f9d9292799c5685e2ccb54a2eba4400681f5e87edd5e8b3d5f360ad8b4",
+            "byte_offset": 43,
+            "byte_length": 12,
+            "generated": false,
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "Symbol": {
+            "id": "symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Registration",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      }
+    },
+    "candidate": {
+      "calls": 1,
+      "complete_response_bytes": 6873,
+      "structured_content_bytes": 6519,
+      "evidence": {
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:1eaee940a798c97a55499607bcbcf73f02273318ad385f61f71ef5fe4b2fd21c\",\"source_id\":\"source:4c331ce3d93622506f49a5211f4afba65be2b400f13f333fa253d537922f857e\",\"path\":\"src/Sample.Components/RegistrationDbContext.cs\",\"raw_sha256\":\"ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef\",\"byte_offset\":966,\"byte_length\":6,\"generated\":false,\"reference_kind\":\"invocation\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:7907c8a2aaa84590f309a93d4578b8fe516d496bb2da044d3d6e0a9cd98364b3\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60\",\"descriptor\":\"M:Microsoft.EntityFrameworkCore.ModelBuilder.Entity``1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:80d0dd98ca350e24f7395e7742ad9cf33db63c5c23624798064f10782478f78a\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"M:Sample.Components.RegistrationDbContext.MapRegistration(Microsoft.EntityFrameworkCore.ModelBuilder)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"entity\"],\"Fact\":{\"kind\":\"storage_entity_mapping\",\"rule\":\"csharp-framework-v2\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"entity\",\"symbol\":{\"id\":\"symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Registration\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:1eaee940a798c97a55499607bcbcf73f02273318ad385f61f71ef5fe4b2fd21c",
+            "source_id": "source:4c331ce3d93622506f49a5211f4afba65be2b400f13f333fa253d537922f857e",
+            "path": "src/Sample.Components/RegistrationDbContext.cs",
+            "raw_sha256": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef",
+            "byte_offset": 966,
+            "byte_length": 6,
+            "generated": false,
+            "reference_kind": "invocation",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:7907c8a2aaa84590f309a93d4578b8fe516d496bb2da044d3d6e0a9cd98364b3",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+            "descriptor": "M:Microsoft.EntityFrameworkCore.ModelBuilder.Entity``1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:80d0dd98ca350e24f7395e7742ad9cf33db63c5c23624798064f10782478f78a",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.RegistrationDbContext.MapRegistration(Microsoft.EntityFrameworkCore.ModelBuilder)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "entity"
+          ],
+          "Fact": {
+            "kind": "storage_entity_mapping",
+            "rule": "csharp-framework-v2",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "entity",
+                "symbol": {
+                  "id": "symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Registration",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        },
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:cd30f874868a168346d81be40a38b11e02bf965b7e8b4d9d04f26d2d20663935\",\"source_id\":\"source:8390a09eb8108466f2d895b15327dfc0bb1dd84e00fddeffad681e4a7646bfc4\",\"path\":\"src/Sample.Components/RegistrationService.cs\",\"raw_sha256\":\"4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643\",\"byte_offset\":855,\"byte_length\":3,\"generated\":false,\"reference_kind\":\"invocation\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:20c017a4a6cf790156caec30d22ed4beb92eb52da5a7408f63d4f8d0cf5f4493\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60\",\"descriptor\":\"M:Microsoft.EntityFrameworkCore.DbContext.Set``1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"entity\"],\"Fact\":{\"kind\":\"storage_entity_use\",\"rule\":\"csharp-framework-v2\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"entity\",\"symbol\":{\"id\":\"symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Registration\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:cd30f874868a168346d81be40a38b11e02bf965b7e8b4d9d04f26d2d20663935",
+            "source_id": "source:8390a09eb8108466f2d895b15327dfc0bb1dd84e00fddeffad681e4a7646bfc4",
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+            "byte_offset": 855,
+            "byte_length": 3,
+            "generated": false,
+            "reference_kind": "invocation",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:20c017a4a6cf790156caec30d22ed4beb92eb52da5a7408f63d4f8d0cf5f4493",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+            "descriptor": "M:Microsoft.EntityFrameworkCore.DbContext.Set``1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "entity"
+          ],
+          "Fact": {
+            "kind": "storage_entity_use",
+            "rule": "csharp-framework-v2",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "entity",
+                "symbol": {
+                  "id": "symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Registration",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "definitions": {
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:d09b48005fdba80f871b4d97d1b952365c67c37e19e6e10d41d70b71edc878fa\",\"source_id\":\"source:51394c630470b598a11be0f680d63d929b0788b81c1da00af725c4968f3c3ff4\",\"path\":\"src/Sample.Components/Registration.cs\",\"raw_sha256\":\"84db43f9d9292799c5685e2ccb54a2eba4400681f5e87edd5e8b3d5f360ad8b4\",\"byte_offset\":43,\"byte_length\":12,\"generated\":false,\"reference_kind\":\"declaration\",\"role\":\"declaration\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"Symbol\":{\"id\":\"symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Registration\",\"descriptor_kind\":\"documentation_comment_id\"}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:d09b48005fdba80f871b4d97d1b952365c67c37e19e6e10d41d70b71edc878fa",
+            "source_id": "source:51394c630470b598a11be0f680d63d929b0788b81c1da00af725c4968f3c3ff4",
+            "path": "src/Sample.Components/Registration.cs",
+            "raw_sha256": "84db43f9d9292799c5685e2ccb54a2eba4400681f5e87edd5e8b3d5f360ad8b4",
+            "byte_offset": 43,
+            "byte_length": 12,
+            "generated": false,
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "Symbol": {
+            "id": "symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Registration",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      }
+    },
+    "equivalent": true
+  },
+  {
+    "task": "registration-entity",
+    "contexts": [
+      "context:f27e60c5fdd6a5b58770d76301e4ee16e6e3195f2c8794e24efb8339d3973870",
+      "context:b7f8978ac9c14984339660f3256f8d1d10aa596d27444e3c32c9e52a8b14f5ea",
+      "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3"
+    ],
+    "baseline": {
+      "calls": 4,
+      "complete_response_bytes": 9460,
+      "structured_content_bytes": 8403,
+      "evidence": {
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:7460b2652a89c265702888670ab19c20c8aa87e037ccb5497338cc2c73d2fb76\",\"source_id\":\"source:791ba2b0a3f0ddb48aa45325578e8b76fa237c97104e88affc909ad9da0278df\",\"path\":\"src/Sample.Components/RegistrationService.cs\",\"raw_sha256\":\"4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643\",\"byte_offset\":855,\"byte_length\":3,\"generated\":false,\"reference_kind\":\"invocation\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:20c017a4a6cf790156caec30d22ed4beb92eb52da5a7408f63d4f8d0cf5f4493\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60\",\"descriptor\":\"M:Microsoft.EntityFrameworkCore.DbContext.Set``1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"entity\"],\"Fact\":{\"kind\":\"storage_entity_use\",\"rule\":\"csharp-framework-v2\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"entity\",\"symbol\":{\"id\":\"symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Registration\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:7460b2652a89c265702888670ab19c20c8aa87e037ccb5497338cc2c73d2fb76",
+            "source_id": "source:791ba2b0a3f0ddb48aa45325578e8b76fa237c97104e88affc909ad9da0278df",
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+            "byte_offset": 855,
+            "byte_length": 3,
+            "generated": false,
+            "reference_kind": "invocation",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:20c017a4a6cf790156caec30d22ed4beb92eb52da5a7408f63d4f8d0cf5f4493",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+            "descriptor": "M:Microsoft.EntityFrameworkCore.DbContext.Set``1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "entity"
+          ],
+          "Fact": {
+            "kind": "storage_entity_use",
+            "rule": "csharp-framework-v2",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "entity",
+                "symbol": {
+                  "id": "symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Registration",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        },
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:e81e1ba483d7f59875120d188588dadcc30b5fe85049b9c9c8b83161662675f1\",\"source_id\":\"source:d0904bdca5d54d486dbcee585f00d540d1c51f567629e5624837f6cb173cba3c\",\"path\":\"src/Sample.Components/RegistrationDbContext.cs\",\"raw_sha256\":\"ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef\",\"byte_offset\":966,\"byte_length\":6,\"generated\":false,\"reference_kind\":\"invocation\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:7907c8a2aaa84590f309a93d4578b8fe516d496bb2da044d3d6e0a9cd98364b3\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60\",\"descriptor\":\"M:Microsoft.EntityFrameworkCore.ModelBuilder.Entity``1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:80d0dd98ca350e24f7395e7742ad9cf33db63c5c23624798064f10782478f78a\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"M:Sample.Components.RegistrationDbContext.MapRegistration(Microsoft.EntityFrameworkCore.ModelBuilder)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"entity\"],\"Fact\":{\"kind\":\"storage_entity_mapping\",\"rule\":\"csharp-framework-v2\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"entity\",\"symbol\":{\"id\":\"symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Registration\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:e81e1ba483d7f59875120d188588dadcc30b5fe85049b9c9c8b83161662675f1",
+            "source_id": "source:d0904bdca5d54d486dbcee585f00d540d1c51f567629e5624837f6cb173cba3c",
+            "path": "src/Sample.Components/RegistrationDbContext.cs",
+            "raw_sha256": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef",
+            "byte_offset": 966,
+            "byte_length": 6,
+            "generated": false,
+            "reference_kind": "invocation",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:7907c8a2aaa84590f309a93d4578b8fe516d496bb2da044d3d6e0a9cd98364b3",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+            "descriptor": "M:Microsoft.EntityFrameworkCore.ModelBuilder.Entity``1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:80d0dd98ca350e24f7395e7742ad9cf33db63c5c23624798064f10782478f78a",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.RegistrationDbContext.MapRegistration(Microsoft.EntityFrameworkCore.ModelBuilder)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "entity"
+          ],
+          "Fact": {
+            "kind": "storage_entity_mapping",
+            "rule": "csharp-framework-v2",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "entity",
+                "symbol": {
+                  "id": "symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Registration",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "definitions": {
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:72280400cabf16c54eaa9ad19d6d8673820c306f8eb1673548262c611f1b61ec\",\"source_id\":\"source:5550a7863afebd6a9e95752c7d9204050b225b8d49ea5f0dfbfb8c822489a608\",\"path\":\"src/Sample.Components/Registration.cs\",\"raw_sha256\":\"84db43f9d9292799c5685e2ccb54a2eba4400681f5e87edd5e8b3d5f360ad8b4\",\"byte_offset\":43,\"byte_length\":12,\"generated\":false,\"reference_kind\":\"declaration\",\"role\":\"declaration\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"Symbol\":{\"id\":\"symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Registration\",\"descriptor_kind\":\"documentation_comment_id\"}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:72280400cabf16c54eaa9ad19d6d8673820c306f8eb1673548262c611f1b61ec",
+            "source_id": "source:5550a7863afebd6a9e95752c7d9204050b225b8d49ea5f0dfbfb8c822489a608",
+            "path": "src/Sample.Components/Registration.cs",
+            "raw_sha256": "84db43f9d9292799c5685e2ccb54a2eba4400681f5e87edd5e8b3d5f360ad8b4",
+            "byte_offset": 43,
+            "byte_length": 12,
+            "generated": false,
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "Symbol": {
+            "id": "symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Registration",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      }
+    },
+    "candidate": {
+      "calls": 1,
+      "complete_response_bytes": 6871,
+      "structured_content_bytes": 6517,
+      "evidence": {
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:7460b2652a89c265702888670ab19c20c8aa87e037ccb5497338cc2c73d2fb76\",\"source_id\":\"source:791ba2b0a3f0ddb48aa45325578e8b76fa237c97104e88affc909ad9da0278df\",\"path\":\"src/Sample.Components/RegistrationService.cs\",\"raw_sha256\":\"4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643\",\"byte_offset\":855,\"byte_length\":3,\"generated\":false,\"reference_kind\":\"invocation\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:20c017a4a6cf790156caec30d22ed4beb92eb52da5a7408f63d4f8d0cf5f4493\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60\",\"descriptor\":\"M:Microsoft.EntityFrameworkCore.DbContext.Set``1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"entity\"],\"Fact\":{\"kind\":\"storage_entity_use\",\"rule\":\"csharp-framework-v2\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"entity\",\"symbol\":{\"id\":\"symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Registration\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:7460b2652a89c265702888670ab19c20c8aa87e037ccb5497338cc2c73d2fb76",
+            "source_id": "source:791ba2b0a3f0ddb48aa45325578e8b76fa237c97104e88affc909ad9da0278df",
+            "path": "src/Sample.Components/RegistrationService.cs",
+            "raw_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+            "byte_offset": 855,
+            "byte_length": 3,
+            "generated": false,
+            "reference_kind": "invocation",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:20c017a4a6cf790156caec30d22ed4beb92eb52da5a7408f63d4f8d0cf5f4493",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+            "descriptor": "M:Microsoft.EntityFrameworkCore.DbContext.Set``1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:526ad3178c3a0bd5ccdf8889f8196ef097b53fc6db7263309c02c38d5edc2206",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "entity"
+          ],
+          "Fact": {
+            "kind": "storage_entity_use",
+            "rule": "csharp-framework-v2",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "entity",
+                "symbol": {
+                  "id": "symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Registration",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        },
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:e81e1ba483d7f59875120d188588dadcc30b5fe85049b9c9c8b83161662675f1\",\"source_id\":\"source:d0904bdca5d54d486dbcee585f00d540d1c51f567629e5624837f6cb173cba3c\",\"path\":\"src/Sample.Components/RegistrationDbContext.cs\",\"raw_sha256\":\"ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef\",\"byte_offset\":966,\"byte_length\":6,\"generated\":false,\"reference_kind\":\"invocation\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:7907c8a2aaa84590f309a93d4578b8fe516d496bb2da044d3d6e0a9cd98364b3\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60\",\"descriptor\":\"M:Microsoft.EntityFrameworkCore.ModelBuilder.Entity``1\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:80d0dd98ca350e24f7395e7742ad9cf33db63c5c23624798064f10782478f78a\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"M:Sample.Components.RegistrationDbContext.MapRegistration(Microsoft.EntityFrameworkCore.ModelBuilder)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"entity\"],\"Fact\":{\"kind\":\"storage_entity_mapping\",\"rule\":\"csharp-framework-v2\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"entity\",\"symbol\":{\"id\":\"symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Registration\",\"descriptor_kind\":\"documentation_comment_id\"}}]}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:e81e1ba483d7f59875120d188588dadcc30b5fe85049b9c9c8b83161662675f1",
+            "source_id": "source:d0904bdca5d54d486dbcee585f00d540d1c51f567629e5624837f6cb173cba3c",
+            "path": "src/Sample.Components/RegistrationDbContext.cs",
+            "raw_sha256": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef",
+            "byte_offset": 966,
+            "byte_length": 6,
+            "generated": false,
+            "reference_kind": "invocation",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:7907c8a2aaa84590f309a93d4578b8fe516d496bb2da044d3d6e0a9cd98364b3",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Microsoft.EntityFrameworkCore, Version=8.0.4.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+            "descriptor": "M:Microsoft.EntityFrameworkCore.ModelBuilder.Entity``1",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:80d0dd98ca350e24f7395e7742ad9cf33db63c5c23624798064f10782478f78a",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "M:Sample.Components.RegistrationDbContext.MapRegistration(Microsoft.EntityFrameworkCore.ModelBuilder)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "entity"
+          ],
+          "Fact": {
+            "kind": "storage_entity_mapping",
+            "rule": "csharp-framework-v2",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "entity",
+                "symbol": {
+                  "id": "symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.Registration",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "definitions": {
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:72280400cabf16c54eaa9ad19d6d8673820c306f8eb1673548262c611f1b61ec\",\"source_id\":\"source:5550a7863afebd6a9e95752c7d9204050b225b8d49ea5f0dfbfb8c822489a608\",\"path\":\"src/Sample.Components/Registration.cs\",\"raw_sha256\":\"84db43f9d9292799c5685e2ccb54a2eba4400681f5e87edd5e8b3d5f360ad8b4\",\"byte_offset\":43,\"byte_length\":12,\"generated\":false,\"reference_kind\":\"declaration\",\"role\":\"declaration\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"Symbol\":{\"id\":\"symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.Registration\",\"descriptor_kind\":\"documentation_comment_id\"}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:72280400cabf16c54eaa9ad19d6d8673820c306f8eb1673548262c611f1b61ec",
+            "source_id": "source:5550a7863afebd6a9e95752c7d9204050b225b8d49ea5f0dfbfb8c822489a608",
+            "path": "src/Sample.Components/Registration.cs",
+            "raw_sha256": "84db43f9d9292799c5685e2ccb54a2eba4400681f5e87edd5e8b3d5f360ad8b4",
+            "byte_offset": 43,
+            "byte_length": 12,
+            "generated": false,
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "Symbol": {
+            "id": "symbol:eb8f112f0b20d8bcf525616d8b15d40c11f984b289a4496801130bd21e6f5a45",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.Registration",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      }
+    },
+    "equivalent": true
+  },
+  {
+    "task": "registration-service",
+    "contexts": [
+      "context:f27e60c5fdd6a5b58770d76301e4ee16e6e3195f2c8794e24efb8339d3973870",
+      "context:b7f8978ac9c14984339660f3256f8d1d10aa596d27444e3c32c9e52a8b14f5ea",
+      "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be"
+    ],
+    "baseline": {
+      "calls": 4,
+      "complete_response_bytes": 7355,
+      "structured_content_bytes": 6298,
+      "evidence": {
+        "{\"Context\":\"context:f27e60c5fdd6a5b58770d76301e4ee16e6e3195f2c8794e24efb8339d3973870\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Api/Sample.Api.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:828d378e1040773384b56b4f6f02258333212e0d4583bfd60dad2995c2b9cde3\",\"source_id\":\"source:66318138aabf96f67865d55c84da447215418f061f15fba90331f34e3cf05485\",\"path\":\"src/Sample.Api/Program.cs\",\"raw_sha256\":\"559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53\",\"byte_offset\":922,\"byte_length\":9,\"generated\":false,\"reference_kind\":\"invocation\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:fc8e99ce72911449fa0691d1b26b646ae4fd5eedcf66d3cac28818c894b33fbc\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60\",\"descriptor\":\"M:Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddScoped``2(Microsoft.Extensions.DependencyInjection.IServiceCollection)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:3d7bd8a1633d69ef0a1bc2e84d6b03ae627183c1ac84efee15a78a06463ac886\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Api/Sample.Api.csproj\",\"descriptor\":\"M:Program.{Main}$(System.String[])\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"service\"],\"Fact\":{\"kind\":\"di_registration\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"service\",\"symbol\":{\"id\":\"symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.IRegistrationService\",\"descriptor_kind\":\"documentation_comment_id\"}},{\"role\":\"implementation\",\"symbol\":{\"id\":\"symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.RegistrationService\",\"descriptor_kind\":\"documentation_comment_id\"}}],\"lifetime\":\"scoped\"}}": {
+          "Context": "context:f27e60c5fdd6a5b58770d76301e4ee16e6e3195f2c8794e24efb8339d3973870",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Api/Sample.Api.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:828d378e1040773384b56b4f6f02258333212e0d4583bfd60dad2995c2b9cde3",
+            "source_id": "source:66318138aabf96f67865d55c84da447215418f061f15fba90331f34e3cf05485",
+            "path": "src/Sample.Api/Program.cs",
+            "raw_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53",
+            "byte_offset": 922,
+            "byte_length": 9,
+            "generated": false,
+            "reference_kind": "invocation",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:fc8e99ce72911449fa0691d1b26b646ae4fd5eedcf66d3cac28818c894b33fbc",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+            "descriptor": "M:Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddScoped``2(Microsoft.Extensions.DependencyInjection.IServiceCollection)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:3d7bd8a1633d69ef0a1bc2e84d6b03ae627183c1ac84efee15a78a06463ac886",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Api/Sample.Api.csproj",
+            "descriptor": "M:Program.{Main}$(System.String[])",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "service"
+          ],
+          "Fact": {
+            "kind": "di_registration",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "service",
+                "symbol": {
+                  "id": "symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.IRegistrationService",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              },
+              {
+                "role": "implementation",
+                "symbol": {
+                  "id": "symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.RegistrationService",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ],
+            "lifetime": "scoped"
+          }
+        }
+      },
+      "definitions": {
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:35990b523e6a2b629a87c74c38e7cfd05587e1fc93e3ef9aeb8dc61b9f9e6394\",\"source_id\":\"source:f9f8486fc1ad1b69fd0848338609e71d5bbd2539942a58c6ef72fd5f07d4515f\",\"path\":\"src/Sample.Components/IRegistrationService.cs\",\"raw_sha256\":\"c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71\",\"byte_offset\":47,\"byte_length\":20,\"generated\":false,\"reference_kind\":\"declaration\",\"role\":\"declaration\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"Symbol\":{\"id\":\"symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.IRegistrationService\",\"descriptor_kind\":\"documentation_comment_id\"}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:35990b523e6a2b629a87c74c38e7cfd05587e1fc93e3ef9aeb8dc61b9f9e6394",
+            "source_id": "source:f9f8486fc1ad1b69fd0848338609e71d5bbd2539942a58c6ef72fd5f07d4515f",
+            "path": "src/Sample.Components/IRegistrationService.cs",
+            "raw_sha256": "c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71",
+            "byte_offset": 47,
+            "byte_length": 20,
+            "generated": false,
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "Symbol": {
+            "id": "symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.IRegistrationService",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      }
+    },
+    "candidate": {
+      "calls": 1,
+      "complete_response_bytes": 5659,
+      "structured_content_bytes": 5305,
+      "evidence": {
+        "{\"Context\":\"context:f27e60c5fdd6a5b58770d76301e4ee16e6e3195f2c8794e24efb8339d3973870\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Api/Sample.Api.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:828d378e1040773384b56b4f6f02258333212e0d4583bfd60dad2995c2b9cde3\",\"source_id\":\"source:66318138aabf96f67865d55c84da447215418f061f15fba90331f34e3cf05485\",\"path\":\"src/Sample.Api/Program.cs\",\"raw_sha256\":\"559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53\",\"byte_offset\":922,\"byte_length\":9,\"generated\":false,\"reference_kind\":\"invocation\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:fc8e99ce72911449fa0691d1b26b646ae4fd5eedcf66d3cac28818c894b33fbc\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60\",\"descriptor\":\"M:Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddScoped``2(Microsoft.Extensions.DependencyInjection.IServiceCollection)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:3d7bd8a1633d69ef0a1bc2e84d6b03ae627183c1ac84efee15a78a06463ac886\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Api/Sample.Api.csproj\",\"descriptor\":\"M:Program.{Main}$(System.String[])\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"service\"],\"Fact\":{\"kind\":\"di_registration\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"service\",\"symbol\":{\"id\":\"symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.IRegistrationService\",\"descriptor_kind\":\"documentation_comment_id\"}},{\"role\":\"implementation\",\"symbol\":{\"id\":\"symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.RegistrationService\",\"descriptor_kind\":\"documentation_comment_id\"}}],\"lifetime\":\"scoped\"}}": {
+          "Context": "context:f27e60c5fdd6a5b58770d76301e4ee16e6e3195f2c8794e24efb8339d3973870",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Api/Sample.Api.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:828d378e1040773384b56b4f6f02258333212e0d4583bfd60dad2995c2b9cde3",
+            "source_id": "source:66318138aabf96f67865d55c84da447215418f061f15fba90331f34e3cf05485",
+            "path": "src/Sample.Api/Program.cs",
+            "raw_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53",
+            "byte_offset": 922,
+            "byte_length": 9,
+            "generated": false,
+            "reference_kind": "invocation",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:fc8e99ce72911449fa0691d1b26b646ae4fd5eedcf66d3cac28818c894b33fbc",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+            "descriptor": "M:Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddScoped``2(Microsoft.Extensions.DependencyInjection.IServiceCollection)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:3d7bd8a1633d69ef0a1bc2e84d6b03ae627183c1ac84efee15a78a06463ac886",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Api/Sample.Api.csproj",
+            "descriptor": "M:Program.{Main}$(System.String[])",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "service"
+          ],
+          "Fact": {
+            "kind": "di_registration",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "service",
+                "symbol": {
+                  "id": "symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.IRegistrationService",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              },
+              {
+                "role": "implementation",
+                "symbol": {
+                  "id": "symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.RegistrationService",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ],
+            "lifetime": "scoped"
+          }
+        }
+      },
+      "definitions": {
+        "{\"Context\":\"context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:35990b523e6a2b629a87c74c38e7cfd05587e1fc93e3ef9aeb8dc61b9f9e6394\",\"source_id\":\"source:f9f8486fc1ad1b69fd0848338609e71d5bbd2539942a58c6ef72fd5f07d4515f\",\"path\":\"src/Sample.Components/IRegistrationService.cs\",\"raw_sha256\":\"c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71\",\"byte_offset\":47,\"byte_length\":20,\"generated\":false,\"reference_kind\":\"declaration\",\"role\":\"declaration\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"Symbol\":{\"id\":\"symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.IRegistrationService\",\"descriptor_kind\":\"documentation_comment_id\"}}": {
+          "Context": "context:4d9e9dfc3c9ceef6c6b39197e514e1d4b5e60ce8c8f8bb2ac6ad250c196e69be",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:35990b523e6a2b629a87c74c38e7cfd05587e1fc93e3ef9aeb8dc61b9f9e6394",
+            "source_id": "source:f9f8486fc1ad1b69fd0848338609e71d5bbd2539942a58c6ef72fd5f07d4515f",
+            "path": "src/Sample.Components/IRegistrationService.cs",
+            "raw_sha256": "c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71",
+            "byte_offset": 47,
+            "byte_length": 20,
+            "generated": false,
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "Symbol": {
+            "id": "symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.IRegistrationService",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      }
+    },
+    "equivalent": true
+  },
+  {
+    "task": "registration-service",
+    "contexts": [
+      "context:f27e60c5fdd6a5b58770d76301e4ee16e6e3195f2c8794e24efb8339d3973870",
+      "context:b7f8978ac9c14984339660f3256f8d1d10aa596d27444e3c32c9e52a8b14f5ea",
+      "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3"
+    ],
+    "baseline": {
+      "calls": 4,
+      "complete_response_bytes": 7355,
+      "structured_content_bytes": 6298,
+      "evidence": {
+        "{\"Context\":\"context:f27e60c5fdd6a5b58770d76301e4ee16e6e3195f2c8794e24efb8339d3973870\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Api/Sample.Api.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:828d378e1040773384b56b4f6f02258333212e0d4583bfd60dad2995c2b9cde3\",\"source_id\":\"source:66318138aabf96f67865d55c84da447215418f061f15fba90331f34e3cf05485\",\"path\":\"src/Sample.Api/Program.cs\",\"raw_sha256\":\"559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53\",\"byte_offset\":922,\"byte_length\":9,\"generated\":false,\"reference_kind\":\"invocation\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:fc8e99ce72911449fa0691d1b26b646ae4fd5eedcf66d3cac28818c894b33fbc\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60\",\"descriptor\":\"M:Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddScoped``2(Microsoft.Extensions.DependencyInjection.IServiceCollection)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:3d7bd8a1633d69ef0a1bc2e84d6b03ae627183c1ac84efee15a78a06463ac886\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Api/Sample.Api.csproj\",\"descriptor\":\"M:Program.{Main}$(System.String[])\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"service\"],\"Fact\":{\"kind\":\"di_registration\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"service\",\"symbol\":{\"id\":\"symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.IRegistrationService\",\"descriptor_kind\":\"documentation_comment_id\"}},{\"role\":\"implementation\",\"symbol\":{\"id\":\"symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.RegistrationService\",\"descriptor_kind\":\"documentation_comment_id\"}}],\"lifetime\":\"scoped\"}}": {
+          "Context": "context:f27e60c5fdd6a5b58770d76301e4ee16e6e3195f2c8794e24efb8339d3973870",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Api/Sample.Api.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:828d378e1040773384b56b4f6f02258333212e0d4583bfd60dad2995c2b9cde3",
+            "source_id": "source:66318138aabf96f67865d55c84da447215418f061f15fba90331f34e3cf05485",
+            "path": "src/Sample.Api/Program.cs",
+            "raw_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53",
+            "byte_offset": 922,
+            "byte_length": 9,
+            "generated": false,
+            "reference_kind": "invocation",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:fc8e99ce72911449fa0691d1b26b646ae4fd5eedcf66d3cac28818c894b33fbc",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+            "descriptor": "M:Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddScoped``2(Microsoft.Extensions.DependencyInjection.IServiceCollection)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:3d7bd8a1633d69ef0a1bc2e84d6b03ae627183c1ac84efee15a78a06463ac886",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Api/Sample.Api.csproj",
+            "descriptor": "M:Program.{Main}$(System.String[])",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "service"
+          ],
+          "Fact": {
+            "kind": "di_registration",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "service",
+                "symbol": {
+                  "id": "symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.IRegistrationService",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              },
+              {
+                "role": "implementation",
+                "symbol": {
+                  "id": "symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.RegistrationService",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ],
+            "lifetime": "scoped"
+          }
+        }
+      },
+      "definitions": {
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:932f5eadc135c504e7b0eb134e58fce7f3cd4e782d11a5417df41c03d4d6f69c\",\"source_id\":\"source:6312f6fd56f2d2f6232379aefa085c089b01f601de683064da28f3a20229f442\",\"path\":\"src/Sample.Components/IRegistrationService.cs\",\"raw_sha256\":\"c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71\",\"byte_offset\":47,\"byte_length\":20,\"generated\":false,\"reference_kind\":\"declaration\",\"role\":\"declaration\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"Symbol\":{\"id\":\"symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.IRegistrationService\",\"descriptor_kind\":\"documentation_comment_id\"}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:932f5eadc135c504e7b0eb134e58fce7f3cd4e782d11a5417df41c03d4d6f69c",
+            "source_id": "source:6312f6fd56f2d2f6232379aefa085c089b01f601de683064da28f3a20229f442",
+            "path": "src/Sample.Components/IRegistrationService.cs",
+            "raw_sha256": "c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71",
+            "byte_offset": 47,
+            "byte_length": 20,
+            "generated": false,
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "Symbol": {
+            "id": "symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.IRegistrationService",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      }
+    },
+    "candidate": {
+      "calls": 1,
+      "complete_response_bytes": 5659,
+      "structured_content_bytes": 5305,
+      "evidence": {
+        "{\"Context\":\"context:f27e60c5fdd6a5b58770d76301e4ee16e6e3195f2c8794e24efb8339d3973870\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Api/Sample.Api.csproj\",\"Snapshot\":\"snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8\",\"Source\":{\"occurrence_id\":\"occurrence:828d378e1040773384b56b4f6f02258333212e0d4583bfd60dad2995c2b9cde3\",\"source_id\":\"source:66318138aabf96f67865d55c84da447215418f061f15fba90331f34e3cf05485\",\"path\":\"src/Sample.Api/Program.cs\",\"raw_sha256\":\"559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53\",\"byte_offset\":922,\"byte_length\":9,\"generated\":false,\"reference_kind\":\"invocation\",\"role\":\"reference\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"API\":{\"id\":\"symbol:fc8e99ce72911449fa0691d1b26b646ae4fd5eedcf66d3cac28818c894b33fbc\",\"language\":\"csharp\",\"namespace_kind\":\"assembly\",\"namespace\":\"Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60\",\"descriptor\":\"M:Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddScoped``2(Microsoft.Extensions.DependencyInjection.IServiceCollection)\",\"descriptor_kind\":\"documentation_comment_id\"},\"Owner\":{\"id\":\"symbol:3d7bd8a1633d69ef0a1bc2e84d6b03ae627183c1ac84efee15a78a06463ac886\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Api/Sample.Api.csproj\",\"descriptor\":\"M:Program.{Main}$(System.String[])\",\"descriptor_kind\":\"documentation_comment_id\"},\"Roles\":[\"service\"],\"Fact\":{\"kind\":\"di_registration\",\"rule\":\"csharp-framework-v1\",\"evidence_scope\":\"compile_time\",\"targets\":[{\"role\":\"service\",\"symbol\":{\"id\":\"symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.IRegistrationService\",\"descriptor_kind\":\"documentation_comment_id\"}},{\"role\":\"implementation\",\"symbol\":{\"id\":\"symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.RegistrationService\",\"descriptor_kind\":\"documentation_comment_id\"}}],\"lifetime\":\"scoped\"}}": {
+          "Context": "context:f27e60c5fdd6a5b58770d76301e4ee16e6e3195f2c8794e24efb8339d3973870",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Api/Sample.Api.csproj",
+          "Snapshot": "snapshot:9dbe9b57d59e604bb9311460c0b2682c5724f3f5b7ec610356a6e2199e1c66e8",
+          "Source": {
+            "occurrence_id": "occurrence:828d378e1040773384b56b4f6f02258333212e0d4583bfd60dad2995c2b9cde3",
+            "source_id": "source:66318138aabf96f67865d55c84da447215418f061f15fba90331f34e3cf05485",
+            "path": "src/Sample.Api/Program.cs",
+            "raw_sha256": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53",
+            "byte_offset": 922,
+            "byte_length": 9,
+            "generated": false,
+            "reference_kind": "invocation",
+            "role": "reference",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "API": {
+            "id": "symbol:fc8e99ce72911449fa0691d1b26b646ae4fd5eedcf66d3cac28818c894b33fbc",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+            "descriptor": "M:Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddScoped``2(Microsoft.Extensions.DependencyInjection.IServiceCollection)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Owner": {
+            "id": "symbol:3d7bd8a1633d69ef0a1bc2e84d6b03ae627183c1ac84efee15a78a06463ac886",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Api/Sample.Api.csproj",
+            "descriptor": "M:Program.{Main}$(System.String[])",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "Roles": [
+            "service"
+          ],
+          "Fact": {
+            "kind": "di_registration",
+            "rule": "csharp-framework-v1",
+            "evidence_scope": "compile_time",
+            "targets": [
+              {
+                "role": "service",
+                "symbol": {
+                  "id": "symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.IRegistrationService",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              },
+              {
+                "role": "implementation",
+                "symbol": {
+                  "id": "symbol:4a76d00c882f5896e383602660918f1bb66ec13f9682dcffe8be02084c0f06b1",
+                  "language": "csharp",
+                  "namespace_kind": "project",
+                  "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+                  "descriptor": "T:Sample.Components.RegistrationService",
+                  "descriptor_kind": "documentation_comment_id"
+                }
+              }
+            ],
+            "lifetime": "scoped"
+          }
+        }
+      },
+      "definitions": {
+        "{\"Context\":\"context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3\",\"Repo\":\"Sample-Outbox\",\"Project\":\"src/Sample.Components/Sample.Components.csproj\",\"Snapshot\":\"snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2\",\"Source\":{\"occurrence_id\":\"occurrence:932f5eadc135c504e7b0eb134e58fce7f3cd4e782d11a5417df41c03d4d6f69c\",\"source_id\":\"source:6312f6fd56f2d2f6232379aefa085c089b01f601de683064da28f3a20229f442\",\"path\":\"src/Sample.Components/IRegistrationService.cs\",\"raw_sha256\":\"c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71\",\"byte_offset\":47,\"byte_length\":20,\"generated\":false,\"reference_kind\":\"declaration\",\"role\":\"declaration\",\"binding_status\":\"resolved\",\"method\":\"roslyn-semantic-model\",\"extractor\":\"msbuild-roslyn\",\"extractor_version\":\"3\"},\"Symbol\":{\"id\":\"symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5\",\"language\":\"csharp\",\"namespace_kind\":\"project\",\"namespace\":\"Sample-Outbox/src/Sample.Components/Sample.Components.csproj\",\"descriptor\":\"T:Sample.Components.IRegistrationService\",\"descriptor_kind\":\"documentation_comment_id\"}}": {
+          "Context": "context:532f16863da8f8e7daffd63fea3410c78fb933cd3dd11c8ecb9e8bbe21d34ee3",
+          "Repo": "Sample-Outbox",
+          "Project": "src/Sample.Components/Sample.Components.csproj",
+          "Snapshot": "snapshot:dbd0366bce1d937046bf3f5dffc5b21b5d4d5cf46174dc01fb38ec513fb144f2",
+          "Source": {
+            "occurrence_id": "occurrence:932f5eadc135c504e7b0eb134e58fce7f3cd4e782d11a5417df41c03d4d6f69c",
+            "source_id": "source:6312f6fd56f2d2f6232379aefa085c089b01f601de683064da28f3a20229f442",
+            "path": "src/Sample.Components/IRegistrationService.cs",
+            "raw_sha256": "c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71",
+            "byte_offset": 47,
+            "byte_length": 20,
+            "generated": false,
+            "reference_kind": "declaration",
+            "role": "declaration",
+            "binding_status": "resolved",
+            "method": "roslyn-semantic-model",
+            "extractor": "msbuild-roslyn",
+            "extractor_version": "3"
+          },
+          "Symbol": {
+            "id": "symbol:d0d734ddb26ccb5e6f0b322f112cc2e98ba4869af0e316849970f056dd6f9bb5",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+            "descriptor": "T:Sample.Components.IRegistrationService",
+            "descriptor_kind": "documentation_comment_id"
+          }
+        }
+      }
+    },
+    "equivalent": true
+  }
+]

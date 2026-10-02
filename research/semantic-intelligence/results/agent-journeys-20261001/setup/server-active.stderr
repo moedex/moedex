@@ -1,0 +1,12 @@
+> serve      started
+moedex-serve: snapshot reverse-outbox -> /Users/zakkeown/Code/moedex/.local/application-impact/reverse-v1/outbox/index/snapshots/reverse-outbox/serve
+moedex-serve: dense arm disabled; ranking lexical+symbol
+server: token index loaded from cache
+server: symbol index loaded from cache
+moedex-serve: corpus ranker ready — 40 blobs, 40 docs, 24 symbol blobs, 0 dense chunks (none) in 6ms
+{"time":"2026-10-01T12:12:01.821332-06:00","level":"INFO","msg":"graph artifact absent; preparing source-only serving snapshot"}
+{"time":"2026-10-01T12:12:01.829541-06:00","level":"INFO","msg":"boot","mode":"mcp-http","blobs":40,"symbol_blobs":24,"dense_chunks":0,"requested_addr":"127.0.0.1:19381","effective_addr":"127.0.0.1:19381","tls":false}
+{"time":"2026-10-01T12:12:01.829583-06:00","level":"WARN","msg":"no auth token configured; /mcp is open (loopback bind)"}
+{"time":"2026-10-01T12:12:01.846849-06:00","level":"INFO","msg":"listening","addr":"127.0.0.1:19381","endpoint":"/mcp","tls":false,"auth":false}
+{"time":"2026-10-01T12:14:36.013128-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":969,"dur_ms":84.465,"remote":"127.0.0.1:53696"}
+{"time":"2026-10-01T12:14:36.046048-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":75921,"dur_ms":19.057,"remote":"127.0.0.1:53699"}

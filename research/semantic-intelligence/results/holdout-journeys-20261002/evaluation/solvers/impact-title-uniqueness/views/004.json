@@ -1,0 +1,15 @@
+{
+  "ordinal": 4,
+  "argv": [
+    "catalog",
+    "--tool",
+    "read_source"
+  ],
+  "started_monotonic": 79065.962748375,
+  "finished_monotonic": 79066.018114875,
+  "returncode": 0,
+  "stdout_bytes": 2670,
+  "stdout_sha256": "be4ce1eb11fb48944084b34e4d7e70f3b533b6496bac41cf6bebf4220ff25c34",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

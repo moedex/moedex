@@ -1,0 +1,58 @@
+{
+  "frozen_utc": "2026-10-01T18:43:21.789332+00:00",
+  "classification": "development_pinned_large_corpus_resource_gate",
+  "source_repo": "https://github.com/dotnet/roslyn",
+  "source_commit": "36d26c5466e4d25940657ccb8d5b9557ccaf7be1",
+  "scope": "Actual production rank/source serving holder and HTTP MCP handlers in a compiled Go test process. Excludes network listener and compiler artifacts; graph absent and embeddings disabled.",
+  "limits": {
+    "sampled_process_physical_footprint_bytes": 8589934592,
+    "timeout_seconds": 180,
+    "GOMAXPROCS": 2,
+    "GOMEMLIMIT": "4GiB"
+  },
+  "policy": "External runner stops at sampled memory/deadline breach; source correctness assertions must pass. First open may create symbol sidecars; warm runs separately labeled. Report cold-process versus cache state, no OS-cache-cold claims, no generalized latency speedup.",
+  "measurements": [
+    "rank-only retained Go heap after GC",
+    "rank/source retained Go heap after GC",
+    "rank/source opening durations",
+    "per-tool request durations/bytes/hashes",
+    "external sampled total process physical footprint"
+  ],
+  "inputs": {
+    "corpus-symbols.sym": {
+      "sha256": "2192b072b7a66ff00a02a548e8faf31f325f1b5e62fd99f7e0defe7a2c55d47d",
+      "bytes": 40383393
+    },
+    "corpus-symbols.sym.meta": {
+      "sha256": "ade1d71ef5afc6d5bf5e18622fd408f11aaa3ef4a4bd5bfdb5d702e4f93d3867",
+      "bytes": 115
+    },
+    "corpus-tokens.tki": {
+      "sha256": "87d1e1b7e1402a953fdde3abc7ca1bc4cc570a8c8cd6c26570ad9a8fc6d2b413",
+      "bytes": 103192408
+    },
+    "corpus-tokens.tki.meta": {
+      "sha256": "97d2f6b95f96509c360aa13464dfa395f035de2cb1e7a2b5eeb7b3b044657740",
+      "bytes": 100
+    },
+    "manifest.json": {
+      "sha256": "57bf72dfba0c9270851fa85372a04c32fc93c763d46841c0ae7c290435f05458",
+      "bytes": 1204
+    },
+    "shard-0000.idx": {
+      "sha256": "8d34cb93e23714fbb7f105cfd7d4703a1e38d99fb320436da36c81d4f7a0390e",
+      "bytes": 426439577
+    },
+    "shard-0001.idx": {
+      "sha256": "6173856eb6229d063b450a79198e87f3302776e10decfee7223ded0c1f01edfe",
+      "bytes": 418630935
+    },
+    "shard-0002.idx": {
+      "sha256": "ae45a1f4ca7142f8aa4f716cd41d3986e9bbcda4a4f81679fc0b7a485a2734eb",
+      "bytes": 369347300
+    }
+  },
+  "probe_sha256": "87c8efce46c866aac2270726487889f0ca7b13e3d02a54dd69ee83992c4eb822",
+  "binary_sha256": "4048c004050f0125feb11938e72e96991dbd6a33abad975046f3fe06ba1b6e58",
+  "preparation_note": "index build completed shards/manifest/ranking caches then automatically entered optional graph construction; operator stopped that unneeded phase under resource guard. No graph artifact exists. Retained failed full-build log is not claimed as successful full index build; serving reader validates persisted inputs."
+}

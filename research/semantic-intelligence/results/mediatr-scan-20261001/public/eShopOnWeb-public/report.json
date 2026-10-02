@@ -1,0 +1,894 @@
+{
+  "classification": "source_authored_development_baseline_not_independent_solver_score",
+  "gold_sha256": "2929267ec1af5219c8f4046efe0daf898cd8620b2040f670f1f11eecc901e213",
+  "repo": "eShopOnWeb",
+  "commit": "4da8212117e87d808d4bbc7da6286fd2147ce606",
+  "identity": [
+    "independent-project",
+    "e74cb4289aa763752fb147e7489d9f920a509ce4aceb60c58e4ae82549c0d8b4"
+  ],
+  "calls": [
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 779
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 2796
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 779
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 2498
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 788
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 3635
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 796
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 3236
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 786
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 2248
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 788
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 2684
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 788
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 2747
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 781
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 1786
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 810
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 2806
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 789
+    },
+    {
+      "tool": "compiler_binding_at",
+      "http_status": 200,
+      "bytes": 2109
+    }
+  ],
+  "response_bytes": 34429,
+  "expectations": [
+    {
+      "id": "mediator-orders",
+      "claim": "mediator dispatch of GetMyOrders; handler GetMyOrdersHandler.Handle",
+      "layer": "domain",
+      "binding_resolved": true,
+      "fact_present": true,
+      "facts": [
+        {
+          "kind": "mediator_send_configuration",
+          "rule": "csharp-mediatr-v1",
+          "evidence_scope": "compile_time",
+          "targets": [
+            {
+              "role": "request",
+              "symbol": {
+                "id": "symbol:b277db3094ce55f9d2a75bec344da9299b487b5db80c41e64d6a9d080c08834c",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShopOnWeb/src/Web/Web.csproj",
+                "descriptor": "T:Microsoft.eShopWeb.Web.Features.MyOrders.GetMyOrders",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            },
+            {
+              "role": "response",
+              "symbol": {
+                "id": "symbol:3ff29daf16c48a3bd92ad1d1976f8c322b8a6ffc7067fbea7c24088283c6a6b2",
+                "language": "csharp",
+                "namespace_kind": "assembly",
+                "namespace": "System.Runtime, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a",
+                "descriptor": "{\"definition\":\"T:System.Collections.Generic.IEnumerable\\u00601\",\"arguments\":[{\"descriptor\":\"T:Microsoft.eShopWeb.Web.ViewModels.OrderViewModel\",\"descriptor_kind\":\"documentation_comment_id\",\"namespace_kind\":\"project\",\"namespace\":\"eShopOnWeb/src/Web/Web.csproj\",\"language\":\"csharp\"}]}",
+                "descriptor_kind": "constructed_named_type_v1"
+              }
+            }
+          ]
+        }
+      ],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:2dd06578a4723ed6deb199ed20fb8bd4a1495f0ec0b8c0a4dd114003f40ee6b5",
+          "binding_status": "resolved",
+          "reference_kind": "invocation",
+          "role": "reference",
+          "repo": "eShopOnWeb",
+          "path": "src/Web/Controllers/OrderController.cs",
+          "raw_sha256": "5428e0b2e91fb7274acecc18129c36aa89ba9522bdc0a19303e590dc32a2b056",
+          "source_id": "source:b719e6d7034d4febd29f4a5ce8fc8a509aec3f191c2a05e84fa369c436cab9d7",
+          "source_snapshot_id": "snapshot:3487d23aaeca883f4d192c1e3bb7e1f356018a25c6c728817b2cf4a8b6713b1e",
+          "context_id": "context:760cf0d50f17efc4757d626fa7c75e17ece67c5ea5e1d97e69e564a5a433ddd7",
+          "project": "src/Web/Web.csproj",
+          "byte_offset": 817,
+          "byte_length": 4,
+          "symbol": {
+            "id": "symbol:d26f66cead18a850e0a93cf223f8f8fb65b84eb6b2575b5e08cfcfe06df00683",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MediatR, Version=12.0.0.0, Culture=neutral, PublicKeyToken=bb9a41a5e8aaa7e2",
+            "descriptor": "M:MediatR.ISender.Send``1(MediatR.IRequest{``0},System.Threading.CancellationToken)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "enclosing_symbol_id": "symbol:5207ca644724a1fdbc01525eed68eb59476b48ee19d7c99582fa55e6c238e9e4",
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "16",
+          "domain_facts": [
+            {
+              "kind": "mediator_send_configuration",
+              "rule": "csharp-mediatr-v1",
+              "evidence_scope": "compile_time",
+              "targets": [
+                {
+                  "role": "request",
+                  "symbol": {
+                    "id": "symbol:b277db3094ce55f9d2a75bec344da9299b487b5db80c41e64d6a9d080c08834c",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "eShopOnWeb/src/Web/Web.csproj",
+                    "descriptor": "T:Microsoft.eShopWeb.Web.Features.MyOrders.GetMyOrders",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                },
+                {
+                  "role": "response",
+                  "symbol": {
+                    "id": "symbol:3ff29daf16c48a3bd92ad1d1976f8c322b8a6ffc7067fbea7c24088283c6a6b2",
+                    "language": "csharp",
+                    "namespace_kind": "assembly",
+                    "namespace": "System.Runtime, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a",
+                    "descriptor": "{\"definition\":\"T:System.Collections.Generic.IEnumerable\\u00601\",\"arguments\":[{\"descriptor\":\"T:Microsoft.eShopWeb.Web.ViewModels.OrderViewModel\",\"descriptor_kind\":\"documentation_comment_id\",\"namespace_kind\":\"project\",\"namespace\":\"eShopOnWeb/src/Web/Web.csproj\",\"language\":\"csharp\"}]}",
+                    "descriptor_kind": "constructed_named_type_v1"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mediator-details",
+      "claim": "mediator dispatch of GetOrderDetails; handler GetOrderDetailsHandler.Handle",
+      "layer": "domain",
+      "binding_resolved": true,
+      "fact_present": true,
+      "facts": [
+        {
+          "kind": "mediator_send_configuration",
+          "rule": "csharp-mediatr-v1",
+          "evidence_scope": "compile_time",
+          "targets": [
+            {
+              "role": "request",
+              "symbol": {
+                "id": "symbol:d693c0adc34c9e08f509806c897aa631b7632be40ef90324aa4adc95866ef45e",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShopOnWeb/src/Web/Web.csproj",
+                "descriptor": "T:Microsoft.eShopWeb.Web.Features.OrderDetails.GetOrderDetails",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            },
+            {
+              "role": "response",
+              "symbol": {
+                "id": "symbol:1a3d0021f5810935c61000e1110ffcd9de49b9744215e2a3cb22fe3449248ba4",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShopOnWeb/src/Web/Web.csproj",
+                "descriptor": "T:Microsoft.eShopWeb.Web.ViewModels.OrderDetailViewModel",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            }
+          ]
+        }
+      ],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:48e548be730b1102e484f36ac04c78dbc3fa37cb739d364ed6deb1265df8e23b",
+          "binding_status": "resolved",
+          "reference_kind": "invocation",
+          "role": "reference",
+          "repo": "eShopOnWeb",
+          "path": "src/Web/Controllers/OrderController.cs",
+          "raw_sha256": "5428e0b2e91fb7274acecc18129c36aa89ba9522bdc0a19303e590dc32a2b056",
+          "source_id": "source:b719e6d7034d4febd29f4a5ce8fc8a509aec3f191c2a05e84fa369c436cab9d7",
+          "source_snapshot_id": "snapshot:3487d23aaeca883f4d192c1e3bb7e1f356018a25c6c728817b2cf4a8b6713b1e",
+          "context_id": "context:760cf0d50f17efc4757d626fa7c75e17ece67c5ea5e1d97e69e564a5a433ddd7",
+          "project": "src/Web/Web.csproj",
+          "byte_offset": 1108,
+          "byte_length": 4,
+          "symbol": {
+            "id": "symbol:d26f66cead18a850e0a93cf223f8f8fb65b84eb6b2575b5e08cfcfe06df00683",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MediatR, Version=12.0.0.0, Culture=neutral, PublicKeyToken=bb9a41a5e8aaa7e2",
+            "descriptor": "M:MediatR.ISender.Send``1(MediatR.IRequest{``0},System.Threading.CancellationToken)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "enclosing_symbol_id": "symbol:3ab5598077aa80db83aab1fd5cfcc71a2b884c0860ae48dbe6ce14b38ef2106d",
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "16",
+          "domain_facts": [
+            {
+              "kind": "mediator_send_configuration",
+              "rule": "csharp-mediatr-v1",
+              "evidence_scope": "compile_time",
+              "targets": [
+                {
+                  "role": "request",
+                  "symbol": {
+                    "id": "symbol:d693c0adc34c9e08f509806c897aa631b7632be40ef90324aa4adc95866ef45e",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "eShopOnWeb/src/Web/Web.csproj",
+                    "descriptor": "T:Microsoft.eShopWeb.Web.Features.OrderDetails.GetOrderDetails",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                },
+                {
+                  "role": "response",
+                  "symbol": {
+                    "id": "symbol:1a3d0021f5810935c61000e1110ffcd9de49b9744215e2a3cb22fe3449248ba4",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "eShopOnWeb/src/Web/Web.csproj",
+                    "descriptor": "T:Microsoft.eShopWeb.Web.ViewModels.OrderDetailViewModel",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orders-handler",
+      "claim": "IRequestHandler<GetMyOrders,IEnumerable<OrderViewModel>> implementation",
+      "layer": "implementation",
+      "binding_resolved": true,
+      "fact_present": true,
+      "facts": [
+        {
+          "kind": "interface_method_implementation",
+          "rule": "csharp-interface-closed-v2",
+          "evidence_scope": "compile_time",
+          "interface_symbol_id": "symbol:bcd392a7947de911e3cb5d6af0925bd3e17f21b7b0b49d6a885954dfc48a8429",
+          "implementing_type_symbol_id": "symbol:52dea6faac05a65bc1499fdb2c15221921ec1156adb99b038f1a93a191a8940d"
+        }
+      ],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:14b4c0679ccd57349a59b004a14280f6e80bec4db14ab59d3cda108fb4207564",
+          "binding_status": "resolved",
+          "reference_kind": "declaration",
+          "role": "declaration",
+          "repo": "eShopOnWeb",
+          "path": "src/Web/Features/MyOrders/GetMyOrdersHandler.cs",
+          "raw_sha256": "a395b93091bae562db99e47e4efca592dc9a11a5b8d5909aa034e02364589940",
+          "source_id": "source:91e1d2a53e1f75c113dd61a70b18afc13b8ee7e16e2e5cea81e746849cf85358",
+          "source_snapshot_id": "snapshot:3487d23aaeca883f4d192c1e3bb7e1f356018a25c6c728817b2cf4a8b6713b1e",
+          "context_id": "context:760cf0d50f17efc4757d626fa7c75e17ece67c5ea5e1d97e69e564a5a433ddd7",
+          "project": "src/Web/Web.csproj",
+          "byte_offset": 624,
+          "byte_length": 6,
+          "symbol": {
+            "id": "symbol:6cfaea9fc3aaf642903dd4a2191e8c41d06737f5dbb792020c719d5454672db8",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShopOnWeb/src/Web/Web.csproj",
+            "descriptor": "M:Microsoft.eShopWeb.Web.Features.MyOrders.GetMyOrdersHandler.Handle(Microsoft.eShopWeb.Web.Features.MyOrders.GetMyOrders,System.Threading.CancellationToken)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "16",
+          "implementation_facts": [
+            {
+              "kind": "interface_method_implementation",
+              "rule": "csharp-interface-closed-v2",
+              "evidence_scope": "compile_time",
+              "interface_symbol_id": "symbol:bcd392a7947de911e3cb5d6af0925bd3e17f21b7b0b49d6a885954dfc48a8429",
+              "implementing_type_symbol_id": "symbol:52dea6faac05a65bc1499fdb2c15221921ec1156adb99b038f1a93a191a8940d"
+            }
+          ],
+          "implementation_symbols": [
+            {
+              "id": "symbol:52dea6faac05a65bc1499fdb2c15221921ec1156adb99b038f1a93a191a8940d",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShopOnWeb/src/Web/Web.csproj",
+              "descriptor": "T:Microsoft.eShopWeb.Web.Features.MyOrders.GetMyOrdersHandler",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            {
+              "id": "symbol:bcd392a7947de911e3cb5d6af0925bd3e17f21b7b0b49d6a885954dfc48a8429",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "MediatR, Version=12.0.0.0, Culture=neutral, PublicKeyToken=bb9a41a5e8aaa7e2",
+              "descriptor": "{\"definition\":\"M:MediatR.IRequestHandler\\u00602.Handle(\\u00600,System.Threading.CancellationToken)\",\"arguments\":[{\"descriptor\":\"T:Microsoft.eShopWeb.Web.Features.MyOrders.GetMyOrders\",\"descriptor_kind\":\"documentation_comment_id\",\"namespace_kind\":\"project\",\"namespace\":\"eShopOnWeb/src/Web/Web.csproj\",\"language\":\"csharp\"},{\"descriptor\":\"{\\u0022definition\\u0022:\\u0022T:System.Collections.Generic.IEnumerable\\\\u00601\\u0022,\\u0022arguments\\u0022:[{\\u0022descriptor\\u0022:\\u0022T:Microsoft.eShopWeb.Web.ViewModels.OrderViewModel\\u0022,\\u0022descriptor_kind\\u0022:\\u0022documentation_comment_id\\u0022,\\u0022namespace_kind\\u0022:\\u0022project\\u0022,\\u0022namespace\\u0022:\\u0022eShopOnWeb/src/Web/Web.csproj\\u0022,\\u0022language\\u0022:\\u0022csharp\\u0022}]}\",\"descriptor_kind\":\"constructed_named_type_v1\",\"namespace_kind\":\"assembly\",\"namespace\":\"System.Runtime, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a\",\"language\":\"csharp\"}]}",
+              "descriptor_kind": "constructed_interface_method_v2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "details-handler",
+      "claim": "IRequestHandler<GetOrderDetails,OrderDetailViewModel> implementation",
+      "layer": "implementation",
+      "binding_resolved": true,
+      "fact_present": true,
+      "facts": [
+        {
+          "kind": "interface_method_implementation",
+          "rule": "csharp-interface-closed-v1",
+          "evidence_scope": "compile_time",
+          "interface_symbol_id": "symbol:1c3b6ea948d11c4f79ac69a204886f6df367086a587900f9548bba0d5ecf90b4",
+          "implementing_type_symbol_id": "symbol:508b2f2b58b8d2fa9e03a4d25586507d6e43ec045d5b4414f8f8a1b2e14a1077"
+        }
+      ],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:dd2c46a3e32b05a8efc2654bf4adf2fafb7a9b9bdad6a80e14b1aa8c4da8a01e",
+          "binding_status": "resolved",
+          "reference_kind": "declaration",
+          "role": "declaration",
+          "repo": "eShopOnWeb",
+          "path": "src/Web/Features/OrderDetails/GetOrderDetailsHandler.cs",
+          "raw_sha256": "f3626cfbb26460fdd5ae6c7d71d1f422642543f51d5fe3fc78d200201b7f595b",
+          "source_id": "source:b01b42487251f45f4366ec3c14a09f9604381e1c5ae907a5a81eeab121c4c731",
+          "source_snapshot_id": "snapshot:3487d23aaeca883f4d192c1e3bb7e1f356018a25c6c728817b2cf4a8b6713b1e",
+          "context_id": "context:760cf0d50f17efc4757d626fa7c75e17ece67c5ea5e1d97e69e564a5a433ddd7",
+          "project": "src/Web/Web.csproj",
+          "byte_offset": 628,
+          "byte_length": 6,
+          "symbol": {
+            "id": "symbol:fbce2a41a4a1fbd459bc9b8e84f7e06b5c5737fb1f620c8831e1d109d2b6d5b8",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShopOnWeb/src/Web/Web.csproj",
+            "descriptor": "M:Microsoft.eShopWeb.Web.Features.OrderDetails.GetOrderDetailsHandler.Handle(Microsoft.eShopWeb.Web.Features.OrderDetails.GetOrderDetails,System.Threading.CancellationToken)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "16",
+          "implementation_facts": [
+            {
+              "kind": "interface_method_implementation",
+              "rule": "csharp-interface-closed-v1",
+              "evidence_scope": "compile_time",
+              "interface_symbol_id": "symbol:1c3b6ea948d11c4f79ac69a204886f6df367086a587900f9548bba0d5ecf90b4",
+              "implementing_type_symbol_id": "symbol:508b2f2b58b8d2fa9e03a4d25586507d6e43ec045d5b4414f8f8a1b2e14a1077"
+            }
+          ],
+          "implementation_symbols": [
+            {
+              "id": "symbol:1c3b6ea948d11c4f79ac69a204886f6df367086a587900f9548bba0d5ecf90b4",
+              "language": "csharp",
+              "namespace_kind": "assembly",
+              "namespace": "MediatR, Version=12.0.0.0, Culture=neutral, PublicKeyToken=bb9a41a5e8aaa7e2",
+              "descriptor": "{\"definition\":\"M:MediatR.IRequestHandler\\u00602.Handle(\\u00600,System.Threading.CancellationToken)\",\"arguments\":[{\"descriptor\":\"T:Microsoft.eShopWeb.Web.Features.OrderDetails.GetOrderDetails\",\"descriptor_kind\":\"documentation_comment_id\",\"namespace_kind\":\"project\",\"namespace\":\"eShopOnWeb/src/Web/Web.csproj\",\"language\":\"csharp\"},{\"descriptor\":\"T:Microsoft.eShopWeb.Web.ViewModels.OrderDetailViewModel\",\"descriptor_kind\":\"documentation_comment_id\",\"namespace_kind\":\"project\",\"namespace\":\"eShopOnWeb/src/Web/Web.csproj\",\"language\":\"csharp\"}]}",
+              "descriptor_kind": "constructed_interface_method_v1"
+            },
+            {
+              "id": "symbol:508b2f2b58b8d2fa9e03a4d25586507d6e43ec045d5b4414f8f8a1b2e14a1077",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShopOnWeb/src/Web/Web.csproj",
+              "descriptor": "T:Microsoft.eShopWeb.Web.Features.OrderDetails.GetOrderDetailsHandler",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "assembly-scan",
+      "claim": "MediatR assembly scanning configuration; runtime handler selection unproved",
+      "layer": "domain",
+      "binding_resolved": true,
+      "fact_present": true,
+      "facts": [
+        {
+          "kind": "mediator_assembly_scan_configuration",
+          "rule": "csharp-mediatr-scan-v1",
+          "evidence_scope": "compile_time",
+          "targets": [
+            {
+              "role": "assembly_marker",
+              "symbol": {
+                "id": "symbol:518fda919e12e78301a0bc072dd65ab79cf7fb0e2d7e5a39014c662c5cf3554e",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShopOnWeb/src/Web/Web.csproj",
+                "descriptor": "T:Microsoft.eShopWeb.Web.Services.BasketViewModelService",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            }
+          ]
+        }
+      ],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:d5b458b68688a2401606f53de06894c62a610e28185262ad33905f8485b293a5",
+          "binding_status": "resolved",
+          "reference_kind": "invocation",
+          "role": "reference",
+          "repo": "eShopOnWeb",
+          "path": "src/Web/Configuration/ConfigureWebServices.cs",
+          "raw_sha256": "74723f33e98728b101e499581d0e758b54b8f99f3f048f8a198ae8873cce8fb8",
+          "source_id": "source:25f1588418a3a940d893edd362167bf60c6519923f1cfc44191fd0d0f8440631",
+          "source_snapshot_id": "snapshot:3487d23aaeca883f4d192c1e3bb7e1f356018a25c6c728817b2cf4a8b6713b1e",
+          "context_id": "context:760cf0d50f17efc4757d626fa7c75e17ece67c5ea5e1d97e69e564a5a433ddd7",
+          "project": "src/Web/Web.csproj",
+          "byte_offset": 365,
+          "byte_length": 28,
+          "symbol": {
+            "id": "symbol:4e109a6249d1eed660b68ed1f2ce7b395bf36ad2101924c7e25ffb23d144250e",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "MediatR, Version=12.0.0.0, Culture=neutral, PublicKeyToken=bb9a41a5e8aaa7e2",
+            "descriptor": "M:Microsoft.Extensions.DependencyInjection.MediatRServiceConfiguration.RegisterServicesFromAssembly(System.Reflection.Assembly)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "enclosing_symbol_id": "symbol:cc69459690d3585477b3f49816ccd2e48eb28dac6273ec3939ccfef3d10322ca",
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "16",
+          "domain_facts": [
+            {
+              "kind": "mediator_assembly_scan_configuration",
+              "rule": "csharp-mediatr-scan-v1",
+              "evidence_scope": "compile_time",
+              "targets": [
+                {
+                  "role": "assembly_marker",
+                  "symbol": {
+                    "id": "symbol:518fda919e12e78301a0bc072dd65ab79cf7fb0e2d7e5a39014c662c5cf3554e",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "eShopOnWeb/src/Web/Web.csproj",
+                    "descriptor": "T:Microsoft.eShopWeb.Web.Services.BasketViewModelService",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "order-registration",
+      "claim": "scoped IOrderService to OrderService registration",
+      "layer": "domain",
+      "binding_resolved": true,
+      "fact_present": true,
+      "facts": [
+        {
+          "kind": "di_registration",
+          "rule": "csharp-framework-v1",
+          "evidence_scope": "compile_time",
+          "targets": [
+            {
+              "role": "service",
+              "symbol": {
+                "id": "symbol:b8525feaa04bf3c4fbb3e420fcbc9aa3b87544264b1a4f3fb0d75af6dd91df73",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShopOnWeb/src/ApplicationCore/ApplicationCore.csproj",
+                "descriptor": "T:Microsoft.eShopWeb.ApplicationCore.Interfaces.IOrderService",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            },
+            {
+              "role": "implementation",
+              "symbol": {
+                "id": "symbol:4bada6694ef45bb6a846690da6c95519853f78bc6a06bc5f8bb09b9b1c4797c5",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShopOnWeb/src/ApplicationCore/ApplicationCore.csproj",
+                "descriptor": "T:Microsoft.eShopWeb.ApplicationCore.Services.OrderService",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            }
+          ],
+          "lifetime": "scoped"
+        }
+      ],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:8bc6003e06092bc639407397159b9d7305cde82b3f147a7990980947dd4048fe",
+          "binding_status": "resolved",
+          "reference_kind": "invocation",
+          "role": "reference",
+          "repo": "eShopOnWeb",
+          "path": "src/Web/Configuration/ConfigureCoreServices.cs",
+          "raw_sha256": "1e2431014bb7717c2916cea7984c25b86ff448847fd5a94edc9cc5dadd0d835a",
+          "source_id": "source:3ef1535998fe839bbd584a81358870a55188124c68481ef4fe2dd7592727db84",
+          "source_snapshot_id": "snapshot:3487d23aaeca883f4d192c1e3bb7e1f356018a25c6c728817b2cf4a8b6713b1e",
+          "context_id": "context:760cf0d50f17efc4757d626fa7c75e17ece67c5ea5e1d97e69e564a5a433ddd7",
+          "project": "src/Web/Web.csproj",
+          "byte_offset": 764,
+          "byte_length": 9,
+          "symbol": {
+            "id": "symbol:fc8e99ce72911449fa0691d1b26b646ae4fd5eedcf66d3cac28818c894b33fbc",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+            "descriptor": "M:Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddScoped``2(Microsoft.Extensions.DependencyInjection.IServiceCollection)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "enclosing_symbol_id": "symbol:6b840ef0fad34220071852f167e4670b1104f90c15b5b42e728aa4db9839e18a",
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "16",
+          "domain_facts": [
+            {
+              "kind": "di_registration",
+              "rule": "csharp-framework-v1",
+              "evidence_scope": "compile_time",
+              "targets": [
+                {
+                  "role": "service",
+                  "symbol": {
+                    "id": "symbol:b8525feaa04bf3c4fbb3e420fcbc9aa3b87544264b1a4f3fb0d75af6dd91df73",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "eShopOnWeb/src/ApplicationCore/ApplicationCore.csproj",
+                    "descriptor": "T:Microsoft.eShopWeb.ApplicationCore.Interfaces.IOrderService",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                },
+                {
+                  "role": "implementation",
+                  "symbol": {
+                    "id": "symbol:4bada6694ef45bb6a846690da6c95519853f78bc6a06bc5f8bb09b9b1c4797c5",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "eShopOnWeb/src/ApplicationCore/ApplicationCore.csproj",
+                    "descriptor": "T:Microsoft.eShopWeb.ApplicationCore.Services.OrderService",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                }
+              ],
+              "lifetime": "scoped"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "open-repository",
+      "claim": "open generic IReadRepository to EfRepository registration; no concrete runtime dispatch proof",
+      "layer": "domain",
+      "binding_resolved": true,
+      "fact_present": true,
+      "facts": [
+        {
+          "kind": "di_open_generic_registration_configuration",
+          "rule": "csharp-open-di-v1",
+          "evidence_scope": "compile_time",
+          "targets": [
+            {
+              "role": "service_template",
+              "symbol": {
+                "id": "symbol:cf097bf7fc959dced9609fe22337b45c156af0ad9e67bbf769ad2508ac5d6c2a",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShopOnWeb/src/ApplicationCore/ApplicationCore.csproj",
+                "descriptor": "T:Microsoft.eShopWeb.ApplicationCore.Interfaces.IReadRepository`1",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            },
+            {
+              "role": "implementation_template",
+              "symbol": {
+                "id": "symbol:a0bc21c2a7f3b1a5575077aeafadada850e9eba88db06ac284be3a17a3ef1663",
+                "language": "csharp",
+                "namespace_kind": "project",
+                "namespace": "eShopOnWeb/src/Infrastructure/Infrastructure.csproj",
+                "descriptor": "T:Microsoft.eShopWeb.Infrastructure.Data.EfRepository`1",
+                "descriptor_kind": "documentation_comment_id"
+              }
+            }
+          ],
+          "lifetime": "scoped"
+        }
+      ],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:5350ea185fc669fc9dfab145cdf1551d61b7486ea56018e7e8ccaf255f23b1b9",
+          "binding_status": "resolved",
+          "reference_kind": "invocation",
+          "role": "reference",
+          "repo": "eShopOnWeb",
+          "path": "src/Web/Configuration/ConfigureCoreServices.cs",
+          "raw_sha256": "1e2431014bb7717c2916cea7984c25b86ff448847fd5a94edc9cc5dadd0d835a",
+          "source_id": "source:3ef1535998fe839bbd584a81358870a55188124c68481ef4fe2dd7592727db84",
+          "source_snapshot_id": "snapshot:3487d23aaeca883f4d192c1e3bb7e1f356018a25c6c728817b2cf4a8b6713b1e",
+          "context_id": "context:760cf0d50f17efc4757d626fa7c75e17ece67c5ea5e1d97e69e564a5a433ddd7",
+          "project": "src/Web/Web.csproj",
+          "byte_offset": 548,
+          "byte_length": 9,
+          "symbol": {
+            "id": "symbol:b41c1b61bf116ab8c55e33aecdeb533833debc72fd4ff6151fd48b25db842a7e",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60",
+            "descriptor": "M:Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddScoped(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Type,System.Type)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "enclosing_symbol_id": "symbol:6b840ef0fad34220071852f167e4670b1104f90c15b5b42e728aa4db9839e18a",
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "16",
+          "domain_facts": [
+            {
+              "kind": "di_open_generic_registration_configuration",
+              "rule": "csharp-open-di-v1",
+              "evidence_scope": "compile_time",
+              "targets": [
+                {
+                  "role": "service_template",
+                  "symbol": {
+                    "id": "symbol:cf097bf7fc959dced9609fe22337b45c156af0ad9e67bbf769ad2508ac5d6c2a",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "eShopOnWeb/src/ApplicationCore/ApplicationCore.csproj",
+                    "descriptor": "T:Microsoft.eShopWeb.ApplicationCore.Interfaces.IReadRepository`1",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                },
+                {
+                  "role": "implementation_template",
+                  "symbol": {
+                    "id": "symbol:a0bc21c2a7f3b1a5575077aeafadada850e9eba88db06ac284be3a17a3ef1663",
+                    "language": "csharp",
+                    "namespace_kind": "project",
+                    "namespace": "eShopOnWeb/src/Infrastructure/Infrastructure.csproj",
+                    "descriptor": "T:Microsoft.eShopWeb.Infrastructure.Data.EfRepository`1",
+                    "descriptor_kind": "documentation_comment_id"
+                  }
+                }
+              ],
+              "lifetime": "scoped"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "checkout-call",
+      "claim": "resolved interface call IOrderService.CreateOrderAsync",
+      "layer": "binding",
+      "binding_resolved": true,
+      "fact_present": null,
+      "facts": [],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:6b80cd65e4aff877fa614495e0133b0f8cb9686148d429864f1cca6bb6d942c0",
+          "binding_status": "resolved",
+          "reference_kind": "invocation",
+          "role": "reference",
+          "repo": "eShopOnWeb",
+          "path": "src/Web/Pages/Basket/Checkout.cshtml.cs",
+          "raw_sha256": "0214147258f513750944a528a42cb8eec6d54b372ada853b49120101e6dbd2c2",
+          "source_id": "source:25bc22a517b06ccba959fae8867c47d3bcd99d52ef43f59ccb07c752b094674e",
+          "source_snapshot_id": "snapshot:3487d23aaeca883f4d192c1e3bb7e1f356018a25c6c728817b2cf4a8b6713b1e",
+          "context_id": "context:760cf0d50f17efc4757d626fa7c75e17ece67c5ea5e1d97e69e564a5a433ddd7",
+          "project": "src/Web/Web.csproj",
+          "byte_offset": 1957,
+          "byte_length": 16,
+          "symbol": {
+            "id": "symbol:4db978739abac340f921cf95be7ea9dde8ad1ce1323031db3527098bd2311efb",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShopOnWeb/src/ApplicationCore/ApplicationCore.csproj",
+            "descriptor": "M:Microsoft.eShopWeb.ApplicationCore.Interfaces.IOrderService.CreateOrderAsync(System.Int32,Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate.Address)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "enclosing_symbol_id": "symbol:5fdaac6e551d4a739a29b4972bffe08e514722c31387b833d6ff0c2ee5169c5b",
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "16"
+        }
+      ]
+    },
+    {
+      "id": "order-implementation",
+      "claim": "IOrderService.CreateOrderAsync implemented by OrderService",
+      "layer": "implementation",
+      "binding_resolved": true,
+      "fact_present": true,
+      "facts": [
+        {
+          "kind": "interface_method_implementation",
+          "rule": "csharp-interface-v1",
+          "evidence_scope": "compile_time",
+          "interface_symbol_id": "symbol:4db978739abac340f921cf95be7ea9dde8ad1ce1323031db3527098bd2311efb",
+          "implementing_type_symbol_id": "symbol:4bada6694ef45bb6a846690da6c95519853f78bc6a06bc5f8bb09b9b1c4797c5"
+        }
+      ],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:acd140c2a38e398db798c8e7e23049e161c20e5fcdc2b00ca20e923781af74ef",
+          "binding_status": "resolved",
+          "reference_kind": "declaration",
+          "role": "declaration",
+          "repo": "eShopOnWeb",
+          "path": "src/ApplicationCore/Services/OrderService.cs",
+          "raw_sha256": "1401534b700196e7ca52051f2dda35da0c6e84d0757b5ab9d0580af0cbeabc3f",
+          "source_id": "source:88c3c55650274fea630f86e8c014083c27751a0f8e85e25055651e7ba1b4f03a",
+          "source_snapshot_id": "snapshot:3487d23aaeca883f4d192c1e3bb7e1f356018a25c6c728817b2cf4a8b6713b1e",
+          "context_id": "context:d2f6b24e9ba19c3236b2c03546019bfd477f7ae5e516c63ecf45ce6375a2395e",
+          "project": "src/ApplicationCore/ApplicationCore.csproj",
+          "byte_offset": 1097,
+          "byte_length": 16,
+          "symbol": {
+            "id": "symbol:dc95e46571b55e4a884f3a6718a42e97e4830b8e5d8a2902399b9ae0afe74974",
+            "language": "csharp",
+            "namespace_kind": "project",
+            "namespace": "eShopOnWeb/src/ApplicationCore/ApplicationCore.csproj",
+            "descriptor": "M:Microsoft.eShopWeb.ApplicationCore.Services.OrderService.CreateOrderAsync(System.Int32,Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate.Address)",
+            "descriptor_kind": "documentation_comment_id"
+          },
+          "candidates": [],
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "16",
+          "implementation_facts": [
+            {
+              "kind": "interface_method_implementation",
+              "rule": "csharp-interface-v1",
+              "evidence_scope": "compile_time",
+              "interface_symbol_id": "symbol:4db978739abac340f921cf95be7ea9dde8ad1ce1323031db3527098bd2311efb",
+              "implementing_type_symbol_id": "symbol:4bada6694ef45bb6a846690da6c95519853f78bc6a06bc5f8bb09b9b1c4797c5"
+            }
+          ],
+          "implementation_symbols": [
+            {
+              "id": "symbol:4bada6694ef45bb6a846690da6c95519853f78bc6a06bc5f8bb09b9b1c4797c5",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShopOnWeb/src/ApplicationCore/ApplicationCore.csproj",
+              "descriptor": "T:Microsoft.eShopWeb.ApplicationCore.Services.OrderService",
+              "descriptor_kind": "documentation_comment_id"
+            },
+            {
+              "id": "symbol:4db978739abac340f921cf95be7ea9dde8ad1ce1323031db3527098bd2311efb",
+              "language": "csharp",
+              "namespace_kind": "project",
+              "namespace": "eShopOnWeb/src/ApplicationCore/ApplicationCore.csproj",
+              "descriptor": "M:Microsoft.eShopWeb.ApplicationCore.Interfaces.IOrderService.CreateOrderAsync(System.Int32,Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate.Address)",
+              "descriptor_kind": "documentation_comment_id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "repository-call",
+      "claim": "resolved inherited generic repository ListAsync call; concrete implementation is not source-proved",
+      "layer": "binding",
+      "binding_resolved": true,
+      "fact_present": null,
+      "facts": [],
+      "bindings": [
+        {
+          "generated": false,
+          "occurrence_id": "occurrence:06dcc5b645545951597d6b46c0df3eb458092ef995cbb69a48e6c380a0d9bdb4",
+          "binding_status": "resolved",
+          "reference_kind": "invocation",
+          "role": "reference",
+          "repo": "eShopOnWeb",
+          "path": "src/Web/Features/MyOrders/GetMyOrdersHandler.cs",
+          "raw_sha256": "a395b93091bae562db99e47e4efca592dc9a11a5b8d5909aa034e02364589940",
+          "source_id": "source:91e1d2a53e1f75c113dd61a70b18afc13b8ee7e16e2e5cea81e746849cf85358",
+          "source_snapshot_id": "snapshot:3487d23aaeca883f4d192c1e3bb7e1f356018a25c6c728817b2cf4a8b6713b1e",
+          "context_id": "context:760cf0d50f17efc4757d626fa7c75e17ece67c5ea5e1d97e69e564a5a433ddd7",
+          "project": "src/Web/Web.csproj",
+          "byte_offset": 826,
+          "byte_length": 9,
+          "symbol": {
+            "id": "symbol:63c3e63bd9a8b8ae4d879f71cf46966a2b7b99a2e1a50059e041d24a2c5aef2e",
+            "language": "csharp",
+            "namespace_kind": "assembly",
+            "namespace": "Ardalis.Specification, Version=7.0.0.0, Culture=neutral, PublicKeyToken=null",
+            "descriptor": "{\"definition\":\"M:Ardalis.Specification.IReadRepositoryBase\\u00601.ListAsync(Ardalis.Specification.ISpecification{\\u00600},System.Threading.CancellationToken)\",\"arguments\":[{\"descriptor\":\"T:Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate.Order\",\"descriptor_kind\":\"documentation_comment_id\",\"namespace_kind\":\"project\",\"namespace\":\"eShopOnWeb/src/ApplicationCore/ApplicationCore.csproj\",\"language\":\"csharp\"}]}",
+            "descriptor_kind": "constructed_interface_method_v1"
+          },
+          "candidates": [],
+          "enclosing_symbol_id": "symbol:6cfaea9fc3aaf642903dd4a2191e8c41d06737f5dbb792020c719d5454672db8",
+          "method": "roslyn-semantic-model",
+          "extractor": "msbuild-roslyn",
+          "extractor_version": "16"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "endpoint": "http://127.0.0.1:19382/mcp",
+  "started_monotonic": 10126.07682325,
+  "started_utc": "2026-10-01T18:48:04Z",
+  "calls": 11,
+  "response_bytes": 41413,
+  "pending": null,
+  "stopped": null,
+  "limits": {
+    "calls": 24,
+    "response_bytes": 131072,
+    "wall_seconds": 600,
+    "transport_response_cap": 8388608
+  },
+  "prompt_sha256": "1d5d4c5f221484981e537dd8dad4e9e571d8fe38417f4f1551855c1e793e997c",
+  "catalog_sha256": "f78b27da012a0491e1093bfff6aba30b681e13dce979f079d2c05888141a6aff",
+  "client_sha256": "6e2934d7f16a8f87ba961d716899a8f298c8abf9feea367cce2b9e2fc00c36a1",
+  "initial_catalog_charged": false,
+  "token_usage": "unknown",
+  "filesystem_isolation": "not enforced; solver can access host workspace",
+  "accounting": "Each attempted MCP list/call is charged, including native errors. Local CLI syntax errors are separate events, not MCP calls. Complete response bytes include the JSON-RPC envelope. First crossing response is retained and returned, then calls stop. Timer starts at first interaction; coordinator separately records solver spawn and answer times and enforces the full solver deadline."
+}

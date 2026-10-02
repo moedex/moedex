@@ -1,0 +1,93 @@
+=== RUN   TestPublicDomainSourceToMCP
+=== RUN   TestPublicDomainSourceToMCP/di-singleton
+    domain_public_test.go:202: source_to_mcp case=di-singleton offset=516 facts=1 structured_sha256=a0732d0d34f203ee687c7bcb87d23439a1fe169febf075b362fbbb7b4c9a672c
+=== RUN   TestPublicDomainSourceToMCP/di-scoped
+    domain_public_test.go:202: source_to_mcp case=di-scoped offset=586 facts=1 structured_sha256=2c666eee6b57f175c69bd86fe93453bfa28464ba09f23e34ab175873347f29f6
+=== RUN   TestPublicDomainSourceToMCP/di-self
+    domain_public_test.go:202: source_to_mcp case=di-self offset=651 facts=1 structured_sha256=f3adf7354fbff30cc573c2f29b324dea0475bd158c7782a4b6021215c4d1a991
+=== RUN   TestPublicDomainSourceToMCP/di-factory
+    domain_public_test.go:202: source_to_mcp case=di-factory offset=712 facts=0 structured_sha256=625471908ab53380f39271c94edbb4245d9882da66058b34f2630714722d224a
+=== RUN   TestPublicDomainSourceToMCP/di-open
+    domain_public_test.go:202: source_to_mcp case=di-open offset=790 facts=0 structured_sha256=5c5ec8faf3c05619bfc3ea4c665605dfbb5b323b2380f1306242e2a19dd32b04
+=== RUN   TestPublicDomainSourceToMCP/di-instance
+    domain_public_test.go:202: source_to_mcp case=di-instance offset=864 facts=0 structured_sha256=3ffafdcf1c1d05608ab3c6918ef1b52297d78acd4cadf0399a746d189c747b8d
+=== RUN   TestPublicDomainSourceToMCP/di-lookalike
+    domain_public_test.go:202: source_to_mcp case=di-lookalike offset=946 facts=0 structured_sha256=745f1708ea457f0da29cacec38a70d82371432cee5f00fccfe9bf883638ab862
+=== RUN   TestPublicDomainSourceToMCP/publish-explicit
+    domain_public_test.go:202: source_to_mcp case=publish-explicit offset=1126 facts=1 structured_sha256=5bafa5f4264ee442f26182f70825e5c688c24de46796283847760d351163285f
+=== RUN   TestPublicDomainSourceToMCP/publish-inferred
+    domain_public_test.go:202: source_to_mcp case=publish-inferred offset=1205 facts=1 structured_sha256=6cde42fed594c256ed6708eb67ef4162f8d49913dde3d4000428bc3dda67b621
+=== RUN   TestPublicDomainSourceToMCP/publish-alias
+    domain_public_test.go:202: source_to_mcp case=publish-alias offset=1273 facts=1 structured_sha256=b2552c1acb413e873b61014aebaf44b37a176093601eabcc6f913dfb721583be
+=== RUN   TestPublicDomainSourceToMCP/publish-open-target
+    domain_public_test.go:202: source_to_mcp case=publish-open-target offset=1361 facts=0 structured_sha256=641c279abe09d1320961f4fdff02675f40b75419094073f3f2e15d9bc44c2348
+=== RUN   TestPublicDomainSourceToMCP/publish-lookalike
+    domain_public_test.go:202: source_to_mcp case=publish-lookalike offset=1476 facts=0 structured_sha256=cbd9f63b77b29aae4ef92174d3be0f6d657d13890491f998614882ab9ad59e59
+=== RUN   TestPublicDomainSourceToMCP/publish-dynamic
+    domain_public_test.go:202: source_to_mcp case=publish-dynamic offset=1581 facts=0 structured_sha256=5ae3e5d5f772860544e149dcae6c87cfbe37679a6f8e92548fad7e571ec257ca
+=== RUN   TestPublicDomainSourceToMCP/consumes
+    domain_public_test.go:202: source_to_mcp case=consumes offset=1661 facts=1 structured_sha256=1c263f4545f27390e2720b3f751113d386458be479a3adefc6abdc4c86cd26dc
+=== RUN   TestPublicDomainSourceToMCP/consumes-generic
+    domain_public_test.go:202: source_to_mcp case=consumes-generic offset=1825 facts=0 structured_sha256=19316de5798bd462532a194e593b28ea709ffc04d710595228b2e0a234954cd1
+=== RUN   TestPublicDomainSourceToMCP/dbset
+    domain_public_test.go:202: source_to_mcp case=dbset offset=2012 facts=1 structured_sha256=7919df256479cd6ca13247d184ae3bb8cb09ab30083b3778417d16a4cde9cc43
+=== RUN   TestPublicDomainSourceToMCP/dbset-generic
+    domain_public_test.go:202: source_to_mcp case=dbset-generic offset=2085 facts=0 structured_sha256=09d3cf4ba69bbb3ac688f5c35936f72ecda2318d1198f17f5af58debc3d0011e
+=== RUN   TestPublicDomainSourceToMCP/table-literal
+    domain_public_test.go:202: source_to_mcp case=table-literal offset=2277 facts=1 structured_sha256=c5850659ba3ff684f344923626bde12b1adf0778cd318a7f1abb15bbaddff8f0
+=== RUN   TestPublicDomainSourceToMCP/table-constant-schema
+    domain_public_test.go:202: source_to_mcp case=table-constant-schema offset=2402 facts=1 structured_sha256=4bd0ae40dd34a2dd8c4e02f0daa2de59fd7fa8ba2b72da320713ddecf2c7ab62
+=== RUN   TestPublicDomainSourceToMCP/table-dynamic
+    domain_public_test.go:202: source_to_mcp case=table-dynamic offset=2480 facts=0 structured_sha256=eab173510ab7afe9422ea3391d5d868d010026608327f4a886b1a2e6f186e911
+=== RUN   TestPublicDomainSourceToMCP/table-lookalike
+    domain_public_test.go:202: source_to_mcp case=table-lookalike offset=3813 facts=0 structured_sha256=f24900f517f742a02a2d69e3592bff545473ecf76ba81374d52ed2b2f0d8ff97
+=== RUN   TestPublicDomainSourceToMCP/table-whitespace
+    domain_public_test.go:202: source_to_mcp case=table-whitespace offset=2558 facts=0 structured_sha256=3d5fd0d2875ceebbc659309e5bf6735d35ac266655bf7c4870b54f057323683f
+=== RUN   TestPublicDomainSourceToMCP/table-nul-schema
+    domain_public_test.go:202: source_to_mcp case=table-nul-schema offset=2630 facts=0 structured_sha256=419e7ecdade269720f1d8e344d1dfaebe2642821da0cbb2f37443320c2be3d7b
+=== RUN   TestPublicDomainSourceToMCP/table-long
+    domain_public_test.go:202: source_to_mcp case=table-long offset=2714 facts=0 structured_sha256=0689139eaa1e69edf171f6a9acf4f45eb3fbbb65cd6d4894da95ada837cf9065
+=== NAME  TestPublicDomainSourceToMCP
+    domain_public_test.go:236: compiler_definitions target=T:DomainGold.IService offset=184 structured_sha256=741a0ebe6355cc3beafbb0c2f687e54dac2872150dad7316a1c3d4e157faee3d
+    domain_public_test.go:236: compiler_definitions target=T:DomainGold.Service offset=217 structured_sha256=bb73988ef26be8ee8b27d91913847a7c52e97d3bc0d86ac2c8c04fae54703ee3
+    domain_public_test.go:236: compiler_definitions target=T:DomainGold.Notice offset=260 structured_sha256=fcb1e9e99d187c8ef4dec2658a7331a229af92b02be9cd74325eef4baa6327ee
+    domain_public_test.go:244: real source→worker→artifact→index→MCP cases=24 positive_facts=10
+--- PASS: TestPublicDomainSourceToMCP (0.04s)
+    --- PASS: TestPublicDomainSourceToMCP/di-singleton (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/di-scoped (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/di-self (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/di-factory (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/di-open (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/di-instance (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/di-lookalike (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/publish-explicit (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/publish-inferred (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/publish-alias (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/publish-open-target (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/publish-lookalike (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/publish-dynamic (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/consumes (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/consumes-generic (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/dbset (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/dbset-generic (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/table-literal (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/table-constant-schema (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/table-dynamic (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/table-lookalike (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/table-whitespace (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/table-nul-schema (0.00s)
+    --- PASS: TestPublicDomainSourceToMCP/table-long (0.00s)
+=== RUN   TestPublicDomainRejectsForgedCaptureFacts
+=== RUN   TestPublicDomainRejectsForgedCaptureFacts/lookalike_api
+=== RUN   TestPublicDomainRejectsForgedCaptureFacts/method_target
+=== RUN   TestPublicDomainRejectsForgedCaptureFacts/invalid_lifetime
+=== RUN   TestPublicDomainRejectsForgedCaptureFacts/runtime_claim
+--- PASS: TestPublicDomainRejectsForgedCaptureFacts (0.03s)
+    --- PASS: TestPublicDomainRejectsForgedCaptureFacts/lookalike_api (0.01s)
+    --- PASS: TestPublicDomainRejectsForgedCaptureFacts/method_target (0.01s)
+    --- PASS: TestPublicDomainRejectsForgedCaptureFacts/invalid_lifetime (0.01s)
+    --- PASS: TestPublicDomainRejectsForgedCaptureFacts/runtime_claim (0.01s)
+=== RUN   TestPublicDomainIncompleteFactsNotServable
+--- PASS: TestPublicDomainIncompleteFactsNotServable (0.00s)
+PASS
+ok  	moedex/internal/semanticimport	0.228s

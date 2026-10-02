@@ -297,21 +297,21 @@ func TestBuildEmitsCrossServiceEdges(t *testing.T) {
 	result := httproute.Build(fixtureCorpus(t))
 
 	want := []string{
-		// Structural identity on both sides: Verified.
-		"billing-svc GET /api/orders/{} -> orders-api GET /api/orders/{} [Exact Verified]",
-		"billing-svc POST /api/orders -> orders-api POST /api/orders [Exact Verified]",
-		"web-ui GET /api/orders/{} -> orders-api GET /api/orders/{} [Exact Verified]",
-		"web-ui POST /api/orders -> orders-api POST /api/orders [Exact Verified]",
-		"web-ui GET /api/cart/{} -> bff-node GET /api/cart/{} [Exact Verified]",
-		"inventory-svc GET /api/cart/{} -> bff-node GET /api/cart/{} [Exact Verified]",
-		"inventory-svc POST /api/reports -> reporting-svc POST /api/reports [Exact Verified]",
-		"reporting-svc GET /api/orders/{} -> orders-api GET /api/orders/{} [Exact Verified]",
-		"reporting-svc GET /api/inventory/{} -> inventory-svc GET /api/inventory/{} [Exact Verified]",
+		// Structural identity is still route-only evidence: Pattern.
+		"billing-svc GET /api/orders/{} -> orders-api GET /api/orders/{} [Exact Pattern]",
+		"billing-svc POST /api/orders -> orders-api POST /api/orders [Exact Pattern]",
+		"web-ui GET /api/orders/{} -> orders-api GET /api/orders/{} [Exact Pattern]",
+		"web-ui POST /api/orders -> orders-api POST /api/orders [Exact Pattern]",
+		"web-ui GET /api/cart/{} -> bff-node GET /api/cart/{} [Exact Pattern]",
+		"inventory-svc GET /api/cart/{} -> bff-node GET /api/cart/{} [Exact Pattern]",
+		"inventory-svc POST /api/reports -> reporting-svc POST /api/reports [Exact Pattern]",
+		"reporting-svc GET /api/orders/{} -> orders-api GET /api/orders/{} [Exact Pattern]",
+		"reporting-svc GET /api/inventory/{} -> inventory-svc GET /api/inventory/{} [Exact Candidate]",
 
 		// Binding was required: Pattern.
 		"billing-svc GET /{}/api/orders/{} -> orders-api GET /api/orders/{} [Parameterized Pattern]",
 		"billing-svc GET /api/reports/17 -> reporting-svc ANY /api/reports/{} [Parameterized Pattern]",
-		"reporting-svc GET /api/inventory/{} -> inventory-svc ANY /api/inventory/reports/* [Parameterized Pattern]",
+		"reporting-svc GET /api/inventory/{} -> inventory-svc ANY /api/inventory/reports/* [Parameterized Candidate]",
 	}
 
 	got := make([]string, 0, len(result.Edges))

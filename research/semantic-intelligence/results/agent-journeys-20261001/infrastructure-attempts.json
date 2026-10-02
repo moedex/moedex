@@ -1,0 +1,34 @@
+{
+  "recorded_utc": "2026-10-01T18:18:54.924949+00:00",
+  "aborted_solver_runs": [
+    {
+      "agent": "journey_01",
+      "task": "locate-duplicate",
+      "path": ".local/application-impact/agent-journeys/runs/locate-duplicate",
+      "status": "infrastructure_failure_no_product_response"
+    },
+    {
+      "agent": "journey_02",
+      "task": "locate-retry",
+      "path": ".local/application-impact/agent-journeys/runs/locate-retry",
+      "status": "infrastructure_failure_no_product_response"
+    },
+    {
+      "agent": "journey_03",
+      "task": "locate-validation-service",
+      "path": ".local/application-impact/agent-journeys/runs/locate-validation-service",
+      "status": "infrastructure_failure_no_product_response"
+    }
+  ],
+  "smokes": [
+    {
+      "path": ".local/application-impact/agent-journeys/setup-smoke",
+      "result": "connection_refused"
+    },
+    {
+      "path": ".local/application-impact/agent-journeys/setup-smoke-root",
+      "result": "catalog_only_success"
+    }
+  ],
+  "root_server_session": 6830
+}

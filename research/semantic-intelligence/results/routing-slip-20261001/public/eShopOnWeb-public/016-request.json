@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": 16,
+  "method": "tools/call",
+  "params": {
+    "name": "compiler_binding_at",
+    "arguments": {
+      "repo": "eShopOnWeb",
+      "path": "src/Web/Pages/Basket/Checkout.cshtml.cs",
+      "byte_offset": 1957,
+      "raw_sha256": "0214147258f513750944a528a42cb8eec6d54b372ada853b49120101e6dbd2c2",
+      "context_id": "context:7e71d5a9df161bb7cec13c114ac378795b29ccbeb2d0aca38f5197b9860f634b"
+    }
+  }
+}

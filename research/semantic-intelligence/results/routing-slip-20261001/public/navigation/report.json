@@ -1,0 +1,54 @@
+{
+  "classification": "bounded_constructor_witness_not_runtime_route_execution",
+  "sibling_activity_distinct": true,
+  "calls": [
+    {
+      "tool": "compiler_definitions",
+      "passed": true
+    },
+    {
+      "tool": "compiler_contract_impact",
+      "passed": true
+    },
+    {
+      "tool": "compiler_contract_context",
+      "passed": true
+    },
+    {
+      "tool": "compiler_definitions",
+      "passed": true
+    },
+    {
+      "tool": "compiler_contract_impact",
+      "passed": true
+    },
+    {
+      "tool": "compiler_contract_context",
+      "passed": true
+    },
+    {
+      "tool": "compiler_definitions",
+      "passed": true
+    },
+    {
+      "tool": "compiler_contract_impact",
+      "passed": true
+    },
+    {
+      "tool": "compiler_contract_context",
+      "passed": true
+    },
+    {
+      "tool": "compiler_contract_impact",
+      "passed": true
+    },
+    {
+      "tool": "compiler_contract_context",
+      "passed": true
+    },
+    {
+      "tool": "compiler_binding_at",
+      "passed": true
+    }
+  ]
+}

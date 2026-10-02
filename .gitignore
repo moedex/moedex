@@ -1,5 +1,14 @@
 .parity-work*
 
+# Local evaluation corpora, SDKs, dependency bundles, captures, and reference copies.
+/.local/
+/.references/
+__pycache__/
+*.pyc
+
+# Restart-safe external application evaluation SDK, packages, and captures.
+/.local/application-impact/
+
 # built binaries (cmd/* names, when built into the repo root)
 /moedex
 /moedex-mcp
@@ -25,3 +34,16 @@
 # go test -c / -cpuprofile leftovers
 *.test
 test.log
+
+# Disposable graph serving caches beside indexed shards.
+*.idx.graph-symbols
+graph-catalog.cache
+.graph-symbols-*
+.graph-catalog-*
+
+# Optional semantic compiler worker build products and Python harness caches.
+/tools/semantic-dotnet/bin/
+/tools/semantic-dotnet/obj/
+/tools/semantic-dotnet/__pycache__/
+/research/semantic-intelligence/__pycache__/
+/research/semantic-intelligence/roslyn/__pycache__/

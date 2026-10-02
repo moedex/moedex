@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"compiler_contract_paths","arguments":{"symbol_id":"symbol:a9687f8eb378e6d479f427396d7fdd2df7c32788506333ec24f083f189a4bebf","context_ids":["context:c3ea5704a009646629a19c999d15b71f6ab1eef15b158d92e8bba1851fbe327f"],"limit":10}}}

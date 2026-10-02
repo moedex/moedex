@@ -1,0 +1,105 @@
+[
+  {
+    "label": "full-test",
+    "argv": [
+      "go",
+      "test",
+      "./..."
+    ],
+    "native_environment": {
+      "MOEDEX_FORWARD_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/forwarding/capture.jsonl",
+      "MOEDEX_FORWARD_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/forwarding",
+      "MOEDEX_DEFAULT_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/selection/capture.jsonl",
+      "MOEDEX_DEFAULT_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/selection",
+      "MOEDEX_BRIDGE_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/bridge/capture.jsonl",
+      "MOEDEX_BRIDGE_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/bridge",
+      "MOEDEX_RESPONSE_DI_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/response-di/capture.jsonl",
+      "MOEDEX_RESPONSE_DI_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/response-di",
+      "MOEDEX_REQUEST_RESPONSE_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/request-response/capture.jsonl",
+      "MOEDEX_REQUEST_RESPONSE_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/request-response",
+      "MOEDEX_ENDPOINT_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/endpoint/capture.jsonl",
+      "MOEDEX_ENDPOINT_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/endpoint",
+      "MOEDEX_MEDIATR_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/mediatr/capture.jsonl",
+      "MOEDEX_MEDIATR_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/mediatr",
+      "MOEDEX_GENERIC_HANDLER_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/generic-handler/capture.jsonl",
+      "MOEDEX_GENERIC_HANDLER_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/generic-handler",
+      "MOEDEX_OPEN_DI_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/open-di/capture.jsonl",
+      "MOEDEX_OPEN_DI_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/open-di",
+      "MOEDEX_MEDIATR_SCAN_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/mediatr-scan/capture.jsonl",
+      "MOEDEX_MEDIATR_SCAN_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/mediatr-scan",
+      "MOEDEX_MASSTRANSIT_SCAN_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/native/capture.jsonl",
+      "MOEDEX_MASSTRANSIT_SCAN_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/native"
+    },
+    "returncode": 0
+  },
+  {
+    "label": "vet",
+    "argv": [
+      "go",
+      "vet",
+      "./..."
+    ],
+    "native_environment": {
+      "MOEDEX_FORWARD_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/forwarding/capture.jsonl",
+      "MOEDEX_FORWARD_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/forwarding",
+      "MOEDEX_DEFAULT_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/selection/capture.jsonl",
+      "MOEDEX_DEFAULT_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/selection",
+      "MOEDEX_BRIDGE_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/bridge/capture.jsonl",
+      "MOEDEX_BRIDGE_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/bridge",
+      "MOEDEX_RESPONSE_DI_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/response-di/capture.jsonl",
+      "MOEDEX_RESPONSE_DI_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/response-di",
+      "MOEDEX_REQUEST_RESPONSE_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/request-response/capture.jsonl",
+      "MOEDEX_REQUEST_RESPONSE_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/request-response",
+      "MOEDEX_ENDPOINT_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/endpoint/capture.jsonl",
+      "MOEDEX_ENDPOINT_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/endpoint",
+      "MOEDEX_MEDIATR_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/mediatr/capture.jsonl",
+      "MOEDEX_MEDIATR_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/mediatr",
+      "MOEDEX_GENERIC_HANDLER_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/generic-handler/capture.jsonl",
+      "MOEDEX_GENERIC_HANDLER_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/generic-handler",
+      "MOEDEX_OPEN_DI_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/open-di/capture.jsonl",
+      "MOEDEX_OPEN_DI_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/open-di",
+      "MOEDEX_MEDIATR_SCAN_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/mediatr-scan/capture.jsonl",
+      "MOEDEX_MEDIATR_SCAN_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/mediatr-scan",
+      "MOEDEX_MASSTRANSIT_SCAN_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/native/capture.jsonl",
+      "MOEDEX_MASSTRANSIT_SCAN_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/native"
+    },
+    "returncode": 0
+  },
+  {
+    "label": "race",
+    "argv": [
+      "go",
+      "test",
+      "-race",
+      "./internal/semantic",
+      "./internal/semanticindex",
+      "./internal/semanticimport",
+      "./internal/mcp"
+    ],
+    "native_environment": {
+      "MOEDEX_FORWARD_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/forwarding/capture.jsonl",
+      "MOEDEX_FORWARD_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/forwarding",
+      "MOEDEX_DEFAULT_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/selection/capture.jsonl",
+      "MOEDEX_DEFAULT_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/selection",
+      "MOEDEX_BRIDGE_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/bridge/capture.jsonl",
+      "MOEDEX_BRIDGE_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/bridge",
+      "MOEDEX_RESPONSE_DI_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/response-di/capture.jsonl",
+      "MOEDEX_RESPONSE_DI_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/response-di",
+      "MOEDEX_REQUEST_RESPONSE_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/request-response/capture.jsonl",
+      "MOEDEX_REQUEST_RESPONSE_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/request-response",
+      "MOEDEX_ENDPOINT_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/endpoint/capture.jsonl",
+      "MOEDEX_ENDPOINT_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/endpoint",
+      "MOEDEX_MEDIATR_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/mediatr/capture.jsonl",
+      "MOEDEX_MEDIATR_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/mediatr",
+      "MOEDEX_GENERIC_HANDLER_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/generic-handler/capture.jsonl",
+      "MOEDEX_GENERIC_HANDLER_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/generic-handler",
+      "MOEDEX_OPEN_DI_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/open-di/capture.jsonl",
+      "MOEDEX_OPEN_DI_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/open-di",
+      "MOEDEX_MEDIATR_SCAN_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/mediatr-scan/capture.jsonl",
+      "MOEDEX_MEDIATR_SCAN_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/mediatr-scan",
+      "MOEDEX_MASSTRANSIT_SCAN_STREAM": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/native/capture.jsonl",
+      "MOEDEX_MASSTRANSIT_SCAN_ROOT": "/Users/zakkeown/Code/moedex/.local/masstransit-scan/native"
+    },
+    "returncode": 0
+  }
+]

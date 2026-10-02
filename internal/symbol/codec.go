@@ -50,6 +50,25 @@ var magic = []byte("SYM2")
 // magicV1 is the legacy symbols-only sidecar magic, still readable.
 var magicV1 = []byte("SYM1")
 
+// Encode writes the current symbol format without taking ownership of w.
+func Encode(w io.Writer, ix *Index) error { return writeIndex(w, ix) }
+
+// Decode reads exactly size bytes in the current format. Unlike Load's legacy
+// compatibility path, this rejects older formats, trailing bytes, invalid enums,
+// offsets, duplicate blob records, and noncanonical record ordering. Callers
+// must additionally validate offsets and blob IDs against their source corpus.
+func Decode(r io.Reader, size int64) (*Index, error) {
+	if size < 0 {
+		return nil, fmt.Errorf("symbol: negative size")
+	}
+	limited := &io.LimitedReader{R: r, N: size}
+	ix, err := readIndexChecked(bufio.NewReader(limited), size, true)
+	if err == nil && limited.N != 0 {
+		return nil, io.ErrUnexpectedEOF
+	}
+	return ix, err
+}
+
 // Save writes ix to path.
 func Save(ix *Index, path string) error {
 	f, err := os.Create(path)
@@ -224,12 +243,19 @@ func checkCount(n uint64, minItemSize int, total int64) error {
 }
 
 func readIndex(r *bufio.Reader, size int64) (*Index, error) {
+	return readIndexChecked(r, size, false)
+}
+
+func readIndexChecked(r *bufio.Reader, size int64, strict bool) (*Index, error) {
 	hdr := make([]byte, len(magic))
 	if _, err := io.ReadFull(r, hdr); err != nil {
 		return nil, fmt.Errorf("symbol: reading magic: %w", err)
 	}
 	isV2 := string(hdr) == string(magic)
 	isV1 := string(hdr) == string(magicV1)
+	if strict && !isV2 {
+		return nil, fmt.Errorf("symbol: current format required")
+	}
 	if !isV2 && !isV1 {
 		return nil, fmt.Errorf("symbol: bad magic %q", hdr)
 	}
@@ -244,11 +270,15 @@ func readIndex(r *bufio.Reader, size int64) (*Index, error) {
 	if err := checkCount(blobCount, minBlobHeaderSize, size); err != nil {
 		return nil, fmt.Errorf("symbol: blobCount: %w", err)
 	}
-	symBlobs := make([]uint64, 0, blobCount)
 	for i := uint64(0); i < blobCount; i++ {
 		id, err := getU()
 		if err != nil {
 			return nil, err
+		}
+		if strict {
+			if _, exists := ix.byBlob[id]; exists {
+				return nil, fmt.Errorf("symbol: duplicate blob %d", id)
+			}
 		}
 		symCount, err := getU()
 		if err != nil {
@@ -257,7 +287,11 @@ func readIndex(r *bufio.Reader, size int64) (*Index, error) {
 		if err := checkCount(symCount, minSymbolRecordSize, size); err != nil {
 			return nil, fmt.Errorf("symbol: blob %d symCount: %w", id, err)
 		}
-		syms := make([]Symbol, 0, symCount)
+		capacity := symCount
+		if strict {
+			capacity = 0 // Never reserve memory from an untrusted cache count.
+		}
+		syms := make([]Symbol, 0, capacity)
 		for j := uint64(0); j < symCount; j++ {
 			nameLen, err := getU()
 			if err != nil {
@@ -290,6 +324,18 @@ func readIndex(r *bufio.Reader, size int64) (*Index, error) {
 			if err != nil {
 				return nil, err
 			}
+			if strict {
+				maxInt := uint64(^uint(0) >> 1)
+				if kind > uint64(Service) || ns > ne || ne > maxInt || bs > be || be > maxInt {
+					return nil, fmt.Errorf("symbol: invalid symbol range or kind")
+				}
+				if len(syms) > 0 {
+					prev := syms[len(syms)-1]
+					if bs < uint64(prev.BodyStart) || bs == uint64(prev.BodyStart) && be > uint64(prev.BodyEnd) {
+						return nil, fmt.Errorf("symbol: unordered symbols")
+					}
+				}
+			}
 			syms = append(syms, Symbol{
 				Name:      string(nb),
 				Kind:      Kind(kind),
@@ -303,7 +349,6 @@ func readIndex(r *bufio.Reader, size int64) (*Index, error) {
 		// it (Set would re-sort identically, but this keeps Load independent of
 		// Set's tie-break).
 		ix.byBlob[id] = syms
-		symBlobs = append(symBlobs, id)
 	}
 
 	// References section (SYM2 only). A SYM1 file ends after the symbols section,
@@ -313,10 +358,20 @@ func readIndex(r *bufio.Reader, size int64) (*Index, error) {
 		if err != nil {
 			return nil, err
 		}
+		if strict {
+			if err := checkCount(refBlobCount, minBlobHeaderSize, size); err != nil {
+				return nil, err
+			}
+		}
 		for i := uint64(0); i < refBlobCount; i++ {
 			id, err := getU()
 			if err != nil {
 				return nil, err
+			}
+			if strict {
+				if _, exists := ix.refsByBlob[id]; exists {
+					return nil, fmt.Errorf("symbol: duplicate reference blob %d", id)
+				}
 			}
 			refCount, err := getU()
 			if err != nil {
@@ -325,7 +380,11 @@ func readIndex(r *bufio.Reader, size int64) (*Index, error) {
 			if err := checkCount(refCount, minOccurrenceRecordSize, size); err != nil {
 				return nil, fmt.Errorf("symbol: ref blob %d refCount: %w", id, err)
 			}
-			occs := make([]Occurrence, 0, refCount)
+			capacity := refCount
+			if strict {
+				capacity = 0
+			}
+			occs := make([]Occurrence, 0, capacity)
 			for j := uint64(0); j < refCount; j++ {
 				nameLen, err := getU()
 				if err != nil {
@@ -354,6 +413,9 @@ func readIndex(r *bufio.Reader, size int64) (*Index, error) {
 				if err != nil {
 					return nil, err
 				}
+				if strict && (kind > uint64(Service) || role != uint64(Reference) || start > end || end > uint64(^uint(0)>>1) || len(occs) > 0 && start < uint64(occs[len(occs)-1].Start)) {
+					return nil, fmt.Errorf("symbol: invalid reference range, kind, role or order")
+				}
 				occs = append(occs, Occurrence{
 					Name:  string(nb),
 					Kind:  Kind(kind),
@@ -365,20 +427,16 @@ func readIndex(r *bufio.Reader, size int64) (*Index, error) {
 			ix.refsByBlob[id] = occs
 		}
 	}
+	if strict {
+		if _, err := r.ReadByte(); err != io.EOF {
+			return nil, fmt.Errorf("symbol: trailing bytes or read error: %v", err)
+		}
+	}
 
 	// Rebuild the byName inverted view for every blob touched by the load
 	// (definitions + references) so References/Definitions work post-load. Done
 	// once here rather than via Set/SetRefs to keep the stored BodyStart order
 	// untouched.
-	touched := map[uint64]bool{}
-	for _, id := range symBlobs {
-		touched[id] = true
-	}
-	for id := range ix.refsByBlob {
-		touched[id] = true
-	}
-	for id := range touched {
-		ix.rebuildName(id)
-	}
+	ix.rebuildNames()
 	return ix, nil
 }

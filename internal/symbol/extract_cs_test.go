@@ -354,3 +354,82 @@ func occNames(occs []Occurrence) []string {
 	}
 	return out
 }
+
+func TestCSharpExtractor_LiteralDeclarationsAreNotCode(t *testing.T) {
+	cases := []struct {
+		name, literal string
+	}{
+		{"normal", `"public void Fake() { FakeCall(); }"`},
+		{"verbatim", `@"
+public void Fake() { FakeCall(""quoted""); }
+class FakeType {}
+C:\"`},
+		{"interpolated_verbatim", `$@"
+public void Fake() { FakeCall(""quoted""); }
+class FakeType {}
+C:\"`},
+		{"verbatim_interpolated", `@$"
+public void Fake() { FakeCall(""quoted""); }
+class FakeType {}
+C:\"`},
+		{"raw", `"""
+"quotation before declaration"
+public void Fake() { FakeCall("quoted"); }
+class FakeType {}
+"""`},
+		{"raw_opening_whitespace", "\"\"\" \t\npublic void Fake() { FakeCall(); }\n\"\"\""},
+		{"raw_four_quotes", `""""
+""" embedded triple delimiter
+public void Fake() { FakeCall("quoted"); }
+class FakeType {}
+""""`},
+		{"interpolated_raw", `$$"""
+"quotation before declaration"
+public void Fake() { FakeCall("quoted"); }
+class FakeType {}
+"""`},
+		{"block_comment", `/*
+public void Fake() { FakeCall(); }
+class FakeType {}
+*/`},
+		{"line_comment", "// public void Fake() { FakeCall(); }\n// class FakeType {}"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			src := []byte("public class Real {\npublic void Before() {}\nstring source = " + tc.literal + ";\npublic void After() { RealCall(); }\n}\n")
+			defs, refs, err := (CSharpExtractor{}).ExtractDefsRefs(src)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := symNames(defs)
+			for _, name := range []string{"Real", "Before", "After"} {
+				if _, ok := got[name]; !ok {
+					t.Errorf("missing real declaration %s: %v", name, names(defs))
+				}
+			}
+			if len(defs) != 3 {
+				t.Errorf("unexpected declarations: %v", names(defs))
+			}
+			if len(refs) != 1 || refs[0].Name != "RealCall" {
+				t.Errorf("references = %+v; want only RealCall", refs)
+			}
+		})
+	}
+}
+
+func TestCSharpExtractor_UnterminatedSingleLineRawStringRecoversAtNewline(t *testing.T) {
+	for _, newline := range []string{"\n", "\r\n"} {
+		src := []byte("public class Real {\nstring source = \"\"\"oops" + newline + "public void After() { RealCall(); }\n}\n")
+		defs, refs, err := (CSharpExtractor{}).ExtractDefsRefs(src)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := symNames(defs)
+		if len(defs) != 2 || got["Real"].Name != "Real" || got["After"].Name != "After" {
+			t.Errorf("newline %q: definitions = %v; want Real and After", newline, names(defs))
+		}
+		if len(refs) != 1 || refs[0].Name != "RealCall" {
+			t.Errorf("newline %q: references = %+v; want RealCall", newline, refs)
+		}
+	}
+}

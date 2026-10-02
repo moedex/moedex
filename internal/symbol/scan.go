@@ -172,6 +172,10 @@ func lineEnd(content []byte, from int) int {
 // The mask is allocated once per file and indexed in O(1); construction is a
 // single linear scan. It is bounds-safe and never panics.
 func literalMask(content []byte) []bool {
+	return literalMaskWithStringSkipper(content, skipString)
+}
+
+func literalMaskWithStringSkipper(content []byte, skip func([]byte, int, byte) int) []bool {
 	n := len(content)
 	mask := make([]bool, n)
 	i := 0
@@ -212,7 +216,7 @@ func literalMask(content []byte) []bool {
 			i++
 		case '"', '\'', '`':
 			start := i
-			end := skipString(content, i, c)
+			end := skip(content, i, c)
 			markRange(start, end)
 			i = end
 		default:

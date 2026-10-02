@@ -1,0 +1,83 @@
+package semantic
+
+import (
+	"path/filepath"
+	"testing"
+)
+
+func routingArtifact(version string) *Artifact {
+	a := domainFixture()
+	api := &a.Symbols[1]
+	api.Key.Namespace = "MassTransit.Abstractions, Version=8.2.1.0"
+	api.Key.Descriptor = "M:MassTransit.IItineraryBuilder.AddActivity(System.String,System.Uri,System.Object)"
+	api.ID = api.ComputeID()
+	f := DomainFact{Kind: "routing_slip_activity_configuration", Rule: "csharp-routing-slip-v1", EvidenceScope: "compile_time", Targets: []DomainTarget{{Role: "activity", SymbolID: a.Symbols[0].ID}}}
+	for _, target := range []struct {
+		role, descriptor string
+		metadata         bool
+	}{{"arguments", "T:Args", false}, {"address_field", "F:Planner._address", false}, {"formatter_api", "M:MassTransit.IEndpointNameFormatter.ExecuteActivity``2", true}} {
+		s := a.Symbols[0]
+		if target.metadata {
+			s = a.Symbols[1]
+		}
+		s.Key.Descriptor = target.descriptor
+		s.ID = s.ComputeID()
+		a.Symbols = append(a.Symbols, s)
+		f.Targets = append(f.Targets, DomainTarget{Role: target.role, SymbolID: s.ID})
+	}
+	c := &a.Contexts[0]
+	c.ExtractorVersion = version
+	c.ID = c.ComputeID()
+	o := &a.Occurrences[0]
+	o.ContextID = c.ID
+	o.ID = o.ComputeID()
+	b := &a.Bindings[0]
+	b.ExtractorVersion = version
+	b.OccurrenceID = o.ID
+	b.SymbolID = a.Symbols[1].ID
+	b.DomainFacts = []DomainFact{f}
+	b.ID = b.ComputeID()
+	return a
+}
+func TestRoutingArtifactBounds(t *testing.T) {
+	for _, v := range []string{"17", "18", "19", "20", "21"} {
+		a := routingArtifact(v)
+		if err := a.Validate(); (err == nil) != (v == "18" || (v == "19" || v == "20")) {
+			t.Fatalf("%s: %v", v, err)
+		}
+	}
+	a := routingArtifact("18")
+	p := filepath.Join(t.TempDir(), "artifact")
+	if err := Write(p, a); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Read(p, Limits{}); err != nil {
+		t.Fatal(err)
+	}
+	f := a.Bindings[0].DomainFacts[0]
+	for _, tc := range []struct {
+		role  string
+		index int
+		desc  string
+	}{{"address_field", 3, "P:Planner.Address"}, {"address_field", 3, "F:Planner`1._address"}, {"formatter_api", 4, "M:MassTransit.IEndpointNameFormatter.Consumer``1"}, {"activity", 0, "T:Activity`1"}} {
+		s := a.Symbols[tc.index]
+		s.Key.Descriptor = tc.desc
+		if ValidateDomainFactTarget(f, tc.role, s) == nil {
+			t.Fatal(tc)
+		}
+	}
+	bad := a.Symbols[4]
+	bad.Key.NamespaceKind = "project"
+	if ValidateDomainFactTarget(f, "formatter_api", bad) == nil {
+		t.Fatal("source formatter admitted")
+	}
+	bad = a.Symbols[3]
+	bad.Key.NamespaceKind = "assembly"
+	if ValidateDomainFactTarget(f, "address_field", bad) == nil {
+		t.Fatal("metadata address field admitted")
+	}
+	f.Targets[2].Role = "handler"
+	if ValidateDomainFacts([]DomainFact{f}) == nil {
+		t.Fatal("routing roles changed")
+	}
+}

@@ -1,0 +1,21 @@
+{
+  "source_snapshot": "20260930T230839Z-1",
+  "source_commit": "36d26c5466e4d25940657ccb8d5b9557ccaf7be1",
+  "shards": [
+    {
+      "name": "shard-0000.idx",
+      "bytes": 426353753,
+      "sha256": "c7c1941da48b15d33902954a7733e7d2f83cae01d70f701febe3f353510e7320"
+    },
+    {
+      "name": "shard-0001.idx",
+      "bytes": 418489359,
+      "sha256": "41fb5b8ceb6d875e656142355cfbce3bf17f1ce3054e897e889ecc761a6c5676"
+    },
+    {
+      "name": "shard-0002.idx",
+      "bytes": 368739716,
+      "sha256": "c67034c72fcd3fe28cfb05299dcd974181fc6aeb06165e5ed58c2019c971c603"
+    }
+  ]
+}

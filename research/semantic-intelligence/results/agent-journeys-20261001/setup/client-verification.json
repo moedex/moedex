@@ -1,0 +1,17 @@
+{
+  "files_sha256": {
+    "research/semantic-intelligence/agent-journeys/client.py": "6e2934d7f16a8f87ba961d716899a8f298c8abf9feea367cce2b9e2fc00c36a1",
+    "research/semantic-intelligence/agent-journeys/test_client.py": "367eb2250b2413410a7b8bbe547283a117efe6c9ce52f92ac742cc91bf69cd69",
+    "research/semantic-intelligence/agent-journeys/README.md": "e9d8a7eebc5d034d3dcd406050dedac8a529352e28dbc18c478ff99e0ebb3cd6"
+  },
+  "verification": {
+    "command": "python3 -B -m unittest discover -s research/semantic-intelligence/agent-journeys -p 'test_*.py'",
+    "exit_code": 0,
+    "tests": 10,
+    "duration_seconds": 0.066,
+    "evidence": "Reported from execution tool output; original stdout was not redirected to a log."
+  },
+  "native_requests_executed_by_client_author": 0,
+  "token_usage": "unknown",
+  "filesystem_isolation": "not enforced"
+}

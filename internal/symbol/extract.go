@@ -32,7 +32,11 @@ import (
 //	          TypeScript call-vs-declaration fix (an indented call such as
 //	          `expect(...)` no longer defines expect). Together these removed
 //	          ~97k spurious definitions, 39% of the corpus total.
-const ExtractorsVersion = 2
+//	3       — C# method declarations inside literals/comments are excluded;
+//	          verbatim and raw string delimiters are recognized by definition
+//	          and reference masks, preventing embedded test sources from
+//	          becoming real declarations and calls.
+const ExtractorsVersion = 3
 
 // Extractor pulls symbols out of a blob's content. Implementations are
 // language-specific; the only one in slice 1 is GoExtractor. An error means the
@@ -368,6 +372,8 @@ func goReferencesFromFile(file *ast.File, off func(token.Pos) int, declSites map
 // skipped, never fatal. Blobs that parse but yield no symbols are also skipped.
 func Build(ix *index.Index, ext Extractor) *Index {
 	out := NewIndex()
+	out.deferNames = true
+	defer out.rebuildNames()
 	if ix == nil || ext == nil {
 		return out
 	}

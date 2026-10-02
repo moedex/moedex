@@ -1,0 +1,6 @@
+  Determining projects to restore...
+  Restored /Users/zakkeown/Code/moedex/.local/fresh-paths/provision/eShopOnWeb/src/Infrastructure/Infrastructure.csproj (in 933 ms).
+  Restored /Users/zakkeown/Code/moedex/.local/fresh-paths/provision/eShopOnWeb/src/BlazorAdmin/BlazorAdmin.csproj (in 456 ms).
+  Restored /Users/zakkeown/Code/moedex/.local/fresh-paths/provision/eShopOnWeb/src/ApplicationCore/ApplicationCore.csproj (in 9 ms).
+  Restored /Users/zakkeown/Code/moedex/.local/fresh-paths/provision/eShopOnWeb/src/Web/Web.csproj (in 1.55 sec).
+  Restored /Users/zakkeown/Code/moedex/.local/fresh-paths/provision/eShopOnWeb/src/BlazorShared/BlazorShared.csproj (in 2 ms).

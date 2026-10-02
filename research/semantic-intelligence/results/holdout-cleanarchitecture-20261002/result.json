@@ -1,0 +1,30 @@
+{
+  "classification": "Source-only holdout preparation; coordinator-authored oracle pending independent review; no product evaluation",
+  "files": [
+    {
+      "path": "prepare.py",
+      "bytes": 10426,
+      "sha256": "240406a90e36039df70a164ec31ea3eca2eb0f371d39ce615acf474cf3ec547d"
+    },
+    {
+      "path": "protocol.json",
+      "bytes": 4052,
+      "sha256": "e9561cd94ba53a7880cf545bd321c432fafd5267f6fc8ae91ce28c6b53d5bef6"
+    },
+    {
+      "path": "readiness.md",
+      "bytes": 3023,
+      "sha256": "835e3aa0834bdeeb2ab941c4bef340208428007a74baa5c6b5ebfd4abba9d38f"
+    },
+    {
+      "path": "source-gold.json",
+      "bytes": 36239,
+      "sha256": "9fca6b1949d2dceed0e6394c8335e79781f38f3bad6cf45abd4b38f8c1b8dee3"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 46601,
+      "sha256": "eda716bb319d8cdabffacb03704b697529366395dfe28d307add643b9ae00837"
+    }
+  ]
+}

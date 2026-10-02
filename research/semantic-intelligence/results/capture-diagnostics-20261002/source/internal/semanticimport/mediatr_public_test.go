@@ -1,0 +1,205 @@
+package semanticimport_test
+
+import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
+	"github.com/google/jsonschema-go/jsonschema"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"moedex/internal/mcp"
+	"moedex/internal/semantic"
+	"moedex/internal/semanticimport"
+	"moedex/internal/semanticindex"
+)
+
+func TestPublicMediatrDispatch(t *testing.T) {
+	stream, root := os.Getenv("MOEDEX_MEDIATR_STREAM"), os.Getenv("MOEDEX_MEDIATR_ROOT")
+	if stream == "" || root == "" {
+		t.Skip("set MOEDEX_MEDIATR_STREAM/ROOT for native fixture")
+	}
+	raw, err := os.ReadFile(stream)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, err := semanticimport.Import(context.Background(), bytes.NewReader(raw), semanticimport.Options{Repo: "fixture", Root: root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "artifact")
+	if err := semantic.Write(path, a); err != nil {
+		t.Fatal(err)
+	}
+	a, err = semantic.Read(path, semantic.Limits{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	artifact, _ := os.ReadFile(path)
+	sha := fmt.Sprintf("%x", sha256.Sum256(artifact))
+	provenance := semanticindex.Provenance{ArtifactSHA256: sha, CorpusFingerprint: strings.Repeat("b", 64)}
+	ip := filepath.Join(t.TempDir(), "index")
+	if err := semanticindex.Build(ip, a, provenance); err != nil {
+		t.Fatal(err)
+	}
+	x, err := semanticindex.Open(ip, provenance, semanticindex.Limits{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer x.Close()
+	p := &domainGoldProvider{index: x, artifact: sha}
+	tools := map[string]mcp.ToolHandler{}
+	for _, tool := range mcp.CompilerTools(p) {
+		tools[tool.Name()] = tool
+	}
+	call := func(name string, args any) map[string]any {
+		t.Helper()
+		raw, _ := json.Marshal(args)
+		out, err := tools[name].Call(context.Background(), raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out["isError"] == true {
+			t.Fatal(out)
+		}
+		schemaJSON, _ := json.Marshal(tools[name].Specification().OutputSchema)
+		var schema jsonschema.Schema
+		if err := json.Unmarshal(schemaJSON, &schema); err != nil {
+			t.Fatal(err)
+		}
+		resolved, err := schema.Resolve(nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wire, _ := json.Marshal(out["structuredContent"])
+		var schemaValue any
+		json.Unmarshal(wire, &schemaValue)
+		if err := resolved.Validate(schemaValue); err != nil {
+			t.Fatalf("%s schema: %v", name, err)
+		}
+		var result map[string]any
+		if json.Unmarshal(wire, &result) != nil {
+			t.Fatal("bad response")
+		}
+		return result
+	}
+
+	content, err := os.ReadFile(filepath.Join(root, "Fixture.cs"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sourceHash := fmt.Sprintf("%x", sha256.Sum256(content))
+	cases := []struct{ label, request, response string }{
+		{"simple", "Detail", "One.Reply"},
+		{"collection", "Orders", "IEnumerable:One.Reply"},
+		{"other-collection", "OtherOrders", "IEnumerable:Two.Reply"},
+		{"dictionary", "DictionaryRequest", "Dictionary:System.String,One.Reply"},
+		{"named", "Detail", "One.Reply"},
+		{"inherited", "Inherited", "One.Reply"},
+		{"conditional", "Detail", "One.Reply"},
+	}
+	for _, label := range []string{"variable", "erased", "factory", "cast", "object", "void", "nested", "array", "tuple", "generic-request", "covariant", "wide", "lookalike", "concrete-api", "conditional-value", "open"} {
+		cases = append(cases, struct{ label, request, response string }{label: label})
+	}
+	responseIDs := map[string]string{}
+	for _, tc := range cases {
+		t.Run(tc.label, func(t *testing.T) {
+			marker := []byte("/*" + tc.label + "*/")
+			if bytes.Count(content, marker) != 1 {
+				t.Fatal("marker drift")
+			}
+			offset := bytes.Index(content, marker) + len(marker)
+			args := map[string]any{"repo": "fixture", "path": "Fixture.cs", "byte_offset": offset, "raw_sha256": sourceHash}
+			discovery := call("compiler_binding_at", args)
+			if discovery["status"] != "context_required" {
+				t.Fatal(discovery)
+			}
+			contexts := discovery["contexts"].([]any)
+			if len(contexts) != 1 {
+				t.Fatal(discovery)
+			}
+			id := contexts[0].(map[string]any)["context_id"]
+			args["context_id"] = id
+			selected := call("compiler_binding_at", args)
+			wire, _ := json.Marshal(selected)
+			var result mcp.CompilerResult
+			if err := json.Unmarshal(wire, &result); err != nil {
+				t.Fatal(err)
+			}
+			if result.Error != nil || result.Truncated || len(result.Results) != 1 {
+				t.Fatal(string(wire))
+			}
+			binding := result.Results[0]
+			if (binding.ExtractorVersion != "13" && (binding.ExtractorVersion != "14" && (binding.ExtractorVersion != "15" && (binding.ExtractorVersion != "16" && (binding.ExtractorVersion != "17" && (binding.ExtractorVersion != "18" && binding.ExtractorVersion != "19")))))) || binding.ByteOffset != uint64(offset) || binding.RawSHA256 != sourceHash {
+				t.Fatal(binding)
+			}
+			if tc.request == "" {
+				if len(binding.DomainFacts) != 0 {
+					t.Fatal(binding.DomainFacts)
+				}
+				return
+			}
+			if len(binding.DomainFacts) != 1 {
+				t.Fatal(binding.DomainFacts)
+			}
+			f := binding.DomainFacts[0]
+			if f.Kind != "mediator_send_configuration" || f.Rule != "csharp-mediatr-v1" || f.EvidenceScope != "compile_time" || len(f.Targets) != 2 {
+				t.Fatal(f)
+			}
+			request, response := f.Targets[0], f.Targets[1]
+			if request.Role != "request" || request.Symbol.Descriptor != "T:"+tc.request || request.Symbol.NamespaceKind != "project" || response.Role != "response" {
+				t.Fatal(f)
+			}
+			if definition, args, ok := strings.Cut(tc.response, ":"); ok {
+				var value struct {
+					Definition string               `json:"definition"`
+					Arguments  []semantic.SymbolKey `json:"arguments"`
+				}
+				if err := json.Unmarshal([]byte(response.Symbol.Descriptor), &value); err != nil {
+					t.Fatal(err)
+				}
+				names := strings.Split(args, ",")
+				if response.Symbol.DescriptorKind != "constructed_named_type_v1" || value.Definition != fmt.Sprintf("T:System.Collections.Generic.%s`%d", definition, len(names)) || len(value.Arguments) != len(names) {
+					t.Fatal(response)
+				}
+				for i, arg := range value.Arguments {
+					if arg.Descriptor != "T:"+names[i] || arg.DescriptorKind != "documentation_comment_id" {
+						t.Fatal(arg)
+					}
+					if strings.HasPrefix(names[i], "One.") || strings.HasPrefix(names[i], "Two.") {
+						if arg.NamespaceKind != "project" || arg.Namespace != "fixture/Fixture.csproj" {
+							t.Fatal(arg)
+						}
+					}
+				}
+			} else if response.Symbol.DescriptorKind != "documentation_comment_id" || response.Symbol.Descriptor != "T:"+tc.response {
+				t.Fatal(response)
+			}
+			responseIDs[tc.label] = response.Symbol.ID
+			defs := call("compiler_definitions", map[string]any{"symbol_id": request.Symbol.ID, "repo": "fixture"})
+			if defs["status"] != "ok" || len(defs["results"].([]any)) != 1 {
+				t.Fatal(defs)
+			}
+			for _, target := range f.Targets {
+				for _, name := range []string{"compiler_contract_impact", "compiler_contract_context"} {
+					view := call(name, map[string]any{"symbol_id": target.Symbol.ID, "context_ids": []any{id}})
+					wire, _ := json.Marshal(view)
+					if view["status"] != "ok" || !bytes.Contains(wire, []byte(`"kind":"mediator_send_configuration"`)) {
+						t.Fatal(string(wire))
+					}
+				}
+			}
+
+		})
+	}
+	if responseIDs["collection"] == responseIDs["other-collection"] {
+		t.Fatal("response identity collapsed")
+	}
+	if p.acquired != p.released {
+		t.Fatal("lease leak")
+	}
+}

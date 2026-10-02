@@ -1,0 +1,20 @@
+--- FAIL: TestMessageConfigurationShapeAPIAndArtifact (0.00s)
+    --- FAIL: TestMessageConfigurationShapeAPIAndArtifact/message_publish_configuration (0.00s)
+        domain_v4_test.go:76: worker 7: <nil>
+    --- FAIL: TestMessageConfigurationShapeAPIAndArtifact/message_event_configuration (0.00s)
+        domain_v4_test.go:76: worker 7: <nil>
+--- FAIL: TestDomainExtractorVersions (0.00s)
+    domain_version_test.go:10: rule csharp-framework-v1 worker "7": accepted=true want false
+    domain_version_test.go:10: rule csharp-framework-v2 worker "7": accepted=true want false
+    domain_version_test.go:10: rule csharp-framework-v3 worker "7": accepted=true want false
+    domain_version_test.go:10: rule csharp-framework-v4 worker "7": accepted=true want false
+FAIL
+FAIL	moedex/internal/semantic	0.240s
+--- FAIL: TestRevalidateSupportedWorkerVersions (0.00s)
+    --- FAIL: TestRevalidateSupportedWorkerVersions/7 (0.00s)
+        revalidate_test.go:160: unsupported worker admitted
+FAIL
+FAIL	moedex/internal/semanticimport	0.194s
+ok  	moedex/internal/semanticindex	1.046s
+ok  	moedex/internal/mcp	0.372s
+FAIL

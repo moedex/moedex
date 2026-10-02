@@ -1,0 +1,65 @@
+?   	moedex/cmd/moedex	[no test files]
+ok  	moedex/internal/app/corpuscmd	(cached)
+ok  	moedex/internal/app/indexcmd	(cached)
+ok  	moedex/internal/app/mcpcmd	(cached)
+?   	moedex/internal/app/navcmd	[no test files]
+?   	moedex/internal/app/navtools	[no test files]
+ok  	moedex/internal/app/paritycmd	(cached)
+ok  	moedex/internal/app/scalecmd	(cached)
+?   	moedex/internal/app/searchcmd	[no test files]
+ok  	moedex/internal/app/searchservice	(cached)
+ok  	moedex/internal/app/semanticcmd	(cached)
+ok  	moedex/internal/app/servecmd	(cached)
+ok  	moedex/internal/blobstore	(cached)
+ok  	moedex/internal/classify	(cached)
+ok  	moedex/internal/cli	(cached)
+ok  	moedex/internal/config	(cached)
+ok  	moedex/internal/contextwin	(cached)
+ok  	moedex/internal/corpus	(cached)
+?   	moedex/internal/corpus/catalog	[no test files]
+ok  	moedex/internal/depfence	0.159s
+ok  	moedex/internal/diskstore	(cached)
+ok  	moedex/internal/embed	(cached)
+ok  	moedex/internal/eval	(cached)
+ok  	moedex/internal/event	(cached)
+ok  	moedex/internal/fmindex	(cached)
+ok  	moedex/internal/fold	(cached)
+ok  	moedex/internal/graph	(cached)
+?   	moedex/internal/graph/adjacency	[no test files]
+?   	moedex/internal/graph/artifact	[no test files]
+ok  	moedex/internal/graph/build	(cached)
+ok  	moedex/internal/graph/candidates	(cached)
+ok  	moedex/internal/graph/cluster	(cached)
+ok  	moedex/internal/graph/diskgraph	(cached)
+ok  	moedex/internal/graph/httproute	(cached)
+ok  	moedex/internal/graph/manifest	(cached)
+ok  	moedex/internal/graph/serve	(cached)
+ok  	moedex/internal/graph/verify	(cached)
+ok  	moedex/internal/index	(cached)
+ok  	moedex/internal/ingest	(cached)
+ok  	moedex/internal/mcp	(cached)
+ok  	moedex/internal/mmapslice	(cached)
+ok  	moedex/internal/navigate	(cached)
+ok  	moedex/internal/parity	(cached)
+ok  	moedex/internal/query	(cached)
+ok  	moedex/internal/rank	(cached)
+ok  	moedex/internal/render	(cached)
+ok  	moedex/internal/search	(cached)
+ok  	moedex/internal/semantic	(cached)
+ok  	moedex/internal/semanticimport	(cached)
+ok  	moedex/internal/semanticindex	(cached)
+ok  	moedex/internal/semanticrun	11.135s
+ok  	moedex/internal/serve	(cached)
+ok  	moedex/internal/setops	(cached)
+?   	moedex/internal/shardset	[no test files]
+ok  	moedex/internal/snapshot	(cached)
+ok  	moedex/internal/sourcescope	(cached)
+ok  	moedex/internal/symbol	(cached)
+ok  	moedex/internal/tokenindex	(cached)
+?   	moedex/internal/trigram	[no test files]
+ok  	moedex/internal/tui	(cached)
+?   	moedex/internal/ui/theme	[no test files]
+ok  	moedex/internal/version	(cached)
+?   	moedex/internal/version/buildmeta	[no test files]
+ok  	moedex/internal/version/sourcehash	(cached)
+ok  	moedex/scripts	(cached)

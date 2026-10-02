@@ -1,0 +1,41 @@
+using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+class Generic<T> { public static string Run() => "generic"; }
+class Fake { public void MapPost(string pattern, Delegate handler) {} }
+class Routes {
+ const string Pattern = "/constant";
+ static string Submit() => "ok";
+ static string Overload(int value) => "int";
+ static string Overload(string value) => value;
+ static T GenericMethod<T>() => default;
+ static Task Http(HttpContext context) => Task.CompletedTask;
+ string Instance() => "instance";
+ static Func<string> Factory() => Submit;
+ public void Configure(IEndpointRouteBuilder app, string dynamicPattern, bool enabled) {
+  app./*literal*/MapPost("/order", Submit);
+  app./*constant*/MapPost(Pattern, Submit);
+  EndpointRouteBuilderExtensions./*static-call*/MapPost(app, "/static", Submit);
+  app./*named*/MapPost(handler: Submit, pattern: "/named");
+  app./*overload*/MapPost("/overload/{value}", (Func<int,string>)Overload);
+  app.MapGroup("/parent")./*group*/MapPost("/child", Submit);
+  if(enabled) app./*conditional*/MapPost("/conditional", Submit);
+  app./*dynamic*/MapPost(dynamicPattern, Submit);
+  app./*lambda*/MapPost("/lambda", () => "ok");
+  Func<string> variable = Submit; app./*variable*/MapPost("/variable", variable);
+  app./*factory*/MapPost("/factory", Factory());
+  app./*instance*/MapPost("/instance", Instance);
+  app./*generic-method*/MapPost("/generic", GenericMethod<int>);
+  app./*generic-owner*/MapPost("/generic-owner", Generic<int>.Run);
+  app./*metadata*/MapPost("/metadata", Guid.NewGuid);
+  app./*other-verb*/MapGet("/get", Submit);
+  app./*request-delegate*/MapPost("/http", Http);
+  app./*empty*/MapPost("", Submit);
+  app./*null*/MapPost(null, Submit);
+  app./*oversized*/MapPost("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", Submit);
+  new Fake()./*lookalike*/MapPost("/fake", Submit);
+  string Local() => "local"; app./*local-function*/MapPost("/local", Local);
+ }
+}

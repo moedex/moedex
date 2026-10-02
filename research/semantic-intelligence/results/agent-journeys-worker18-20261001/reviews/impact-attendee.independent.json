@@ -1,0 +1,60 @@
+{
+  "task": "impact-attendee",
+  "reviewer": "review18_12",
+  "answer_sha256": "61f7cf333bf0184a7aa28364d5e901e8d9bda3f17ca509cb4709d7475550bdef",
+  "atoms": [
+    {
+      "id": "impact-attendee.1",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly identifies all three init-only contract properties; answer cites Contracts/AddEventAttendee.cs:3\u20138, fully returned in 002.response.raw block 1\u20138 and matching pinned source."
+    },
+    {
+      "id": "impact-attendee.2",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly separates declaration and body, identifying IConsumer<AddEventAttendee> and MemberId/EventId logging. Citation Consumers/AddEventAttendeeConsumer.cs:8\u201324 matches 002.response.raw and pinned source; 005 additionally records compile-time message_consumer."
+    },
+    {
+      "id": "impact-attendee.3",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly identifies the second IConsumer declaration and all three forwarded properties. Citation Consumers/ValidateRegistrationConsumer.cs:9\u201325 matches 002.response.raw and pinned source (forwarding line 23); 005 corroborates the declaration."
+    },
+    {
+      "id": "impact-attendee.4",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly names both configured consumers and ValidateRegistrationConsumerDefinition. Citation Worker/Program.cs:60\u201387 spans the relevant configuration block, including exact lines 76\u201377; 006.response.raw returns the whole file and matches pinned source."
+    },
+    {
+      "id": "impact-attendee.5",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly describes configured publication, all three saga mappings, and the preceding Payment/retry conditional failure. Citation StateMachines/RegistrationStateMachine.cs:14\u201341 covers the complete described action chain, especially 33\u201340; 008.response.raw and pinned source agree; 005 labels message_publish_configuration."
+    },
+    {
+      "id": "impact-attendee.6",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Lists validation interface and implementation as downstream review targets, identifies forwarding of all three values, and explicitly notes RegistrationId propagation to RegistrationValidated. Interface line 5 is in 002.response.raw; implementation 7\u201320 in 011.response.raw and cited answer spans match pinned source."
+    },
+    {
+      "id": "impact-attendee.7",
+      "correctness": 1,
+      "evidence": 1,
+      "reason": "Explicitly says configuration/startup code does not establish activation, instantiation, delivery, service resolution or database effects. Cited Worker/Program.cs:60\u201394 and state-machine 14\u201341 are returned in 006/008; 005 compile-time scope and limitations corroborate the boundary. No runtime inference is asserted."
+    }
+  ],
+  "correctness_total": 7,
+  "evidence_total": 7,
+  "possible": 7,
+  "unsupported_claims": [],
+  "strict_success": true,
+  "limitations": [
+    "All seven rubric source files match their frozen raw SHA-256 hashes. Also checked the cited consumer and saga definitions against pinned source.",
+    "Reviewed all eleven logged request/response pairs. Search 002 reports 19 blocks, truncated=false and clipped=false; read_source calls are complete. Compiler 004 requests explicit context; 005 selects one context and returns three facts without evidence/definition/context truncation. No absence claim is inferred from capture coverage.",
+    "Run transcript confirms eleven complete HTTP 200 responses. It does not retain the outer client invocation/display stream, so claims about required escalation, initial display truncation, and isolation cannot be independently audited from these files; these procedural self-reports do not affect source-claim scoring.",
+    "No runtime execution was assessed. Source/compile-time evidence is sufficient for the frozen task and answer correctly preserves runtime unknowns."
+  ]
+}

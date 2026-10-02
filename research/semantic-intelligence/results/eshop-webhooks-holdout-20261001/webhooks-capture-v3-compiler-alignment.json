@@ -1,0 +1,10 @@
+{
+  "compiler_alignment_manifest": "../worker-v6-sdk8-inputs.json",
+  "compiler_alignment_manifest_sha256": "ad2878aa7af591e8d2a10dea3072d12930487a9d03d7fef159684c90bff266d9",
+  "reason": "SDK8 project generated interceptor source rejected by Roslyn5; identical worker6 source rebuilt against matching SDK8 Roslyn4.11 libraries.",
+  "earlier_attempts": [
+    "../webhooks-capture-v1/failure-notes.json",
+    "../webhooks-capture-v2/failure-notes.json"
+  ],
+  "scope": "Compiler environment correction only; source gold v2 fixed before first capture, no detector or source edits."
+}

@@ -1,0 +1,52 @@
+[
+  {
+    "argv": [
+      "python3",
+      "research/semantic-intelligence/check-project-capture.py",
+      "--source",
+      "/Users/zakkeown/Code/moedex/.local/fresh-paths/corpus/eShopOnWeb",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/routing-slip/eShopOnWeb",
+      "--moe",
+      "/Users/zakkeown/Code/moedex/.local/routing-slip/moedex",
+      "--dotnet",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/dotnet",
+      "--sdk",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/sdk/8.0.400",
+      "--worker",
+      "/Users/zakkeown/Code/moedex/.local/routing-slip/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+      "--bundle",
+      "/Users/zakkeown/Code/moedex/.local/capture-portability/eShopOnWeb-bundle",
+      "--gold",
+      "/Users/zakkeown/Code/moedex/research/semantic-intelligence/results/fresh-paths-20261001/eShopOnWeb-source-gold.json",
+      "--restore-standard-evaluation",
+      "--max-dependency-bytes",
+      "2147483648"
+    ],
+    "returncode": 0
+  },
+  {
+    "argv": [
+      "python3",
+      "research/semantic-intelligence/check-project-capture.py",
+      "--source",
+      "/Users/zakkeown/Code/moedex/.local/fresh-paths/corpus/Sample-ForkJoint",
+      "--output",
+      "/Users/zakkeown/Code/moedex/.local/routing-slip/ForkJoint",
+      "--moe",
+      "/Users/zakkeown/Code/moedex/.local/routing-slip/moedex",
+      "--dotnet",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/dotnet",
+      "--sdk",
+      "/Users/zakkeown/Code/moedex/.local/application-impact/independent/dotnet8/sdk/8.0.400",
+      "--worker",
+      "/Users/zakkeown/Code/moedex/.local/routing-slip/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll",
+      "--bundle",
+      "/Users/zakkeown/Code/moedex/.local/fresh-paths/ForkJoint-complete-bundle",
+      "--gold",
+      "/Users/zakkeown/Code/moedex/research/semantic-intelligence/results/fresh-paths-20261001/Sample-ForkJoint-source-gold.json",
+      "--restore-standard-evaluation"
+    ],
+    "returncode": 0
+  }
+]

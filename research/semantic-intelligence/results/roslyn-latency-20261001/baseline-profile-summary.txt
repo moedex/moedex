@@ -1,0 +1,110 @@
+Manual protobuf interpretation; CPU sample weights, not wall-clock phase timings.
+Source: /private/tmp/moedex-roslyn-latency-20261001/baseline.cpu.pprof
+Sample types: [('samples', 'count'), ('cpu', 'nanoseconds')]
+Total sampled CPU: 89.050 s
+
+Flat
+   21.750s  24.42% regexp.(*machine).add
+    7.520s   8.44% regexp.(*machine).step
+    4.760s   5.35% runtime.memclrNoHeapPointers
+    4.470s   5.02% runtime.madvise
+    4.000s   4.49% runtime.memmove
+    3.540s   3.98% regexp/syntax.(*Inst).MatchRunePos
+    3.520s   3.95% path.(*lazybuf).append
+    3.350s   3.76% path.Clean
+    2.600s   2.92% runtime.tryDeferToSpanScan
+    1.890s   2.12% regexp.(*machine).match
+    1.550s   1.74% internal/bytealg.LastIndexByteString
+    1.290s   1.45% internal/bytealg.CountString
+    1.240s   1.39% runtime.pthread_cond_signal
+    1.240s   1.39% internal/bytealg.IndexByteString
+    1.230s   1.38% runtime.scanObject
+    1.040s   1.17% regexp.(*machine).alloc
+    1.030s   1.16% crypto/internal/fips140/sha256.blockSHA2
+    1.000s   1.12% regexp.(*inputBytes).step
+    0.960s   1.08% runtime.(*spanInlineMarkBits).init
+    0.850s   0.95% regexp.lazyFlag.match
+    0.800s   0.90% strings.genSplit
+    0.760s   0.85% regexp.(*Regexp).tryBacktrack
+    0.760s   0.85% internal/stringslite.Index
+    0.630s   0.71% runtime.memequal
+    0.550s   0.62% moedex/internal/symbol.matchDelims
+    0.540s   0.61% runtime.(*gcBits).bytep
+    0.530s   0.60% regexp/syntax.IsWordChar
+    0.520s   0.58% internal/filepathlite.(*lazybuf).append
+    0.470s   0.53% runtime.mapaccess2
+    0.430s   0.48% runtime.mapassign_faststr
+    0.430s   0.48% runtime.scanObjectsSmall
+    0.400s   0.45% internal/filepathlite.Clean
+    0.370s   0.42% runtime.(*spanScanOwnership).or
+    0.360s   0.40% moedex/internal/index.lineStarts
+    0.360s   0.40% runtime.(*mspan).typePointersOfUnchecked
+    0.350s   0.39% moedex/internal/graph/serve.(*graphSnapshot).buildPathIndex
+    0.340s   0.38% runtime.(*mspan).moveInlineMarks
+    0.320s   0.36% moedex/internal/graph/serve.sharedDirectoryPrefixDepth
+    0.300s   0.34% encoding/binary.littleEndian.Uint64
+    0.300s   0.34% runtime.mallocgcSmallScanNoHeaderSC7
+
+Cumulative (overlapping)
+   57.990s  65.12% moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP
+   57.990s  65.12% testing.tRunner
+   57.930s  65.05% moedex/internal/graph/serve.openGraphSnapshotWithClusters
+   57.930s  65.05% moedex/internal/graph/serve.openGraphSnapshot
+   57.930s  65.05% moedex/internal/graph/serve.OpenGraphToolsStrict
+   50.260s  56.44% moedex/internal/graph/serve.OpenSymbols
+   49.450s  55.53% moedex/internal/symbol.BuildMulti
+   48.780s  54.78% moedex/internal/symbol.CSharpExtractor.ExtractDefsRefs
+   48.780s  54.78% moedex/internal/symbol.extractDefsRefs
+   44.530s  50.01% slices.AppendSeq[go.shape.[]go.shape.[]int,go.shape.[]int]
+   44.530s  50.01% regexp.(*Regexp).matches.func1
+   44.530s  50.01% regexp.(*Regexp).FindAllSubmatchIndex
+   44.530s  50.01% regexp.(*Regexp).allSubmatchIndex.func1
+   44.530s  50.01% slices.Collect[go.shape.[]int]
+   42.560s  47.79% regexp.(*Regexp).find
+   40.640s  45.64% regexp.(*machine).match
+   32.370s  36.35% moedex/internal/symbol.CSharpExtractor.Extract
+   31.730s  35.63% regexp.(*machine).step
+   27.170s  30.51% regexp.(*machine).add
+   18.170s  20.40% sort.Slice
+   18.160s  20.39% sort.pdqsort_func
+   17.840s  20.03% github.com/modelcontextprotocol/go-sdk/internal/jsonrpc2.(*Connection).handleAsync.func3
+   17.790s  19.98% github.com/modelcontextprotocol/go-sdk/mcp.defaultReceivingMethodHandler[go.shape.*uint8]
+   17.790s  19.98% moedex/internal/mcp.(*Server).configureOfficial.func4.func1
+   17.790s  19.98% moedex/internal/mcp.(*Server).configureOfficial.func1.1
+   17.790s  19.98% github.com/modelcontextprotocol/go-sdk/mcp.(*ServerSession).handle
+   17.790s  19.98% github.com/modelcontextprotocol/go-sdk/internal/jsonrpc2.HandlerFunc.Handle
+   17.790s  19.98% github.com/modelcontextprotocol/go-sdk/mcp.handleReceive[go.shape.*uint8]
+   17.790s  19.98% moedex/internal/mcp.(*Server).configureOfficial.func2.1
+   17.790s  19.98% github.com/modelcontextprotocol/go-sdk/mcp.serverMethod[go.shape.*uint8,go.shape.*uint8].func1
+   17.790s  19.98% github.com/modelcontextprotocol/go-sdk/mcp.serverMultiRoundTripMiddleware.func1.1
+   17.790s  19.98% github.com/modelcontextprotocol/go-sdk/mcp.newServerMethodInfo[go.shape.*github.com/modelcontextprotocol/go-sdk/mcp.CallToolParamsRaw,go.shape.*uint8,go.shape.struct { github.com/modelcontextprotocol/go-sdk/mcp.Meta "json:\"_meta,omitempty\""; Name string "json:\"name\""; Arguments encoding/json/jsontext.Value "json:\"arguments,omitempty\""; InputResponses github.com/modelcontextprotocol/go-sdk/mcp.InputResponseMap "json:\"inputResponses,omitempty\""; RequestState string "json:\"requestState,omitempty\"" }].func2
+   17.790s  19.98% moedex/internal/mcp.(*Server).configureOfficial.func3.1
+   17.790s  19.98% github.com/modelcontextprotocol/go-sdk/mcp.(*Server).callTool
+   17.410s  19.55% moedex/internal/graph/serve.(*graphSnapshot).traverse
+   17.410s  19.55% moedex/internal/graph/serve.(*graphTool).Call
+   17.390s  19.53% moedex/internal/graph/serve.(*graphSnapshot).makeResult
+   17.260s  19.38% moedex/internal/graph/serve.(*graphSnapshot).makeResult.func1
+   17.210s  19.33% moedex/internal/graph/serve.graphLocationProximity
+   17.060s  19.16% moedex/internal/graph/serve.sharedDirectoryPrefixDepth
+
+Top complete stacks (innermost first)
+5.750s regexp.(*machine).step <- regexp.(*machine).match <- regexp.(*Regexp).find <- regexp.(*Regexp).matches.func1 <- regexp.(*Regexp).allSubmatchIndex.func1 <- slices.AppendSeq[go.shape.[]go.shape.[]int,go.shape.[]int] <- slices.Collect[go.shape.[]int] <- regexp.(*Regexp).FindAllSubmatchIndex <- moedex/internal/symbol.CSharpExtractor.Extract <- moedex/internal/symbol.CSharpExtractor.ExtractDefsRefs <- moedex/internal/symbol.extractDefsRefs <- moedex/internal/symbol.BuildMulti <- moedex/internal/graph/serve.OpenSymbols <- moedex/internal/graph/serve.openGraphSnapshotWithClusters <- moedex/internal/graph/serve.openGraphSnapshot <- moedex/internal/graph/serve.OpenGraphToolsStrict <- moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP <- testing.tRunner
+4.470s runtime.madvise <- runtime.sysUsedOS <- runtime.sysUsed <- runtime.(*mheap).allocSpan <- runtime.(*mheap).alloc.func1 <- runtime.systemstack
+2.470s regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).step <- regexp.(*machine).match <- regexp.(*Regexp).find <- regexp.(*Regexp).matches.func1 <- regexp.(*Regexp).allSubmatchIndex.func1 <- slices.AppendSeq[go.shape.[]go.shape.[]int,go.shape.[]int] <- slices.Collect[go.shape.[]int] <- regexp.(*Regexp).FindAllSubmatchIndex <- moedex/internal/symbol.CSharpExtractor.Extract <- moedex/internal/symbol.CSharpExtractor.ExtractDefsRefs <- moedex/internal/symbol.extractDefsRefs <- moedex/internal/symbol.BuildMulti <- moedex/internal/graph/serve.OpenSymbols <- moedex/internal/graph/serve.openGraphSnapshotWithClusters <- moedex/internal/graph/serve.openGraphSnapshot <- moedex/internal/graph/serve.OpenGraphToolsStrict <- moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP <- testing.tRunner
+1.930s regexp.(*machine).add <- regexp.(*machine).match <- regexp.(*Regexp).find <- regexp.(*Regexp).matches.func1 <- regexp.(*Regexp).allSubmatchIndex.func1 <- slices.AppendSeq[go.shape.[]go.shape.[]int,go.shape.[]int] <- slices.Collect[go.shape.[]int] <- regexp.(*Regexp).FindAllSubmatchIndex <- moedex/internal/symbol.CSharpExtractor.Extract <- moedex/internal/symbol.CSharpExtractor.ExtractDefsRefs <- moedex/internal/symbol.extractDefsRefs <- moedex/internal/symbol.BuildMulti <- moedex/internal/graph/serve.OpenSymbols <- moedex/internal/graph/serve.openGraphSnapshotWithClusters <- moedex/internal/graph/serve.openGraphSnapshot <- moedex/internal/graph/serve.OpenGraphToolsStrict <- moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP <- testing.tRunner
+1.770s regexp.(*machine).step <- regexp.(*machine).match <- regexp.(*Regexp).find <- regexp.(*Regexp).matches.func1 <- regexp.(*Regexp).allSubmatchIndex.func1 <- slices.AppendSeq[go.shape.[]go.shape.[]int,go.shape.[]int] <- slices.Collect[go.shape.[]int] <- regexp.(*Regexp).FindAllSubmatchIndex <- moedex/internal/symbol.csReferencesFromDefs <- moedex/internal/symbol.CSharpExtractor.ExtractDefsRefs <- moedex/internal/symbol.extractDefsRefs <- moedex/internal/symbol.BuildMulti <- moedex/internal/graph/serve.OpenSymbols <- moedex/internal/graph/serve.openGraphSnapshotWithClusters <- moedex/internal/graph/serve.openGraphSnapshot <- moedex/internal/graph/serve.OpenGraphToolsStrict <- moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP <- testing.tRunner
+1.670s regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).step <- regexp.(*machine).match <- regexp.(*Regexp).find <- regexp.(*Regexp).matches.func1 <- regexp.(*Regexp).allSubmatchIndex.func1 <- slices.AppendSeq[go.shape.[]go.shape.[]int,go.shape.[]int] <- slices.Collect[go.shape.[]int] <- regexp.(*Regexp).FindAllSubmatchIndex <- moedex/internal/symbol.csReferencesFromDefs <- moedex/internal/symbol.CSharpExtractor.ExtractDefsRefs <- moedex/internal/symbol.extractDefsRefs <- moedex/internal/symbol.BuildMulti <- moedex/internal/graph/serve.OpenSymbols <- moedex/internal/graph/serve.openGraphSnapshotWithClusters <- moedex/internal/graph/serve.openGraphSnapshot <- moedex/internal/graph/serve.OpenGraphToolsStrict <- moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP <- testing.tRunner
+1.660s regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).step <- regexp.(*machine).match <- regexp.(*Regexp).find <- regexp.(*Regexp).matches.func1 <- regexp.(*Regexp).allSubmatchIndex.func1 <- slices.AppendSeq[go.shape.[]go.shape.[]int,go.shape.[]int] <- slices.Collect[go.shape.[]int] <- regexp.(*Regexp).FindAllSubmatchIndex <- moedex/internal/symbol.csReferencesFromDefs <- moedex/internal/symbol.CSharpExtractor.ExtractDefsRefs <- moedex/internal/symbol.extractDefsRefs <- moedex/internal/symbol.BuildMulti <- moedex/internal/graph/serve.OpenSymbols <- moedex/internal/graph/serve.openGraphSnapshotWithClusters <- moedex/internal/graph/serve.openGraphSnapshot <- moedex/internal/graph/serve.OpenGraphToolsStrict <- moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP <- testing.tRunner
+1.620s regexp.(*machine).add <- regexp.(*machine).step <- regexp.(*machine).match <- regexp.(*Regexp).find <- regexp.(*Regexp).matches.func1 <- regexp.(*Regexp).allSubmatchIndex.func1 <- slices.AppendSeq[go.shape.[]go.shape.[]int,go.shape.[]int] <- slices.Collect[go.shape.[]int] <- regexp.(*Regexp).FindAllSubmatchIndex <- moedex/internal/symbol.CSharpExtractor.Extract <- moedex/internal/symbol.CSharpExtractor.ExtractDefsRefs <- moedex/internal/symbol.extractDefsRefs <- moedex/internal/symbol.BuildMulti <- moedex/internal/graph/serve.OpenSymbols <- moedex/internal/graph/serve.openGraphSnapshotWithClusters <- moedex/internal/graph/serve.openGraphSnapshot <- moedex/internal/graph/serve.OpenGraphToolsStrict <- moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP <- testing.tRunner
+1.610s regexp/syntax.(*Inst).MatchRunePos <- regexp/syntax.(*Inst).MatchRune <- regexp.(*machine).step <- regexp.(*machine).match <- regexp.(*Regexp).find <- regexp.(*Regexp).matches.func1 <- regexp.(*Regexp).allSubmatchIndex.func1 <- slices.AppendSeq[go.shape.[]go.shape.[]int,go.shape.[]int] <- slices.Collect[go.shape.[]int] <- regexp.(*Regexp).FindAllSubmatchIndex <- moedex/internal/symbol.csReferencesFromDefs <- moedex/internal/symbol.CSharpExtractor.ExtractDefsRefs <- moedex/internal/symbol.extractDefsRefs <- moedex/internal/symbol.BuildMulti <- moedex/internal/graph/serve.OpenSymbols <- moedex/internal/graph/serve.openGraphSnapshotWithClusters <- moedex/internal/graph/serve.openGraphSnapshot <- moedex/internal/graph/serve.OpenGraphToolsStrict <- moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP <- testing.tRunner
+1.580s regexp/syntax.(*Inst).MatchRunePos <- regexp/syntax.(*Inst).MatchRune <- regexp.(*machine).step <- regexp.(*machine).match <- regexp.(*Regexp).find <- regexp.(*Regexp).matches.func1 <- regexp.(*Regexp).allSubmatchIndex.func1 <- slices.AppendSeq[go.shape.[]go.shape.[]int,go.shape.[]int] <- slices.Collect[go.shape.[]int] <- regexp.(*Regexp).FindAllSubmatchIndex <- moedex/internal/symbol.CSharpExtractor.Extract <- moedex/internal/symbol.CSharpExtractor.ExtractDefsRefs <- moedex/internal/symbol.extractDefsRefs <- moedex/internal/symbol.BuildMulti <- moedex/internal/graph/serve.OpenSymbols <- moedex/internal/graph/serve.openGraphSnapshotWithClusters <- moedex/internal/graph/serve.openGraphSnapshot <- moedex/internal/graph/serve.OpenGraphToolsStrict <- moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP <- testing.tRunner
+1.400s regexp.(*machine).match <- regexp.(*Regexp).find <- regexp.(*Regexp).matches.func1 <- regexp.(*Regexp).allSubmatchIndex.func1 <- slices.AppendSeq[go.shape.[]go.shape.[]int,go.shape.[]int] <- slices.Collect[go.shape.[]int] <- regexp.(*Regexp).FindAllSubmatchIndex <- moedex/internal/symbol.CSharpExtractor.Extract <- moedex/internal/symbol.CSharpExtractor.ExtractDefsRefs <- moedex/internal/symbol.extractDefsRefs <- moedex/internal/symbol.BuildMulti <- moedex/internal/graph/serve.OpenSymbols <- moedex/internal/graph/serve.openGraphSnapshotWithClusters <- moedex/internal/graph/serve.openGraphSnapshot <- moedex/internal/graph/serve.OpenGraphToolsStrict <- moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP <- testing.tRunner
+1.370s runtime.tryDeferToSpanScan <- runtime.scanObject <- runtime.gcDrain <- runtime.gcDrainMarkWorkerIdle <- runtime.gcBgMarkWorker.func2 <- runtime.systemstack <- runtime.gcBgMarkWorker
+1.320s regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).step <- regexp.(*machine).match <- regexp.(*Regexp).find <- regexp.(*Regexp).matches.func1 <- regexp.(*Regexp).allSubmatchIndex.func1 <- slices.AppendSeq[go.shape.[]go.shape.[]int,go.shape.[]int] <- slices.Collect[go.shape.[]int] <- regexp.(*Regexp).FindAllSubmatchIndex <- moedex/internal/symbol.CSharpExtractor.Extract <- moedex/internal/symbol.CSharpExtractor.ExtractDefsRefs <- moedex/internal/symbol.extractDefsRefs <- moedex/internal/symbol.BuildMulti <- moedex/internal/graph/serve.OpenSymbols <- moedex/internal/graph/serve.openGraphSnapshotWithClusters <- moedex/internal/graph/serve.openGraphSnapshot <- moedex/internal/graph/serve.OpenGraphToolsStrict <- moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP <- testing.tRunner
+1.230s regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).step <- regexp.(*machine).match <- regexp.(*Regexp).find <- regexp.(*Regexp).matches.func1 <- regexp.(*Regexp).allSubmatchIndex.func1 <- slices.AppendSeq[go.shape.[]go.shape.[]int,go.shape.[]int] <- slices.Collect[go.shape.[]int] <- regexp.(*Regexp).FindAllSubmatchIndex <- moedex/internal/symbol.CSharpExtractor.Extract <- moedex/internal/symbol.CSharpExtractor.ExtractDefsRefs <- moedex/internal/symbol.extractDefsRefs <- moedex/internal/symbol.BuildMulti <- moedex/internal/graph/serve.OpenSymbols <- moedex/internal/graph/serve.openGraphSnapshotWithClusters <- moedex/internal/graph/serve.openGraphSnapshot <- moedex/internal/graph/serve.OpenGraphToolsStrict <- moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP <- testing.tRunner
+1.210s runtime.pthread_cond_signal <- runtime.semawakeup <- runtime.notewakeup <- runtime.startm <- runtime.wakep <- runtime.goschedImpl <- runtime.gopreempt_m <- runtime.newstack <- runtime.morestack
+1.190s regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).step <- regexp.(*machine).match <- regexp.(*Regexp).find <- regexp.(*Regexp).matches.func1 <- regexp.(*Regexp).allSubmatchIndex.func1 <- slices.AppendSeq[go.shape.[]go.shape.[]int,go.shape.[]int] <- slices.Collect[go.shape.[]int] <- regexp.(*Regexp).FindAllSubmatchIndex <- moedex/internal/symbol.CSharpExtractor.Extract <- moedex/internal/symbol.CSharpExtractor.ExtractDefsRefs <- moedex/internal/symbol.extractDefsRefs <- moedex/internal/symbol.BuildMulti <- moedex/internal/graph/serve.OpenSymbols <- moedex/internal/graph/serve.openGraphSnapshotWithClusters <- moedex/internal/graph/serve.openGraphSnapshot <- moedex/internal/graph/serve.OpenGraphToolsStrict <- moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP <- testing.tRunner
+1.030s crypto/internal/fips140/sha256.blockSHA2 <- crypto/internal/fips140/sha256.block <- crypto/internal/fips140/sha256.(*Digest).Write <- crypto/sha256.Sum256 <- moedex/internal/graph/diskgraph.(*Graph).BuildID <- moedex/internal/graph/serve.openGraphSnapshotWithClusters <- moedex/internal/graph/serve.openGraphSnapshot <- moedex/internal/graph/serve.OpenGraphToolsStrict <- moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP <- testing.tRunner
+0.990s regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).add <- regexp.(*machine).step <- regexp.(*machine).match <- regexp.(*Regexp).find <- regexp.(*Regexp).matches.func1 <- regexp.(*Regexp).allSubmatchIndex.func1 <- slices.AppendSeq[go.shape.[]go.shape.[]int,go.shape.[]int] <- slices.Collect[go.shape.[]int] <- regexp.(*Regexp).FindAllSubmatchIndex <- moedex/internal/symbol.CSharpExtractor.Extract <- moedex/internal/symbol.CSharpExtractor.ExtractDefsRefs <- moedex/internal/symbol.extractDefsRefs <- moedex/internal/symbol.BuildMulti <- moedex/internal/graph/serve.OpenSymbols <- moedex/internal/graph/serve.openGraphSnapshotWithClusters <- moedex/internal/graph/serve.openGraphSnapshot <- moedex/internal/graph/serve.OpenGraphToolsStrict <- moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP <- testing.tRunner
+0.990s regexp.(*machine).add <- regexp.(*machine).match <- regexp.(*Regexp).find <- regexp.(*Regexp).matches.func1 <- regexp.(*Regexp).allSubmatchIndex.func1 <- slices.AppendSeq[go.shape.[]go.shape.[]int,go.shape.[]int] <- slices.Collect[go.shape.[]int] <- regexp.(*Regexp).FindAllSubmatchIndex <- moedex/internal/symbol.csReferencesFromDefs <- moedex/internal/symbol.CSharpExtractor.ExtractDefsRefs <- moedex/internal/symbol.extractDefsRefs <- moedex/internal/symbol.BuildMulti <- moedex/internal/graph/serve.OpenSymbols <- moedex/internal/graph/serve.openGraphSnapshotWithClusters <- moedex/internal/graph/serve.openGraphSnapshot <- moedex/internal/graph/serve.OpenGraphToolsStrict <- moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP <- testing.tRunner
+0.890s regexp.(*machine).add <- regexp.(*machine).step <- regexp.(*machine).match <- regexp.(*Regexp).find <- regexp.(*Regexp).matches.func1 <- regexp.(*Regexp).allSubmatchIndex.func1 <- slices.AppendSeq[go.shape.[]go.shape.[]int,go.shape.[]int] <- slices.Collect[go.shape.[]int] <- regexp.(*Regexp).FindAllSubmatchIndex <- moedex/internal/symbol.csReferencesFromDefs <- moedex/internal/symbol.CSharpExtractor.ExtractDefsRefs <- moedex/internal/symbol.extractDefsRefs <- moedex/internal/symbol.BuildMulti <- moedex/internal/graph/serve.OpenSymbols <- moedex/internal/graph/serve.openGraphSnapshotWithClusters <- moedex/internal/graph/serve.openGraphSnapshot <- moedex/internal/graph/serve.OpenGraphToolsStrict <- moedex/internal/graph/serve.TestPinnedRoslynFactoredGraphMCP <- testing.tRunner

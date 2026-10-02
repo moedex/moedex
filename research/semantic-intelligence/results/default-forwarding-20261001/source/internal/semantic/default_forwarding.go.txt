@@ -1,0 +1,91 @@
+package semantic
+
+import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"strings"
+)
+
+// DefaultForwarding retains a bounded source computation and its closed target.
+// The explicit cast remains an obligation; successful execution is not asserted.
+type DefaultForwarding struct {
+	Rule                   string `json:"rule"`
+	Receiver               string `json:"receiver"`
+	Conversion             string `json:"conversion"`
+	TypeParameterOrdinal   int    `json:"type_parameter_ordinal"`
+	InterfaceSymbolID      string `json:"interface_symbol_id"`
+	ImplementationSymbolID string `json:"implementation_symbol_id"`
+	CastTypeSymbolID       string `json:"cast_type_symbol_id"`
+	CallOccurrenceID       string `json:"call_occurrence_id"`
+	CallContextID          string `json:"call_context_id"`
+	CallSourceID           string `json:"call_source_id"`
+	CallPath               string `json:"call_path"`
+	CallSHA256             string `json:"call_sha256"`
+	CallOffset             uint64 `json:"call_offset"`
+	CallLength             uint64 `json:"call_length"`
+}
+
+func ValidateDefaultForwarding(f DefaultForwarding) error {
+	bad := func() error { return fmt.Errorf("semantic: invalid default forwarding") }
+	if f.Rule != "csharp-default-forward-v1" || f.Receiver != "this" || f.Conversion != "explicit_type_parameter_cast" || f.TypeParameterOrdinal < 0 || f.TypeParameterOrdinal >= 8 || !relative(f.CallPath) || !digest(f.CallSHA256) || f.CallLength == 0 || f.CallOffset+f.CallLength < f.CallOffset {
+		return bad()
+	}
+	for _, v := range []struct{ id, prefix string }{{f.CallOccurrenceID, "occurrence:"}, {f.CallContextID, "context:"}, {f.CallSourceID, "source:"}} {
+		if !strings.HasPrefix(v.id, v.prefix) || !digest(strings.TrimPrefix(v.id, v.prefix)) {
+			return bad()
+		}
+	}
+	o := Occurrence{SourceID: f.CallSourceID, ContextID: f.CallContextID, Role: "reference", Kind: "invocation", Offset: f.CallOffset, Length: f.CallLength}
+	if o.ComputeID() != f.CallOccurrenceID {
+		return bad()
+	}
+	return nil
+}
+
+type constructedMethod struct {
+	Definition string      `json:"definition"`
+	Arguments  []SymbolKey `json:"arguments"`
+}
+
+func validateForwardingSymbols(f ImplementationFact, typ, selected, target, implementation, cast Symbol) error {
+	bad := func() error { return fmt.Errorf("semantic: inconsistent forwarding symbols") }
+	v := f.Forwarding
+	if v == nil || ValidateDefaultForwarding(*v) != nil || target.ID != v.InterfaceSymbolID || implementation.ID != v.ImplementationSymbolID || cast.ID != v.CastTypeSymbolID || ValidateDomainTarget(cast) != nil || ValidateConstructedInterfaceMethod(target.Key) != nil || target.Key.Namespace != selected.Key.Namespace || target.Key.NamespaceKind != selected.Key.NamespaceKind {
+		return bad()
+	}
+	var a, b constructedMethod
+	if json.Unmarshal([]byte(selected.Key.Descriptor), &a) != nil || json.Unmarshal([]byte(target.Key.Descriptor), &b) != nil || !reflect.DeepEqual(a.Arguments, b.Arguments) || v.TypeParameterOrdinal >= len(a.Arguments) || a.Arguments[v.TypeParameterOrdinal] != cast.Key {
+		return bad()
+	}
+	// Same generic owner; the called member accepts exactly this type parameter.
+	name, _, _ := strings.Cut(a.Definition, "(")
+	dot := strings.LastIndex(name, ".")
+	if dot < 0 || !strings.HasPrefix(b.Definition, name[:dot+1]) || strings.Contains(strings.TrimPrefix(b.Definition, name[:dot+1]), "#") || !strings.HasSuffix(b.Definition, fmt.Sprintf("(`%d)", v.TypeParameterOrdinal)) {
+		return bad()
+	}
+	relation := ImplementationFact{Kind: "interface_method_implementation", Rule: "csharp-interface-closed-v1", EvidenceScope: "compile_time", InterfaceSymbolID: target.ID, ImplementingTypeSymbolID: typ.ID}
+	return ValidateImplementationSymbols(relation, implementation, target, typ)
+}
+
+// ValidateForwardingWitness checks the stored call against the exact captured
+// binding, including its enclosing default template and original target identity.
+func ValidateForwardingWitness(f ImplementationFact, snapshotID string, o Occurrence, b Binding, s Source, c BuildContext, template, target Symbol) error {
+	v := f.Forwarding
+	bad := func() error { return fmt.Errorf("semantic: invalid forwarding call witness") }
+	if v == nil || ValidateDefaultForwarding(*v) != nil || o.ID != v.CallOccurrenceID || o.SourceID != v.CallSourceID || o.ContextID != v.CallContextID || o.Offset != v.CallOffset || o.Length != v.CallLength || o.Role != "reference" || o.Kind != "invocation" || b.OccurrenceID != o.ID || b.Status != "resolved" || b.EnclosingSymbolID != f.DefaultTemplateSymbolID || b.Method != "roslyn-semantic-model" || b.Extractor != "msbuild-roslyn" || b.ExtractorVersion != "9" || s.ID != o.SourceID || s.Path != v.CallPath || s.RawSHA256 != v.CallSHA256 || s.SnapshotID != snapshotID || c.ID != o.ContextID || c.SnapshotID != snapshotID || c.Status != "complete" || c.Extractor != b.Extractor || c.ExtractorVersion != b.ExtractorVersion {
+		return bad()
+	}
+	var closed constructedMethod
+	if json.Unmarshal([]byte(target.Key.Descriptor), &closed) != nil {
+		return bad()
+	}
+	key := target.Key
+	key.DescriptorKind = "documentation_comment_id"
+	key.Descriptor = closed.Definition
+	original := Symbol{Key: key}
+	if b.SymbolID != original.ComputeID() || !strings.HasSuffix(template.Key.Namespace, "/"+c.Project) {
+		return bad()
+	}
+	return nil
+}

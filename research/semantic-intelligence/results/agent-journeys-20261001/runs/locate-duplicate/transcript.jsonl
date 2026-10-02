@@ -1,0 +1,3 @@
+{"event":"request","ordinal":1,"method":"tools/call","file":"001.request.json","sha256":"ee5b290bd0f666e7a51861a441b7058354ecf1238ea2a598c56971e4a0649922","elapsed_seconds":0.0}
+{"event":"response","ordinal":1,"file":"001.response.raw","sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","serialized_response_bytes":0,"response_complete":false,"http_status":null,"headers":{},"error":"PermissionError: [Errno 1] Operation not permitted","elapsed_seconds":0.003503041998556,"request_seconds":0.0028587920005520573,"calls_used":1,"response_bytes_used":0,"stopped":"transport failure; response accounting unknown","token_usage":"unknown"}
+{"event":"blocked","reason":"transport failure; response accounting unknown","elapsed_seconds":10.524031291999563}

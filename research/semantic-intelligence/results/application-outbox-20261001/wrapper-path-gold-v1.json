@@ -1,0 +1,290 @@
+{
+  "version": 1,
+  "repo": "Sample-Outbox",
+  "commit": "1ab8e66ebf96e5733e68c2f4d2201276f38ed9c5",
+  "source_gold_sha256": "35744683f93f9ae7fb83ef17455b11da7d38a067951feb26acf0ad415e1d8586",
+  "frozen_at_utc": "2026-10-01T16:41:58.360188+00:00",
+  "provenance": "Independently authored from pinned application source before interface-implementation extraction and path query results. Prior domain gold remains unchanged; wrapper invocations remain unsupported as direct publish facts.",
+  "contexts": [
+    {
+      "project": "src/Sample.Api/Sample.Api.csproj",
+      "configuration": "Debug",
+      "framework": "net8.0"
+    },
+    {
+      "project": "src/Sample.Worker/Sample.Worker.csproj",
+      "configuration": "Debug",
+      "framework": "net8.0"
+    },
+    {
+      "project": "src/Sample.Components/Sample.Components.csproj",
+      "configuration": "Debug",
+      "framework": "net8.0"
+    }
+  ],
+  "reviewed_closure": {
+    "projects": [
+      "src/Sample.Api/Sample.Api.csproj",
+      "src/Sample.Worker/Sample.Worker.csproj",
+      "src/Sample.Components/Sample.Components.csproj"
+    ],
+    "paths": [
+      "src/Sample.Api/Controllers/RegistrationController.cs",
+      "src/Sample.Api/Program.cs",
+      "src/Sample.Api/RecreateDatabaseHostedService.cs",
+      "src/Sample.Api/RegistrationModel.cs",
+      "src/Sample.Api/RegistrationResult.cs",
+      "src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs",
+      "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs",
+      "src/Sample.Components/Consumers/RegistrationValidated.cs",
+      "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs",
+      "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+      "src/Sample.Components/Consumers/ValidateRegistrationConsumerDefinition.cs",
+      "src/Sample.Components/Contracts/AddEventAttendee.cs",
+      "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+      "src/Sample.Components/Contracts/SendRegistrationEmail.cs",
+      "src/Sample.Components/DuplicateRegistrationException.cs",
+      "src/Sample.Components/IRegistrationService.cs",
+      "src/Sample.Components/Registration.cs",
+      "src/Sample.Components/RegistrationDbContext.cs",
+      "src/Sample.Components/RegistrationService.cs",
+      "src/Sample.Components/Services/IRegistrationValidationService.cs",
+      "src/Sample.Components/Services/RegistrationValidationService.cs",
+      "src/Sample.Components/StateMachines/RegistrationState.cs",
+      "src/Sample.Components/StateMachines/RegistrationStateDefinition.cs",
+      "src/Sample.Components/StateMachines/RegistrationStateMachine.cs",
+      "src/Sample.Components/StateMachines/RegistrationStateMap.cs",
+      "src/Sample.Worker/Program.cs"
+    ],
+    "source_sha256": {
+      "src/Sample.Api/Controllers/RegistrationController.cs": "57da78434440b2da392bf6cb0a5eb954a1b3bc93f27e786c9c55bf9100fdd4df",
+      "src/Sample.Api/Program.cs": "559216744f54abd3b7d9d2b08ad83d0ba2bfbfd62a41e32d1b89c526c3262c53",
+      "src/Sample.Api/RecreateDatabaseHostedService.cs": "ab268907370a2f35298fe8b0340020b1df909fc80ff0abc1140f73c69e567bca",
+      "src/Sample.Api/RegistrationModel.cs": "5af7d622867aa3a9c10aa39256419aaa797e625d84c324455f01cfb8120bf542",
+      "src/Sample.Api/RegistrationResult.cs": "bfda4c0c2d819760ca443a8c381f0437478ab9d8c64d844d84032ae21ab030f6",
+      "src/Sample.Components/Consumers/AddEventAttendeeConsumer.cs": "f7ae50324fc1b3c8fa3fec399e233b6e6e977b9458d348b834e5ced0f5fc6184",
+      "src/Sample.Components/Consumers/NotifyRegistrationConsumer.cs": "5e1f5c6e87fdf38b0568a0f8e1fdd79cbb804c027c842ab411077fe0a8dc3c81",
+      "src/Sample.Components/Consumers/RegistrationValidated.cs": "5c1029d87ada8134ca31e7863c0a8185467f6b7ce02ef34865ae0290724b5953",
+      "src/Sample.Components/Consumers/SendRegistrationEmailConsumer.cs": "0e5c8f13aa04dd9b46c488b677fcfef3c9583998a74a98cb4283087326de7592",
+      "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca",
+      "src/Sample.Components/Consumers/ValidateRegistrationConsumerDefinition.cs": "3e039a4aadaceff5e3e6e233e0fa5923d66ff16fa942413ec37b4e59584fd9f1",
+      "src/Sample.Components/Contracts/AddEventAttendee.cs": "bd97b1816fc8732ebba2f7cbb5b97cb29e8d878b13330ddf7fa94e55dea987cb",
+      "src/Sample.Components/Contracts/RegistrationSubmitted.cs": "0f659a342b91338f1aca4f547bebebe11e65d42c5606a3b7164f74ce46d63bf0",
+      "src/Sample.Components/Contracts/SendRegistrationEmail.cs": "6aa68e8627a691f56e0c653dbd65f4e9289ef309a4aaa5bbe063eb1f6cec9c09",
+      "src/Sample.Components/DuplicateRegistrationException.cs": "f01d4205ff12574af2bf12f0633c44e3af2cfef22ef37733e4a2bb84c25f5163",
+      "src/Sample.Components/IRegistrationService.cs": "c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71",
+      "src/Sample.Components/Registration.cs": "84db43f9d9292799c5685e2ccb54a2eba4400681f5e87edd5e8b3d5f360ad8b4",
+      "src/Sample.Components/RegistrationDbContext.cs": "ef01d6722802a3b7f0f714893a0be0f10999d627a72b1e56b67934b75b9fd7ef",
+      "src/Sample.Components/RegistrationService.cs": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643",
+      "src/Sample.Components/Services/IRegistrationValidationService.cs": "094614ab8d70256ca3accc40e20d4d358d1170031938fa03a68fbcd2be99a97a",
+      "src/Sample.Components/Services/RegistrationValidationService.cs": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20",
+      "src/Sample.Components/StateMachines/RegistrationState.cs": "5ced8f8102ccbe2e0a3c8c9095e5e0d6635b032cc93977187daf15301a73025f",
+      "src/Sample.Components/StateMachines/RegistrationStateDefinition.cs": "c315310b0f33c525ba4a3a14066594953491507c9254df37685573dec7c30f56",
+      "src/Sample.Components/StateMachines/RegistrationStateMachine.cs": "6ec46ac7ba6f5ed31ecdd0e8e55be96b3382b7a443f59a243e9d87b6faa1f570",
+      "src/Sample.Components/StateMachines/RegistrationStateMap.cs": "325580737a2ec1fb3f77d6cc958a71b6921b4049ceaa1f78de75f5d66ede0572",
+      "src/Sample.Worker/Program.cs": "16591e589766539eef08e5b6034fcd681475d8d56a3a860f227880833dbf84db"
+    }
+  },
+  "paths": [
+    {
+      "id": "controller-wrapper",
+      "message": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "caller": {
+        "project": "src/Sample.Api/Sample.Api.csproj",
+        "path": "src/Sample.Api/Controllers/RegistrationController.cs",
+        "byte_offset": 642,
+        "byte_length": 18,
+        "source_sha256": "57da78434440b2da392bf6cb0a5eb954a1b3bc93f27e786c9c55bf9100fdd4df"
+      },
+      "caller_owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Api/Sample.Api.csproj",
+        "descriptor": "M:Sample.Api.Controllers.RegistrationController.Submit(Sample.Api.RegistrationModel)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "interface_member": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.IRegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "interface_declaration": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/IRegistrationService.cs",
+        "byte_offset": 93,
+        "byte_length": 18,
+        "source_sha256": "c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71"
+      },
+      "implementation_type": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.RegistrationService",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "implementation_method": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.RegistrationService.SubmitRegistration(System.String,System.String,System.Decimal)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "implementation_declaration": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/RegistrationService.cs",
+        "byte_offset": 500,
+        "byte_length": 18,
+        "source_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+      },
+      "seed": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/RegistrationService.cs",
+        "byte_offset": 931,
+        "byte_length": 7,
+        "source_sha256": "4b168083c6473b221df7bd0312e1eb3d9c088f4241c30aa46679af1de10aa643"
+      },
+      "seed_case_id": "submitted-publish",
+      "seed_kind": "message_publish",
+      "seed_rule": "csharp-framework-v1",
+      "classification": "static_candidate",
+      "proof_steps": [
+        "resolved interface invocation",
+        "compiler-confirmed interface implementation",
+        "existing direct publisher in implementation method"
+      ]
+    },
+    {
+      "id": "validation-wrapper",
+      "message": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "caller": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Consumers/ValidateRegistrationConsumer.cs",
+        "byte_offset": 667,
+        "byte_length": 20,
+        "source_sha256": "23f76df2f1405d1f8f9f31ed7dfce544208f2dd5ff4c2850f12a3b4f7d4814ca"
+      },
+      "caller_owner": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.Consumers.ValidateRegistrationConsumer.Consume(MassTransit.ConsumeContext{Sample.Components.Contracts.AddEventAttendee})",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "interface_member": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.Services.IRegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "interface_declaration": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Services/IRegistrationValidationService.cs",
+        "byte_offset": 98,
+        "byte_length": 20,
+        "source_sha256": "094614ab8d70256ca3accc40e20d4d358d1170031938fa03a68fbcd2be99a97a"
+      },
+      "implementation_type": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.Services.RegistrationValidationService",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "implementation_method": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "M:Sample.Components.Services.RegistrationValidationService.ValidateRegistration(System.String,System.String,System.Guid)",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "implementation_declaration": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+        "byte_offset": 362,
+        "byte_length": 20,
+        "source_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20"
+      },
+      "seed": {
+        "project": "src/Sample.Components/Sample.Components.csproj",
+        "path": "src/Sample.Components/Services/RegistrationValidationService.cs",
+        "byte_offset": 474,
+        "byte_length": 7,
+        "source_sha256": "bec7300825fb54f8bc5ab03fad57ff5bd28fe487a7fc1124edba48f188326a20"
+      },
+      "seed_case_id": "validated-publish",
+      "seed_kind": "message_publish",
+      "seed_rule": "csharp-framework-v1",
+      "classification": "static_candidate",
+      "proof_steps": [
+        "resolved interface invocation",
+        "compiler-confirmed interface implementation",
+        "existing direct publisher in implementation method"
+      ]
+    }
+  ],
+  "negative_expectations": [
+    {
+      "id": "controller-wrong-message",
+      "caller_case_id": "controller-wrapper",
+      "message": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.Consumers.RegistrationValidated",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "expected_path_count": 0
+    },
+    {
+      "id": "validation-wrong-message",
+      "caller_case_id": "validation-wrapper",
+      "message": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "expected_path_count": 0
+    },
+    {
+      "id": "controller-not-direct-publish",
+      "caller_case_id": "controller-wrapper",
+      "forbidden_fact_kind": "message_publish"
+    },
+    {
+      "id": "validation-not-direct-publish",
+      "caller_case_id": "validation-wrapper",
+      "forbidden_fact_kind": "message_publish"
+    }
+  ],
+  "selection_policy": "Select one Debug/net8.0 captured context per project; evaluate each retained Components alternative separately. Every edge retains its exact captured context and source snapshot. Selected contexts are not a proven deployment or runtime closure.",
+  "acceptance": [
+    "Require exact qualified caller/interface/implementation/message identities and source path/hash/token spans.",
+    "Require exact compiler implementation relationship rather than method-name equality or DI registration inference.",
+    "No unexpected candidate caller/message pair in the reviewed closure. Missing relationships or context variants must be reported rather than repaired by guessing.",
+    "Preserve existing direct domain facts; neither wrapper acquires a direct publisher fact.",
+    "Paths are static candidates; conditional execution, receiver instance, runtime dispatch, activation and delivery remain unproven."
+  ],
+  "limits": {
+    "wrapper_steps": 1,
+    "seed_limit": 20,
+    "path_limit": 20,
+    "max_selected_contexts": 32
+  }
+}

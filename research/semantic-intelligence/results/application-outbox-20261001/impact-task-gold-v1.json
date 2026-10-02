@@ -1,0 +1,151 @@
+{
+  "version": 1,
+  "frozen_at_utc": "2026-10-01T15:46:58.371098+00:00",
+  "repo": "Sample-Outbox",
+  "commit": "1ab8e66ebf96e5733e68c2f4d2201276f38ed9c5",
+  "source_gold_sha256": "2b0bab11f6bc2f90c4a7dbacba518b14004a2673732a2d3160abb8cbaf5f2052",
+  "provenance": "Source-authored task labels frozen before compact retrieval implementation/results. Expectations reference immutable successor source gold, not extracted output.",
+  "tasks": [
+    {
+      "id": "submitted-message",
+      "prompt": "Show recorded producers and consumers of RegistrationSubmitted and its contract declaration, with source evidence. State remaining wrapper/saga gaps.",
+      "target": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.Contracts.RegistrationSubmitted",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "expected_case_ids": [
+        "submitted-publish",
+        "NotifyRegistration-consumer"
+      ],
+      "known_coverage_gap_case_ids": [
+        "controller-wrapper",
+        "saga-event"
+      ],
+      "expected_definitions": [
+        {
+          "project": "src/Sample.Components/Sample.Components.csproj",
+          "path": "src/Sample.Components/Contracts/RegistrationSubmitted.cs",
+          "byte_offset": 54,
+          "byte_length": 21,
+          "raw_sha256": "0f659a342b91338f1aca4f547bebebe11e65d42c5606a3b7164f74ce46d63bf0"
+        }
+      ]
+    },
+    {
+      "id": "attendee-message",
+      "prompt": "Show recorded consumers of AddEventAttendee and its declaration. Distinguish the unsupported state-machine publish factory from a proven runtime route.",
+      "target": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.Contracts.AddEventAttendee",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "expected_case_ids": [
+        "AddEventAttendee-consumer",
+        "ValidateRegistration-consumer"
+      ],
+      "known_coverage_gap_case_ids": [
+        "fluent-publish-AddEventAttendee"
+      ],
+      "expected_definitions": [
+        {
+          "project": "src/Sample.Components/Sample.Components.csproj",
+          "path": "src/Sample.Components/Contracts/AddEventAttendee.cs",
+          "byte_offset": 54,
+          "byte_length": 16,
+          "raw_sha256": "bd97b1816fc8732ebba2f7cbb5b97cb29e8d878b13330ddf7fa94e55dea987cb"
+        }
+      ]
+    },
+    {
+      "id": "registration-entity",
+      "prompt": "Show the Registration entity declaration and the recorded entity-use and mapping sites. Do not infer a table name or runtime query/write.",
+      "target": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.Registration",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "expected_case_ids": [
+        "entity-set",
+        "entity-model"
+      ],
+      "known_coverage_gap_case_ids": [],
+      "expected_definitions": [
+        {
+          "project": "src/Sample.Components/Sample.Components.csproj",
+          "path": "src/Sample.Components/Registration.cs",
+          "byte_offset": 43,
+          "byte_length": 12,
+          "raw_sha256": "84db43f9d9292799c5685e2ccb54a2eba4400681f5e87edd5e8b3d5f360ad8b4"
+        }
+      ]
+    },
+    {
+      "id": "registration-service",
+      "prompt": "Show the IRegistrationService declaration and recorded service-to-implementation registration/lifetime. Do not claim activation or infer private call-chain impact.",
+      "target": {
+        "language": "csharp",
+        "namespace_kind": "project",
+        "namespace": "Sample-Outbox/src/Sample.Components/Sample.Components.csproj",
+        "descriptor": "T:Sample.Components.IRegistrationService",
+        "descriptor_kind": "documentation_comment_id"
+      },
+      "expected_case_ids": [
+        "api-service"
+      ],
+      "known_coverage_gap_case_ids": [
+        "controller-wrapper"
+      ],
+      "expected_definitions": [
+        {
+          "project": "src/Sample.Components/Sample.Components.csproj",
+          "path": "src/Sample.Components/IRegistrationService.cs",
+          "byte_offset": 47,
+          "byte_length": 20,
+          "raw_sha256": "c5ef105a37ff9c1423c8455c1c937eafe767a52c02347e807c6774982020cf71"
+        }
+      ]
+    }
+  ],
+  "paired_protocol": {
+    "snapshot": "Both arms use the exact same published immutable snapshot/artifact.",
+    "context_selection": "Resolve exact Debug/net8.0 project context IDs before timed task execution. Run each retained Components variant separately, never merge incompatible same-project alternatives. Record every explicit selected ID; use identical selections in both arms.",
+    "baseline": "One compiler_contract_impact call plus compiler_definitions for each selected context, querying the same exact contract ID.",
+    "candidate": "One compiler_contract_context call using the same exact contract ID and explicit contexts.",
+    "discovery": "Measure context-discovery calls/bytes separately and identically; report definition-only context choices. Discovery cannot silently select a context.",
+    "limits": {
+      "max_tool_calls": 12,
+      "max_response_bytes": 65536,
+      "evidence_limit": 80,
+      "definition_limit": 20
+    },
+    "bytes": "Sum actual serialized complete MCP tool return bytes using identical encoder for both arms, including structuredContent/text duplication if present. Also report structuredContent bytes separately; do not substitute index materialization budgets.",
+    "tool_calls": "Count every attempted tool invocation, including discovery separately, errors and retries. No hidden free calls.",
+    "evidence_equivalence": "Normalize both responses to exact contract, context ID, source snapshot/occurrence identity, path/raw hash/token span, kind/rule/scope, ordered target roles/full symbol keys, lifetime/table/schema, and actual recorded owner. Require tuple equality and source-gold expected evidence completeness.",
+    "definitions": "Require exact source-authored definition path/hash/token span and contract identity per selected definition context. Missing definitions cannot be hidden by evidence-only context discovery.",
+    "failure": "Any missing expected evidence/definition, extra unsupported assertion, truncation, provenance mismatch, context omission or budget overflow fails semantic acceptance; report partial measurements honestly.",
+    "report": [
+      "evidence_expected",
+      "evidence_found",
+      "evidence_missing",
+      "unexpected_evidence",
+      "definitions_expected",
+      "definitions_found",
+      "definition_misses",
+      "context_variant_results",
+      "tool_calls",
+      "complete_response_bytes",
+      "structured_content_bytes",
+      "truncated",
+      "budget_exceeded"
+    ],
+    "quality": "Evidence/definition acceptance is required independently of byte/call savings. Known unsupported gaps remain explicit limitations. Do not claim runtime delivery, activation, database behavior, or interprocedural wrapper completeness.",
+    "comparison": "Paired internal interface evaluation only. No CodeGraph competitiveness claim without an actual same-input, same-task external run."
+  }
+}

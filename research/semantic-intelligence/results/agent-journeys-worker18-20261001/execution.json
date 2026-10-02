@@ -1,0 +1,276 @@
+{
+  "authorization": "User yes to fresh solvers and reviewers one at a time",
+  "authorized_at_recorded_utc": "2026-10-02T01:54:41.526868+00:00",
+  "runs": [
+    {
+      "task": "locate-duplicate",
+      "assigned_utc": "2026-10-02T01:54:48.395829+00:00",
+      "assigned_monotonic": 35729.752189625,
+      "completion_observed_utc": "2026-10-02T01:56:29.801377+00:00",
+      "completion_observed_monotonic": 35831.156907958,
+      "elapsed_upper_bound_seconds": 101.40471833300398,
+      "within_deadline": true,
+      "accounting": {
+        "calls": 3,
+        "response_bytes": 28898,
+        "stopped": null,
+        "pending": null
+      },
+      "agent_name": "/root/journey18_01",
+      "fork_turns": "none"
+    },
+    {
+      "task": "locate-retry",
+      "assigned_utc": "2026-10-02T01:56:29.820836+00:00",
+      "assigned_monotonic": 35831.176362125,
+      "completion_observed_utc": "2026-10-02T01:58:12.768800+00:00",
+      "completion_observed_monotonic": 35934.123514666,
+      "elapsed_upper_bound_seconds": 102.9471525409972,
+      "within_deadline": true,
+      "accounting": {
+        "calls": 3,
+        "response_bytes": 20958,
+        "stopped": null,
+        "pending": null
+      },
+      "agent_name": "/root/journey18_02",
+      "fork_turns": "none"
+    },
+    {
+      "task": "locate-validation-service",
+      "assigned_utc": "2026-10-02T01:58:12.788252+00:00",
+      "assigned_monotonic": 35934.142960916,
+      "completion_observed_utc": "2026-10-02T01:59:56.612612+00:00",
+      "completion_observed_monotonic": 36037.966483833,
+      "elapsed_upper_bound_seconds": 103.82352291700226,
+      "within_deadline": true,
+      "accounting": {
+        "calls": 2,
+        "response_bytes": 30307,
+        "stopped": null,
+        "pending": null
+      },
+      "agent_name": "/root/journey18_03",
+      "fork_turns": "none"
+    },
+    {
+      "task": "locate-persistence",
+      "assigned_utc": "2026-10-02T01:59:56.633000+00:00",
+      "assigned_monotonic": 36037.986862458,
+      "completion_observed_utc": "2026-10-02T02:01:48.490596+00:00",
+      "completion_observed_monotonic": 36149.843607166,
+      "elapsed_upper_bound_seconds": 111.85674470800586,
+      "within_deadline": true,
+      "accounting": {
+        "calls": 3,
+        "response_bytes": 28550,
+        "stopped": null,
+        "pending": null
+      },
+      "agent_name": "/root/journey18_04",
+      "fork_turns": "none"
+    },
+    {
+      "task": "flow-notification",
+      "assigned_utc": "2026-10-02T02:01:48.511493+00:00",
+      "assigned_monotonic": 36149.864446041,
+      "completion_observed_utc": "2026-10-02T02:05:50.069659+00:00",
+      "completion_observed_monotonic": 36391.426342791,
+      "elapsed_upper_bound_seconds": 241.5618967499977,
+      "within_deadline": true,
+      "accounting": {
+        "calls": 10,
+        "response_bytes": 83015,
+        "stopped": null,
+        "pending": null
+      },
+      "agent_name": "/root/journey18_05",
+      "fork_turns": "none"
+    },
+    {
+      "task": "flow-email",
+      "assigned_utc": "2026-10-02T02:05:50.087919+00:00",
+      "assigned_monotonic": 36391.444601083,
+      "completion_observed_utc": "2026-10-02T02:07:46.123072+00:00",
+      "completion_observed_monotonic": 36507.478982916,
+      "elapsed_upper_bound_seconds": 116.03438183300023,
+      "within_deadline": true,
+      "accounting": {
+        "calls": 3,
+        "response_bytes": 30675,
+        "stopped": null,
+        "pending": null
+      },
+      "agent_name": "/root/journey18_06",
+      "fork_turns": "none"
+    },
+    {
+      "task": "flow-validation",
+      "assigned_utc": "2026-10-02T02:07:46.143870+00:00",
+      "assigned_monotonic": 36507.499760958,
+      "completion_observed_utc": "2026-10-02T02:10:24.159205+00:00",
+      "completion_observed_monotonic": 36665.514032166,
+      "elapsed_upper_bound_seconds": 158.0142712079978,
+      "within_deadline": true,
+      "accounting": {
+        "calls": 6,
+        "response_bytes": 54603,
+        "stopped": null,
+        "pending": null
+      },
+      "agent_name": "/root/journey18_07",
+      "fork_turns": "none"
+    },
+    {
+      "task": "flow-runtime-proof",
+      "assigned_utc": "2026-10-02T02:10:24.180406+00:00",
+      "assigned_monotonic": 36665.535230375,
+      "completion_observed_utc": "2026-10-02T02:14:07.353125+00:00",
+      "completion_observed_monotonic": 36888.706419416,
+      "elapsed_upper_bound_seconds": 223.17118904100062,
+      "within_deadline": true,
+      "accounting": {
+        "calls": 12,
+        "response_bytes": 42681,
+        "stopped": null,
+        "pending": null
+      },
+      "agent_name": "/root/journey18_08",
+      "fork_turns": "none"
+    },
+    {
+      "task": "impact-submitted",
+      "assigned_utc": "2026-10-02T02:14:07.374683+00:00",
+      "assigned_monotonic": 36888.727981916,
+      "completion_observed_utc": "2026-10-02T02:18:45.053894+00:00",
+      "completion_observed_monotonic": 37166.405301083,
+      "elapsed_upper_bound_seconds": 277.67731916699995,
+      "within_deadline": true,
+      "accounting": {
+        "calls": 11,
+        "response_bytes": 89052,
+        "stopped": null,
+        "pending": null
+      },
+      "agent_name": "/root/journey18_09",
+      "fork_turns": "none"
+    },
+    {
+      "task": "impact-validation-signature",
+      "assigned_utc": "2026-10-02T02:18:45.075225+00:00",
+      "assigned_monotonic": 37166.42660975,
+      "completion_observed_utc": "2026-10-02T02:21:29.227960+00:00",
+      "completion_observed_monotonic": 37330.581693916,
+      "elapsed_upper_bound_seconds": 164.15508416599914,
+      "within_deadline": true,
+      "accounting": {
+        "calls": 5,
+        "response_bytes": 83405,
+        "stopped": null,
+        "pending": null
+      },
+      "agent_name": "/root/journey18_10",
+      "fork_turns": "none"
+    },
+    {
+      "task": "impact-entity-uniqueness",
+      "assigned_utc": "2026-10-02T02:21:29.247392+00:00",
+      "assigned_monotonic": 37330.601115708,
+      "completion_observed_utc": "2026-10-02T02:23:36.114336+00:00",
+      "completion_observed_monotonic": 37457.467310291,
+      "elapsed_upper_bound_seconds": 126.86619458300265,
+      "within_deadline": true,
+      "accounting": {
+        "calls": 5,
+        "response_bytes": 33709,
+        "stopped": null,
+        "pending": null
+      },
+      "agent_name": "/root/journey18_11",
+      "fork_turns": "none"
+    },
+    {
+      "task": "impact-attendee",
+      "assigned_utc": "2026-10-02T02:23:36.137487+00:00",
+      "assigned_monotonic": 37457.490436416,
+      "completion_observed_utc": "2026-10-02T02:27:24.776478+00:00",
+      "completion_observed_monotonic": 37686.128135416,
+      "elapsed_upper_bound_seconds": 228.63769899999897,
+      "within_deadline": true,
+      "accounting": {
+        "calls": 11,
+        "response_bytes": 79167,
+        "stopped": null,
+        "pending": null
+      },
+      "agent_name": "/root/journey18_12",
+      "fork_turns": "none"
+    }
+  ],
+  "server_stopped": true,
+  "source_blocks_verified": 200,
+  "review_method": "One fresh fork_turns=none reviewer per task, sequential; review assignment excludes root scores and other runs.",
+  "review_agents": [
+    {
+      "task": "locate-duplicate",
+      "agent_name": "/root/review18_01",
+      "fork_turns": "none"
+    },
+    {
+      "task": "locate-retry",
+      "agent_name": "/root/review18_02",
+      "fork_turns": "none"
+    },
+    {
+      "task": "locate-validation-service",
+      "agent_name": "/root/review18_03",
+      "fork_turns": "none"
+    },
+    {
+      "task": "locate-persistence",
+      "agent_name": "/root/review18_04",
+      "fork_turns": "none"
+    },
+    {
+      "task": "flow-notification",
+      "agent_name": "/root/review18_05",
+      "fork_turns": "none"
+    },
+    {
+      "task": "flow-email",
+      "agent_name": "/root/review18_06",
+      "fork_turns": "none"
+    },
+    {
+      "task": "flow-validation",
+      "agent_name": "/root/review18_07",
+      "fork_turns": "none"
+    },
+    {
+      "task": "flow-runtime-proof",
+      "agent_name": "/root/review18_08",
+      "fork_turns": "none"
+    },
+    {
+      "task": "impact-submitted",
+      "agent_name": "/root/review18_09",
+      "fork_turns": "none"
+    },
+    {
+      "task": "impact-validation-signature",
+      "agent_name": "/root/review18_10",
+      "fork_turns": "none"
+    },
+    {
+      "task": "impact-entity-uniqueness",
+      "agent_name": "/root/review18_11",
+      "fork_turns": "none"
+    },
+    {
+      "task": "impact-attendee",
+      "agent_name": "/root/review18_12",
+      "fork_turns": "none"
+    }
+  ],
+  "solver_instruction_delivery": "Coordinator assignment messages restated the frozen instructions in condensed wording, with the assigned run path substituted; prompts/catalog and all limits unchanged. No task evidence or scoring requirements were supplied."
+}

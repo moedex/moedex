@@ -1,0 +1,7 @@
+ok  	moedex/internal/semantic	1.661s
+ok  	moedex/internal/semanticimport	1.653s
+ok  	moedex/internal/app/semanticcmd	1.631s
+ok  	moedex/internal/cli	1.754s
+ok  	moedex/internal/app/indexcmd	10.568s
+ok  	moedex/internal/app/servecmd	9.795s
+ok  	moedex/internal/snapshot	(cached)

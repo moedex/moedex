@@ -1,0 +1,17 @@
+{
+  "ordinal": 18,
+  "argv": [
+    "call",
+    "--name",
+    "read_source",
+    "--arguments",
+    "{\"path\":\"src/Domain/Common/BaseEvent.cs\",\"start_line\":1,\"end_line\":7}"
+  ],
+  "started_monotonic": 78048.1103465,
+  "finished_monotonic": 78048.188373375,
+  "returncode": 0,
+  "stdout_bytes": 1399,
+  "stdout_sha256": "845a0494be1dc5ed79c387f236e388107b8d67ff089bd688b49ad35daa0719ca",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

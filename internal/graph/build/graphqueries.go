@@ -105,11 +105,8 @@ func addQueryEdges(
 		report.DbContextsScanned++
 	}
 
-	if len(registry) == 0 {
-		return report, nil
-	}
-
 	// Phase B: scan for query sites and emit edges.
+	// Explicit context.Set<T>() does not require a DbSet property declaration.
 	processed2 := make(map[string]bool, len(sweep.sites))
 	for sha, sites := range sweep.sites {
 		if processed2[sha] {
@@ -217,6 +214,15 @@ func emitQueryEdge(
 		if def.Start < 0 {
 			continue
 		}
+		// The syntax/namespace heuristic does not resolve the receiver's type or
+		// compiler binding. Shared source occurrences may bind differently, so
+		// retain those relationships only as diagnostic candidates.
+		confidence := graph.Candidate
+		sourceRepo, sourceUnique := singleTypeContext(sweep, sourceBlobSHA)
+		targetRepo, targetUnique := singleTypeContext(sweep, targetBlob.SHA)
+		if sourceUnique && targetUnique && sourceRepo == targetRepo {
+			confidence = graph.Pattern
+		}
 
 		record := persistedGraphEdge{
 			sourceBlob:     sourceBlobSHA,
@@ -224,7 +230,7 @@ func emitQueryEdge(
 			typeID:         diskgraph.EdgeQueries,
 			targetBlob:     targetBlob.SHA,
 			targetOffset:   uint64(def.Start),
-			confidence:     uint64(graph.Verified),
+			confidence:     uint64(confidence),
 			evidenceBlob:   sourceBlobSHA,
 			evidence:       uint64(evidenceOffset),
 			evidenceLength: uint64(evidenceLength),
@@ -238,7 +244,7 @@ func emitQueryEdge(
 			Type:         diskgraph.EdgeQueries,
 			TargetBlob:   targetBlob.SHA,
 			TargetOffset: uint64(def.Start),
-			Confidence:   graph.Verified,
+			Confidence:   confidence,
 			Evidence: graph.Evidence{
 				BlobSHA:    sourceBlobSHA,
 				ByteOffset: uint64(evidenceOffset),
@@ -252,10 +258,9 @@ func emitQueryEdge(
 	return nil
 }
 
-// resolveQueryTargets promotes only the target half of an EF relationship that
-// can be resolved. The query syntax proves a DbSet access; repository identity,
-// symbol kind, and C# namespace/imports prove which entity definition it names.
-// Ambiguous targets emit no Verified edge.
+// resolveQueryTargets narrows EF-looking syntax using repository identity, type
+// kind, and C# namespace/import hints. It does not prove the receiver or entity
+// binding. Ambiguous targets are omitted; surviving heuristics are at most Pattern.
 func resolveQueryTargets(sweep *graphSweep, sourceBlob *index.Blob, entityName string) []symbol.ShardRef {
 	shortName := queryLastName(entityName)
 	defs := sweep.merged.Definitions(shortName)
@@ -281,8 +286,11 @@ func resolveQueryTargets(sweep *graphSweep, sourceBlob *index.Blob, entityName s
 		if targetBlob == nil || targetBlob.SHA == "" || !sweep.blobSHAsShareRepository(sourceBlob.SHA, targetBlob.SHA) {
 			continue
 		}
+		if blobPrimaryExtension(targetBlob) != ".cs" {
+			continue
+		}
 		kind, ok := queryDefinitionKind(sweep, def)
-		if !ok || (kind != symbol.Type && kind != symbol.Table) {
+		if !ok || kind != symbol.Type {
 			continue
 		}
 		key := diskgraph.Key{BlobSHA: targetBlob.SHA, SymbolOffset: uint64(def.Start)}
@@ -309,6 +317,9 @@ func resolveQueryTargets(sweep *graphSweep, sourceBlob *index.Blob, entityName s
 	}
 	if len(matched) > 1 {
 		return nil
+	}
+	if qualifiedNamespace != "" {
+		return nil // an explicitly different namespace cannot bind by short name
 	}
 	if len(sameRepo) == 1 {
 		return []symbol.ShardRef{sameRepo[0].ref}

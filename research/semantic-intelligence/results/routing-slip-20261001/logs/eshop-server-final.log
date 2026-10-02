@@ -1,0 +1,31 @@
+> serve      started
+moedex-serve: snapshot independent-project -> .local/routing-slip/eShopOnWeb/index/snapshots/independent-project/serve
+moedex-serve: dense arm disabled; ranking lexical+symbol
+server: token index loaded from cache
+server: symbol index loaded from cache
+moedex-serve: corpus ranker ready — 421 blobs, 421 docs, 252 symbol blobs, 0 dense chunks (none) in 5ms
+{"time":"2026-10-01T18:58:29.846779-06:00","level":"INFO","msg":"graph artifact absent; preparing source-only serving snapshot"}
+{"time":"2026-10-01T18:58:29.866891-06:00","level":"INFO","msg":"server: graph symbol cache hits=0 misses=1 write_errors=0"}
+{"time":"2026-10-01T18:58:29.934846-06:00","level":"INFO","msg":"boot","mode":"mcp-http","blobs":421,"symbol_blobs":252,"dense_chunks":0,"requested_addr":"127.0.0.1:19447","effective_addr":"127.0.0.1:19447","tls":false}
+{"time":"2026-10-01T18:58:29.934895-06:00","level":"WARN","msg":"no auth token configured; /mcp is open (loopback bind)"}
+{"time":"2026-10-01T18:58:29.936286-06:00","level":"INFO","msg":"listening","addr":"127.0.0.1:19447","endpoint":"/mcp","tls":false,"auth":false}
+{"time":"2026-10-01T18:59:26.238852-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":779,"dur_ms":0.327,"remote":"127.0.0.1:58848"}
+{"time":"2026-10-01T18:59:26.239645-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":2796,"dur_ms":0.199,"remote":"127.0.0.1:58849"}
+{"time":"2026-10-01T18:59:26.240142-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":779,"dur_ms":0.12,"remote":"127.0.0.1:58850"}
+{"time":"2026-10-01T18:59:26.240541-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":2498,"dur_ms":0.105,"remote":"127.0.0.1:58851"}
+{"time":"2026-10-01T18:59:26.241008-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":788,"dur_ms":0.098,"remote":"127.0.0.1:58852"}
+{"time":"2026-10-01T18:59:26.241598-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":3635,"dur_ms":0.21,"remote":"127.0.0.1:58853"}
+{"time":"2026-10-01T18:59:26.242296-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":796,"dur_ms":0.349,"remote":"127.0.0.1:58854"}
+{"time":"2026-10-01T18:59:26.242896-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":3236,"dur_ms":0.118,"remote":"127.0.0.1:58855"}
+{"time":"2026-10-01T18:59:26.24327-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":786,"dur_ms":0.06,"remote":"127.0.0.1:58856"}
+{"time":"2026-10-01T18:59:26.243595-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":2248,"dur_ms":0.084,"remote":"127.0.0.1:58857"}
+{"time":"2026-10-01T18:59:26.243932-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":788,"dur_ms":0.056,"remote":"127.0.0.1:58858"}
+{"time":"2026-10-01T18:59:26.244275-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":2684,"dur_ms":0.071,"remote":"127.0.0.1:58859"}
+{"time":"2026-10-01T18:59:26.24468-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":788,"dur_ms":0.053,"remote":"127.0.0.1:58860"}
+{"time":"2026-10-01T18:59:26.245027-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":2747,"dur_ms":0.087,"remote":"127.0.0.1:58861"}
+{"time":"2026-10-01T18:59:26.245459-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":781,"dur_ms":0.067,"remote":"127.0.0.1:58862"}
+{"time":"2026-10-01T18:59:26.245796-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":1786,"dur_ms":0.061,"remote":"127.0.0.1:58863"}
+{"time":"2026-10-01T18:59:26.246215-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":810,"dur_ms":0.07,"remote":"127.0.0.1:58864"}
+{"time":"2026-10-01T18:59:26.246586-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":2806,"dur_ms":0.082,"remote":"127.0.0.1:58865"}
+{"time":"2026-10-01T18:59:26.246955-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":789,"dur_ms":0.05,"remote":"127.0.0.1:58866"}
+{"time":"2026-10-01T18:59:26.247281-06:00","level":"INFO","msg":"access","method":"POST","path":"/mcp","status":200,"bytes":2109,"dur_ms":0.065,"remote":"127.0.0.1:58867"}
