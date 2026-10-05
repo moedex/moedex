@@ -9,6 +9,8 @@ import unittest
 from unittest import mock
 
 import run_record as rr
+import provenance
+from test_provenance import observed_fixture
 
 
 class Clock:
@@ -196,6 +198,63 @@ class Records(unittest.TestCase):
         report = self.report()
         self.assertGreaterEqual(len(report['eligibility_blockers']), 6)
         self.assertFalse(report['benchmark_eligible'])
+
+    def observed_manifest(self):
+        serial = [0]
+        def ref(value):
+            serial[0] += 1
+            path = self.root / ('observed-proof-%d' % serial[0])
+            path.write_bytes(value.encode() if isinstance(value, str) else rr.canonical(value))
+            return rr.reference(self.root, path)
+        self.manifest = observed_fixture(ref, self.manifest)
+
+    def observed_seal(self, record, update=None):
+        provider = self.root / 'observed-records.jsonl'
+        provider.write_text('{"fixture":"synthetic complete records"}\n')
+        records = rr.reference(self.root, provider)
+        assignment = json.loads((record.directory / 'assignment.json').read_bytes())
+        verification = {'assignment_sha256': rr.reference(self.root, record.directory / 'assignment.json')['sha256'],
+                        'solver_records': records, 'complete': True, 'access_checked': True,
+                        'reviewer_id': 'independent-reviewer', 'freeze_sha256': assignment['freeze']['sha256'],
+                        'provenance': provenance.identity_binding(self.root, self.manifest, rr.read_ref)}
+        if update:
+            verification.update(update)
+        path = self.root / 'observed-seal.json'
+        path.write_bytes(rr.canonical(verification))
+        record.seal(records, rr.reference(self.root, path))
+
+    def test_observed_mode_retains_execution_gates_and_accepts_independent_bound_seal(self):
+        self.observed_manifest()
+        self.assertEqual(rr.freeze_gate(self.root, self.manifest), [])
+        record = self.create()
+        record.submit_answer(b'answer')
+        self.observed_seal(record)
+        report = self.report()
+        self.assertTrue(report['benchmark_eligible'], report)
+        self.assertEqual(report['provenance']['policy'], provenance.OBSERVED)
+
+    def test_observed_legacy_or_mismatched_seals_never_verify(self):
+        for number, update in enumerate(({'provenance': None, 'model_revision': None},
+                                        {'freeze_sha256': 'c' * 64},
+                                        {'provenance': {'policy': provenance.IMMUTABLE}},
+                                        {'reviewer_id': 'solver-a'})):
+            with self.subTest(update=update):
+                self.observed_manifest()
+                record = self.create('observed-%d' % number)
+                record.submit_answer(b'answer')
+                self.observed_seal(record, update)
+                self.assertFalse(self.report('observed-%d' % number)['transcript_verified'])
+
+    def test_observed_mode_never_bypasses_capture_isolation_preflight_or_auditor(self):
+        self.observed_manifest()
+        for section, field in (('solver_records', 'capture_available'), ('isolation', 'enforced'),
+                               ('preflight', 'same_execution_environment')):
+            original = self.manifest[section][field]
+            self.manifest[section][field] = False
+            self.assertTrue(rr.freeze_gate(self.root, self.manifest), section)
+            self.manifest[section][field] = original
+        self.manifest['auditor'] = None
+        self.assertTrue(rr.freeze_gate(self.root, self.manifest))
 
     def test_invalid_freeze_reference_never_launches_diagnostic(self):
         self.manifest['model']['verification']['sha256'] = 'e' * 64

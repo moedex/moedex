@@ -19,6 +19,7 @@ import sys
 import time
 
 from journey_clock import monotonic
+import provenance
 
 SHA = re.compile(r'^[0-9a-f]{64}$')
 NAME = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9_.-]*$')
@@ -110,14 +111,21 @@ def freeze_gate(root, manifest):
             read_ref(root, value)
         except (ValueError, OSError, TypeError):
             errors.append(label + ' reference missing or invalid')
+    errors.extend(provenance.validate(root, manifest, read_ref))
+    try:
+        observed = provenance.mode(manifest) == provenance.OBSERVED
+    except ValueError:
+        observed = False
     model = manifest.get('model', {})
     require(isinstance(model, dict), 'model must be an object')
     if not isinstance(model, dict):
         model = {}
-    require(isinstance(model.get('revision'), str) and bool(model['revision'].strip()) and
-            model['revision'].strip().lower() not in ('unknown', 'latest', 'unavailable'), 'exact model revision unknown')
+    if not observed:
+        require(isinstance(model.get('revision'), str) and bool(model['revision'].strip()) and
+                model['revision'].strip().lower() not in ('unknown', 'latest', 'unavailable'), 'exact model revision unknown')
     require(isinstance(model.get('settings'), dict) and bool(model['settings']), 'model settings missing')
-    evidence(model.get('verification'), 'model verification')
+    if not observed:
+        evidence(model.get('verification'), 'model verification')
     records = manifest.get('solver_records', {})
     if not isinstance(records, dict):
         records = {}
@@ -136,18 +144,19 @@ def freeze_gate(root, manifest):
     product = manifest.get('product', {})
     if not isinstance(product, dict):
         product = {}
-    require(isinstance(product.get('serving_sha256'), str) and
-            bool(SHA.fullmatch(product['serving_sha256'])), 'currently serving immutable product digest unknown')
-    evidence(product.get('verification'), 'serving product verification')
-    evidence(product.get('dependencies'), 'runtime dependency closure')
-    try:
-        closure = json.loads(read_ref(root, product.get('dependencies')))
-        require(isinstance(closure, dict) and closure.get('complete') is True,
-                'runtime dependency closure not explicitly complete')
-        if isinstance(closure, dict):
-            evidence(closure.get('verification'), 'dependency closure verification')
-    except (ValueError, OSError, TypeError):
-        errors.append('runtime dependency closure manifest invalid')
+    if not observed:
+        require(isinstance(product.get('serving_sha256'), str) and
+                bool(SHA.fullmatch(product['serving_sha256'])), 'currently serving immutable product digest unknown')
+        evidence(product.get('verification'), 'serving product verification')
+        evidence(product.get('dependencies'), 'runtime dependency closure')
+        try:
+            closure = json.loads(read_ref(root, product.get('dependencies')))
+            require(isinstance(closure, dict) and closure.get('complete') is True,
+                    'runtime dependency closure not explicitly complete')
+            if isinstance(closure, dict):
+                evidence(closure.get('verification'), 'dependency closure verification')
+        except (ValueError, OSError, TypeError):
+            errors.append('runtime dependency closure manifest invalid')
     evidence(manifest.get('auditor'), 'prehashed auditor')
     return errors
 
@@ -489,7 +498,10 @@ def audit(root, assignment):
                 result['transcript_verified'] = (
                     verification.get('assignment_sha256') == assignment_ref['sha256'] and
                     verification.get('solver_records') == event['solver_records'] and
-                    verification.get('model_revision') == model.get('revision') and
+                    (verification.get('model_revision') == model.get('revision')
+                     if provenance.mode(frozen) == provenance.IMMUTABLE else
+                     verification.get('freeze_sha256') == value['freeze']['sha256'] and
+                     verification.get('provenance') == provenance.identity_binding(root, frozen, read_ref)) and
                     verification.get('complete') is True and verification.get('access_checked') is True and
                     isinstance(verification.get('reviewer_id'), str) and bool(verification['reviewer_id']) and
                     verification['reviewer_id'] != value['identity']['solver_id'])
@@ -517,6 +529,8 @@ def audit(root, assignment):
             result['eligibility_blockers'].append('recording exceeded assignment deadline')
         result['identity'] = value['identity']
         result['freeze_sha256'] = value['freeze']['sha256']
+        if not provenance.validate(root, frozen, read_ref):
+            result['provenance'] = provenance.identity_binding(root, frozen, read_ref)
         result['assignment_sha256'] = assignment_ref['sha256']
     except (ValueError, OSError, KeyError, TypeError) as exc:
         errors.append(str(exc))

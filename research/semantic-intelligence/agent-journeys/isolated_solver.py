@@ -24,6 +24,7 @@ import urllib.parse
 from native_http import NativeHTTP
 from journey_clock import monotonic
 from run_record import RunRecord, _new_file, canonical, digest, read_ref, reference
+import provenance
 
 
 IMAGE = re.compile(r'^sha256:[0-9a-f]{64}$')
@@ -122,14 +123,79 @@ def provider_exchange(base_url, token, raw, timeout, cap=64 << 20):
                   'error': error, 'elapsed_seconds': time.monotonic() - started}
 
 
+def validate_provider_identity(body, receipt, expected_models):
+    """Check every returned identity, requiring a completed response on HTTP success.
+
+    Call only after retaining the exact response and receipt. Error bodies may
+    omit an identity, but any identity they do return must still match the freeze.
+    """
+    expected = set(expected_models)
+    if not expected or any(not isinstance(model, str) or not model for model in expected):
+        raise ValueError('frozen observed provider identities required')
+    status = receipt.get('status')
+    successful = type(status) is int and 200 <= status < 300
+    values, completed = [], False
+    content_type = (receipt.get('content_type') or '').split(';', 1)[0].strip().lower()
+    try:
+        if content_type == 'text/event-stream' or body.lstrip().startswith((b'event:', b'data:')):
+            events = []
+            data = []
+            def append_event(payload):
+                if payload == '[DONE]':
+                    return
+                try:
+                    events.append(json.loads(payload))
+                except json.JSONDecodeError:
+                    if successful:
+                        raise
+            for line in body.decode('utf-8', errors='strict' if successful else 'replace').replace('\r\n', '\n').replace('\r', '\n').split('\n'):
+                if not line:
+                    if data:
+                        append_event('\n'.join(data))
+                        data = []
+                elif line.startswith('data:'):
+                    data.append(line[5:].lstrip(' '))
+            if data:
+                append_event('\n'.join(data))
+            for event in events:
+                if not isinstance(event, dict):
+                    raise ValueError('provider event must be an object')
+                if 'model' in event:
+                    values.append(event['model'])
+                response = event.get('response')
+                if isinstance(response, dict):
+                    if 'model' in response:
+                        values.append(response['model'])
+                    if event.get('type') == 'response.completed':
+                        if not isinstance(response.get('model'), str) or not response['model'] or response.get('status') != 'completed':
+                            raise ValueError('completed provider response lacks model identity')
+                        completed = True
+        else:
+            response = json.loads(body)
+            if not isinstance(response, dict):
+                raise ValueError('provider response must be an object')
+            if 'model' in response:
+                values.append(response['model'])
+            completed = response.get('status') == 'completed' and isinstance(response.get('model'), str) and bool(response['model'])
+    except (UnicodeError, json.JSONDecodeError):
+        if successful:
+            raise ValueError('successful provider response cannot establish model identity') from None
+        return
+    if any(not isinstance(model, str) or model not in expected for model in values):
+        raise ValueError('provider returned model identity differs from frozen observation')
+    if successful and not completed:
+        raise ValueError('successful provider response lacks completed model identity')
+
+
 class NativeBroker:
     """Serve only the frozen native tool roster, retaining full native onboarding."""
-    def __init__(self, client, record, allowed_tools):
+    def __init__(self, client, record, allowed_tools, observed_product=None):
         if not allowed_tools or len(set(allowed_tools)) != len(allowed_tools):
             raise ValueError('unique nonempty native allowlist required')
         self.client, self.record, self.allowed = client, record, set(allowed_tools)
         self.catalog = None
         self.display_cap = 8192
+        self.observed_product = observed_product
 
     def exchange(self, request):
         request_bytes = json.dumps(request, separators=(',', ':')).encode()
@@ -158,6 +224,10 @@ class NativeBroker:
             raise ValueError('native catalog lacks frozen tools or has duplicate names')
         if catalog['result'].get('nextCursor'):
             raise ValueError('paginated native catalogs require a frozen onboarding adapter')
+        if self.observed_product is not None:
+            if (response['result'].get('serverInfo') != self.observed_product['server_info'] or
+                    digest(canonical(catalog['result'])) != self.observed_product['catalog_sha256']):
+                raise ValueError('native identity differs from frozen observation')
         self.catalog = [t for t in tools if t['name'] in self.allowed]
         return response['result']
 
@@ -268,7 +338,15 @@ def validate_execution_config(root, config):
     if set(fields) != expected or fields['model'] != config['model'] or fields['reasoning'].get('effort') != config['reasoning_effort']:
         raise ValueError('complete frozen provider request settings required')
     config['provider_fields'] = fields
-    for name in ('isolated_solver.py', 'run_record.py', 'native_http.py', 'journey_clock.py'):
+    runner_names = ['isolated_solver.py', 'run_record.py', 'native_http.py', 'journey_clock.py']
+    config.pop('_observed_identities', None)
+    if provenance.mode(frozen) == 'observed-service-v1':
+        blockers = provenance.validate(root, frozen, read_ref)
+        if blockers:
+            raise ValueError('observed provenance is invalid: ' + '; '.join(blockers))
+        config['_observed_identities'] = provenance.observations(root, frozen, read_ref)
+        runner_names.append('provenance.py')
+    for name in runner_names:
         if frozen.get('runners', {}).get(name) != digest(Path(__file__).with_name(name).read_bytes()):
             raise ValueError('executing runner differs from frozen hash: ' + name)
     return frozen
@@ -395,6 +473,9 @@ def run_container(config, directory, broker=None, record=None, probe=False):
                                        'transport_complete': True}
                         capture.retain(stem + '.response.raw', body)
                         capture.retain(stem + '.receipt.json', canonical(receipt) + b'\n')
+                        if channel == 'provider' and not probe and config.get('_observed_identities'):
+                            validate_provider_identity(body, receipt,
+                                                       config['_observed_identities']['model']['returned_models'])
                         if not receipt['transport_complete']:
                             raise RuntimeError('incomplete recorded exchange')
                         reply({'channel': 'response', 'id': message['id'], 'status': receipt['status'],
@@ -506,10 +587,18 @@ def main():
                                   config['freeze'], config['coordinator_session'])
         broker = NativeBroker(NativeHTTP(os.environ[config['native_url_env']],
                                         os.environ[config['native_token_env']] if config.get('native_token_env') else None),
-                              record, config['enabled_tools'])
+                              record, config['enabled_tools'],
+                              config.get('_observed_identities', {}).get('product'))
         broker.display_cap = config['budgets']['display_bytes']
-        broker.onboard()
-        report = run_container(config, args.capture, broker, record)
+        try:
+            broker.onboard()
+            report = run_container(config, args.capture, broker, record)
+        except BaseException as exc:
+            try:
+                record.stop(type(exc).__name__)
+            except RuntimeError:
+                pass
+            raise
     print(json.dumps(report))
 
 

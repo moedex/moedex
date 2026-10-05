@@ -160,11 +160,12 @@ exclusions, semantic failures, changed products/prompts/rubrics, mismatched answ
 invalid scores, altered evidence, path escapes and non-overwriting CLI output.
 These fixtures are harness tests, **not measured Moedex/CodeGraph results**.
 
-The CodeGraph setup gate remains open: verified dependency closure and binary
-provenance, isolated service configuration and database/auth prerequisites are
-needed before a native paired trial. This harness neither contacts private feeds
-nor starts or configures those services. Existing historical scores and immutable
-archives stay untouched.
+The default launch policy requires verified immutable model/product identities
+and a complete runtime dependency closure. A separately authorized observed-service
+policy is available for interfaces that do not expose those identities; its
+requirements and limits are described below. This harness neither contacts private
+feeds nor starts or configures those services. Existing historical scores and
+immutable archives stay untouched.
 
 `native_http.py` provides a separate transport for authorized native HTTP
 diagnostics, including HTTPS bearer authentication, negotiated MCP sessions, JSON
@@ -296,6 +297,98 @@ all answer revisions, and the byte lower-bound flag. This is a recording gate;
 source review, rubric review, independence, and complete paired coverage remain
 separate requirements checked by the comparison process.
 
+## Explicit observed-service provenance
+
+An absent `provenance` field retains the immutable launch policy. An explicit
+`{"mode":"immutable-v1"}` selects the same policy. Unknown or malformed policies
+fail closed. A new protocol may select `observed-service-v1` only with recorded
+user authorization and explicit reproducibility limits. This retains the capture,
+isolation, budgets, matching preflight and independent review requirements.
+Historical diagnostics cannot acquire eligibility by changing a policy label.
+
+Add the following fields to a new arm freeze; keep the usual execution gates,
+contract, image, endpoint and runner bindings. Replace every `REF` with a reference
+object. `MODEL_SETTINGS` denotes the complete frozen CLI/provider settings object.
+
+```json
+{
+  "provenance": {
+    "mode": "observed-service-v1",
+    "authorization": "REF",
+    "reproducibility_limits": [
+      "Serving image and runtime dependency closure are unverified.",
+      "Requested and returned model names do not establish an immutable revision."
+    ]
+  },
+  "model": {
+    "requested_alias": "REQUESTED_MODEL",
+    "provider_base_url_sha256": "EXACT_URL_DIGEST",
+    "settings": "MODEL_SETTINGS",
+    "observation": "REF"
+  },
+  "product": {"endpoint_sha256": "EXACT_URL_DIGEST", "observation": "REF"}
+}
+```
+
+Authorization JSON uses schema `observed-authorization-v1`, mode
+`observed-service-v1`, `authorized_by: "user"`, a nonempty `decision`, and a
+`requirements` list containing `isolation`, `budgets`, `raw-capture` and
+`independent-scoring`. Its `reproducibility_limits` must exactly match the freeze.
+The reference binds the recorded authorization bytes; it is not a user signature.
+Independent review must establish that the recorded decision actually occurred.
+
+Model observations use schema `observed-model-v1`, a UTC `observed_utc`, the
+frozen `requested_alias` and `provider_base_url_sha256`, and `settings_sha256`
+over canonical JSON of the complete frozen `model.settings`. They include a
+sorted, unique, nonempty `returned_models` list, `immutable_revision_verified:
+false`, and raw `request`, `response` and `receipt` references. The request must
+use the frozen `provider_fields`, without extra settings; `input`,
+`prompt_cache_key` and `client_metadata` are the only additional fields allowed.
+Raw JSON/SSE responses must contain matching model identities and a completed
+response. Malformed events or empty/nonstring identities fail validation.
+
+Product observations use schema `observed-product-v1`, UTC `observed_utc`, the
+frozen `endpoint_sha256`, complete initialization `server_info`, and
+`catalog_sha256` over canonical JSON of the complete `tools/list` result. They
+include three `native_exchanges`, each containing `request`, `response` and
+`receipt` references, in this order: `initialize`, `notifications/initialized`,
+`tools/list`. Catalog pagination must be completed before freezing; the current
+schema rejects a remaining `nextCursor`. `immutable_serving_identity_verified`
+and `runtime_dependency_closure_verified` must both be false. Every observation
+receipt must report successful, complete transport and the exact retained body
+byte count. Observation references reject traversal and symlinks.
+
+`provenance.identity_binding(root, freeze, read_ref)` derives the exact object
+required in independently authored seal verification and accounting output:
+
+```json
+{
+  "policy": "observed-service-v1",
+  "authorization_sha256": "AUTHORIZATION_FILE_DIGEST",
+  "model_observation_sha256": "MODEL_OBSERVATION_FILE_DIGEST",
+  "product_observation_sha256": "PRODUCT_OBSERVATION_FILE_DIGEST",
+  "reproducibility_limits": ["EXACT_FROZEN_LIMITS"]
+}
+```
+
+An observed seal replaces the immutable policy's `model_revision` comparison with
+an exact `freeze_sha256` and this `provenance` object. Assignment hash, exact solver
+record reference, `complete`, `access_checked` and a reviewer distinct from the
+solver remain required. A legacy seal with `model_revision: null` does not verify
+an observed assignment. `run_record.audit` emits the checked binding; the accounting
+adapter must preserve it. `compare.py` checks accounting against the frozen
+observations rather than trusting a free-form provenance label.
+
+The report adds `provenance_classification`, per-arm observed identities and
+the frozen limits. All-observed arms report `observed-service comparison`; differing
+policies report `mixed provenance policies`. The default report says `immutable
+identity policy`, which describes the selected policy without independently
+revalidating deployment attestation. Coverage `classification`, scoring
+`strict_success` and planned/assigned/eligible denominators keep their meanings.
+Observed identities enable a bounded service comparison, with reproducibility
+limited by unverified serving/runtime/model revisions. They cannot establish an
+immutable build comparison.
+
 ## Isolated solver and complete exchange capture
 
 `Dockerfile.solver` builds the pinned CLI bridge. `isolated_solver.py` launches an
@@ -332,7 +425,8 @@ and budgets follow `RunRecord.create`. Freeze JSON must include its exact
 `reasoning`, `tool_choice`, `parallel_tool_calls`, `text`, `store`, `stream`, and
 `include`. SHA-256 of the exact configured URL bytes binds endpoint identities.
 `runners` binds executing `isolated_solver.py`, `run_record.py`, `native_http.py`,
-and `journey_clock.py` bytes. All independent `freeze_gate` prerequisites still
+and `journey_clock.py` bytes; observed runs additionally bind `provenance.py`.
+All independent `freeze_gate` prerequisites for the selected policy still
 apply; no diagnostic fallback is used. Changed tasks, prompts, budgets, model
 settings, endpoints, images or executing code fail before native onboarding.
 
@@ -350,7 +444,10 @@ as an answer revision. Other messages remain timestamped drafts in the capture.
 The CLI's final output file is retained as a submission unless it exactly repeats
 the last submitted body. Independent review must verify source/citations,
 provider transcript coverage, actual native observations, isolation, and the
-immutable serving product/model identities before sealing. The controller does
+selected provenance policy before sealing. In observed mode, native onboarding
+must match the frozen server/catalog identity and each provider response must
+match the frozen returned model names. Raw mismatching responses and receipts
+are retained before the controller stops the assignment. The controller does
 not author semantic scores, declare transcript completeness, or infer immutable
 model identity from an alias. Raw provider bodies contain prompts and retrieved
 source: publish them only to the authorized evidence destination, never as
