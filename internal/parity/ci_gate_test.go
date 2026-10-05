@@ -8,12 +8,10 @@ import (
 	"testing"
 )
 
-// These tests pin a CI/process invariant rather than runtime behavior: per
-// CLAUDE.md, changes to internal/{query,search,parity} "must keep make
-// verify green" (the ripgrep-parity gate), but .gitlab-ci.yml historically
-// ran `make parity` only on schedule/tag pipelines and the gate image had no
-// `rg`, so even the rg-backed unit tests in internal/search skipped on every
-// merge request. They parse .gitlab-ci.yml with a small hand-rolled
+// These tests pin the CI/process policy rather than runtime behavior: ordinary
+// pushes and MRs exercise rg-backed unit parity, while corpus-dependent checks
+// run on schedules/tags and remain available locally through make verify.
+// They parse .gitlab-ci.yml with a small hand-rolled
 // top-level-block splitter (not a real YAML parser) so this package does not
 // pull in a YAML dependency into the default build.
 
@@ -117,6 +115,9 @@ func TestCIGate_GateRunsOnRipgrepCapableImage(t *testing.T) {
 	if gateJob == "" {
 		t.Fatal("no job runs on merge_request_event and invokes make health / go test — the fast unit gate is not wired to MRs")
 	}
+	if !strings.Contains(gateBody, `CI_PIPELINE_SOURCE == "push"`) {
+		t.Errorf("job %q does not run the fast unit gate on pushes", gateJob)
+	}
 
 	if !strings.Contains(strings.ToLower(gateBody), "ripgrep") {
 		t.Errorf("job %q runs on every MR but never installs ripgrep (no \"ripgrep\" install step in its script/before_script) — "+
@@ -124,34 +125,52 @@ func TestCIGate_GateRunsOnRipgrepCapableImage(t *testing.T) {
 	}
 }
 
-// TestCIGate_FullCorpusParityRunsOnCriticalPathMRs asserts that an MR
-// touching internal/query, internal/search, or internal/parity — the
-// packages CLAUDE.md singles out as "must keep make verify green" — triggers
-// the full-corpus `make parity` gate, not just on schedule/tag pipelines.
-func TestCIGate_FullCorpusParityRunsOnCriticalPathMRs(t *testing.T) {
+// TestCIGate_CorpusChecksStayOutsideOrdinaryPipelines prevents an MR or branch
+// push from queuing checks that require externally mounted corpora. It also
+// keeps the scheduled checks and tagged ripgrep parity wired up. A fallback or
+// changes-only rule would defeat this policy, so every rule must be explicit.
+func TestCIGate_CorpusChecksStayOutsideOrdinaryPipelines(t *testing.T) {
 	blocks := ciBlocks(readCIConfig(t))
-
-	var parityJob, parityBody string
-	for name, body := range blocks {
-		code := stripComments(body)
-		if strings.Contains(code, "make parity") {
-			parityJob, parityBody = name, code
-			break
-		}
-	}
-	if parityJob == "" {
-		t.Fatal("no job runs `make parity`")
-	}
-
-	if !strings.Contains(parityBody, `CI_PIPELINE_SOURCE == "merge_request_event"`) {
-		t.Errorf("job %q (make parity) never triggers on merge_request_event — "+
-			"a regression in internal/{query,search,parity} can merge without the full-corpus ripgrep-parity gate running", parityJob)
-	}
-
-	criticalPaths := []string{"internal/query", "internal/search", "internal/parity"}
-	for _, p := range criticalPaths {
-		if !strings.Contains(parityBody, p) {
-			t.Errorf("job %q has no `changes:` rule covering %q — an MR touching that package would not trigger full-corpus parity", parityJob, p)
-		}
+	for _, job := range []struct {
+		name    string
+		command string
+		tagged  bool
+	}{
+		{"parity", "make parity", true},
+		{"graph-eval-private", "make graph-eval-private", false},
+	} {
+		t.Run(job.name, func(t *testing.T) {
+			body, ok := blocks[job.name]
+			if !ok || !strings.Contains(stripComments(body), job.command) {
+				t.Fatalf("job %q must retain %q", job.name, job.command)
+			}
+			// Reuse the block splitter one indentation level down to inspect
+			// only rules, excluding scripts and artifact when: always settings.
+			var unindented []string
+			for line := range strings.SplitSeq(body, "\n") {
+				unindented = append(unindented, strings.TrimPrefix(line, "  "))
+			}
+			rules := ciBlocks(strings.Join(unindented, "\n"))["rules"]
+			allowed := map[string]bool{`- if: '$CI_PIPELINE_SOURCE == "schedule"'`: true}
+			if job.tagged {
+				allowed[`- if: '$CI_COMMIT_TAG'`] = true
+			}
+			seen := map[string]bool{}
+			for line := range strings.SplitSeq(stripComments(rules), "\n") {
+				line = strings.TrimSpace(line)
+				if line == "" {
+					continue
+				}
+				if !allowed[line] {
+					t.Errorf("job %q has an unexpected corpus pipeline rule: %s", job.name, line)
+				}
+				seen[line] = true
+			}
+			for rule := range allowed {
+				if !seen[rule] {
+					t.Errorf("job %q is missing required corpus pipeline rule: %s", job.name, rule)
+				}
+			}
+		})
 	}
 }
