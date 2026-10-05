@@ -39,6 +39,41 @@ Array order is retained. Both arms must declare this exact digest. Corpus commit
 source manifest, prompts, rubric, budgets and protocol are therefore bound to the
 same contract; a missing task is an error rather than a smaller denominator.
 
+For cross-repository tasks, use `native-pair-v2`. Pin each repository separately;
+an aggregate or invented Git commit cannot represent multiple source histories:
+
+```json
+{
+  "schema": "native-pair-v2",
+  "corpus": {"repositories": [
+    {"repository": "https://example.test/api", "commit": "FULL_GIT_OBJECT_ID", "manifest": "REF"},
+    {"repository": "https://example.test/client", "commit": "FULL_GIT_OBJECT_ID", "manifest": "REF"}
+  ]},
+  "rubric": "REF",
+  "protocol": "REF",
+  "budgets": {"calls": 24, "response_bytes": 131072, "assignment_seconds": 600, "display_bytes": 8192},
+  "tasks": [{"id": "find-consumers", "prompt": "REF", "atoms": ["find-consumers.1"],
+             "repositories": ["https://example.test/api", "https://example.test/client"]}]
+}
+```
+
+The repository roster must be nonempty and unique by exact `repository` string.
+Each pin contains exactly `repository`, `commit` and `manifest`; each commit is a
+full lowercase 40- or 64-character Git object ID. Every task declares a nonempty,
+unique `repositories` subset of that roster. Repository strings are exact
+identities, with no URL alias resolution. All source manifests, prompts, rubric
+and protocol references are hash-checked before either launch or comparison.
+Task scope and every pin enter the shared contract hash, so changing either
+invalidates existing execution and arm bindings. Independent review still checks
+source completeness, access differences and whether the task's scope is honest.
+Existing `native-pair-v1` contracts retain their single-repository format.
+
+`contract.py` supplies the validation shared by `compare.py` and
+`isolated_solver.py`. New launches must freeze hashes for both `contract.py` and
+`compare.py` alongside the existing runner hashes. Historical reports can still
+be checked against their v1 contracts; do not resume historical assignments with
+new runner bytes or add missing hashes retrospectively.
+
 The protocol should freeze solver model/settings, independence, arm order,
 onboarding, evidence access, full-assignment timing, native endpoints, review and
 adjudication policy, and any allowed setup work. Maintain a separate frozen product
@@ -425,7 +460,8 @@ and budgets follow `RunRecord.create`. Freeze JSON must include its exact
 `reasoning`, `tool_choice`, `parallel_tool_calls`, `text`, `store`, `stream`, and
 `include`. SHA-256 of the exact configured URL bytes binds endpoint identities.
 `runners` binds executing `isolated_solver.py`, `run_record.py`, `native_http.py`,
-and `journey_clock.py` bytes; observed runs additionally bind `provenance.py`.
+`journey_clock.py`, `contract.py`, and `compare.py` bytes; observed runs
+additionally bind `provenance.py`.
 All independent `freeze_gate` prerequisites for the selected policy still
 apply; no diagnostic fallback is used. Changed tasks, prompts, budgets, model
 settings, endpoints, images or executing code fail before native onboarding.

@@ -97,8 +97,11 @@ not a change to the MCP server or an enforced filesystem boundary.
 
 ## Comparing independently collected native arms
 
-[`compare.py`](compare.py) checks two arm records against one frozen corpus,
-source manifest, prompt, rubric, protocol and budget contract. It verifies local
+[`compare.py`](compare.py) checks two arm records against one frozen contract,
+including pinned source manifests, prompts, rubric, protocol and budgets. v1 pins
+a single repository; v2 pins a repository roster and each task's exact subset.
+The same [`contract.py`](contract.py) validation runs before isolated assignments.
+It verifies local
 evidence hashes, accounting and review identities, preserves planned/assigned/
 eligible denominators, and separates setup failures and unknown transport costs
 from scores. Paired deltas use only mutually eligible tasks and never infer a win.

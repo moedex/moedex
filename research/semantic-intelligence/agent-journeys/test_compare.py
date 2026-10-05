@@ -74,6 +74,33 @@ class CompareTests(unittest.TestCase):
         self.assertEqual(a["arms"][0]["strict_successes"], 1)
         self.assertEqual(a["paired_tasks"][0]["correctness_delta"], 0)
 
+    def multi_repository_contract(self):
+        first = self.contract['corpus']
+        second = {'repository': 'https://example.test/client', 'commit': 'b' * 64,
+                  'manifest': self.ref({'files': []})}
+        self.contract.update(schema='native-pair-v2', corpus={'repositories': [first, second]})
+        self.contract['tasks'][0]['repositories'] = [first['repository'], second['repository']]
+        self.hash = c.digest(c.canonical(self.contract))
+        self.arms = [self.arm('left'), self.arm('right')]
+
+    def test_v2_complete_and_scope_mutation_bound_to_contract_digest(self):
+        self.multi_repository_contract()
+        report = self.run_compare()
+        self.assertEqual(report['classification'], 'complete paired coverage')
+        self.assertEqual(report['contract_sha256'], self.hash)
+        self.contract['tasks'][0]['repositories'].pop()
+        with self.assertRaisesRegex(c.Invalid, 'arm contract mismatch'):
+            self.run_compare()
+
+    def test_v2_valid_pin_mutation_and_invalid_scope_cannot_enter_comparison(self):
+        self.multi_repository_contract()
+        self.contract['corpus']['repositories'][1]['commit'] = 'c' * 40
+        with self.assertRaisesRegex(c.Invalid, 'arm contract mismatch'):
+            self.run_compare()
+        self.contract['tasks'][0]['repositories'] = ['https://example.test/unknown']
+        with self.assertRaisesRegex(c.Invalid, 'unknown repository'):
+            self.run_compare()
+
     def observed_arm(self, number):
         arm = self.arms[number]
         frozen = observed_fixture(self.ref)
