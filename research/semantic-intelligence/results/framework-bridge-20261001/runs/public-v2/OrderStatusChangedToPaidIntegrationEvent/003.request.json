@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"compiler_symbols","arguments":{"repo":"eShop","path":"src/WebApp/Services/OrderStatus/IntegrationEvents/EventHandling/OrderStatusChangedToPaidIntegrationEventHandler.cs","query":".Handle("}}}

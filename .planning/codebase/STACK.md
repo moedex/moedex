@@ -97,7 +97,6 @@
   - **macOS** — `scripts/install-macos.sh` installs binaries to `~/.local/bin` and bootstraps launchd agents `com.moedex.serve` (warm daemon, `-mcp-http 127.0.0.1:8081`) and `com.moedex.refresh` (daily 14:10 local).
   - **Linux systemd** — `deploy/moedex-serve.service` plus one of `moedex-sync.{service,timer}` (hourly pull + reindex + reload) or `moedex-refresh.{service,timer}` (reindex only).
   - **Docker** — `docker build -t moedex-serve .`; publish to host loopback only, mount shards `:ro` for `-http` and `:rw` for `-mcp`/dense (embedding cache).
-- Sizing (measured on a ~5.2 GB / 484-repo corpus, `deploy/README.md`): serve `-http` ~3 GB RSS (comfortable on 8 GB); serve `-mcp` + dense ~4 GB heap (want ≥16 GB); build/refresh ~10 GB peak (build on a ≥24–32 GB host). Servable shard dir is 2.6 GB without dense, 5.4 GB with.
 - Windows is not supported today; `docs/WINDOWS-SUPPORT.md` scopes WSL2 as phase 0.
 
 ---

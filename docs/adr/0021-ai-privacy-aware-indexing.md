@@ -2,11 +2,11 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-14
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 
-TurnCommerce repositories can declare AI access constraints in a root
+configured repositories can declare AI access constraints in a root
 `.ai-privacy.yml` file. Governance requires an AI system to read that policy before repository
 content, default a missing policy to level 3 (Internal), apply the most restrictive matching rule,
 and never read, summarize, embed, or transmit level-1 (Restricted) content.
@@ -24,7 +24,7 @@ searchable references forward.
 
 ### Canonical policy and resolution
 
-Moedex SHALL treat the repository-root `.ai-privacy.yml` file named by TurnCommerce Governance as
+Moedex SHALL treat the repository-root `.ai-privacy.yml` file named by configured Governance as
 the canonical policy. A missing or empty policy defaults to global level 3. The parser accepts only
 the documented `global_privacy_level` and `privacy_levels` subset, validates levels 1–4 and rooted
 repository-relative paths, and rejects unknown or ambiguous syntax. A path's effective level is the
@@ -113,17 +113,11 @@ the branch serving plan rather than being implied by this ingestion change.
 
 ## Evidence
 
-- Hermetic ingest tests cover global and path-level restrictions, missing/empty defaults, malformed
-  policy rejection, policy bootstrap exclusion, and tracked-symlink exclusion.
-- CAS and served-refresh tests prove restricted references are absent, a policy-only change with an
-  unchanged `HEAD` triggers removal, and malformed policy refreshes preserve the prior manifest.
-- Parity freshness tests prove restricted repositories retain identity and become indexable after a
-  permitted policy relaxation.
-- A policy-only audit validated all 114 canonical `.ai-privacy.yml` files in the current conventional
-  corpus without reading repository content; no `.ai-privacy.yaml` aliases were present.
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 
 [0019](./0019-moedex-managed-submodule-corpus.md),
 [0020](./0020-branch-aware-indexing.md),
-TurnCommerce AI Governance §10.
+configured AI Governance §10.

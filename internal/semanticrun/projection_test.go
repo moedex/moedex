@@ -41,7 +41,7 @@ func projectionFixture(t *testing.T) (string, string) {
 	if e = catalog.WriteCatalog(root, cat); e != nil {
 		t.Fatal(e)
 	}
-	lock, e := catalog.NewLock(catalog.DefaultHost, true, []catalog.LockedProject{{ID: 101, PathWithNamespace: "group/project", CloneURL: "git@gitlab.tcdevops.com:group/project.git", DefaultBranch: "main", DefaultCommit: gitTest(t, repo, "rev-parse", "HEAD"), Status: catalog.LockStatusCurrent}})
+	lock, e := catalog.NewLock(catalog.DefaultHost, true, []catalog.LockedProject{{ID: 101, PathWithNamespace: "group/project", CloneURL: "git@gitlab.example.com:group/project.git", DefaultBranch: "main", DefaultCommit: gitTest(t, repo, "rev-parse", "HEAD"), Status: catalog.LockStatusCurrent}})
 	if e != nil {
 		t.Fatal(e)
 	}

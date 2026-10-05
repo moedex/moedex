@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"read_source","arguments":{"repo":"eShop","path":"src/EventBus/Extensions/EventBusBuilderExtensions.cs"}}}

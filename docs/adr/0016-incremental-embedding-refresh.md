@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-26
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 The dense arm ([0007](./0007-optional-dense-arm.md)) is the expensive part of a refresh. Shard/token/symbol freshness ([0011](./0011-shard-level-freshness.md)) rebuilds in seconds, and the out-of-band builder (`moedex-serve -build-embeddings`) keeps the embed off the daemon's reload path — but it was still **all-or-nothing**: any corpus change shifted the shard fingerprint, invalidated the persisted store, and re-embedded the **entire** corpus (~896k chunks, ~1h45m on this machine). A daily refresh that touches a handful of repos paying a full re-embed is the dominant cost in the freshness pipeline.
@@ -33,7 +33,9 @@ Reuse is **byte-identical** to a fresh embed for every carried-over chunk (the e
 - One transition cost: a pre-existing v1 (keyless) store must be re-keyed once before reuse kicks in. The re-key is free (no embedding) and the loader stays back-compatible with v1.
 
 ## Evidence
-The live 896,413-chunk store was migrated v1→v2 by re-keying **in 7.59 s with zero embedding** (vs. the ~1h45m a full re-embed costs); the file grew by exactly `896413 × 16` bytes. The daemon restarted onto the incremental-aware binary and loaded the v2 store **straight from cache** (`896413 dense chunks (cached)`), and an NL query (`how does a user reset their password by email`) recovered `PasswordReset.feature`/`PasswordReset.cshtml` with no lexical overlap — dense recall intact. Unit tests pin the invariants: an incremental build over a changed corpus is byte-identical to a full rebuild, an unchanged corpus reuses every vector and embeds nothing, a model change forces a full re-embed, and the v1 loader + re-key path round-trips to a native v2 store.
+
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 [0007](./0007-optional-dense-arm.md), [0011](./0011-shard-level-freshness.md), [0004](./0004-content-addressable-blob-store.md), [0010](./0010-warm-serving-spine.md).

@@ -113,7 +113,7 @@ execution or PROGRAM30 completion is claimed. Next work should explicitly addres
 closed default selection/forwarding and generalization on fresh source before any
 competitive quality claim.
 
-[Hashed evidence inventory](results/framework-bridge-20261001/result.json) includes
+Hashed evidence inventory (archival evidence maintained separately) includes
 all public transcripts, final source copies, protocol, native observation inventory,
 validation logs and artifact/binary provenance. Corpora, packages, indexes and
 binaries stay under ignored `.local/` storage.

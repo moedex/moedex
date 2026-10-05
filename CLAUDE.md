@@ -48,7 +48,7 @@ All library code is under `internal/`; executables under `cmd/`. See `ARCHITECTU
 
 **Serving spine:** `internal/serve` (`Corpus` / `RankCorpus`) opens a multi-shard mmap'd index warm; `internal/graph/serve` owns online graph tools and `internal/graph/build` owns offline graph construction.
 
-**Corpus lifecycle:** `internal/corpus` is the **only** package that shells out to `glab`/`git` for acquisition + freshness; it is **never imported by the engine or daemon**. Driven by `moedex corpus`, scoped to gitlab.tcdevops.com.
+**Corpus lifecycle:** `internal/corpus` is the **only** package that shells out to `glab`/`git` for acquisition + freshness; it is **never imported by the engine or daemon**. Driven by `moedex corpus`, scoped to gitlab.example.com.
 
 ### Executable (`cmd/`)
 
@@ -58,4 +58,4 @@ Former binary names are install-time compatibility symlinks for two releases.
 
 ## Corpus for parity tests
 
-`make verify`/`make parity` and the `internal/parity` + `internal/search` parity tests need the real corpus on disk at `MOEDEX_CORPUS` (default `~/TCGitlab`) and `rg` on PATH. Override: `make verify MOEDEX_CORPUS=/path`. Without the corpus those tests skip (env-gated skips are acceptable). Parity scratch lives in the repo-local `.parity-work/` (dot-prefixed so `go build/vet ./...` skip it).
+`make verify`/`make parity` and the `internal/parity` + `internal/search` parity tests need the real corpus on disk at `MOEDEX_CORPUS` (default `~/.moedex-managed`) and `rg` on PATH. Override: `make verify MOEDEX_CORPUS=/path`. Without the corpus those tests skip (env-gated skips are acceptable). Parity scratch lives in the repo-local `.parity-work/` (dot-prefixed so `go build/vet ./...` skip it).

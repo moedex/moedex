@@ -1,1 +1,0 @@
-Locate creation, entity insertion, publication, and persistence of a new registration. Describe their source order without claiming a runtime transaction guarantee.

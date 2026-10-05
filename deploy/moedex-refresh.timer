@@ -8,7 +8,7 @@
 
 [Unit]
 Description=Hourly moedex shard refresh
-Documentation=https://gitlab.tcdevops.com/Zak/moedex
+Documentation=https://github.com/moedex/moedex
 
 [Timer]
 OnCalendar=hourly

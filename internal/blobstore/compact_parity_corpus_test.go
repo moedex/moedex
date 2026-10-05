@@ -1,11 +1,11 @@
 package blobstore
 
 // Corpus-scale compaction-GC PARITY gate (the orchestrator's definitive run over
-// REAL TurnCommerce content). It is the corpus-driven sibling of TestCompactionParity
+// REAL configured content). It is the corpus-driven sibling of TestCompactionParity
 // (the self-contained fixture gate): same proof, but the dead blobs are created from a
 // bounded MUTABLE COPY of real polyglot repos rather than a synthetic git fixture.
 //
-// HARD CONSTRAINT — it NEVER mutates the source corpus (~/TCGitlab). The gate needs to
+// HARD CONSTRAINT — it NEVER mutates the source corpus (~/.moedex-managed). The gate needs to
 // "remove a repo" + "churn a file" to create real dead content, so it copies a bounded
 // subset of repos (including their .git) into a fresh t.TempDir() and operates ONLY on
 // that copy. The source is read once (DiscoverRepos + a recursive copy) and never written.
@@ -17,7 +17,7 @@ package blobstore
 //
 // Run it with:
 //
-//	MOEDEX_COMPACT_PARITY_CORPUS=$HOME/TCGitlab \
+//	MOEDEX_COMPACT_PARITY_CORPUS=$HOME/.moedex-managed \
 //	  go test -count=1 -timeout 0 -run TestCompactionParityCorpus ./internal/blobstore/
 //
 // (MOEDEX_COMPACT_PARITY_MAXREPOS=N overrides the 60-repo cap; 0 = every repo — only
@@ -67,7 +67,7 @@ func TestCompactionParityCorpus(t *testing.T) {
 	}
 	src := compactCorpusRoot(t)
 	if src == "" {
-		t.Skip("corpus not present (set MOEDEX_COMPACT_PARITY_CORPUS to the source, e.g. $HOME/TCGitlab)")
+		t.Skip("corpus not present (set MOEDEX_COMPACT_PARITY_CORPUS to the source, e.g. $HOME/.moedex-managed)")
 	}
 
 	// --- Discover the SOURCE repos (read-only) and take a deterministic first-N. ------

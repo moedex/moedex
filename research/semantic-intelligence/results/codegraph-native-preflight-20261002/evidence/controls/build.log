@@ -1,9 +1,0 @@
-  Determining projects to restore...
-  Restored /Users/zakkeown/Code/moedex/.local/codegraph-native-provenance/controls/src/Fixture/Fixture.csproj (in 46 ms).
-  Fixture -> /Users/zakkeown/Code/moedex/.local/codegraph-native-provenance/controls/src/Fixture/bin/Debug/net10.0/TC.CodeGraphFixture.dll
-
-Build succeeded.
-    0 Warning(s)
-    0 Error(s)
-
-Time Elapsed 00:00:00.77

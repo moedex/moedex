@@ -2,7 +2,7 @@ package symbol
 
 import "testing"
 
-const csRefFixture = `namespace TC.Demo
+const csRefFixture = `namespace Example.Demo
 {
     public class Service
     {

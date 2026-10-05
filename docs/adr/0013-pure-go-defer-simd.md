@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-25
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 The research pass in [`research/simd-kernel.md`](../../research/simd-kernel.md) flagged SIMD-accelerated posting-list intersection and candidate verification as the inner loop where ripgrep-class throughput comes from, and where Go is weakest (poor autovectorization, awkward Plan9 assembly or cgo). The honest counsel was: **don't hand-write SIMD on a hunch** — profile first, exhaust pure-Go wins (intersect-smallest-first, buffer reuse, bitmaps), and only reach for a native kernel if intersection or verify clears a large share of query CPU after that. The dev machine is arm64; Go 1.26's `simd/archsimd` is amd64-only.
@@ -23,7 +23,9 @@ Ship **pure Go by default on every architecture**, behind a clean kernel boundar
 - Native-amd64 ns/op numbers and a Teddy-class SIMD verify prefilter remain unmeasured; the decision is "deferred," not "rejected forever."
 
 ## Evidence
-The pure-Go galloping fold measured **~26× faster and zero-alloc** vs the old per-fold-allocating merge on the dominant rare-AND-common posting shape — the Tier-0 win the research note predicted, captured without SIMD. The optional AVX2 kernel was actually built and measured (Rosetta-translated x86-64, directional only): **no consistent win at this corpus scale** — the pure-Go galloping path beat the AVX2 broadcast-compare on the dominant skewed case. This confirms the latency analysis ([0012](./0012-search-latency-positional-verify.md)): the tail is scan-bound (Go's `regexp` machine over long minified lines), not intersection-bound, so an intersection SIMD kernel is low-leverage now.
+
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 [0001](./0001-single-node-scope-pure-go-default.md), [0012](./0012-search-latency-positional-verify.md).

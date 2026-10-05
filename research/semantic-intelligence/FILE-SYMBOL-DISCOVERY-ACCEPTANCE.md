@@ -90,7 +90,7 @@ change adds no eager catalog or serving allocation at startup.
 
 ## Evidence and next work
 
-[Machine-readable result and hashed file inventory](results/file-symbol-discovery-20261001/result.json)
+Machine-readable result and hashed file inventory (archival evidence maintained separately)
 retain both walkthrough attempts, final same-binary comparisons, public controls,
 source copies, test logs and binary identities. Source copies in this archive use
 `.txt` suffixes to avoid accidental compilation. Corpora, indexes and binaries

@@ -2,12 +2,12 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-14
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 
 `moedex-corpus` already uses an authenticated `glab` CLI to enumerate the curated set of visible,
-non-archived projects on `gitlab.tcdevops.com`, then creates and refreshes independent shallow
+non-archived projects on `gitlab.example.com`, then creates and refreshes independent shallow
 clones under `<corpus>/<path_with_namespace>`. This proves the acquisition boundary, group
 allowlist, pinned-host validation, bounded concurrency, and continue-on-error behavior. It does not,
 however, make the corpus itself a versioned artifact:
@@ -155,17 +155,8 @@ The complete decision is [ADR 0021](./0021-ai-privacy-aware-indexing.md).
 
 ## Evidence
 
-- `internal/corpus` already proves authenticated enumeration, curated filtering, clone/sync
-  reconciliation, path containment, pinned-host URLs, and bounded parallel Git operations.
-- Source discovery now recognizes both `.git` directories and `.git` files, while managed indexing
-  consumes the lock/catalog rather than indexing the superproject or inferring membership from the
-  filesystem.
-- The 2026-08-14 scheduled refresh reached the local corpus successfully but its GitLab sync failed
-  before VPN connectivity was available, demonstrating why connectivity and authentication must be
-  distinct diagnostics and why a failed enumeration must never imply prune authority.
-- The rollout preflight found 114 canonical `.ai-privacy.yml` policies in the conventional corpus;
-  the first sibling initialization was stopped before CAS/index creation when the missing
-  enforcement was discovered.
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 

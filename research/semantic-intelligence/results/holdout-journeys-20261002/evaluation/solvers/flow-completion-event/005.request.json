@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"read_source","arguments":{"path":"src/Domain/Common/BaseEntity.cs","start_line":11,"end_line":30}}}

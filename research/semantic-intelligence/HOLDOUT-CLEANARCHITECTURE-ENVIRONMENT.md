@@ -75,7 +75,7 @@ This is setup status, not a failed product task or a substitute component compar
 
 ## Reviewable next step
 
-The [readiness archive](results/holdout-environment-20261002/result.json) includes
+The readiness archive (archival evidence maintained separately) includes
 commands, logs, evaluated project inputs, SDK/dependency/worker hashes, a concrete
 unexecuted capture plan, and a source-only oracle-review assignment. Source and
 task archives remain unchanged. The plan requires checking complete contexts,

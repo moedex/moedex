@@ -1,1 +1,0 @@
-public static class Api { public static int Read() => FixtureGenerated.Value + Shared.Number; }

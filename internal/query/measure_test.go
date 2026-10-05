@@ -13,21 +13,30 @@ import (
 // TestSelectivityMeasurement quantifies the Cox reduction's improvement over the
 // slice-1 required-literals reduction by counting candidate blobs each returns
 // for a set of representative code-search regexes. Fewer candidates = better
-// selectivity (less verification work). It builds the corpus from ~/TCGitlab if
+// selectivity (less verification work). It builds the corpus from ~/.moedex-managed if
 // present and skips cleanly otherwise.
 func TestSelectivityMeasurement(t *testing.T) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		t.Skip("no home dir")
 	}
-	base := filepath.Join(home, "TCGitlab")
+	base := os.Getenv("MOEDEX_CORPUS")
+	if base == "" {
+		base = filepath.Join(home, ".moedex-managed")
+	}
 	if _, err := os.Stat(base); err != nil {
-		t.Skip("corpus not present at ~/TCGitlab")
+		t.Skip("corpus not present at ~/.moedex-managed")
 	}
 
-	repos := []string{
-		filepath.Join(base, "Services.Registrar", "TC.PushApi"),
-		filepath.Join(base, "Services.Registrar", "TC.SslApi"),
+	repos, err := ingest.DiscoverRepos(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(repos) == 0 {
+		t.Skip("no repositories in configured corpus")
+	}
+	if len(repos) > 2 {
+		repos = repos[:2]
 	}
 	ix := index.New()
 	nFiles := 0
@@ -45,7 +54,7 @@ func TestSelectivityMeasurement(t *testing.T) {
 		}
 	}
 	if ix.NumBlobs() == 0 {
-		t.Skip("no indexable repos found under ~/TCGitlab/Services.Registrar")
+		t.Skip("no indexable repos found under ~/.moedex-managed/examples")
 	}
 	total := ix.NumBlobs()
 	t.Logf("corpus: %d files -> %d blobs", nFiles, total)

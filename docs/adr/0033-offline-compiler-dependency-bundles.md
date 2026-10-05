@@ -36,9 +36,14 @@ files, unsafe relative paths, duplicate entries, and output inside inputs are
 rejected. Executable permission is normalized to private 0700 or 0600; ownership,
 setuid and other filesystem permissions are not propagated.
 
-Restore still uses explicit cleared package/fallback feeds, isolated home/temp
-directories, and a private cache. Missing packages fail; the capture command does
-not acquire missing dependencies or inherit the operator's package cache.
+Restore clears ambient package/fallback feeds and uses isolated home/temp
+directories and a private cache. With a verified bundle, that cache is also the
+explicit local hierarchical NuGet source for restore and reference preparation.
+Floating versions require this feed lookup even when the package is cached.
+Without a bundle, the explicit source is an empty private directory. The pinned
+SDK may also contribute its own local library packs.
+Missing packages or versions fail; capture does not acquire missing dependencies
+or inherit the operator's package cache.
 MSBuild targets and SDK resolvers execute trusted project code. This is not an
 OS network sandbox, and source-controlled SDK resolver configuration can have its
 own behavior. Dependency discovery/acquisition is a separate explicit operation

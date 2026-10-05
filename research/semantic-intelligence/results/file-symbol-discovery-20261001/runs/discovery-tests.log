@@ -1,6 +1,0 @@
---- FAIL: TestFileSymbolsKeepsContextAlternatives (0.00s)
-    discovery_test.go:86: semantic: context capture digest mismatch
-FAIL
-FAIL	moedex/internal/semanticindex	1.150s
-ok  	moedex/internal/mcp	0.423s
-FAIL

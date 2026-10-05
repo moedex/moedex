@@ -104,7 +104,7 @@ func graphEdgeSchema() map[string]interface{} {
 
 func graphResultSchema() map[string]interface{} {
 	return objectSchema([]string{"tool", "query", "depth", "nodes", "edges"}, map[string]interface{}{
-		"tool": stringSchema(), "query": stringSchema(), "depth": intSchema(),
+		"tool": stringSchema(), "query": stringSchema(), "depth": intSchema(), "repo": stringSchema(), "path": stringSchema(),
 		"nodes": arrayOf(graphNodeSchema()), "edges": arrayOf(graphEdgeSchema()),
 		"truncated": boolSchema(), "total_is_exact": boolSchema(), "expansion_limit": intSchema(),
 	})

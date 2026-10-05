@@ -1,1 +1,0 @@
-Discover IRegistrationValidationService.ValidateRegistration and recorded implementation alternatives.

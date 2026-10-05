@@ -58,10 +58,10 @@ handler a runtime container selects, or whether a call executes.
 - Both application captures preserve frozen commits, source hashes and source gold.
   The orders-handler observation is the only changed frozen expectation.
 
-Evidence: [manifest](results/generic-handler-20261001/result.json),
-[public handler navigation](results/generic-handler-20261001/public/navigation/report.json),
-[eShopOnWeb observations](results/generic-handler-20261001/public/eShopOnWeb-public/report.json),
-[ForkJoint observations](results/generic-handler-20261001/public/ForkJoint-public/report.json).
+Evidence: manifest (archival evidence maintained separately),
+public handler navigation (archival evidence maintained separately),
+eShopOnWeb observations (archival evidence maintained separately),
+ForkJoint observations (archival evidence maintained separately).
 The archive includes final source snapshots, native streams, capture manifests,
 public requests/responses and validation logs. Previous milestone archives remain
 unchanged. Large dependency caches, corpora, binaries and index shards stay local.

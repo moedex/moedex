@@ -100,6 +100,6 @@ Independent agent coverage stays **3/12**. Further work should generalize on fre
 application source and measure agent use of this evidence. No competitive win,
 new large-corpus resource result or production deployment is claimed.
 
-[Hashed evidence inventory](results/default-forwarding-20261001/result.json)
+Hashed evidence inventory (archival evidence maintained separately)
 contains transcripts, native streams, logs, provenance, delivered source copies
 and verified predecessor inventories. Expensive binaries/indexes remain local.

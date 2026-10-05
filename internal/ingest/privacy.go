@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	// AIPrivacyFileName is the repository-root policy defined by TurnCommerce AI
+	// AIPrivacyFileName is the repository-root policy defined by configured AI
 	// Governance section 10. Reading this file is the one permitted bootstrap
 	// read before repository content is processed.
 	AIPrivacyFileName = ".ai-privacy.yml"

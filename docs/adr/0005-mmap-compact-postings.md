@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-25
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 Positional postings ([0002](./0002-positional-trigram-core-byte-offsets.md)) are the memory wall: roughly one `Posting` per content byte, ~16 bytes each in their naive in-RAM form. Holding the whole positional index of a multi-GB corpus on the Go heap is the thing that breaks the single-node envelope ([0001](./0001-single-node-scope-pure-go-default.md)) — and GC over a heap that large is its own tax. The research note observed positional trigrams need only ~1.2× corpus in RAM *with posting lists on SSD* — which only holds if the postings actually stay off-heap.
@@ -25,7 +25,9 @@ Persist the index to a single file with **grouped varint delta-coded** posting l
 - mmap ties the working set to OS page-cache behavior — fine on a dedicated box, less predictable under memory contention with other tenants (not a concern given the single-node, internal-first scope).
 
 ## Evidence
-Scale run on the 5.2 GB / 484-repo corpus (`cmd/scale`, `MOEDEX_MMAP=1`, 748,144,248 postings): the in-RAM positional index holds **15.41× content** on the heap (≈14,694 MB); after persist → drop in-RAM copy → reload with postings mmap'd, heap drops to **1.12× content** (≈1,069 MB) — a **13.75× heap reduction**, proving the working set is the mapping, not the heap. Warm grep p95 stayed **563 ms** on the 5.2 GB corpus.
+
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 [0001](./0001-single-node-scope-pure-go-default.md), [0002](./0002-positional-trigram-core-byte-offsets.md), [0004](./0004-content-addressable-blob-store.md), [0012](./0012-search-latency-positional-verify.md).

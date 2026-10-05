@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"compiler_implementations","arguments":{"symbol_id":"symbol:4776a24c2ed7d962d6c18b6aa1d42ed960ab50dad132f1170fb97d8a22233fad","context_ids":["context:cc40ab51eb7cbec5f8e86861d72415c4a574bfdd0a095e4d2402c6470b43a67f"]}}}

@@ -99,6 +99,6 @@ discovery, private host copying, canonical paths, pinned restore arguments,
 property-separator rejection and bounded diagnostic filtering. Both public source
 baseline checks passed. Test servers were stopped after measurements.
 
-See [result.json](results/capture-portability-20261001/result.json) for retained
+See result.json (archival evidence maintained separately) for retained
 commands, logs, manifests, source snapshots and hashes. Large corpora, caches,
 indexes and executables remain under `.local/capture-portability/`.

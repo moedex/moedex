@@ -356,7 +356,7 @@ Agent MCP `search_context` over the warm daemon:
   `MDXE`, `SYM2` with legacy `SYM1` still readable). Directory/index files are
   written temp+rename after the data file is fsynced.
 - **Host scope:** `internal/corpus` reaches exactly one host,
-  `gitlab.tcdevops.com`, and never handles tokens (auth is delegated to `glab`).
+  `gitlab.example.com`, and never handles tokens (auth is delegated to `glab`).
 
 ## Anti-Patterns
 

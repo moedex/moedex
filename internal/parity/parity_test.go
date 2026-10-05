@@ -19,7 +19,7 @@ import (
 // path: common/rare tokens, case variants, metacharacters, multibyte runes, and
 // byte-identical duplicate content (dedup-expand).
 var synthFiles = []struct{ rel, content string }{
-	{"a.cs", "namespace TC.SslApi;\npublic class SslService {\n  public string Token;\n  void get() {}\n}\n"},
+	{"a.cs", "namespace Example.SslApi;\npublic class SslService {\n  public string Token;\n  void get() {}\n}\n"},
 	{"b.cs", "using System;\nusing System.Text;\nclass Other { get; set; }\nPUBLIC Public public\n"},
 	{"u.txt", "let prix = café_au_lait;\nΣumма = Δ + ß\nplain ascii line\n你好 world → done\n"},
 	{"m.txt", "arr[0] = obj.Method(x);\nif (a|b) i++;\n$value => { return null; }\n"},
@@ -281,7 +281,7 @@ func TestFullPipelineParitySmall(t *testing.T) {
 
 	corpus := t.TempDir()
 	makeGitRepo(t, filepath.Join(corpus, "repoA"), map[string]string{
-		"svc.cs":   "namespace TC.SslApi;\npublic class SslService {\n  public string Token;\n}\nPUBLIC public Public\n",
+		"svc.cs":   "namespace Example.SslApi;\npublic class SslService {\n  public string Token;\n}\nPUBLIC public Public\n",
 		"util.cs":  "using System;\nusing System.Text;\nvar x = obj.Method(arr[0]);\nif (a|b) i++;\n",
 		"notes.md": "café_au_lait and Σumма plus 你好 → done\nreturn null; // TODO\n",
 	})

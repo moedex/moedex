@@ -3,7 +3,7 @@
   "description": "Development marketplace for moedex",
   "owner": {
     "name": "Zak Keown",
-    "email": "zak@turncommerce.com"
+    "email": "maintainers@moedex.dev"
   },
   "plugins": [
     {
@@ -13,7 +13,7 @@
       "source": "./",
       "author": {
         "name": "Zak Keown",
-        "email": "zak@turncommerce.com"
+        "email": "maintainers@moedex.dev"
       }
     }
   ]

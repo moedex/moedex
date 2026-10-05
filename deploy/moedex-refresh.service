@@ -15,7 +15,7 @@
 
 [Unit]
 Description=moedex shard refresh (atomic rebuild + hot reload)
-Documentation=https://gitlab.tcdevops.com/Zak/moedex
+Documentation=https://github.com/moedex/moedex
 After=network-online.target
 Wants=network-online.target
 

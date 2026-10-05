@@ -38,12 +38,12 @@ func TestCatalogCanonicalRoundTrip(t *testing.T) {
 		Version: ManagedSchemaVersion,
 		Host:    DefaultHost,
 		GroupPolicy: GroupPolicy{
-			TopLevelGroups: []string{"Services.Payment", "Libraries.Common"},
+			TopLevelGroups: []string{"services", "Libraries.Common"},
 		},
 		RefPolicy: RefPolicyDefault,
 	}
 	second := first
-	second.GroupPolicy.TopLevelGroups = []string{"Libraries.Common", "Services.Payment"}
+	second.GroupPolicy.TopLevelGroups = []string{"Libraries.Common", "services"}
 
 	if err := WriteCatalog(firstRoot, first); err != nil {
 		t.Fatalf("WriteCatalog(first): %v", err)

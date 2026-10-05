@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-25
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 A warm daemon ([0010](./0010-warm-serving-spine.md)) over a prebuilt shard dir is stale the moment a repo advances. A full rebuild of the whole corpus per update is wasteful when only a few repos changed; the goal is the Blackbird "delta indexing" instinct — re-touch only what changed. But a content-sized shard interleaves several repos, so the granularity question (per-repo vs per-shard) is real.
@@ -23,7 +23,9 @@ Freshness is **shard-level, not per-repo**, because a shard interleaves repos. T
 - Carried + rebuilt shards lose cross-shard dedup between them (the deduped served format — [0004](./0004-content-addressable-blob-store.md) — is the durable fix); shard IDs are opaque per build.
 
 ## Evidence
-Refresh validated on a 484-repo mutable copy after a real `git pull`: **89 repos advanced HEAD (~18% changeset)**. Because the changes scattered, refresh touched **all 6 shards, carried 0 forward**, re-ingested **480 of 484 repos (99%)**, and fragmented the shard set **6 → 480** (+2,515 blobs, +5.0% vs a clean full rebuild). Timing confirmed the degeneration: refresh **389 s** vs full rebuild **~410 s** — within noise. **Correctness PASS**: a spot battery of 8 literal+regex queries over the refreshed dir (480 shards) vs an independent full rebuild (6 shards) returned **identical match sets** (counts up to 51,698), and a SIGHUP swap under 400 concurrent requests dropped none. A real bug was fixed in passing: commitless repos (zero tracked files, no readable HEAD) were flagged "changed" on **every** check forever — `DetectChanges` now normalizes an unreadable HEAD to `""` to match `ingest.Head`, so a clean check reports no changes.
+
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 [0004](./0004-content-addressable-blob-store.md), [0010](./0010-warm-serving-spine.md).

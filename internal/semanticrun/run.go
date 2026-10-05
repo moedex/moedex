@@ -38,7 +38,7 @@ type Result struct {
 }
 
 // Capture executes trusted MSBuild code in a private, exact-commit projection.
-// Empty NuGet feeds prevent package downloads, but this is not an OS sandbox.
+// NuGet feeds are limited to the supplied bundle; this is not an OS sandbox.
 // Successful workspaces stay at their original absolute path for revalidation.
 func Capture(ctx context.Context, o Options) (result Result, err error) {
 	if !o.RestoreOffline || !cleanRelative(o.Repo) || !cleanRelative(o.Project) || o.Framework == "" || o.Dotnet == "" || o.Worker == "" || o.SDKPath == "" || o.Workspace == "" || o.Output == "" {
@@ -219,6 +219,13 @@ func Capture(ctx context.Context, o Options) (result Result, err error) {
 	if err = os.WriteFile(config, []byte("<configuration><packageSources><clear /></packageSources><fallbackPackageFolders><clear /></fallbackPackageFolders></configuration>"), 0600); err != nil {
 		return result, err
 	}
+	// Floating versions require a feed lookup even when the resolved package
+	// is already in the global cache. The verified bundle is a hierarchical
+	// local feed as well as a cache; no ambient or network feeds are enabled.
+	restoreSource := filepath.Join(o.Workspace, "empty-feed")
+	if bundle != nil {
+		restoreSource = filepath.Join(o.Workspace, "packages")
+	}
 	env := []string{
 		"PATH=" + filepath.Dir(pinnedDotnet) + ":/usr/bin:/bin", "HOME=" + filepath.Join(o.Workspace, "home"),
 		"TMPDIR=" + filepath.Join(o.Workspace, "tmp"), "DOTNET_CLI_HOME=" + filepath.Join(o.Workspace, "home"),
@@ -231,7 +238,7 @@ func Capture(ctx context.Context, o Options) (result Result, err error) {
 	// Restore the declared project graph without a global TargetFramework: that
 	// would force the entry framework onto netstandard analyzer projects too.
 	// Reference preparation and extraction still select the requested entry TFM.
-	restore := []string{filepath.Join(o.SDKPath, "MSBuild.dll"), "-target:Restore", filepath.Join(p.Root, filepath.FromSlash(o.Project)), "-nologo", "-p:RestoreConfigFile=" + config, "-p:RestorePackagesPath=" + filepath.Join(o.Workspace, "packages"), "-p:RestoreSources=" + filepath.Join(o.Workspace, "empty-feed"), "-p:RestoreDisableParallel=true", "-p:NuGetAudit=false", "-p:Configuration=" + o.Configuration}
+	restore := []string{filepath.Join(o.SDKPath, "MSBuild.dll"), "-target:Restore", filepath.Join(p.Root, filepath.FromSlash(o.Project)), "-nologo", "-p:RestoreConfigFile=" + config, "-p:RestorePackagesPath=" + filepath.Join(o.Workspace, "packages"), "-p:RestoreSources=" + restoreSource, "-p:RestoreDisableParallel=true", "-p:NuGetAudit=false", "-p:Configuration=" + o.Configuration}
 	env = append(env, "MSBuildSDKsPath="+filepath.Join(o.SDKPath, "Sdks"))
 	if o.RestoreStandardEvaluation {
 		restore = append(restore, "-p:RestoreUseStaticGraphEvaluation=false")
@@ -253,7 +260,7 @@ func Capture(ctx context.Context, o Options) (result Result, err error) {
 	// Let the selected SDK resolve/build references in the private projection,
 	// including their own framework negotiation and custom output paths. Never
 	// borrow bin/obj files from the caller's checkout or guess analyzer paths.
-	prepare := []string{filepath.Join(o.SDKPath, "MSBuild.dll"), "-target:ResolveReferences", filepath.Join(p.Root, filepath.FromSlash(o.Project)), "-nologo", "-maxcpucount:1", "-nodeReuse:false", "-p:BuildProjectReferences=true", "-p:UseSharedCompilation=false", "-p:TargetFramework=" + o.Framework, "-p:Configuration=" + o.Configuration, "-p:RestoreConfigFile=" + config, "-p:RestorePackagesPath=" + filepath.Join(o.Workspace, "packages"), "-p:RestoreSources=" + filepath.Join(o.Workspace, "empty-feed"), "-p:NuGetAudit=false"}
+	prepare := []string{filepath.Join(o.SDKPath, "MSBuild.dll"), "-target:ResolveReferences", filepath.Join(p.Root, filepath.FromSlash(o.Project)), "-nologo", "-maxcpucount:1", "-nodeReuse:false", "-p:BuildProjectReferences=true", "-p:UseSharedCompilation=false", "-p:TargetFramework=" + o.Framework, "-p:Configuration=" + o.Configuration, "-p:RestoreConfigFile=" + config, "-p:RestorePackagesPath=" + filepath.Join(o.Workspace, "packages"), "-p:RestoreSources=" + restoreSource, "-p:NuGetAudit=false"}
 	prepared, err := RunProcess(ctx, ProcessSpec{Executable: pinnedDotnet, Args: prepare, Dir: p.Root, Env: env, StdoutLimit: 1 << 20, StderrLimit: 64 << 10})
 	if err != nil {
 		return result, captureProcessError("project reference preparation", err, append(prepared.Stdout, prepared.Stderr...))

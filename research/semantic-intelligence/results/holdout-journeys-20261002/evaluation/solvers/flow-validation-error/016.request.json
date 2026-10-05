@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"read_source","arguments":{"repo":"CleanArchitecture","path":"src/Application/TodoItems/Commands/CreateTodoItem/CreateTodoItemCommandValidator.cs","start_line":1,"end_line":11}}}

@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search_context","arguments":{"query":"INotificationHandler","repo":"CleanArchitecture","path_prefix":"src/Application","top_k":6,"token_budget":2000,"graph_depth":0,"format":"structured"}}}

@@ -3,14 +3,14 @@
 # moedex-sync.timer (or run on demand: `sudo systemctl start moedex-sync`).
 #
 # Unlike moedex-refresh (which only rebuilds shards from an already-updated LOCAL
-# corpus), moedex-sync talks to gitlab.tcdevops.com: it clones newly-created
+# corpus), moedex-sync talks to gitlab.example.com: it clones newly-created
 # repos, fast-forwards existing ones, then drives cas-refresh -> cas-export
 # -deduped. It therefore needs (a) NETWORK, (b) the service identity to be
 # authenticated to GitLab, and (c) WRITE to the corpus / CAS / shard tree.
 #
 # CREDENTIALS (the load-bearing difference from the read-only units): the user
 # this runs as must reach GitLab non-interactively —
-#   * glab : run once AS THAT USER:  glab auth login --hostname gitlab.tcdevops.com
+#   * glab : run once AS THAT USER:  glab auth login --hostname gitlab.example.com
 #            (or set GITLAB_TOKEN in the EnvironmentFile — glab reads it).
 #   * git  : an SSH key that can clone the repos, with the GitLab host key already
 #            in that user's ~/.ssh/known_hosts (sync uses ssh accept-new, which
@@ -29,7 +29,7 @@
 
 [Unit]
 Description=moedex corpus sync + per-blob-delta reindex + hot reload
-Documentation=https://gitlab.tcdevops.com/Zak/moedex
+Documentation=https://github.com/moedex/moedex
 After=network-online.target
 Wants=network-online.target
 

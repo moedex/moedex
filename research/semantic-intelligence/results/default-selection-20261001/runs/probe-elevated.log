@@ -1,6 +1,0 @@
-Handler | IGeneric<Msg>.Run(Msg) => Handler.Run(Msg) | Class | M:Handler.Run(Msg) | refs=1
-Handler | IGeneric<Msg>.IBase.Run(object) =>  |  |  | refs=
-Handler | IBase.Run(object) => IGeneric<Msg>.IBase.Run(object) | Interface | M:IGeneric`1.IBase#Run(System.Object) | refs=1
-Override | IGeneric<Msg>.Run(Msg) => Override.Run(Msg) | Class | M:Override.Run(Msg) | refs=1
-Override | IGeneric<Msg>.IBase.Run(object) =>  |  |  | refs=
-Override | IBase.Run(object) => Override.Run(object) | Class | M:Override.Run(System.Object) | refs=1

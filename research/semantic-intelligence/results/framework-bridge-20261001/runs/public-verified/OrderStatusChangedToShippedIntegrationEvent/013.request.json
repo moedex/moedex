@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"compiler_contract_impact","arguments":{"symbol_id":"symbol:5a5a4914cf5e494fa583a54757108d1285bfe41c1edb9e8c6de48546bdbc5026","context_ids":["context:45d6460dcf345e56fa9e6bf0147d194fee040b4a84ac3d97b0ac6be217afd470"]}}}

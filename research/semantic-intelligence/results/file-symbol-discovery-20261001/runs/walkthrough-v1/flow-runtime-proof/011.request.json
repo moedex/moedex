@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"read_source","arguments":{"repo":"Sample-Outbox","path":"src/Sample.Api/Program.cs"}}}

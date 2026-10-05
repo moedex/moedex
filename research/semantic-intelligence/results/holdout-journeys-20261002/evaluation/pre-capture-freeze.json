@@ -1,7 +1,0 @@
-{
-  "source-gold-reviewed.json": "f9d17710e18305ed9d9178bc30b9f74b99fe4529cb784bdd08a9e53f617d98a7",
-  "protocol-reviewed.json": "8e5a16d62cf5715380a9b9953bc2e15491c75366c8185a3252913a1e2118fd2e",
-  "oracle-amendments.json": "ddeef07e675648ab07448fbf7f0ecdba9b9dc757c07659b67b92a7399d184b41",
-  "view.py": "8416155abc4bf3d9511dd1597c9668161b826fe0f2b1004f43ed672116ade742",
-  "manage.py": "4a45c34464f3a7028fdb74bc9561856e11a08bef8f4c0fcb7c98107c7834b338"
-}

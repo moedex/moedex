@@ -74,26 +74,26 @@ curated default-branch snapshot. It uses your own glab auth + access levels and 
 out to `glab` and `git`; indexing dispatches through the same `moe` process. The engine is never linked
 into it, so the zero-dependency posture of the daemon is preserved.
 
-Prereqs: active TC VPN, the [`glab`](https://gitlab.com/gitlab-org/cli) CLI, and
+Prereqs: access to the configured GitLab instance, the [`glab`](https://gitlab.com/gitlab-org/cli) CLI, and
 `git`. The VPN session times out after 12 hours, so the macOS refresh runs at
 14:10 local time when an operator is more likely to be connected. `doctor` never
 changes anything and reports the external layers separately:
 
 ```sh
-moedex corpus doctor
-#   ✓ authenticated to gitlab.tcdevops.com
+MOEDEX_GITLAB_HOST=gitlab.example.com moedex corpus doctor -groups /path/to/corpus-groups.txt
+#   ✓ authenticated to gitlab.example.com
 #   ✓ GitLab host/VPN reachable
 #   ✓ Git clone/fetch transport
 #   repos: N project(s) in scope
 # If not authenticated, it prints the exact command to run:
-#   glab auth login --hostname gitlab.tcdevops.com
+#   glab auth login --hostname gitlab.example.com
 ```
 
 **First run** — initialize and index a new sibling. Never point `init` at a
 populated legacy corpus:
 
 ```sh
-moedex corpus init -corpus /srv/moedex/corpus-managed
+moedex corpus init -groups /path/to/corpus-groups.txt -corpus /srv/moedex/corpus-managed
 moedex index cas build \
   -corpus /srv/moedex/corpus-managed \
   -cas-dir /srv/moedex/cas-managed
@@ -107,9 +107,10 @@ user-owned and is refused with a sibling-root instruction. Keep the old corpus,
 CAS, and shards as the immediate rollback set. The compatibility `clone` command
 still maintains independent shallow clones, but marked roots are always lock-driven.
 
-**Scope.** By default the built-in curated allowlist (the TurnCommerce top-level
-groups) is used. Override with `-groups FILE`; regenerate a list from an existing
-mirror with `moedex corpus groups --from-disk > corpus-groups.txt`.
+**Scope.** Supply an external allowlist with `-groups FILE` or
+`MOEDEX_CORPUS_GROUPS`; regenerate one from an existing mirror with
+`moedex corpus groups --from-disk > corpus-groups.txt`. Set `MOEDEX_GITLAB_HOST`
+for acquisition. Keep organization-specific configuration outside public commits.
 
 **Steady state** — fail-stop sync, CAS refresh, deduped export, sidecars, reload:
 
@@ -135,7 +136,7 @@ and every gate in
 [`ROLLOUT.md`](../docs/plans/phases/02-managed-corpus-integration/ROLLOUT.md).
 
 ```sh
-moedex corpus doctor -corpus /srv/moedex/corpus-managed
+moedex corpus doctor -groups /path/to/corpus-groups.txt -corpus /srv/moedex/corpus-managed
 moedex doctor -shard-dir /srv/moedex/shards-managed
 moedex index check \
   -corpus /srv/moedex/corpus-managed \
@@ -157,8 +158,8 @@ Only after health, freshness, exact-result parity, and rollback rehearsal pass:
 Before relying on the 14:10 macOS run, check each prerequisite independently:
 
 ```sh
-glab auth status --hostname gitlab.tcdevops.com  # credential only
-moedex corpus doctor -corpus /srv/moedex/corpus-managed  # VPN/API + Git transport + local lock
+glab auth status --hostname gitlab.example.com  # credential only
+moedex corpus doctor -groups /path/to/corpus-groups.txt -corpus /srv/moedex/corpus-managed  # VPN/API + Git transport + local lock
 ```
 
 An authenticated `glab` session with an expired/disconnected VPN is expected to
@@ -194,22 +195,10 @@ moedex index refresh -shard-dir /srv/moedex/shards
 
 ## Hardware sizing
 
-Measured on the ~5.2 GB / 484-repo corpus (953 MB indexed); see ADR
-[`0001`](../docs/adr/0001-single-node-scope-pure-go-default.md) and
-[`0005`](../docs/adr/0005-mmap-compact-postings.md) for the full numbers and the
-8 GB projection.
-
-| Phase | Footprint (5.2 GB corpus) | Notes |
-| --- | --- | --- |
-| **Serve** `-http` (lexical+symbol+path) | ~3 GB RSS (~1 GB heap + reclaimable mmap) | Working set is the **mmap'd postings** (file-backed, reclaimable), not the heap. Comfortable on **8 GB RAM**; ~p50 120 ms / p95 560 ms warm. |
-| **Serve** `-mcp` + dense (float32) | ~4 GB heap | Dense store is ~3.5× indexed content. Want **≥16 GB RAM**; `int8` quantization (future) would cut it ~4×. |
-| **Build / refresh** (`moedex index`) | ~10 GB peak | The RAM-binding step (the sidecar build loads all content at once; not shard-bounded). Build on a **≥24–32 GB host**, then ship the shard dir to a modest serve host. |
-| **Disk** (servable shard dir) | 2.6 GB (no dense) / 5.4 GB (+dense) | Scales ~linearly to ~4 / ~8 GB at an 8 GB corpus. |
-
-**Rule of thumb:** serving is cheap (postings are mmap'd); building is the
-expensive step — separate the build host from the serve host if RAM is tight.
-
----
+Measure peak build memory, steady-state serving memory and shard disk size on
+an accessible representative corpus. Building sidecars can require more RAM than
+serving mmap-backed postings. Dense vectors add model- and dimension-dependent
+storage and memory costs.
 
 ## Docker
 
@@ -270,7 +259,7 @@ Files (in `deploy/`): `moedex-serve.service`, `moedex-serve.env.example`, and
 
 - **`moedex-sync.service` + `moedex-sync.timer`** — the complete loop: pull from
   GitLab + fail-stop managed sync + CAS refresh + deduped export + reload. Needs
-  network + the service identity authenticated to `gitlab.tcdevops.com` + write
+  network + the service identity authenticated to `gitlab.example.com` + write
   to the corpus tree. **Recommended** for a GitLab-connected host.
 - **`moedex-refresh.service` + `moedex-refresh.timer`** — reindex only, from a
   corpus someone else keeps updated on disk (`moedex index refresh`). No glab/network.
@@ -335,10 +324,10 @@ journalctl -u moedex-sync.service -f
 ```
 
 **Credentials are the load-bearing difference.** `moedex-sync` runs `git`/`glab`
-over the network, so the user it runs as must reach `gitlab.tcdevops.com`
+over the network, so the user it runs as must reach `gitlab.example.com`
 non-interactively:
 
-- **glab** — run once *as that user*: `glab auth login --hostname gitlab.tcdevops.com`
+- **glab** — run once *as that user*: `glab auth login --hostname gitlab.example.com`
   (or set `GITLAB_TOKEN` in the env file — glab reads it).
 - **git/SSH** — an SSH key with clone access, and the GitLab host key already in
   that user's `~/.ssh/known_hosts` (the unit keeps `HOME` read-only, so first-

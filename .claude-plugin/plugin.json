@@ -4,10 +4,10 @@
   "description": "Code-search and agent context MCP tools, backed by moedex's trigram engine",
   "author": {
     "name": "Zak Keown",
-    "email": "zak@turncommerce.com"
+    "email": "maintainers@moedex.dev"
   },
-  "homepage": "https://gitlab.tcdevops.com/moedex/moedex",
-  "repository": "https://gitlab.tcdevops.com/moedex/moedex",
+  "homepage": "https://github.com/moedex/moedex",
+  "repository": "https://github.com/moedex/moedex",
   "license": "MIT",
   "keywords": ["code-search", "mcp", "trigram", "context", "ripgrep"],
   "mcpServers": {

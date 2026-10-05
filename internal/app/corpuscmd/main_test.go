@@ -256,3 +256,22 @@ func TestValidateReindexFlags(t *testing.T) {
 		})
 	}
 }
+
+func TestGroupsRequireExplicitScope(t *testing.T) {
+	t.Setenv("MOEDEX_CORPUS_GROUPS", "")
+	if _, err := resolveGroups(""); err == nil {
+		t.Fatal("missing allowlist must not enumerate all visible projects")
+	}
+}
+
+func TestGroupsFromExternalConfiguration(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "groups.txt")
+	if err := os.WriteFile(path, []byte("sample-group\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("MOEDEX_CORPUS_GROUPS", path)
+	groups, err := resolveGroups("")
+	if err != nil || len(groups) != 1 || groups[0] != "sample-group" {
+		t.Fatalf("configured groups = %v, %v", groups, err)
+	}
+}

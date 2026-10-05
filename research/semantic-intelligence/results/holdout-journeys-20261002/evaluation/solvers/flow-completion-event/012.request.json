@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"search_context","arguments":{"query":"AddMediatR RegisterServicesFromAssembly","repo":"CleanArchitecture","top_k":1,"token_budget":1400,"graph_depth":0}}}

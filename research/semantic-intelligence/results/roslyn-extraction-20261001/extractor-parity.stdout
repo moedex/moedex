@@ -1,7 +1,0 @@
-=== RUN   TestPinnedRoslynCSharpFrozenExtractorParity
-    extract_cs_oracle_test.go:511: verified shard=shard-0000.idx csharp_blobs=2538 cumulative_blobs=2538 definitions=100187 occurrences=767782 content_bytes=135053218
-    extract_cs_oracle_test.go:511: verified shard=shard-0001.idx csharp_blobs=3346 cumulative_blobs=5884 definitions=172562 occurrences=1099806 content_bytes=183522861
-    extract_cs_oracle_test.go:511: verified shard=shard-0002.idx csharp_blobs=11741 cumulative_blobs=17625 definitions=269945 occurrences=1472740 content_bytes=255858321
-    extract_cs_oracle_test.go:516: full pinned Roslyn parity: commit=36d26c5466e4d25940657ccb8d5b9557ccaf7be1 shards=3 blobs=17625 definitions=269945 occurrences=1472740 bytes=255858321
---- PASS: TestPinnedRoslynCSharpFrozenExtractorParity (217.01s)
-PASS

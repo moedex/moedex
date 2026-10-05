@@ -44,10 +44,8 @@ const (
 	DefaultCorpusDirName = ".moedex-managed"
 )
 
-// DefaultHost is the ONLY GitLab host a managed corpus may be pinned to. It
-// mirrors internal/corpus.DefaultHost (the two must always agree; corpus
-// re-exports this constant rather than redeclaring it).
-const DefaultHost = "gitlab.tcdevops.com"
+// DefaultHost is an example host; actual catalogs retain their configured host.
+const DefaultHost = "gitlab.example.com"
 
 // GroupPolicy records the curated top-level GitLab namespaces. An empty list
 // preserves the "all visible projects" behavior of an unfiltered corpus.

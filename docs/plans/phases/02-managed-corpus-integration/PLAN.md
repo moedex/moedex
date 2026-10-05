@@ -53,8 +53,8 @@ requirements:
   - ADR-0019
   - ADR-0021
 user_setup:
-  - An authenticated `glab` session for `gitlab.tcdevops.com`.
-  - Active TC VPN access during the real-corpus checkpoint.
+  - An authenticated `glab` session for `gitlab.example.com`.
+  - Active required network access during the real-corpus checkpoint.
   - Free disk for a sibling corpus, CAS, shard directory, and rollback copy.
 must_haves:
   truths:
@@ -253,7 +253,7 @@ case must fail the refresh and prove that the previously served snapshot remains
 <task type="auto" id="2.5">
   <name>Task 5: Enforce AI-privacy policy before content ingestion</name>
   <files>internal/ingest/privacy.go, internal/ingest/ingest.go, internal/ingest/ingest_test.go, internal/blobstore/build.go, internal/blobstore/manifest.go, internal/blobstore/export_shared.go, internal/blobstore/refresh_deduped.go, internal/blobstore/blobstore_test.go, internal/parity/corpus.go, internal/parity/manifest.go, internal/parity/manifest_test.go, cmd/moedex-index/main.go, cmd/scale/main.go, internal/eval/runner_corpus.go, docs/adr/0019-moedex-managed-submodule-corpus.md, docs/adr/0021-ai-privacy-aware-indexing.md, ARCHITECTURE.md</files>
-  <read_first>TurnCommerce AI Governance §10, internal/ingest/ingest.go, internal/blobstore/build.go, internal/blobstore/refresh_deduped.go, internal/parity/manifest.go</read_first>
+  <read_first>configured AI Governance §10, internal/ingest/ingest.go, internal/blobstore/build.go, internal/blobstore/refresh_deduped.go, internal/parity/manifest.go</read_first>
   <action>
 Add a dependency-free strict parser for the canonical repository-root `.ai-privacy.yml`. Missing or
 empty policy defaults to global level 3; the effective level is the most restrictive global/exact/

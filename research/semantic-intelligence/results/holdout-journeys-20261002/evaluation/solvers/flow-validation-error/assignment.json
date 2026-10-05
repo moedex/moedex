@@ -1,7 +1,0 @@
-{
-  "task": "flow-validation-error",
-  "assigned_utc": "2026-10-02T13:42:34.504833+00:00",
-  "assigned_monotonic": 78195.872390708,
-  "deadline_monotonic": 78795.872390708,
-  "agent": "/root/holdout_solver_04"
-}

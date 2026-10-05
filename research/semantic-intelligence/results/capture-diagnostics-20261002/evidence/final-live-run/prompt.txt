@@ -1,1 +1,0 @@
-Unscored setup smoke: inspect native instructions, then list repositories.

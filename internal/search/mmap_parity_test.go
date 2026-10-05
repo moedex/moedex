@@ -21,7 +21,7 @@ func TestMmapParity(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write("a.cs", "namespace TC.SslApi;\npublic class SslService {\n  public string Token;\n  void get() {}\n}\n")
+	write("a.cs", "namespace Example.SslApi;\npublic class SslService {\n  public string Token;\n  void get() {}\n}\n")
 	write("b.cs", "using System;\nusing System.Text;\nclass Other { get; set; }\n")
 	write("unicode.txt", "let prix = café_au_lait;\nΣumма = Δ + ß\nplain ascii line\n")
 	dup := "marker line\nZZUNIQUEDUPTOKEN appears here\n"

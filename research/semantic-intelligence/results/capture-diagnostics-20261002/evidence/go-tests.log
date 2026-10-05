@@ -1,8 +1,0 @@
---- FAIL: TestDefaultSelectionValidation (0.00s)
-    default_selection_test.go:29: extractor gate 19
-FAIL
-FAIL	moedex/internal/semantic	0.231s
-ok  	moedex/internal/semanticimport	0.262s
-ok  	moedex/internal/semanticrun	10.123s
-ok  	moedex/internal/app/semanticcmd	0.205s
-FAIL

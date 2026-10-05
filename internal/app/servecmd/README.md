@@ -360,10 +360,15 @@ depends on:
 | `depends_on` | outgoing `imports` / `uses_type` / `references` / `candidate` / `publishes` / `consumes` |
 | `similar_to` | semantic siblings (`similar_to`, either direction; needs an `onnx`-built graph) |
 
-Each neighbor carries its node `id` (usable directly with `trace_calls` /
-`impact_analysis`), symbol, kind, repo/path/line, the `edge` type and `direction`
+Each neighbor carries its node `id`, symbol, kind, repo/path/line, the `edge` type and `direction`
 that reached it, the hop count, and the edge's confidence `{tier, score}`.
 Text renders this as `Symbol [Tier] (repo/path:line)`.
+
+Follow a neighbor with `trace_calls` using its `symbol`, `repo`, and exact
+repository-relative `path`. Repository and path select starting declarations;
+the traversal can still cross repositories. Omit both selectors to trace every
+declaration with that name. An unmatched selector returns an empty result.
+The node `id` identifies returned evidence; it is not a `symbol` argument.
 
 `graph_depth` controls the radius: **1** by default (the direct neighborhood), up to
 10, and **0 turns the annotation off**. Each lane traverses in one fixed direction, so

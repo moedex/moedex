@@ -51,7 +51,5 @@ fail-closed condition.
 
 ## Evidence
 
-The tagged navigation regression launches a fake language server that writes
-under its initialized root. The file appears only in the projected cache, the
-managed checkout stays clean, and the fake server's scratch result URI is returned
-to the caller as the original canonical file path.
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.

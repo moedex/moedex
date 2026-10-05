@@ -1,1 +1,0 @@
-Which implementation is registered for registration validation, with what lifetime, and where is it called? Distinguish configured registration from runtime instance selection.

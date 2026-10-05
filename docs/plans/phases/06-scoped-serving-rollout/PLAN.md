@@ -37,7 +37,7 @@ requirements:
   - ADR-0020
   - ADR-0021
 user_setup:
-  - Active TC VPN and authenticated Git transport for final refresh/parity/capacity measurements.
+  - Active required network and authenticated Git transport for final refresh/parity/capacity measurements.
   - Sibling CAS/shard/sidecar capacity and a rollback configuration retaining the default-only index.
   - Operator approval for hot-swap and soak completion.
 must_haves:

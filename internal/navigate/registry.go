@@ -102,7 +102,7 @@ var defaultRegistry = map[string]LangSpec{
 		RootMarkers: []string{"compile_commands.json", "compile_flags.txt", ".clangd"},
 		Note:        "not present in the corpus today",
 	},
-	// C# is the dominant language in the TurnCommerce corpus (~60% of files), so
+	// C# is the dominant language in the configured corpus (~60% of files), so
 	// it is wired even though its server (csharp-ls, a dotnet global tool) needs a
 	// little more setup than the others. Project roots are located by the per-
 	// project *.sln / *.csproj files (globbed), with fixed-name fallbacks.
@@ -114,7 +114,7 @@ var defaultRegistry = map[string]LangSpec{
 		ResolveEnv:  dotnetRootEnv,
 		Note:        "needs the .NET SDK (csharp-ls is a dotnet global tool); DOTNET_ROOT auto-resolved",
 	},
-	// SQL and ColdFusion are real parts of the TurnCommerce corpus (SQL ~2.9k
+	// SQL and ColdFusion are real parts of the configured corpus (SQL ~2.9k
 	// files, CFML ~2.2k), so they are wired despite thin LSP ecosystems — both
 	// servers are best-effort and shallower than the C#/Go/TS servers:
 	//   - sql-language-server: completion/hover/lint and schema-aware navigation;

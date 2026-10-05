@@ -64,7 +64,7 @@ Go source copies out of root `go test ./...` traversal without altering archives
 - Managed capture, isolated publication, source-integrity audit and native serving
   pass. No GPU or subagents were used.
 
-The [sealed manifest](results/build-event-severity-20261002/result.json) retains
+The sealed manifest (archival evidence maintained separately) retains
 commands, tests, normalized evidence, regression streams, admission controls,
 publication and native responses. SDKs, dependencies, large artifacts and shards
 remain in ignored `.local`. Earlier sealed archives are unchanged.

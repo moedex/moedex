@@ -16,7 +16,7 @@ type Project struct {
 	// change, so managed-corpus reconciliation keys projects by this value.
 	ID int64 `json:"id"`
 	// PathWithNamespace is the full namespace path, e.g.
-	// "Services.Payment/TC.BillingApi". It doubles as the local relative path so
+	// "services/Example.BillingApi". It doubles as the local relative path so
 	// the mirror layout matches GitLab exactly.
 	PathWithNamespace string `json:"path_with_namespace"`
 	// SSHURL is the git clone URL (ssh_url_to_repo). Clones use SSH so they ride
@@ -37,8 +37,8 @@ type Project struct {
 }
 
 // TopLevelGroup returns the first path segment of the project's namespace — the
-// group the allowlist matches on (e.g. "Services.Payment" for
-// "Services.Payment/TC.BillingApi", "Libraries.Common" for a deeper
+// group the allowlist matches on (e.g. "services" for
+// "services/Example.BillingApi", "Libraries.Common" for a deeper
 // "Libraries.Common/sub/Repo").
 func (p Project) TopLevelGroup() string { return topLevelGroup(p.PathWithNamespace) }
 
@@ -104,7 +104,7 @@ func FilterByGroups(projects []Project, allow []string) []Project {
 //
 // Curation is by group allowlist over ALL visible projects, NOT by membership.
 // That choice is empirical: on the live corpus, all-visible + non-archived +
-// allowlist reproduces today's ~484-repo mirror, whereas membership=true
+// allowlist defines the requested scope, whereas membership=true
 // undershoots it by ~145 repos — almost all internal-visibility infra repos
 // (Ansible roles/plays) the operator can read but isn't an explicit member of.
 func Enumerate(ctx context.Context, r Runner, cfg Config) ([]Project, error) {

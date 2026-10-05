@@ -62,10 +62,10 @@ and worker versions are enforced by artifact and index validation.
 - Both application captures retain frozen commits, tracked source bytes and source
   gold. All 21 anchors resolve and prior observations remain present.
 
-Evidence: [manifest](results/masstransit-scan-20261001/result.json),
-[marker navigation](results/masstransit-scan-20261001/public/navigation/report.json),
-[eShopOnWeb observations](results/masstransit-scan-20261001/public/eShopOnWeb-public/report.json),
-[ForkJoint observations](results/masstransit-scan-20261001/public/ForkJoint-public/report.json).
+Evidence: manifest (archival evidence maintained separately),
+marker navigation (archival evidence maintained separately),
+eShopOnWeb observations (archival evidence maintained separately),
+ForkJoint observations (archival evidence maintained separately).
 The archive includes source snapshots, native streams, capture metadata, validation
 logs and public requests/responses. Previous milestone archives remain unchanged.
 Corpora, dependency caches, binaries and generated indices stay local.

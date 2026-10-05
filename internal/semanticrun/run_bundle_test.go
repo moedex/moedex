@@ -42,6 +42,50 @@ func TestCaptureStagesPrivateDependencies(t *testing.T) {
 	}
 }
 
+func TestCaptureRestoreFeedsAreConfined(t *testing.T) {
+	for _, bundled := range []bool{false, true} {
+		script := `
+case "$2" in
+  -target:Restore|-target:ResolveReferences) ;;
+  *) printf 'unexpected worker' >&2; exit 9 ;;
+esac
+found=0
+for arg do
+  case "$arg" in
+    -p:RestoreSources=*)
+      test "$arg" = "-p:RestoreSources=$EXPECTED_SOURCE" || { printf 'wrong feed' >&2; exit 8; }
+      found=1 ;;
+  esac
+done
+test "$found" = 1 || { printf 'missing feed' >&2; exit 8; }
+if [ "$2" = -target:ResolveReferences ]; then printf 'local feeds verified' >&2; exit 9; fi
+exit 0
+`
+		// The fixture tools receive the same isolated environment as real capture.
+		// Derive the expected source from its private cache, not the host config.
+		expected := "$DOTNET_CLI_HOME/../empty-feed"
+		if bundled {
+			expected = "$NUGET_PACKAGES"
+		}
+		script = "EXPECTED_SOURCE=\"" + expected + "\"\n" + script
+		var o Options
+		if bundled {
+			o = captureBundleFixture(t, script)
+		} else {
+			o, _ = captureFixture(t, script)
+		}
+		// Normalize the textual path used by the fake tool's comparison.
+		script = strings.ReplaceAll(script, "$DOTNET_CLI_HOME/../empty-feed", filepath.Join(o.Workspace, "empty-feed"))
+		if err := os.WriteFile(o.Dotnet, []byte("#!/bin/sh\n"+script), 0700); err != nil {
+			t.Fatal(err)
+		}
+		_, err := Capture(context.Background(), o)
+		if err == nil || !strings.Contains(err.Error(), "local feeds verified") {
+			t.Fatalf("bundled=%v: %v", bundled, err)
+		}
+	}
+}
+
 func TestCaptureRejectsDependencyMutationBeforeWorker(t *testing.T) {
 	for _, target := range []string{"\"$NUGET_PACKAGES/p/1.0/data\"", "\"$DOTNET_CLI_HOME/../dependency-manifest.json\""} {
 		t.Run(target, func(t *testing.T) {

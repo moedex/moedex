@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":5,"result":{"_meta":{"dev.moedex/server":{"version":"dev+unknown"},"dev.moedex/snapshot":{"cacheable":true,"corpus_fingerprint":"c46c3455e4dc30b00da3949b93be44145846bf754f147b2a3f0e1521588b2185"}},"content":[{"type":"text","text":"list_symbols: 0 result(s)"}],"structuredContent":{"symbols":[],"total":0,"truncated":false}}}

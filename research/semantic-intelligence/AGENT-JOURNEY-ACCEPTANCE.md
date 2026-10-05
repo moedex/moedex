@@ -77,7 +77,7 @@ frozen tasks require fresh solver capacity.
 
 ## Separate production correction
 
-Evidence: [separate correction manifest](results/source-only-discovery-20261001/result.json).
+Evidence: separate correction manifest (archival evidence maintained separately).
 
 The first slice exposed a source-only serving defect: an absent optional graph
 created an empty, effectively closed discovery toolset. The correction opens an

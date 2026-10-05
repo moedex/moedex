@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"read_source","arguments":{"path":"src/Domain/Entities/TodoItem.cs","start_line":1,"end_line":29}}}

@@ -35,77 +35,17 @@ type Config struct {
 	// and never passes through rank — is structurally unaffected.
 	Fusion Fusion
 
-	// SymbolMinCoverage gates the symbol-name arm: a symbol contributes to a
-	// blob's arm score only when it matches at least this fraction of the query's
-	// DISTINCT terms. It stops a single coincidental subtoken match from casting a
-	// full RRF vote — e.g. query "build deploy stage" matching just "build" in a
-	// symbol BuildIndex (coverage 1/3) is gated out, while a symbol whose name IS
-	// the query, e.g. "refund" -> func Refund (coverage 1/1), still fires. This
-	// was the measured false-boost mode (see eval). A negative value disables the
-	// gate (pre-gating behavior).
-	//
-	// The zero value means the 0.67 default. It was 0.5 until the path arm landed;
-	// once the path arm carries the filename signal, the looser 0.5 gate let the
-	// symbol arm cast marginal votes the path arm already covers, which cost NDCG in
-	// the combined stack. Raising to 0.67 (only near-exact symbol-name matches vote)
-	// makes the symbol arm additive-on-recall and ~neutral-on-NDCG alongside path;
-	// it is the plateau on the gold (0.67/0.75/1.0 score identically), so a stable
-	// choice rather than a fragile peak. See eval's symbol-coverage sweep.
+	// SymbolMinCoverage requires a fraction of query tokens in a symbol name.
 	SymbolMinCoverage float64
 
-	// PathMinCoverage gates AND enables the filename/path arm: a blob whose file
-	// path tokens cover at least this fraction of the query's DISTINCT terms casts
-	// an RRF vote. Unlike the symbol/dense arms it needs no external index — every
-	// blob has a path — so it is ON by default (the zero value means the 0.6
-	// default). A NEGATIVE value disables the arm entirely (and skips building the
-	// path index). This is the zoekt-style signal: a query like "federated server"
-	// finds mysql_create_federated_server.sql even when "federated" appears only in
-	// the filename and never in the content the lexical arm scores.
-	//
-	// The default 0.6 is higher than the symbol arm's 0.5 by design and was chosen
-	// on the pooled gold as the gate at which the arm is PURELY ADDITIVE — it never
-	// demotes a query below its no-path score. Path tokens are short and common, so
-	// a loose gate lets a one-token filename distractor (a file literally named for
-	// a couple of the query words but not the true definer) outvote the real result
-	// via RRF; 0.6 requires both terms of a 2-term query (a majority for longer
-	// ones), which gated out exactly the three gold queries that regressed at 0.5
-	// while keeping every win (e.g. "federated server"/"administration service"
-	// 0.0->1.0). See eval's gold sweep.
+	// PathMinCoverage gates filename/path votes by query-token coverage.
 	PathMinCoverage float64
 
-	// DenseMinScore gates the dense (embedding cosine) arm: a dense chunk casts its
-	// RRF vote only when its cosine similarity is at least this value. The dense arm
-	// pulls a fixed candidate pool (top-64 chunks) and, UNGATED, every chunk votes
-	// regardless of similarity. Measured on the pooled gold this is CONDITIONALLY
-	// good: dense lifts the synonym-gap / agent stratum (where a semantic match is the
-	// only signal — corpusGoldAgentNL: +dense NDCG 0.14->0.34) but REGRESSES the
-	// answerable gold (where lexical/path/symbol already win and low-cosine dense
-	// chunks are noise that displaces correct hits — 0.932->0.923). The threshold
-	// keeps the confident semantic matches and drops the noise.
-	//
-	// Cosine is in [-1,1] and SCALE-DEPENDENT on the embedder, so the default is
-	// calibrated for the bundled model (embed/onnx); a different Embedder may want a
-	// different value. The zero value means the default (see withDefaults); a NEGATIVE
-	// value DISABLES the gate (every dense chunk votes — the pre-gate behavior, used by
-	// hermetic fixture tests whose synthetic embedder has a different cosine scale).
-	// The gate only matters when the dense arm is active (store+emb set).
+	// DenseMinScore gates dense votes by cosine similarity. Negative values disable
+	// the gate; zero selects the bundled-model default. Calibration is model-specific.
 	DenseMinScore float64
 
-	// DenseMinQueryTerms gates the dense arm by QUERY LENGTH: the dense arm runs only
-	// when the query has at least this many DISTINCT terms. This is the additive
-	// mechanism the score gate could not provide. Short keyword queries ("generate
-	// csr", "void transaction") are the lexical/symbol/path arms' home turf, where the
-	// answer is already found and low-cosine dense chunks are pure noise that displaces
-	// it; longer natural-language queries ("migrate a recurring subscription from one
-	// processor to another") are where those arms are starved and a semantic match is
-	// the only signal. Gating dense to fire only on the long queries makes it PURELY
-	// ADDITIVE on the pooled gold — it never touches the (short) answerable queries
-	// (no regression) yet keeps the full lift on the (long) synonym-gap stratum. Unlike
-	// DenseMinScore this is embedder-agnostic (it never looks at cosine scale).
-	//
-	// The zero value means the default (see withDefaults); a NEGATIVE value disables
-	// the gate (dense runs for every query — the pre-gate behavior, used by hermetic
-	// fixture tests whose short synthetic queries exercise the dense plumbing).
+	// DenseMinQueryTerms reserves dense retrieval for longer natural-language queries.
 	DenseMinQueryTerms int
 }
 
@@ -129,11 +69,6 @@ func (c Config) withDefaults() Config {
 		c.PathMinCoverage = 0.6
 	}
 	if c.DenseMinQueryTerms == 0 {
-		// Dense fires only on queries with >= 5 distinct terms. Chosen on the pooled
-		// gold as the smallest value that is PURELY ADDITIVE: the (short) answerable
-		// queries are untouched — identical to the no-dense baseline — while the (long)
-		// synonym-gap stratum keeps its full lift (+0.21 NDCG / +0.42 recall). See
-		// eval's TestCorpusDenseGateSweep. A negative value disables the gate.
 		c.DenseMinQueryTerms = 5
 	}
 	// DenseMinScore intentionally has NO default bump: the cosine gate is an opt-in,
@@ -667,7 +602,7 @@ func (r *Ranker) denseAllowedFor(q string, terms []string) bool {
 	if r.cfg.DenseMinQueryTerms <= 0 {
 		return true // gate fully disabled (used by eval/measurement)
 	}
-	// Skip dense for a single-token identifier lookup (e.g. "DropCatchCheckout"): the
+	// Skip dense for a single-token identifier lookup (e.g. "CheckoutRequest"): the
 	// camelCase tokenizer expands one identifier into many subtokens, which would
 	// otherwise trip the term-count gate below and pay for a full embedding scan that
 	// the lexical/symbol arms already serve precisely. Dense earns its cost on

@@ -1,1 +1,0 @@
-public static class Shared { public static int Number => 1; }

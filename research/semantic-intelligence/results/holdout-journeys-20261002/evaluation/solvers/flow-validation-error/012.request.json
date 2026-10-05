@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"read_source","arguments":{"repo":"CleanArchitecture","path":"src/Application/Common/Behaviours/UnhandledExceptionBehaviour.cs","start_line":15,"end_line":30}}}

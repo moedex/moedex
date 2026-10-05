@@ -2,7 +2,7 @@
 
 - **Status:** Proposed
 - **Date:** 2026-08-14
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 
@@ -180,15 +180,8 @@ workspace before live navigation is enabled for repositories containing level-1 
 
 ## Evidence
 
-- The current index and CAS already deduplicate identical content by content hash and attach
-  multiple file references, which is the correct storage primitive for cross-branch reuse.
-- The incremental embedding store keys chunks from blob/content identity, so unchanged branch
-  content can reuse vectors once source metadata is separated from content identity.
-- `contextwin.Assemble` currently reports `Files[0]`; `search.appendRefs` emits every file reference.
-  Together they demonstrate why branch eligibility and provenance selection must be explicit at both
-  exact-search and ranked-context layers.
-- `MOEDEX05` serializes only repository, relative path, and absolute path for each file reference;
-  persisted branch/commit provenance requires a new format rather than an in-memory-only field.
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 

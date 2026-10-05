@@ -12,7 +12,7 @@ func symNames(syms []Symbol) map[string]Symbol {
 }
 
 func TestCSharpExtractor_TypesAndMethods(t *testing.T) {
-	src := []byte(`namespace TC.Certificates
+	src := []byte(`namespace Example.Certificates
 {
     public class ReIssueCertificate
     {

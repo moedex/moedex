@@ -184,15 +184,11 @@ func TestEvaluateZeroRelevantQueryExcludedFromMean(t *testing.T) {
 // TestRealCorpus runs the harness over a real repo if present, mirroring the
 // skip pattern in internal/diskstore/diskstore_test.go. It does NOT hard-fail
 // when the corpus is absent. The corpus dir is configurable via MOEDEX_EVAL_CORPUS;
-// it defaults to ~/TCGitlab/Services.Registrar/TC.SslApi.
+// no repository is selected implicitly.
 func TestRealCorpus(t *testing.T) {
 	dir := os.Getenv("MOEDEX_EVAL_CORPUS")
 	if dir == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			t.Skipf("no home dir: %v", err)
-		}
-		dir = filepath.Join(home, "TCGitlab", "Services.Registrar", "TC.SslApi")
+		t.Skip("set MOEDEX_EVAL_CORPUS to a local repository")
 	}
 	if _, err := os.Stat(dir); err != nil {
 		t.Skipf("corpus not present at %s: %v", dir, err)

@@ -1,7 +1,0 @@
-11:14:21 info: TC.CodeGraphApi.Extractors.CSharp.SolutionAnalyzer[0] Opening solution /Users/zakkeown/Code/moedex/.local/application-impact/comparison/codegraph-outbox-v2/source/Sample-Outbox.sln
-11:14:21 info: TC.CodeGraphApi.Extractors.CSharp.SolutionAnalyzer[0] Running dotnet restore "/Users/zakkeown/Code/moedex/.local/application-impact/comparison/codegraph-outbox-v2/source/Sample-Outbox.sln"
-11:14:22 info: TC.CodeGraphApi.Extractors.CSharp.SolutionAnalyzer[0] dotnet restore completed successfully
-11:14:24 info: TC.CodeGraphApi.Extractors.CSharp.SolutionAnalyzer[0] Analyzing 3 projects in solution
-11:14:25 info: TC.CodeGraphApi.Extractors.CSharp.SolutionAnalyzer[0] Stashed Roslyn diagnostics for Sample-Outbox: 10 files with issues
-11:14:25 info: TC.CodeGraphApi.Extractors.CSharp.SolutionAnalyzer[0] Extraction complete: 35 results from Sample-Outbox.sln (framework: Worker Service)
-11:14:25 info: TC.CodeGraphApi.Services.Pipeline.GraphBuffer[0] Edge resolution: 30 resolved, 108 dropped (CALLS=62, IMPLEMENTS=36, INHERITS=7, INJECTS=3)

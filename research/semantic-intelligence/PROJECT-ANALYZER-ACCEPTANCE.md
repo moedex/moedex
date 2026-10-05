@@ -98,14 +98,14 @@ score or paired CodeGraph claim is added.
 
 ## Preserved evidence and limits
 
-[Sealed result](results/project-analyzers-20261002/result.json): 397 files,
+Sealed result (archival evidence maintained separately): 397 files,
 10,129,941 bytes excluding its result manifest. SHA-256:
 `8742e28d5ae694ff4bcffa837547d8773886f4b167c69bf414c2bfbc380cbfcb`.
 
-[Final fixture](results/project-analyzers-20261002/evidence/fixture-final/result.json),
-[generated binding audit](results/project-analyzers-20261002/evidence/generated-binding-audit.json),
-[native MCP](results/project-analyzers-20261002/evidence/mcp-final/mcp-smoke.json), and
-[Quartz final failure](results/project-analyzers-20261002/evidence/quartz-final/stderr).
+Final fixture (archival evidence maintained separately),
+generated binding audit (archival evidence maintained separately),
+native MCP (archival evidence maintained separately), and
+Quartz final failure (archival evidence maintained separately).
 
 All files in five prior evidence archives were verified unchanged. No subagents
 or GPU were used. This is trusted project-build execution in an isolated copy,

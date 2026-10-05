@@ -1,2 +1,0 @@
-internal/app/mcpcmd/graphcache.go:25:2: open /Users/zakkeown/Library/Caches/go-build/18/18fd60a957badf67e1c86ee1da43b74b8ddbe36fe7730bf95f4da9a7f0479bbb-d: operation not permitted
-pattern ./...: open /Users/zakkeown/Library/Caches/go-build/18/18fd60a957badf67e1c86ee1da43b74b8ddbe36fe7730bf95f4da9a7f0479bbb-d: operation not permitted

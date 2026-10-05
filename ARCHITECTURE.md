@@ -87,7 +87,6 @@ All library code lives under `internal/`; executables under `cmd/`.
 | mcp | [`internal/mcp`](internal/mcp) | Serve typed search, graph, discovery, and navigation tools through the official MCP SDK over stdio and stateless Streamable HTTP; stamp snapshot-bound result identity | `ContextSearcher`, `SnapshotContextSearcher`; `Server`, `NewServer`, `Serve`; `IndexSearcher`, `NewIndexSearcher`, `SetEnclosingBytes`, `SearchContext`; `GraphAnnotator`, `SnapshotGraphAnnotator`, `WithGraphAnnotator`; `ToolSpecification`, `SnapshotIdentity` |
 | corpus | [`internal/corpus`](internal/corpus) | Corpus acquisition + freshness over glab/git (the only package that shells out to them; **not imported by the engine**) | `Runner`, `ExecRunner`; `Config`, `DefaultGroups`; `Project`, `Enumerate`; `Doctor`, `Report`; `CloneArgs`, `CloneProjects`; `Reconcile`, `PlanSync`, `SyncProjects`; `Reindex`; re-exports the `catalog` package's schema (`Catalog`, `Lock`, `LockedProject`, `IsManagedRoot`, `LoadCatalog`, `LoadLock`, `DefaultHost`, …) under its historical names |
 | corpus/catalog | [`internal/corpus/catalog`](internal/corpus/catalog) | Leaf managed-corpus schema (ownership marker + acquisition lock): zero os/exec, zero `Runner` — the seam that lets `internal/ingest` recognize a managed root and read its locked commit without pulling glab/git shell-out machinery into any default-build production binary (review finding F-17) | `Catalog`, `GroupPolicy`, `NewCatalog`, `IsManagedRoot`, `LoadCatalog`, `WriteCatalog`, `CatalogPath`; `Lock`, `LockedProject`, `LockStatus`, `NewLock`, `LoadLock`, `WriteLock`, `LockPath`; `DefaultHost` |
-| navigate | [`internal/navigate`](internal/navigate) | Experimental LSP-precise navigation arm (ADR 0017, `-tags lsp`): type-resolved go-to-def / find-refs / find-impls via an out-of-process language server over a hand-written stdlib JSON-RPC client; multi-language registry sized to the real corpus (csharp ~60% via `csharp-ls`; typescript/js; css/scss via vscode-css-language-server; cfml via `cflsp`; html; sql; go; python; ready-but-unused rust/cpp) — partial-capability servers degrade gracefully (a `-32601` unimplemented method → empty, not error), C#'s `DOTNET_ROOT` is resolved per-launch via `LangSpec.ResolveEnv`, and a shared per-(root,language) server pool with idle-TTL eviction + restart backoff, incremental `didChange` sync, and live-buffer overlays. Managed-corpus roots are never opened directly by an external server: the pool lazily materializes the exact locked commit into a writable cache and maps all inputs/results between canonical and scratch paths. No new go.mod dep (mirrors the dense arm's build-tag boundary). ADR 0018 adds name-based navigation on top: `workspace/symbol` (root-routed, merges every already-live language server for a polyglot root when no language is pinned) and `textDocument/documentSymbol` (file-routed, flattens the hierarchical `DocumentSymbol` shape and prefers `selectionRange` over the whole declaration range) — both return the named `Symbol` type, not a bare `Location` | `Pos`, `Location`, `Symbol`, `Navigator`; `Config`; `LSP`, `NewLSP`, `(*LSP) Definition/References/Implementations/WorkspaceSymbol/DocumentSymbol/SetOverlay/DropOverlay/NotifyChanged/Alive/Close`; `Pool`, `NewPool`, `(*Pool) Navigator/NavigatorFor/Definition/References/Implementations/WorkspaceSymbol/DocumentSymbol/SetOverlay/DropOverlay/NotifyChanged/Stats/Sweep/Close`; `Stats`; `LangSpec`, `LanguageForPath`, `SpecForLanguage`, `SpecForPath`; `ErrServerDead`; `const LSPCompiled` |
 | cli | [`internal/cli`](internal/cli) | Unified Fang/Cobra command tree, global configuration/progress flags, argv[0] compatibility dispatch | `Execute`, `NewRoot` |
 | tui | [`internal/tui`](internal/tui) | TTY-aware Bubble Tea search shell with debouncing, cancellation, graph panel, and OSC52 copy | `Run`, `IsInteractive`, `Options` |
 | app | [`internal/app`](internal/app) | Command adapters and shared search service; terminal packages never leak into engine code | command-specific `Main`/`MainContext`; `searchservice.Provider` |
@@ -272,7 +271,7 @@ which records a repo's *blob set* so a per-repo refresh is a pure set-diff.
 
 The retrieval correctness invariant — **moedex never under-approximates** (it
 returns every line ripgrep does) and returns no spurious lines — is scaled from
-the small `internal/search` parity test to the entire `~/TCGitlab` corpus by
+the small `internal/search` parity test to the entire `~/.moedex-managed` corpus by
 [`internal/parity`](internal/parity), driven by
 [`internal/app/paritycmd`](internal/app/paritycmd) and gated by `make verify` / `make parity`.
 
@@ -339,7 +338,7 @@ side (`moedex index`) produces and refreshes that directory; the daemon
   `OpenSymbols` builds one symbol index **per shard** and merges them into a
   `symbol.Corpus` — a corpus-wide `byName` lookup — then resolves each hit back to
   repo/path/line as a `SymbolSite`. This is what answers *"every repo that defines
-  or references `AccountBillingContactChanged`"* (`DefiningRepos` /
+  or references `AccountChanged`"* (`DefiningRepos` /
   `ReferencingRepos`), which the concatenated ranking index cannot: it flattens
   shard identity into a global blob ID. The merge itself keeps only a
   name → `[shard IDs]` posting list and resolves occurrences **on touch** from the
@@ -463,8 +462,8 @@ side (`moedex index`) produces and refreshes that directory; the daemon
 
 Everything above assumes the corpus is already on disk. `moedex corpus` is the
 setup-and-freshness operator that *puts* it there and keeps it current — the one
-component that reaches outside the box, to TurnCommerce's internal GitLab
-(`gitlab.tcdevops.com`, and only that host). It is deliberately quarantined from
+component that reaches outside the box, to configured's internal GitLab
+(selected by `MOEDEX_GITLAB_HOST` for each operation). It is deliberately quarantined from
 the engine: it lives in its own package, shells out to `glab`, `git`, and the
 unified `moedex index` command behind a `Runner` seam (so all of its logic is unit-tested
 without a network), and is **never imported by** `internal/*` or the daemon — the
@@ -482,9 +481,8 @@ default-build production binary (review finding F-17).
   handles tokens), and is `git` present? It reports the projected repo count and,
   on failure, the exact remediation (`glab auth login --hostname …`).
 - **clone** ([`clone.go`](internal/corpus/clone.go)) — enumerate the curated
-  projects (a top-level-group allowlist over all *visible* non-archived projects,
-  which reproduces today's ~484-repo mirror; the default list is embedded), then
-  shallow-clone (`--depth 1 --single-branch`, LFS skipped, non-interactive ssh)
+  projects using an explicit top-level-group allowlist over all *visible*
+  non-archived projects, then shallow-clone (`--depth 1 --single-branch`, LFS skipped, non-interactive ssh)
   each into `<root>/<path_with_namespace>` with a bounded-concurrency worker pool.
   Idempotent.
 - **sync** ([`sync.go`](internal/corpus/sync.go)) — reconcile the enumerated set
@@ -561,7 +559,7 @@ tool's voice (the parallel clones are his tentacles).
   `build`/`check`/`refresh`): detect changed repos by git HEAD and rebuild only the
   affected shards.
 - **Corpus acquisition + freshness** (`internal/corpus` + `moedex corpus`): a
-  setup tool that checks/guides glab auth (gitlab.tcdevops.com only), shallow-clones
+  setup tool that checks/guides configured GitLab authentication, shallow-clones
   the curated repo set using the operator's own access, and on a schedule pulls
   fresh + drives the per-blob-delta reindex (`cas-refresh` → `cas-export -deduped`)
   + reloads the daemon. Shells out to glab/git; the engine never

@@ -132,9 +132,9 @@ Each task was committed atomically:
 ```json
 {
   "version": 1,
-  "host": "gitlab.tcdevops.com",
+  "host": "gitlab.example.com",
   "group_policy": {
-    "top_level_groups": ["Libraries.Common", "Services.Payment"]
+    "top_level_groups": ["Libraries.Common", "services"]
   },
   "ref_policy": "default"
 }
@@ -150,7 +150,7 @@ Each task was committed atomically:
     {
       "id": 101,
       "path_with_namespace": "group/project",
-      "clone_url": "git@gitlab.tcdevops.com:group/project.git",
+      "clone_url": "git@gitlab.example.com:group/project.git",
       "default_branch": "main",
       "default_commit": "0123456789abcdef0123456789abcdef01234567",
       "status": "current"

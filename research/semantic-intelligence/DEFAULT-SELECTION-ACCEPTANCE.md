@@ -89,7 +89,7 @@ Fresh independent tasks and paired CodeGraph evaluation remain separate gates.
 Independent agent coverage remains **3/12**. No additional large-corpus resource
 measurement or production deployment is claimed.
 
-[Hashed evidence inventory](results/default-selection-20261001/result.json)
+Hashed evidence inventory (archival evidence maintained separately)
 retains public transcripts, native captures, test logs, provenance, implementation
 source copies, and predecessor inventory verification. Expensive binaries and
 indexes remain local, outside the tracked evidence archive.

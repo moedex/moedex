@@ -40,7 +40,7 @@ There is no recursive traversal or change to `compiler_contract_paths` semantics
 ## Frozen applications
 
 Expectations were written from source before the first capture, then hashed in
-[pre-capture-freeze.json](results/fresh-paths-20261001/pre-capture-freeze.json).
+pre-capture-freeze.json (archival evidence maintained separately).
 No source expectation or extractor was adjusted to match output. These are
 source-authored development baselines, not blind agent evaluations.
 
@@ -106,5 +106,5 @@ coverage remains **3/12**; paired CodeGraph evaluation and competitive superiori
 remain unproved.
 
 The reproducible evidence inventory is
-[result.json](results/fresh-paths-20261001/result.json). Large corpora, dependency
+result.json (archival evidence maintained separately). Large corpora, dependency
 caches, binaries and indexes remain under `.local/fresh-paths/`.

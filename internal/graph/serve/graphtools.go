@@ -126,6 +126,8 @@ type GraphEdge struct {
 type GraphQueryResult struct {
 	Tool           string      `json:"tool"`
 	Query          string      `json:"query"`
+	Repo           string      `json:"repo,omitempty"`
+	Path           string      `json:"path,omitempty"`
 	Depth          int         `json:"depth"`
 	Nodes          []GraphNode `json:"nodes"`
 	Edges          []GraphEdge `json:"edges"`
@@ -614,9 +616,11 @@ func (t *graphTool) Descriptor() map[string]interface{} {
 	description := ""
 	switch t.name {
 	case "trace_calls":
-		description = "Trace callers and callees of a symbol through confidence-scored call edges from the mmap graph."
+		description = "Trace callers and callees of a symbol through confidence-scored call edges from the mmap graph. Optional repo/path select starting declarations; traversal can cross repositories."
 		schema["properties"] = map[string]interface{}{
 			"symbol": map[string]interface{}{"type": "string", "minLength": 1, "description": "Exact symbol name to trace."},
+			"repo":   map[string]interface{}{"type": "string", "minLength": 1, "description": "Exact indexed repository for starting declarations; omitted searches all repositories."},
+			"path":   map[string]interface{}{"type": "string", "minLength": 1, "description": "Exact repository-relative file for starting declarations. Requires repo; no suffix matching."},
 			"hops":   depth,
 		}
 		schema["required"] = []string{"symbol"}
@@ -686,9 +690,11 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 	switch t.name {
 	case "trace_calls":
 		var args struct {
-			Symbol        string `json:"symbol"`
-			Hops          *int   `json:"hops"`
-			MinConfidence string `json:"min_confidence"`
+			Symbol        string  `json:"symbol"`
+			Repo          *string `json:"repo"`
+			Path          *string `json:"path"`
+			Hops          *int    `json:"hops"`
+			MinConfidence string  `json:"min_confidence"`
 		}
 		if err := decodeGraphArgs(raw, &args); err != nil {
 			return invalidGraphArgs(err, snap), nil
@@ -696,6 +702,22 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 		args.Symbol = strings.TrimSpace(args.Symbol)
 		if err := validateGraphString("symbol", args.Symbol); err != nil {
 			return invalidGraphArgs(err, snap), nil
+		}
+		var repo, file string
+		if args.Repo != nil {
+			repo = *args.Repo
+			if err := validateGraphString("repo", repo); err != nil {
+				return invalidGraphArgs(err, snap), nil
+			}
+		}
+		if args.Path != nil {
+			file = *args.Path
+			if err := validateGraphString("path", file); err != nil {
+				return invalidGraphArgs(err, snap), nil
+			}
+		}
+		if file != "" && repo == "" {
+			return invalidGraphArgs(errors.New("path requires repo"), snap), nil
 		}
 		hops := defaultTraceDepth
 		if args.Hops != nil {
@@ -707,7 +729,7 @@ func (t *graphTool) Call(ctx context.Context, raw json.RawMessage) (map[string]i
 		if minConfidence, err = graph.ParseMinConfidence(args.MinConfidence); err != nil {
 			return invalidGraphArgs(err, snap), nil
 		}
-		result, err = snap.traceCalls(ctx, args.Symbol, hops, minConfidence)
+		result, err = snap.traceCallsScoped(ctx, args.Symbol, repo, file, hops, minConfidence)
 	case "trace_consumers":
 		var args struct {
 			Name          string `json:"name"`
@@ -935,10 +957,28 @@ func (s *graphSnapshot) errorResult(code, message string, blobSHAs ...string) ma
 }
 
 func (s *graphSnapshot) traceCalls(ctx context.Context, symbol string, hops int, minConfidence graph.ConfidenceTier) (GraphQueryResult, error) {
+	return s.traceCallsScoped(ctx, symbol, "", "", hops, minConfidence)
+}
+
+func (s *graphSnapshot) traceCallsScoped(ctx context.Context, symbol, repo, file string, hops int, minConfidence graph.ConfidenceTier) (GraphQueryResult, error) {
 	roots := append([]diskgraph.Key(nil), s.bySymbol[symbol]...)
-	return s.traverse(ctx, "trace_calls", symbol, roots, hops, true, minConfidence, func(t diskgraph.EdgeType) bool {
+	if repo != "" {
+		selected := roots[:0]
+		for _, key := range roots {
+			for _, location := range s.nodes[key].Locations {
+				if location.Repo == repo && (file == "" || location.Path == file) {
+					selected = append(selected, key)
+					break
+				}
+			}
+		}
+		roots = selected
+	}
+	result, err := s.traverse(ctx, "trace_calls", symbol, roots, hops, true, minConfidence, func(t diskgraph.EdgeType) bool {
 		return t == diskgraph.EdgeCalls
 	})
+	result.Repo, result.Path = repo, file
+	return result, err
 }
 
 func (s *graphSnapshot) traceConsumers(ctx context.Context, name string, minConfidence graph.ConfidenceTier) (GraphQueryResult, error) {

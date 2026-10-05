@@ -89,8 +89,8 @@ func WithGraphAnnotator(a GraphAnnotator) Option {
 // provenance of that relationship (Confidence, and Similarity for SIMILAR_TO).
 //
 // ID is the graph node id ("<blob_sha>:<symbol_offset>") — the same identity the
-// standalone graph tools return, so a neighbor can be followed up with
-// trace_calls / impact_analysis without a re-resolution step.
+// standalone graph tools return. Follow up through trace_calls using Symbol
+// and the Repo/RelPath root selectors; the ID itself is not a symbol argument.
 type Neighbor struct {
 	ID         string           `json:"id"`
 	Symbol     string           `json:"symbol,omitempty"`

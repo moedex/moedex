@@ -14,11 +14,17 @@ import (
 	"moedex/internal/corpus/catalog"
 )
 
-// DefaultHost is the ONLY GitLab host moedex-corpus talks to. The whole tool is
-// pinned to TurnCommerce's internal GitLab by design — it never authenticates to
-// or clones from anywhere else (no gitlab.com, no other instance). It re-exports
-// internal/corpus/catalog.DefaultHost so the two never drift apart.
+// DefaultHost is a placeholder used in examples and synthetic fixtures.
+// Set MOEDEX_GITLAB_HOST for acquisition from an authenticated GitLab instance.
 const DefaultHost = catalog.DefaultHost
+
+// ConfiguredHost returns the deployment-selected acquisition host.
+func ConfiguredHost() string {
+	if host := os.Getenv("MOEDEX_GITLAB_HOST"); host != "" {
+		return host
+	}
+	return DefaultHost
+}
 
 // DefaultCorpusDirName is the corpus root under the user's home directory when
 // neither an explicit path nor MOEDEX_CORPUS is given. It matches the engine's
@@ -36,7 +42,7 @@ func DefaultConcurrency() int {
 
 // Config is the resolved settings for a corpus operation.
 type Config struct {
-	Host        string   // pinned to DefaultHost
+	Host        string   // pinned for each acquisition operation
 	Root        string   // corpus root (absolute)
 	Groups      []string // top-level namespace allowlist (sorted, de-duplicated); empty means "no filter"
 	Concurrency int      // parallel git operations
@@ -94,7 +100,7 @@ func LoadGroups(path string) ([]string, error) {
 
 // GroupsFromDisk derives an allowlist from an existing mirror: every immediate
 // subdirectory of root (excluding dotfiles like .git/.DS_Store) is a top-level
-// group. This reproduces today's curation from a populated ~/TCGitlab so the
+// group. This reproduces today's curation from a populated ~/.moedex-managed so the
 // default list can be regenerated and committed. The result is sorted.
 func GroupsFromDisk(root string) ([]string, error) {
 	entries, err := os.ReadDir(root)

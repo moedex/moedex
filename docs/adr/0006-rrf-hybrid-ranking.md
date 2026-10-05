@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-25
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 Grep returns matches in scan order; an agent needs them **ranked**. CodeRAG-Bench overturned the old "BM25 always wins on code" wisdom — dense models now frequently surpass BM25 semantically, while BM25 still wins on exact identifiers — so the initial research verdict was **hybrid: lexical for exact symbols, dense for intent, plus filename and symbol signals, fused.** Fusing arms whose scores live on different scales (BM25 magnitudes vs cosine in [0,1] vs coverage fractions) needs either careful score calibration or a rank-based fusion that sidesteps it. A learned reranker is the higher ceiling but needs a labeled gold set to train and tune against — which did not exist when ranking was first built. The design lineage and source links are retained in [`ARCHITECTURE.md`](../../ARCHITECTURE.md#design-lineage).
@@ -27,7 +27,9 @@ A learned reranker (GBDT/LambdaMART or cross-encoder) is **explicitly deferred**
 - Four gates means four knobs to keep honest; the gold gate (`gold_gate_test.go`) is what stops a regression from a mis-set gate.
 
 ## Evidence
-On the gold set, production MeanNDCG ≈ **0.93** (hard CI floor 0.85), lexical-only ≈ 0.64 → 0.89 with the path arm. The path and symbol arms proved **complementary, not redundant** (production 0.93 ≫ either alone ~0.84). The dense arm proved complementary on a synonym-gap/agent-NL stratum (+0.21 NDCG / +0.42 recall there) while being net-negative on the grep-style gold — which is exactly why it is query-length gated rather than always on.
+
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 [0007](./0007-optional-dense-arm.md), [0008](./0008-polyglot-symbol-sidecar.md), [0009](./0009-agent-context-api.md), [0014](./0014-eval-harness-gold-gate.md).

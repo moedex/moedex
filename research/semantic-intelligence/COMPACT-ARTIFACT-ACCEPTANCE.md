@@ -78,7 +78,7 @@ heldout evidence after development tuning.
 
 ## Evidence
 
-[Sealed result manifest](results/compact-artifacts-20261002/result.json) records
+Sealed result manifest (archival evidence maintained separately) records
 source snapshots, tests, capture/publication commands, fixture cases, exact size
 accounting, raw native MCP exchanges and prior-archive integrity checks. Large
 local artifacts, dependencies and binaries remain under `.local/compact-artifacts`

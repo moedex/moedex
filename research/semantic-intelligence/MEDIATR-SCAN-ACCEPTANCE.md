@@ -59,10 +59,10 @@ fixture uses SDK8 and MediatR12.0.1; the metadata owner boundary is explicit.
 - Both frozen captures preserve commits, tracked source hashes and source gold.
   All 21 anchors resolve and every previous observation remains present.
 
-Evidence: [manifest](results/mediatr-scan-20261001/result.json),
-[marker navigation](results/mediatr-scan-20261001/public/navigation/report.json),
-[eShopOnWeb observations](results/mediatr-scan-20261001/public/eShopOnWeb-public/report.json),
-[ForkJoint observations](results/mediatr-scan-20261001/public/ForkJoint-public/report.json).
+Evidence: manifest (archival evidence maintained separately),
+marker navigation (archival evidence maintained separately),
+eShopOnWeb observations (archival evidence maintained separately),
+ForkJoint observations (archival evidence maintained separately).
 The archive retains source snapshots, native streams, capture metadata, validation
 logs and public requests/responses. Previous milestone archives remain unchanged.
 Corpora, dependency caches, binaries and generated indices stay local.

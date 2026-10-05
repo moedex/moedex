@@ -1,5 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/zakkeown/Code/moedex/research/semantic-intelligence/agent-journeys/check_framework_bridge.py", line 54, in <module>
-    assert len(alternatives)==1,alternatives
-           ^^^^^^^^^^^^^^^^^^^^
-AssertionError: []

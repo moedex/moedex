@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"read_source","arguments":{"repo":"CleanArchitecture","path":"src/Domain/Entities/TodoItem.cs","start_line":13,"end_line":26,"format":"text"}}}

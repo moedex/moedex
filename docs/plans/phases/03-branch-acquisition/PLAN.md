@@ -29,7 +29,7 @@ requirements:
   - ADR-0020
   - ADR-0021
 user_setup:
-  - Active TC VPN and authenticated `glab`/Git transport for the real-corpus capacity run.
+  - Active required network and authenticated `glab`/Git transport for the real-corpus capacity run.
   - A reviewed disk, memory, refresh-duration, and daemon-RSS budget for all-head indexing.
 must_haves:
   truths:

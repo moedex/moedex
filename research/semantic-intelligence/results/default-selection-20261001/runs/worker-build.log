@@ -1,9 +1,0 @@
-  Determining projects to restore...
-  Restored /Users/zakkeown/Code/moedex/.local/default-selection/worker/Moedex.SemanticWorker.csproj (in 23 ms).
-  Moedex.SemanticWorker -> /Users/zakkeown/Code/moedex/.local/default-selection/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll
-
-Build succeeded.
-    0 Warning(s)
-    0 Error(s)
-
-Time Elapsed 00:00:01.70

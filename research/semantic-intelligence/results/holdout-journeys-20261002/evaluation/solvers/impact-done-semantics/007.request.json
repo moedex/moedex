@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"read_source","arguments":{"repo":"CleanArchitecture","path":"src/Infrastructure/DependencyInjection.cs","format":"text","start_line":1,"end_line":90}}}

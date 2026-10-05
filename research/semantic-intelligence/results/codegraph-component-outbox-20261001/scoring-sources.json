@@ -1,8 +1,0 @@
-{
-  "research/semantic-intelligence/score-codegraph-component.py": "014d50299badf88429adf02a71cffb25583744dde78796c140cc41c8c11ad1b8",
-  "research/semantic-intelligence/test_score_codegraph_component.py": "af32f26d1e68a1c30b480e0714df4b160c8b6d5c5f84ed657621e05a551cea30",
-  "research/semantic-intelligence/score-codegraph-component-v2.py": "9d3a451f703c68a75a52e8e79aa769e2f72d0716269ba25dd0824fc277dae349",
-  "research/semantic-intelligence/test_score_codegraph_component_v2.py": "5540010f916a59de6f887508addd1c6b49aee7cf6d1bdc3d44c6784ab0c1fab2",
-  "research/semantic-intelligence/score-moedex-component.py": "3d8e6179cf73469a5391e94a63cb5d368c52b1c529939c918d4b7b53afe205ed",
-  "research/semantic-intelligence/test_score_moedex_component.py": "46a28d93f396c5df7cb2e20d4e633cbb5c8c82640c5425672a328cca00f67bc2"
-}

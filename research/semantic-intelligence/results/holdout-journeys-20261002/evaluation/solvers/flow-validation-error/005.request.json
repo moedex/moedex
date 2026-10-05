@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"search_context","arguments":{"repo":"CleanArchitecture","query":"ValidationException","path_prefix":"src/Application/Common/Exceptions","top_k":1,"token_budget":1500}}}

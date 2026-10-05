@@ -2,10 +2,10 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-25
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
-Zoekt shards roughly per-repo, with `uint32` offsets capping a shard at 4 GB / content at 1 GB. The initial research pass identified the single highest-leverage change as **GitHub Blackbird's content-addressable architecture**: shard by git blob SHA so identical content is stored once. With content dedup + delta indexing, GitHub collapsed ~115 TB raw → ~28 TB unique. A polyglot corpus like `~/TCGitlab` (vendored libraries, forks, copied config) has heavy cross-repo and cross-shard content duplication that per-repo sharding pays for repeatedly. The source and its historical-scale caveat are retained in [`ARCHITECTURE.md`](../../ARCHITECTURE.md#design-lineage).
+Zoekt shards roughly per-repo, with `uint32` offsets capping a shard at 4 GB / content at 1 GB. The initial research pass identified the single highest-leverage change as **GitHub Blackbird's content-addressable architecture**: shard by git blob SHA so identical content is stored once. With content dedup + delta indexing, GitHub collapsed ~115 TB raw → ~28 TB unique. A polyglot corpus like `~/.moedex-managed` (vendored libraries, forks, copied config) has heavy cross-repo and cross-shard content duplication that per-repo sharding pays for repeatedly. The source and its historical-scale caveat are retained in [`ARCHITECTURE.md`](../../ARCHITECTURE.md#design-lineage).
 
 ## Decision
 Address all content by **git blob SHA** and store each unique blob **once corpus-wide**, with a per-blob delta refresh path and a deduped served format.
@@ -26,7 +26,9 @@ Address all content by **git blob SHA** and store each unique blob **once corpus
 - The non-`-deduped` `cas-export` still writes the inlined `MOEDEX03` bridge, kept as the proven default; a delta-aware deduped *re-export* (append only net-new content + rewrite only affected shards) exists but the legacy `moedex-index refresh` path is still shard-level ([0011](./0011-shard-level-freshness.md)).
 
 ## Evidence
-`cas-build` prints the dedup ratio (raw / stored bytes) directly on the live corpus. The deduped served path is proven byte-for-byte parity-clean against the direct inlined build and ripgrep by the deduped arm of `blobstore.TestCASExportParityCorpus` — `server.Corpus`/`RankCorpus` resolve content from the one shared mmap'd store and return identical `(file, line)` matches. The manifest write fsyncs the completeness marker so a hard crash never indexes non-durable bytes.
+
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 [0001](./0001-single-node-scope-pure-go-default.md), [0005](./0005-mmap-compact-postings.md), [0010](./0010-warm-serving-spine.md), [0011](./0011-shard-level-freshness.md).

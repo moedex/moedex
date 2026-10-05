@@ -143,7 +143,7 @@ func newManagedWorkspaceFixture(t *testing.T) (root, repo, commit string) {
 	lock, err := catalog.NewLock(catalog.DefaultHost, true, []catalog.LockedProject{{
 		ID:                101,
 		PathWithNamespace: "group/project",
-		CloneURL:          "git@gitlab.tcdevops.com:group/project.git",
+		CloneURL:          "git@gitlab.example.com:group/project.git",
 		DefaultBranch:     "main",
 		DefaultCommit:     commit,
 		Status:            catalog.LockStatusCurrent,

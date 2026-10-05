@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"read_source","arguments":{"path":"src/Infrastructure/DependencyInjection.cs","start_line":15,"end_line":42}}}

@@ -80,7 +80,7 @@ func goldLiteral(blobs map[string]string, q string) []string {
 func parityCorpus() map[string]string {
 	return map[string]string{
 		"a.go":  "package main\nfunc Handler(w http.ResponseWriter) {}\nvar itemAnswer = 1\n",
-		"b.cs":  "namespace TC.SslApi;\npublic class SslService {\n  string Token;\n  void get() {}\n}\n",
+		"b.cs":  "namespace Example.SslApi;\npublic class SslService {\n  string Token;\n  void get() {}\n}\n",
 		"c.txt": "the quick brown fox\nfoobar baz qux\nFOOBAR upper line\nFooBar mixed case\n",
 		"d.js": strings.Repeat("var x=function(y){return z(y)};\n", 30) +
 			"var Razavi_0 = itemAnswer(0);\n" +

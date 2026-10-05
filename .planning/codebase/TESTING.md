@@ -208,7 +208,7 @@ func TestParitySynthetic(t *testing.T) {
 		}
 		return p
 	}
-	write("a.cs", "namespace TC.SslApi;\npublic class SslService {\n ... }\n")
+	write("a.cs", "namespace Example.SslApi;\npublic class SslService {\n ... }\n")
 	write("unicode.txt", "let prix = café_au_lait;\nΣumма = Δ + ß\nplain ascii line\n")
 	dup := "marker line\nZZUNIQUEDUPTOKEN appears here\n"
 	write("dup1.cs", dup)

@@ -104,7 +104,7 @@ func TestSelectiveNeverUnderApproxVsAllTrigram(t *testing.T) {
 		"package main\nfunc Handler(w http.ResponseWriter) {}\n",
 		"the quick brown fox\nfoobar baz qux\n",
 		"public class SslService {\n  string Token;\n}\n",
-		"namespace TC.Api;\nusing System;\n",
+		"namespace Example.Api;\nusing System;\n",
 		"var x = function(y) { return z(y); };\n",
 		"alpha beta gamma\ndelta epsilon\n",
 		"foobar appears again here\n",

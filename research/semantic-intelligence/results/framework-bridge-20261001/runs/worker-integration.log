@@ -1,9 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/zakkeown/Code/moedex/tools/semantic-dotnet/test_worker.py", line 88, in <module>
-    output, rows = extract(project, 2 if project.startswith('Broken') else 0)
-                   ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/zakkeown/Code/moedex/tools/semantic-dotnet/test_worker.py", line 42, in extract
-    output = run([dll, '--repo', 'fixture', '--root', root, '--project', project, '--framework', 'net10.0', '--sdk-path', a.sdk_path, '--configuration', config], expected)
-  File "/Users/zakkeown/Code/moedex/tools/semantic-dotnet/test_worker.py", line 34, in run
-    raise AssertionError((args, result.returncode, result.stdout.decode(errors='replace')[-4000:], result.stderr.decode(errors='replace')))
-AssertionError: ([PosixPath('/Users/zakkeown/Code/moedex/.local/framework-bridge/worker-integration/worker/bin/Debug/net10.0/Moedex.SemanticWorker.dll'), '--repo', 'fixture', '--root', PosixPath('/Users/zakkeown/Code/moedex/.local/framework-bridge/worker-integration/fixture'), '--project', 'App/App.csproj', '--framework', 'net10.0', '--sdk-path', '/Users/zakkeown/Code/moedex/.local/application-impact/dotnet/sdk/10.0.100', '--configuration', 'Debug'], 1, '', 'semantic worker failed: RemoteInvocationException: An exception of type System.InvalidOperationException was thrown: Error while calling hostfxr function hostfxr_resolve_sdk2. Error code: -2147450725 Detailed error: A compatible .NET SDK was not found.\n\nRequested SDK version: 8.0.400\nglobal.json file: /Users/zakkeown/Code/moedex/.local/framework-bridge/global.json\n\nInstalled SDKs:\n\nInstall the [8.0.400] .NET SDK or update [/Users/zakkeown/Code/moedex/.local/framework-bridge/global.json] to match an installed SDK.\n\nLearn about SDK resolution:\nhttps://aka.ms/dotnet/sdk-not-found\n\n')

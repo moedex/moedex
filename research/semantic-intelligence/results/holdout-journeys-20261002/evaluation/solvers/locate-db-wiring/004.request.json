@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"search_context","arguments":{"query":"AuditableEntityInterceptor DispatchDomainEventsInterceptor","repo":"CleanArchitecture","path_prefix":"src/Infrastructure/Data/Interceptors","top_k":2,"token_budget":3000,"graph_depth":0}}}
