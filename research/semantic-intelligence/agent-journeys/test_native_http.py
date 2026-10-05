@@ -72,6 +72,31 @@ class ResponseTests(unittest.TestCase):
         self.assertEqual(receipt['error'],'response_cap_exceeded')
         self.assertFalse(receipt['transport_complete'])
 
+    def test_declared_body_truncated_at_eof_remains_incomplete(self):
+        class Sock:
+            def settimeout(self, _): pass
+        class Response:
+            status = 200
+            length = 10
+            def getheader(self, _): return None
+            def read1(self, count):
+                if self.length == 10:
+                    self.length -= 7
+                    return b'partial'
+                return b''
+        class Connection:
+            sock = Sock()
+            def __init__(self, *args, **kwargs): pass
+            def request(self, *args): pass
+            def getresponse(self): return Response()
+            def close(self): pass
+        with patch('native_http.http.client.HTTPConnection', Connection):
+            _, raw, receipt = NativeHTTP('http://localhost/mcp').exchange({'id': 1, 'method': 'tools/list'})
+        self.assertEqual(raw, b'partial')
+        self.assertEqual(receipt['body_bytes_observed'], 7)
+        self.assertEqual(receipt['error'], 'IncompleteRead')
+        self.assertFalse(receipt['transport_complete'])
+
 
 if __name__ == '__main__':
     unittest.main()

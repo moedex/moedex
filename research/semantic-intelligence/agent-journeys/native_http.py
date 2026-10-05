@@ -82,6 +82,10 @@ class NativeHTTP:
                 sock.settimeout(remaining)
                 block = response.read1(min(65536, self.cap + 1 - size))
                 if not block:
+                    # read1() can return EOF without raising IncompleteRead even
+                    # when Content-Length still promises additional bytes.
+                    if getattr(response, 'length', 0) not in (None, 0):
+                        raise http.client.IncompleteRead(b'', response.length)
                     complete = True
                     break
                 parts.append(block)
