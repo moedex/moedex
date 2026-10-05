@@ -616,7 +616,7 @@ func (t *graphTool) Descriptor() map[string]interface{} {
 	description := ""
 	switch t.name {
 	case "trace_calls":
-		description = "Trace callers and callees of a symbol through confidence-scored call edges from the mmap graph. Optional repo/path select starting declarations; traversal can cross repositories."
+		description = "Trace candidate callers and callees through confidence-scored edges from the mmap graph. Use compiler_trace_calls for exact recorded compiler invocations with explicit build contexts and source witnesses. Optional repo/path select starting declarations; traversal can cross repositories."
 		schema["properties"] = map[string]interface{}{
 			"symbol": map[string]interface{}{"type": "string", "minLength": 1, "description": "Exact symbol name to trace."},
 			"repo":   map[string]interface{}{"type": "string", "minLength": 1, "description": "Exact indexed repository for starting declarations; omitted searches all repositories."},

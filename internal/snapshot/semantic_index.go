@@ -5,7 +5,7 @@ import "fmt"
 const (
 	SemanticIndexComponent       = "semantic_index"
 	SemanticIndexFormat          = "moedex.semantic-index"
-	SemanticIndexVersion         = 5
+	SemanticIndexVersion         = 6
 	SemanticIndexPath            = "semantic/index.msi"
 	SemanticIndexMaxBytes  int64 = 128 << 20
 	SemanticIndexScope           = "recorded-compiler-context"

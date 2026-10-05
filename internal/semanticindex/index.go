@@ -19,12 +19,14 @@ import (
 const legacyHeaderSize = 320
 const contractHeaderSize = 336
 const implementationHeaderSize = 384
-const headerSize = 400
+const interfaceHeaderSize = 400
+const headerSize = 416
 const legacySectionCount = 11
 const domainSectionCount = 12
 const contractSectionCount = 13
 const implementationSectionCount = 16
-const sectionCount = 17
+const interfaceSectionCount = 17
+const sectionCount = 18
 const (
 	strdir = iota
 	strdata
@@ -43,9 +45,10 @@ const (
 	invocationPostings
 	implementationPostings
 	interfacePostings
+	callerPostings
 )
 
-var widths = [sectionCount]uint64{16, 1, 40, 56, 48, 48, 128, 8, 8, 8, 16, 16, 32, 16, 8, 24, 24}
+var widths = [sectionCount]uint64{16, 1, 40, 56, 48, 48, 128, 8, 8, 8, 16, 16, 32, 16, 8, 24, 24, 8}
 var le = binary.LittleEndian
 
 type section struct{ off, n uint64 }
@@ -269,6 +272,10 @@ func Build(path string, a *semantic.Artifact, p Provenance) error {
 	sort.Slice(invocations, func(i, j int) bool { return less3(x.invocationKey(invocations[i]), x.invocationKey(invocations[j])) })
 	for _, row := range invocations {
 		push(invocationPostings, row)
+	}
+	sort.Slice(invocations, func(i, j int) bool { return less3(x.callerKey(invocations[i]), x.callerKey(invocations[j])) })
+	for _, row := range invocations {
+		push(callerPostings, row)
 	}
 	sort.Slice(implementations, func(i, j int) bool {
 		return lessContractPosting(x.implementationKey(implementations[i]), x.implementationKey(implementations[j]))

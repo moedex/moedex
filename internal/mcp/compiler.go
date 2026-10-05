@@ -32,7 +32,7 @@ type CompilerSessionProvider interface {
 // CompilerTools has a stable catalog even when the current generation has no
 // query index. Every invocation acquires its own immutable serving lease.
 func CompilerTools(provider CompilerSessionProvider) []ToolHandler {
-	return []ToolHandler{&compilerTool{provider, "compiler_binding_at"}, &compilerTool{provider, "compiler_definitions"}, &compilerContractImpactTool{provider: provider}, &compilerContractContextTool{provider: provider}, &compilerContractPathsTool{provider: provider}, &compilerImplementationsTool{provider: provider}, &compilerSymbolsTool{provider: provider}, &compilerEvidencePathTool{provider: provider}}
+	return []ToolHandler{&compilerTool{provider, "compiler_binding_at"}, &compilerTool{provider, "compiler_definitions"}, &compilerContractImpactTool{provider: provider}, &compilerContractContextTool{provider: provider}, &compilerContractPathsTool{provider: provider}, &compilerImplementationsTool{provider: provider}, &compilerSymbolsTool{provider: provider}, &compilerEvidencePathTool{provider: provider}, &compilerCallTraceTool{provider: provider}}
 }
 
 type compilerTool struct {

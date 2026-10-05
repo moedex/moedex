@@ -72,7 +72,7 @@ func TestCompilerContractDiscoveryRequiresSelection(t *testing.T) {
 	reader.result.Truncated = true
 	provider := &compilerProviderFixture{reader: reader}
 	tools := CompilerTools(provider)
-	if len(tools) != 8 || tools[2].Name() != "compiler_contract_impact" {
+	if len(tools) != 9 || tools[2].Name() != "compiler_contract_impact" {
 		t.Fatal("tool registration missing")
 	}
 	out := contractPayload(t, tools[2], `{"symbol_id":"symbol:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","limit":1}`)

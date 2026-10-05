@@ -22,7 +22,8 @@ import (
 
 const catalogCacheTTL = 5 * time.Minute
 
-const serverInstructions = "Use search_context with an explicit token_budget to retrieve ranked code context. " +
+const serverInstructions = "Use compiler_trace_calls with exact method IDs and explicitly selected contexts when compiler evidence is available; trace_calls returns confidence-scored graph candidates. " +
+	"Use search_context with an explicit token_budget to retrieve ranked code context. " +
 	"Check list_repos.graph_available before graph traversal; false leaves source discovery available and says nothing about compiler or LSP support. " +
 	"Clients reading structuredContent can request format=structured on search_context and read_source to avoid duplicate source in the text fallback. " +
 	"Text source excerpts number lines for citations; cite relevant lines and verify narrow ranges with read_source. Structured source text remains unnumbered for hash and compiler-offset verification. " +
