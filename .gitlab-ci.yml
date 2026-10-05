@@ -1,18 +1,20 @@
 # moedex CI.
 #
-# Two stages:
+# Two validation stages:
 #   gate   — `make health` (build + vet + test) on every push and MR. Fast.
 #            The image installs ripgrep so internal/search's rg-backed parity
 #            unit tests (parity_test.go) actually run here instead of
 #            skipping via requireRipgrep.
-#   parity — `make parity` (full-corpus ripgrep parity). Runs on schedules
-#            and tags, AND on any MR that touches internal/query,
-#            internal/search, or internal/parity (CLAUDE.md: those packages
-#            "must keep make verify green"). Requires a SELF-HOSTED runner
+#   parity — corpus-dependent product checks. Full-corpus ripgrep parity runs
+#            on schedules and tags; private graph-gold evaluation runs on
+#            schedules. Neither blocks ordinary pushes or MRs. These checks
+#            require a SELF-HOSTED runner
 #            that has the real corpus on disk at $MOEDEX_CORPUS and ripgrep
 #            (`rg`) installed; tagged accordingly.
 #
 # Plus an optional MANUAL job to build + push the default and dense images.
+# CodeGraph/Moedex paired comparisons run manually outside CI. Generic recorder
+# tests below use synthetic data; they do not run a product comparison.
 
 default:
   image: golang:1.26
@@ -62,10 +64,24 @@ tagged-check:
   script:
     - make tagged-check
 
-# --- parity: full-corpus ripgrep parity (expensive; gated) ----------------
-# Runs on scheduled pipelines, tags, and any MR touching internal/query,
-# internal/search, or internal/parity (CLAUDE.md: those packages "must keep
-# make verify green"). Needs a self-hosted runner tagged `moedex-corpus` with:
+# Generic recording/controller tests use synthetic data and need no corpus,
+# provider credentials, Docker daemon or actual solver/model invocation.
+comparison-harness:
+  stage: gate
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "push"'
+      changes:
+        - research/semantic-intelligence/agent-journeys/**/*
+        - .gitlab-ci.yml
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq python3
+  script:
+    - python3 -m unittest discover -s research/semantic-intelligence/agent-journeys -p 'test_*.py' -v
+
+# --- parity: full-corpus ripgrep parity (scheduled/tagged product check) ---
+# Run locally for query/search/parity changes with `make verify`; CI runs this
+# corpus-dependent check only on schedules and tags. Needs a self-hosted runner
+# tagged `moedex-corpus` with:
 #   * the managed corpus checked out at $MOEDEX_CORPUS (default
 #     ~/.moedex/corpus if unset),
 #   * ripgrep (`rg`) on PATH,
@@ -77,11 +93,6 @@ parity:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - if: '$CI_COMMIT_TAG'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes:
-        - internal/query/**/*
-        - internal/search/**/*
-        - internal/parity/**/*
   script:
     - rg --version
     - make parity
@@ -91,7 +102,8 @@ parity:
       - PARITY-REPORT.md
     expire_in: 30 days
 
-# --- graph-eval-private: reviewed private graph quality (self-hosted) -----
+# --- graph-eval-private: scheduled private graph quality (self-hosted) ----
+# This product check does not invoke CodeGraph and does not block push/MR CI.
 # Configure these as runner/project variables (they are paths, not secrets):
 #   * CI_MOEDEX_GRAPH_EVAL_SHARDS — mounted managed shards directory.
 #   * CI_MOEDEX_GRAPH_GOLD — mounted reviewed gold JSON file.
@@ -104,24 +116,15 @@ parity:
 # the floor. Check the labels before treating a Verified trip as graph breakage.
 graph-eval-private:
   stage: parity
+  tags:
+    # This gate reads mounted private shards/gold, just like parity. Ordinary
+    # Docker build runners cannot mount a workstation-specific configured path.
+    # Scheduled evaluation requires a corpus runner and the configured mounts.
+    - moedex-corpus
   variables:
     MOEDEX_GRAPH_EVAL_SHARDS: "$CI_MOEDEX_GRAPH_EVAL_SHARDS"
     MOEDEX_GRAPH_GOLD: "$CI_MOEDEX_GRAPH_GOLD"
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "push"'
-      changes:
-        - internal/graph/**/*
-        - internal/contextwin/**/*
-        - internal/mcp/**/*
-        - internal/serve/**/*
-        - internal/graph/build/**/*
-        - internal/graph/serve/**/*
-        - internal/eval/**/*
-        - cmd/moedex/**/*
-        - internal/app/servecmd/**/*
-        - internal/app/indexcmd/**/*
-        - Makefile
-        - .gitlab-ci.yml
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
   before_script:
     - |
