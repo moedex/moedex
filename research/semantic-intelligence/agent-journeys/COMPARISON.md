@@ -165,3 +165,19 @@ provenance, isolated service configuration and database/auth prerequisites are
 needed before a native paired trial. This harness neither contacts private feeds
 nor starts or configures those services. Existing historical scores and immutable
 archives stay untouched.
+
+`native_http.py` provides a separate transport for authorized native HTTP
+diagnostics, including HTTPS bearer authentication, negotiated MCP sessions, JSON
+and multiline SSE responses. `NativeHTTP.exchange` returns the request bytes,
+retained response-body bytes, and a receipt. A size crossing or interrupted body
+is explicitly incomplete; partial bytes remain available. Redirects are not
+followed, and plaintext endpoints are restricted to loopback. Receipts omit
+credentials, session IDs, endpoint URLs and exception messages.
+
+The caller must persist exchanges, account for attempted calls and initialization,
+freeze the native catalog and enforce assignment/display budgets. This transport
+does not replace `client.py` or the independent accounting auditor. Its byte count
+measures response bodies, excluding HTTP headers, TLS framing and model tokens;
+it does not establish deployed build identity or benchmark eligibility. Complete
+native catalogs may exceed the example 128 KiB budget. Choose and freeze a shared
+budget before assignments rather than silently omitting catalog bytes.
