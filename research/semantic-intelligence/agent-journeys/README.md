@@ -109,6 +109,13 @@ See [input format and interpretation](COMPARISON.md). This is an offline report
 validator, not a service launcher, blind solver or replacement for independent
 raw-evidence audits. Existing frozen results are not rewritten.
 
+For new broader benchmarks, [`broader_claim.py`](broader_claim.py) validates
+frozen source-only stratified plans, selects deterministic tasks, and analyzes
+whole-task paired success with shared positive cluster multipliers. Both family
+and system intervals must clear the practical margin, with coverage, external
+review, access and uncertainty gates. See [schemas, governance and limits](BROADER_CLAIMS.md).
+This is a manual workflow outside comparison CI; its tests use synthetic inputs.
+
 New runs default to immutable model/product provenance. An explicitly authorized
 [`observed-service-v1` policy](COMPARISON.md#explicit-observed-service-provenance)
 records the available service/model identities and reproducibility limits while
