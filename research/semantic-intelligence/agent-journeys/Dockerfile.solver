@@ -1,0 +1,9 @@
+# Run with --network none --read-only, /tmp and /root/.codex tmpfs, no host mounts.
+# The host bridge supplies all provider/native requests over attached JSONL stdio.
+FROM node@sha256:be23f54a88d34e8824c741b19b91064094f92c1c97b194144bfc8b50d67258e2
+ARG CODEX_VERSION=0.160.0
+RUN npm install --global "@openai/codex@${CODEX_VERSION}" \
+    && npm cache clean --force
+COPY container_solver.cjs /opt/solver/container_solver.cjs
+WORKDIR /tmp
+ENTRYPOINT ["node", "/opt/solver/container_solver.cjs"]

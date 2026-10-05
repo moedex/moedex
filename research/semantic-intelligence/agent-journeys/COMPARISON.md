@@ -181,3 +181,177 @@ measures response bodies, excluding HTTP headers, TLS framing and model tokens;
 it does not establish deployed build identity or benchmark eligibility. Complete
 native catalogs may exceed the example 128 KiB budget. Choose and freeze a shared
 budget before assignments rather than silently omitting catalog bytes.
+
+## Retain native assignments before interpreting them
+
+`run_record.py` is a reusable recorder and offline auditor for new assignments.
+It does not issue network requests, enforce operating-system isolation, collect
+provider logs, or award semantic scores. Python 3.9 or newer on macOS/Linux is
+required. Product adapters can use the following sequence:
+
+```python
+from pathlib import Path
+from run_record import RunRecord, audit, reference
+
+root = Path("EVIDENCE_ROOT").resolve()
+record = RunRecord.create(
+    root, "unique-assignment-id",
+    {"task": "fresh-task", "arm": "native-arm", "solver_id": "fresh-solver",
+     "contract_sha256": contract_digest, "prompt_sha256": prompt_digest},
+    {"calls": 24, "response_bytes": 262144,
+     "assignment_seconds": 600, "display_bytes": 8192},
+    reference(root, root / "freeze.json"), session_id=coordinator_session)
+
+ordinal = record.begin_call(request_bytes)  # Persist BEFORE network I/O.
+request, response, receipt = transport.exchange(request_object)
+record.finish_call(ordinal, response, receipt)
+record.display(exact_display_bytes)          # Include the complete envelope.
+first_answer = record.submit_answer(first_answer_bytes)
+revised_answer = record.submit_answer(revised_answer_bytes)
+report = audit(root, "unique-assignment-id")
+```
+
+The adapter must ensure `request_bytes` are exactly the bytes sent, log every
+native exchange including initialization/catalog calls, and deliver only the
+persisted display bytes to the solver. Retain exceptions and blocked outcomes;
+call `stop(reason)` when abandoning an assignment. Native response receipts must
+contain boolean `transport_complete` and integer `body_bytes_observed` equal to
+the length of the retained body. A budget-crossing response is retained in full
+and counted. Interrupted transport retains observed bytes as a lower bound.
+Unknown headers, TLS framing, and provider tokens remain outside this body count.
+
+Each assignment starts its own `journey_clock.monotonic` deadline at creation.
+Creation belongs at actual task assignment, before onboarding. The recorder binds
+that origin to the OS boot identity and a coordinator session identity. Preserve
+the session across cooperating CLI processes; mint a new identity after a
+coordinator restart. A different boot/session cannot mutate an old assignment.
+Never mint a replacement origin for an existing task to reset its elapsed budget.
+The optional clock/boot arguments exist for verified integrations and synthetic
+tests; production callers must not invent boot identities or use process-local
+clocks.
+
+Events and evidence files are created exclusively and fsynced; a hash chain starts
+at the immutable assignment file. Each answer revision gets its own evidence
+file and completion receipt. Its completion time is sampled after the answer body
+and submission event have been fsynced. A deadline crossing during persistence
+retains the late answer and excludes the assignment. An interrupted completion
+receipt preserves the body and blocks further solver actions. Pending attempts prevent retries and further solver actions.
+A crash between blob creation and event creation leaves orphan evidence, which
+fails audit and stops future mutation. Preserve that interrupted assignment and
+start a new one. Do not delete orphan files, reset a ledger, or replace an answer.
+The lock serializes local callers; external reference digests and a published
+snapshot are still required to detect wholesale rewriting or truncation of a
+locally writable ledger. A hash chain alone is not a trusted timestamp service.
+
+The freeze manifest required by `freeze_gate(root, manifest)` has this shape:
+
+```json
+{
+  "model": {"revision": "EXACT_PROVIDER_REVISION", "settings": {"temperature": 0}, "verification": "REF"},
+  "solver_records": {"capture_available": true, "capture_probe": "REF"},
+  "isolation": {"enforced": true, "verification": "REF"},
+  "preflight": {"same_execution_environment": true, "verification": "REF"},
+  "product": {"serving_sha256": "IMMUTABLE_LIVE_BINARY_OR_IMAGE_SHA256", "verification": "REF", "dependencies": "REF"},
+  "auditor": "REF"
+}
+```
+
+Every `REF` uses the exact path/digest object described above. The recorder rejects
+symlinks even within the evidence root. Freeze the recorder, clock, transport,
+adapter and auditor source hashes in the protocol/product bundle before launch;
+`auditor` references the actual auditor used. Independent review must assess the
+content of each proof: model revision/settings, complete provider capture probe,
+filesystem/network isolation enforcement, preflight in the same solver sandbox,
+currently serving immutable product identity and runtime dependency closure.
+The dependency reference must contain JSON with explicit `complete: true` and a
+`verification` reference to the independently checked closure evidence. Merely
+referencing build metadata does not assert a complete runtime closure.
+The gate verifies references and explicit declarations; it cannot establish that
+those declarations faithfully describe a deployed process. Instructions to a
+solver do not establish enforced isolation. Version strings or a successful
+source build do not establish the identity of the binary currently serving.
+
+Unknowns fail launch by default. `diagnostic=True` explicitly permits collecting
+an assignment with preserved launch blockers; answers cannot erase those blockers
+or promote that assignment into scored evidence. Even an otherwise ready
+assignment remains ineligible until complete solver records are attached with
+`seal(solver_records_ref, independent_verification_ref)`. That verification JSON
+must bind `assignment_sha256`, `solver_records` (the exact reference),
+`model_revision`, boolean `complete` and `access_checked`, and a nonempty
+`reviewer_id` distinct from `solver_id`. The assertions remain reviewable evidence,
+not facts inferred from a native call ledger. Independent sealing may occur after
+the solver deadline; it does not extend the deadline or alter the recorded final
+answer duration. Sealing stops further solver mutations.
+
+```sh
+python3 research/semantic-intelligence/agent-journeys/run_record.py \
+  --root EVIDENCE_ROOT --assignment unique-assignment-id \
+  --output NEW_AUDIT_FILE.json
+```
+
+The audit output must be a new file. Exit 2 means malformed/tampered records;
+exit 0 can still mean an incomplete or diagnostic assignment. Check
+`benchmark_eligible`, `validation_errors`, `eligibility_blockers`, pending calls,
+all answer revisions, and the byte lower-bound flag. This is a recording gate;
+source review, rubric review, independence, and complete paired coverage remain
+separate requirements checked by the comparison process.
+
+## Isolated solver and complete exchange capture
+
+`Dockerfile.solver` builds the pinned CLI bridge. `isolated_solver.py` launches an
+immutable local image with networking disabled, a read-only filesystem, dropped
+capabilities, no host/corpus mounts, and fresh runtime directories. Docker attached
+stdin/stdout carry provider and MCP exchanges. The host keeps credentials in
+memory and dispatches only to configured, frozen endpoint identities and native
+tool names. CLI flags alone are insufficient isolation: resource, patch and
+collaboration helpers can remain available. Those helpers cannot reach host
+source or an external network in this container.
+
+```sh
+docker build -f Dockerfile.solver -t recorded-solver:local .
+# Obtain the immutable ID using docker image inspect.
+python3 isolated_solver.py --probe --config LOCAL_CONFIG.json --capture NEW_PRIVATE_DIR
+```
+
+Probe config requires `image` (a `sha256:` image ID), `model`, `reasoning_effort`,
+`prompt`, `enabled_tools`, and `timeout_seconds`. The probe initializes a synthetic
+MCP broker, returns one synthetic metadata-only `ALL_TOOLS` call, then HTTP 400.
+It performs **zero real model/provider or native corpus retrieval calls**. Its
+expected CLI exit is nonzero. A complete capture proves recording capability;
+it does not establish native product readiness, model identity or correctness.
+
+For an actual run, omit `--probe` and supply `evidence_root`, `assignment`,
+`identity`, `budgets`, `freeze`, `coordinator_session`, and environment-variable
+names `native_url_env`, optional `native_token_env`, `provider_url_env`, and
+`provider_token_env`. No credential values belong in configuration files. Identity
+and budgets follow `RunRecord.create`. Freeze JSON must include its exact
+`contract` reference, `arm`, `native_allowed_tools`, `isolation.image_sha256`,
+`product.endpoint_sha256`, `model.requested_alias`,
+`model.provider_base_url_sha256`, model settings including
+`reasoning_summary: "none"`, and all eight observed `provider_fields`: `model`,
+`reasoning`, `tool_choice`, `parallel_tool_calls`, `text`, `store`, `stream`, and
+`include`. SHA-256 of the exact configured URL bytes binds endpoint identities.
+`runners` binds executing `isolated_solver.py`, `run_record.py`, `native_http.py`,
+and `journey_clock.py` bytes. All independent `freeze_gate` prerequisites still
+apply; no diagnostic fallback is used. Changed tasks, prompts, budgets, model
+settings, endpoints, images or executing code fail before native onboarding.
+
+Native onboarding retains the complete original catalog and consumes the task's
+original budget. The broker exposes the frozen subset, retains complete native
+responses, and explicitly truncates oversized model-visible JSON-RPC envelopes.
+Native semantic errors remain errors. Provider bodies are retained separately
+with exact request bytes, raw response-body bytes, safe receipts, timestamped CLI
+events and a non-overwriting inventory. HTTP headers/TLS framing remain outside
+body accounting. Provider failure/partial transport, interruption and deadline
+crossings remain evidence and cannot be silently retried as the same assignment.
+
+Every completed agent message that parses as task-bound answer JSON is retained
+as an answer revision. Other messages remain timestamped drafts in the capture.
+The CLI's final output file is retained as a submission unless it exactly repeats
+the last submitted body. Independent review must verify source/citations,
+provider transcript coverage, actual native observations, isolation, and the
+immutable serving product/model identities before sealing. The controller does
+not author semantic scores, declare transcript completeness, or infer immutable
+model identity from an alias. Raw provider bodies contain prompts and retrieved
+source: publish them only to the authorized evidence destination, never as
+public fixtures. Container images and local configuration remain uncommitted.

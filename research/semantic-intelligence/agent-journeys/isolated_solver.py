@@ -1,0 +1,517 @@
+#!/usr/bin/env python3
+"""Credential-free container solvers with host-side native/provider recording.
+
+No corpus or host directories are mounted. The container has no external
+network. A fixed host controller serves its provider and MCP requests over
+Docker stdin/stdout. This controller never supplies a shell or arbitrary URL
+tool. Product credentials stay in host memory. Evidence belongs in an authorized
+private directory; raw provider bodies contain prompts and retrieved source.
+"""
+import argparse
+import base64
+import http.client
+import json
+import math
+import os
+from pathlib import Path
+import re
+import selectors
+import signal
+import subprocess
+import time
+import urllib.parse
+
+from native_http import NativeHTTP
+from journey_clock import monotonic
+from run_record import RunRecord, _new_file, canonical, digest, read_ref, reference
+
+
+IMAGE = re.compile(r'^sha256:[0-9a-f]{64}$')
+
+
+def bounded_response(response, cap):
+    """Bound the complete JSON-RPC envelope; raw native bytes remain retained."""
+    raw = canonical(response)
+    if len(raw) <= cap:
+        return response
+    text = raw.decode()
+    def envelope(count):
+        payload = {'truncated_display': True, 'native_envelope_bytes': len(raw), 'prefix': text[:count]}
+        result = {'content': [{'type': 'text', 'text': canonical(payload).decode()}]}
+        if 'error' in response or (isinstance(response.get('result'), dict) and response['result'].get('isError')):
+            result['isError'] = True
+        return {'jsonrpc': '2.0', 'id': response.get('id'), 'result': result}
+    lo, hi = 0, len(text)
+    while lo < hi:
+        middle = (lo + hi + 1) // 2
+        if len(canonical(envelope(middle))) <= cap:
+            lo = middle
+        else:
+            hi = middle - 1
+    result = envelope(lo)
+    if len(canonical(result)) > cap:
+        raise ValueError('display cap cannot fit truncation envelope')
+    return result
+
+
+def container_command(image):
+    if not isinstance(image, str) or not IMAGE.fullmatch(image):
+        raise ValueError('solver image must be an immutable local image ID')
+    return ['docker', 'run', '--rm', '-i', '--network', 'none', '--read-only',
+            '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
+            '--pids-limit', '128', '--memory', '1g',
+            '--tmpfs', '/tmp:rw,nosuid,size=128m',
+            '--tmpfs', '/work:rw,nosuid,size=32m',
+            '--tmpfs', '/root/.codex:rw,nosuid,size=128m', image]
+
+
+def provider_exchange(base_url, token, raw, timeout, cap=64 << 20):
+    """POST only to the configured Responses endpoint; retain interrupted bytes.
+
+    Counts decoded HTTP response-body bytes. Headers/TLS framing are excluded.
+    No redirect, cookie, session ID, credential or exception text is retained.
+    """
+    url = urllib.parse.urlsplit(base_url)
+    if (url.scheme not in ('https', 'http') or not url.hostname or url.username or
+            url.password or url.query or url.fragment or
+            (url.scheme == 'http' and url.hostname not in ('127.0.0.1', 'localhost', '::1'))):
+        raise ValueError('provider URL must be HTTPS or plaintext loopback')
+    if not math.isfinite(timeout) or timeout <= 0 or type(cap) is not int or cap <= 0:
+        raise ValueError('positive finite transport budget required')
+    if '\r' in token or '\n' in token:
+        raise ValueError('invalid provider credential')
+    cls = http.client.HTTPSConnection if url.scheme == 'https' else http.client.HTTPConnection
+    connection = cls(url.hostname, url.port, timeout=timeout)
+    started = time.monotonic()
+    parts, size, status, content_type, error, complete = [], 0, None, None, None, False
+    def remaining():
+        value = timeout - (time.monotonic() - started)
+        if value <= 0:
+            raise TimeoutError()
+        return value
+    try:
+        connection.connect()
+        connection.sock.settimeout(remaining())
+        connection.request('POST', url.path.rstrip('/') + '/responses', raw,
+                           {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json',
+                            'Accept': 'application/json, text/event-stream', 'Accept-Encoding': 'identity'})
+        sock = connection.sock
+        sock.settimeout(remaining())
+        response = connection.getresponse()
+        status, content_type = response.status, response.getheader('Content-Type')
+        while size <= cap:
+            sock.settimeout(remaining())
+            block = response.read1(min(65536, cap + 1 - size))
+            if not block:
+                if getattr(response, 'length', 0) not in (None, 0):
+                    raise http.client.IncompleteRead(b'', response.length)
+                remaining()
+                complete = True
+                break
+            parts.append(block)
+            size += len(block)
+        if size > cap:
+            error = 'response_cap_exceeded'
+    except Exception as exc:
+        error = type(exc).__name__
+    finally:
+        connection.close()
+    body = b''.join(parts)
+    return body, {'status': status, 'content_type': content_type,
+                  'body_bytes_observed': len(body), 'transport_complete': complete,
+                  'error': error, 'elapsed_seconds': time.monotonic() - started}
+
+
+class NativeBroker:
+    """Serve only the frozen native tool roster, retaining full native onboarding."""
+    def __init__(self, client, record, allowed_tools):
+        if not allowed_tools or len(set(allowed_tools)) != len(allowed_tools):
+            raise ValueError('unique nonempty native allowlist required')
+        self.client, self.record, self.allowed = client, record, set(allowed_tools)
+        self.catalog = None
+        self.display_cap = 8192
+
+    def exchange(self, request):
+        request_bytes = json.dumps(request, separators=(',', ':')).encode()
+        ordinal = self.record.begin_call(request_bytes)
+        self.client.timeout = min(self.client.timeout, self.record.remaining_seconds())
+        returned, body, receipt = self.client.exchange(request)
+        if returned != request_bytes:
+            raise ValueError('native transport changed request bytes')
+        self.record.finish_call(ordinal, body, receipt)
+        if request.get('method') == 'notifications/initialized':
+            if not receipt['transport_complete'] or receipt['status'] not in (200, 202, 204):
+                raise ValueError('native notification failed')
+            return None
+        return self.client.decode(body, receipt, request['id'])
+
+    def onboard(self):
+        response = self.exchange({'jsonrpc': '2.0', 'id': 1, 'method': 'initialize',
+                                  'params': {'protocolVersion': '2025-03-26', 'capabilities': {},
+                                             'clientInfo': {'name': 'recorded-native-solver', 'version': '1'}}})
+        if 'error' in response:
+            raise ValueError('native initialization failed')
+        self.exchange({'jsonrpc': '2.0', 'method': 'notifications/initialized'})
+        catalog = self.exchange({'jsonrpc': '2.0', 'id': 3, 'method': 'tools/list', 'params': {}})
+        tools = catalog['result']['tools']
+        if len({t['name'] for t in tools}) != len(tools) or not self.allowed.issubset({t['name'] for t in tools}):
+            raise ValueError('native catalog lacks frozen tools or has duplicate names')
+        if catalog['result'].get('nextCursor'):
+            raise ValueError('paginated native catalogs require a frozen onboarding adapter')
+        self.catalog = [t for t in tools if t['name'] in self.allowed]
+        return response['result']
+
+    def handle(self, request):
+        method, request_id = request.get('method'), request.get('id')
+        result = None
+        if method == 'initialize':
+            result = {'protocolVersion': '2025-03-26', 'capabilities': {'tools': {}},
+                      'serverInfo': {'name': 'recorded-native-broker', 'version': '1'}}
+        elif method == 'notifications/initialized':
+            return None
+        elif method == 'tools/list':
+            if self.catalog is None:
+                raise ValueError('native onboarding has not completed')
+            result = {'tools': self.catalog}
+        elif method == 'tools/call':
+            params = request.get('params', {})
+            if params.get('name') not in self.allowed:
+                raise ValueError('native tool outside frozen allowlist')
+            response = self.exchange({'jsonrpc': '2.0', 'id': request_id,
+                                      'method': 'tools/call', 'params': params})
+            # Full native response remains in raw evidence. The entire model-visible
+            # envelope (including JSON-RPC/MCP wrappers) is subject to the display cap.
+            response = bounded_response(response, self.display_cap)
+            raw = canonical(response)
+            self.record.display(raw)
+            return response
+        elif method in ('resources/list', 'resources/templates/list', 'prompts/list'):
+            result = {('resources' if method == 'resources/list' else
+                       'resourceTemplates' if method == 'resources/templates/list' else 'prompts'): []}
+        else:
+            raise ValueError('broker method outside frozen capability set')
+        return {'jsonrpc': '2.0', 'id': request_id, 'result': result}
+
+
+class Capture:
+    """New evidence directory per process; requests persisted BEFORE dispatch."""
+    def __init__(self, directory):
+        self.root = Path(directory).resolve()
+        self.root.mkdir(mode=0o700)
+        self.files, self.ordinals = [], {}
+        self.journal = self.root / 'events.jsonl'
+
+    def retain(self, name, raw):
+        path = self.root / name
+        _new_file(path, raw)
+        self.files.append(reference(self.root, path))
+
+    def event(self, event):
+        event = dict(event, controller_monotonic=monotonic())
+        with self.journal.open('ab') as stream:
+            stream.write(canonical(event) + b'\n')
+            stream.flush()
+            os.fsync(stream.fileno())
+
+    def request(self, channel, raw):
+        ordinal = self.ordinals.get(channel, 0) + 1
+        self.ordinals[channel] = ordinal
+        stem = '%s-%04d' % (channel, ordinal)
+        self.retain(stem + '.request.json', raw)
+        return stem
+
+    def finish(self, complete):
+        if self.journal.exists():
+            self.files.append(reference(self.root, self.journal))
+        self.retain('inventory.json', canonical({'complete': complete, 'files': self.files.copy(),
+                                                'scope': 'exact provider/native broker bodies and serialized CLI events; no auth headers'}) + b'\n')
+
+
+def decode_message(message):
+    if message.get('channel') not in ('provider', 'mcp'):
+        raise ValueError('unknown request channel')
+    if not isinstance(message.get('id'), str) or not re.fullmatch(r'[1-9][0-9]*', message['id']):
+        raise ValueError('invalid request identity')
+    if message.get('method') != 'POST' or message.get('path') != ('/v1/responses' if message['channel'] == 'provider' else '/mcp'):
+        raise ValueError('controller accepts only the frozen endpoint paths')
+    raw = base64.b64decode(message['body_base64'], validate=True)
+    value = json.loads(raw)
+    if not isinstance(value, dict):
+        raise ValueError('request must be a JSON object')
+    return raw, value
+
+
+def validate_execution_config(root, config):
+    """Bind ALL task budgets, identity and executing code to frozen bytes."""
+    frozen = json.loads(read_ref(root, config['freeze']))
+    contract = json.loads(read_ref(root, frozen['contract']))
+    tasks = [t for t in contract['tasks'] if t['id'] == config['identity']['task']]
+    if len(tasks) != 1:
+        raise ValueError('assigned task missing from frozen contract')
+    task = tasks[0]
+    prompt = read_ref(root, task['prompt'])
+    if (contract.get('schema') != 'native-pair-v1' or
+            digest(canonical(contract)) != config['identity']['contract_sha256'] or
+            task['prompt']['sha256'] != config['identity']['prompt_sha256'] or
+            prompt != config['prompt'].encode() or
+            config['budgets'] != contract['budgets'] or
+            frozen.get('arm') != config['identity']['arm'] or
+            frozen.get('isolation', {}).get('image_sha256') != config['image'] or
+            frozen.get('model', {}).get('requested_alias') != config['model'] or
+            frozen.get('model', {}).get('settings', {}).get('reasoning_effort') != config['reasoning_effort'] or
+            frozen.get('model', {}).get('settings', {}).get('reasoning_summary') != 'none' or
+            frozen.get('native_allowed_tools') != config['enabled_tools'] or
+            config.get('timeout_seconds', 600) != contract['budgets']['assignment_seconds']):
+        raise ValueError('execution configuration differs from frozen task, budgets, model, image or native roster')
+    fields = frozen['model']['settings'].get('provider_fields', {})
+    expected = {'model', 'reasoning', 'tool_choice', 'parallel_tool_calls', 'text', 'store', 'stream', 'include'}
+    if set(fields) != expected or fields['model'] != config['model'] or fields['reasoning'].get('effort') != config['reasoning_effort']:
+        raise ValueError('complete frozen provider request settings required')
+    config['provider_fields'] = fields
+    for name in ('isolated_solver.py', 'run_record.py', 'native_http.py', 'journey_clock.py'):
+        if frozen.get('runners', {}).get(name) != digest(Path(__file__).with_name(name).read_bytes()):
+            raise ValueError('executing runner differs from frozen hash: ' + name)
+    return frozen
+
+
+def validate_environment_bindings(frozen, config, environment):
+    if (digest(environment[config['native_url_env']].encode()) != frozen['product'].get('endpoint_sha256') or
+            digest(environment[config['provider_url_env']].encode()) != frozen['model'].get('provider_base_url_sha256')):
+        raise ValueError('native or provider endpoint differs from frozen identity')
+
+
+def validate_provider_request(config, value):
+    expected = config.get('provider_fields', {})
+    if (value.get('model') != config['model'] or value.get('reasoning', {}).get('effort') != config['reasoning_effort'] or
+            any(value.get(k) != v for k, v in expected.items()) or
+            (expected and set(value) - set(expected) - {'input', 'prompt_cache_key', 'client_metadata'})):
+        raise ValueError('solver changed frozen provider request settings')
+
+
+def probe_provider_response(model, ordinal):
+    """One metadata-only synthetic tool call, then HTTP 400; zero model calls."""
+    if ordinal > 1:
+        return canonical({'error': {'message': 'controlled capture probe', 'type': 'probe'}}), {
+            'status': 400, 'content_type': 'application/json', 'transport_complete': True}
+    item = {'type': 'custom_tool_call', 'id': 'synthetic_metadata_call', 'status': 'completed',
+            'call_id': 'synthetic_metadata_call', 'name': 'exec',
+            'input': 'text(ALL_TOOLS.map(({name}) => name));'}
+    response = {'id': 'synthetic_metadata_response', 'object': 'response', 'status': 'completed',
+                'model': model, 'output': [item],
+                'usage': {'input_tokens': 0, 'output_tokens': 0, 'total_tokens': 0}}
+    events = [
+        {'type': 'response.created', 'response': dict(response, status='in_progress', output=[])},
+        {'type': 'response.output_item.added', 'output_index': 0, 'item': dict(item, status='in_progress', input='')},
+        {'type': 'response.output_item.done', 'output_index': 0, 'item': item},
+        {'type': 'response.completed', 'response': response}]
+    body = b''.join(b'event: ' + e['type'].encode() + b'\ndata: ' + canonical(e) + b'\n\n' for e in events)
+    return body, {'status': 200, 'content_type': 'text/event-stream', 'transport_complete': True}
+
+
+def run_container(config, directory, broker=None, record=None, probe=False):
+    """Run one immutable, network-isolated image; probe never contacts a provider.
+
+    Probe returns a synthetic metadata-only tool call, then answers HTTP 400. Its
+    evidence demonstrates capture/isolation capabilities, not native readiness,
+    model correctness, or a verified immutable provider model revision.
+    """
+    capture = Capture(directory)
+    command = container_command(config['image'])
+    cidfile = capture.root / 'container.id'
+    command[2:2] = ['--cidfile', str(cidfile)]
+    capture.retain('container-command.json', canonical(command) + b'\n')
+    timeout = config.get('timeout_seconds', 600)
+    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError('positive finite assignment timeout required')
+    started, seen, exit_code, complete = time.monotonic(), set(), None, False
+    submitted_answer_sha256 = None
+    def interrupted(signum, frame):
+        raise InterruptedError('controller interrupted')
+    previous_sigterm = signal.signal(signal.SIGTERM, interrupted)
+    with (capture.root / 'container.stderr').open('wb') as stderr:
+        process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=stderr)
+        selector = selectors.DefaultSelector()
+        selector.register(process.stdout, selectors.EVENT_READ)
+        buffer = b''
+        def reply(message):
+            process.stdin.write(canonical(message) + b'\n')
+            process.stdin.flush()
+        try:
+            start = {k: config[k] for k in ('model', 'reasoning_effort', 'prompt', 'enabled_tools')}
+            start['timeout_ms'] = int(min(timeout, record.remaining_seconds() if record is not None else timeout) * 1000)
+            reply({'channel': 'start', 'config': start})
+            while exit_code is None:
+                remaining = timeout - (time.monotonic() - started)
+                if record is not None:
+                    remaining = min(remaining, record.remaining_seconds())
+                if remaining <= 0:
+                    raise TimeoutError()
+                ready = selector.select(min(remaining, 1))
+                if not ready:
+                    if process.poll() is not None:
+                        raise RuntimeError('container ended without completion event')
+                    continue
+                chunk = os.read(process.stdout.fileno(), 65536)
+                if not chunk:
+                    raise RuntimeError('container stream ended without completion event')
+                buffer += chunk
+                if len(buffer) > 96 << 20:
+                    raise ValueError('container message cap exceeded')
+                while b'\n' in buffer:
+                    line, buffer = buffer.split(b'\n', 1)
+                    message = json.loads(line)
+                    capture.event(message)
+                    channel = message.get('channel')
+                    if channel in ('provider', 'mcp'):
+                        # Streamable MCP clients may probe GET SSE or close a
+                        # session via DELETE. These never forward native I/O.
+                        if not isinstance(message.get('id'), str) or not re.fullmatch(r'[1-9][0-9]*', message['id']) or message['id'] in seen:
+                            raise ValueError('invalid or reused request identity')
+                        seen.add(message['id'])
+                        if channel == 'mcp' and message.get('path') == '/mcp' and message.get('method') in ('GET', 'DELETE'):
+                            reply({'channel': 'response', 'id': message['id'],
+                                   'status': 405 if message['method'] == 'GET' else 202,
+                                   'content_type': 'application/json', 'body_base64': ''})
+                            continue
+                        raw, value = decode_message(message)
+                        stem = capture.request(channel, raw)
+                        if channel == 'provider':
+                            validate_provider_request(config, value)
+                            if probe:
+                                body, receipt = probe_provider_response(config['model'], capture.ordinals['provider'])
+                                receipt['body_bytes_observed'] = len(body)
+                            else:
+                                body, receipt = provider_exchange(os.environ[config['provider_url_env']],
+                                                                  os.environ[config['provider_token_env']], raw,
+                                                                  min(timeout - (time.monotonic() - started), record.remaining_seconds()))
+                        else:
+                            if probe:
+                                result = mock_mcp(value, config['enabled_tools'])
+                            else:
+                                result = broker.handle(value)
+                            body = canonical(result) if result is not None else b''
+                            receipt = {'status': 200 if result is not None else 202,
+                                       'content_type': 'application/json', 'body_bytes_observed': len(body),
+                                       'transport_complete': True}
+                        capture.retain(stem + '.response.raw', body)
+                        capture.retain(stem + '.receipt.json', canonical(receipt) + b'\n')
+                        if not receipt['transport_complete']:
+                            raise RuntimeError('incomplete recorded exchange')
+                        reply({'channel': 'response', 'id': message['id'], 'status': receipt['status'],
+                               'content_type': receipt['content_type'], 'body_base64': base64.b64encode(body).decode()})
+                    elif channel == 'answer':
+                        if not probe:
+                            answer = base64.b64decode(message['body_base64'], validate=True)
+                            value = json.loads(answer)
+                            if not isinstance(value, dict) or value.get('task') != config['identity']['task']:
+                                raise ValueError('final answer must bind the assigned task')
+                            if digest(answer) != submitted_answer_sha256:
+                                record.submit_answer(answer)
+                                submitted_answer_sha256 = digest(answer)
+                    elif channel == 'event' and not probe:
+                        event = message.get('event', {})
+                        item = event.get('item', {})
+                        if event.get('type') == 'item.completed' and item.get('type') == 'agent_message':
+                            text = item.get('text')
+                            if isinstance(text, str):
+                                try:
+                                    candidate = json.loads(text)
+                                except ValueError:
+                                    candidate = None
+                                if isinstance(candidate, dict) and candidate.get('task') == config['identity']['task']:
+                                    answer = text.encode()
+                                    record.submit_answer(answer)
+                                    submitted_answer_sha256 = digest(answer)
+                    elif channel == 'exit':
+                        exit_code = message.get('code')
+                        if type(exit_code) is not int:
+                            raise ValueError('invalid container completion')
+                        if buffer.strip():
+                            raise ValueError('unexpected output after container completion')
+                        break
+                    elif channel not in ('event', 'diagnostic', 'error'):
+                        raise ValueError('unknown container output')
+            complete = True
+        except BaseException as exc:
+            capture.event({'channel': 'controller_error', 'error_type': type(exc).__name__})
+            if record is not None:
+                try:
+                    record.stop(type(exc).__name__)
+                except RuntimeError:
+                    pass
+            raise
+        finally:
+            selector.close()
+            if process.poll() is None:
+                process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+            try:
+                if cidfile.is_file():
+                    container_id = cidfile.read_text().strip()
+                    if not re.fullmatch(r'[0-9a-f]{64}', container_id):
+                        raise ValueError('invalid container cleanup identity')
+                    cleanup = subprocess.run(['docker', 'rm', '--force', container_id],
+                                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
+                    capture.retain('container-cleanup.json', canonical({'container_id': container_id,
+                                   'returncode': cleanup.returncode, 'auto_remove_may_already_have_completed': True}) + b'\n')
+                    capture.files.append(reference(capture.root, cidfile))
+            except Exception as exc:
+                complete = False
+                capture.event({'channel': 'cleanup_error', 'error_type': type(exc).__name__})
+            finally:
+                signal.signal(signal.SIGTERM, previous_sigterm)
+                capture.finish(complete)
+    return {'exit_code': exit_code, 'capture_complete': complete, 'probe': probe,
+            'provider_requests': capture.ordinals.get('provider', 0),
+            'inventory_sha256': digest((capture.root / 'inventory.json').read_bytes())}
+
+
+def mock_mcp(request, enabled_tools):
+    method = request.get('method')
+    if method == 'notifications/initialized':
+        return None
+    if method == 'initialize':
+        result = {'protocolVersion': '2025-03-26', 'capabilities': {'tools': {}},
+                  'serverInfo': {'name': 'synthetic-capture-probe', 'version': '1'}}
+    elif method == 'tools/list':
+        result = {'tools': [{'name': name, 'description': 'Synthetic isolation probe; never queries a corpus.',
+                             'inputSchema': {'type': 'object', 'properties': {'query': {'type': 'string'}},
+                                             'required': ['query']}} for name in enabled_tools]}
+    elif method in ('resources/list', 'resources/templates/list', 'prompts/list'):
+        result = {('resources' if method == 'resources/list' else
+                   'resourceTemplates' if method == 'resources/templates/list' else 'prompts'): []}
+    else:
+        raise ValueError('probe cannot execute native or model tools')
+    return {'jsonrpc': '2.0', 'id': request['id'], 'result': result}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--config', required=True)
+    parser.add_argument('--capture', required=True)
+    parser.add_argument('--probe', action='store_true')
+    args = parser.parse_args()
+    config = json.loads(Path(args.config).read_text())
+    if args.probe:
+        report = run_container(config, args.capture, probe=True)
+    else:
+        root = Path(config['evidence_root']).resolve()
+        frozen = validate_execution_config(root, config)
+        validate_environment_bindings(frozen, config, os.environ)
+        record = RunRecord.create(root, config['assignment'], config['identity'], config['budgets'],
+                                  config['freeze'], config['coordinator_session'])
+        broker = NativeBroker(NativeHTTP(os.environ[config['native_url_env']],
+                                        os.environ[config['native_token_env']] if config.get('native_token_env') else None),
+                              record, config['enabled_tools'])
+        broker.display_cap = config['budgets']['display_bytes']
+        broker.onboard()
+        report = run_container(config, args.capture, broker, record)
+    print(json.dumps(report))
+
+
+if __name__ == '__main__':
+    main()
