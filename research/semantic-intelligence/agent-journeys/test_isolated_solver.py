@@ -1,12 +1,17 @@
 """Synthetic controller checks; these are not scored product comparisons."""
 import base64
+import io
 import json
+import os
 from pathlib import Path
+import shutil
+import subprocess
 import tempfile
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import unittest
 from copy import deepcopy
+from unittest.mock import patch
 
 import isolated_solver as solver
 
@@ -25,6 +30,8 @@ class Record:
         if len(raw) > 8192:
             raise ValueError('display cap')
         self.displays.append(raw)
+    def stop(self, reason):
+        self.stop_reason = reason
 
 
 class Native:
@@ -54,6 +61,138 @@ class Native:
 
 
 class ControllerTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which('node'), 'Node is required to check container CLI configuration')
+    def test_container_approves_only_frozen_tools_and_rejects_unsafe_names(self):
+        script = """
+const bridge = require(process.argv[1]);
+const names = ['allowed', 'second_tool'];
+const args = bridge.configArgs({reasoning_effort: 'high', enabled_tools: names}, 1234, 5678);
+const pairs = Object.fromEntries(args.flatMap((v, i) => v === '-c' ? [args[i + 1].split(/=(.*)/s).slice(0, 2)] : []));
+const bad = [[], ['repeat', 'repeat'], ['good', 'bad.name'], ['bad\"name'], ['bad name'], ['bad\\nname'], [17]];
+const rejected = bad.map(enabled_tools => {
+  try { bridge.configArgs({enabled_tools}, 1234, 5678); return false; } catch { return true; }
+});
+console.log(JSON.stringify({pairs, rejected, args}));
+"""
+        result = subprocess.run(['node', '-e', script, str(Path(solver.__file__).with_name('container_solver.cjs'))],
+                                check=True, capture_output=True, text=True)
+        value = json.loads(result.stdout)
+        approvals = {key: json.loads(item) for key, item in value['pairs'].items() if key.endswith('.approval_mode')}
+        self.assertEqual(approvals, {'mcp_servers.retrieval.tools.allowed.approval_mode': 'approve',
+                                    'mcp_servers.retrieval.tools.second_tool.approval_mode': 'approve'})
+        self.assertEqual(json.loads(value['pairs']['approval_policy']), 'never')
+        self.assertEqual(json.loads(value['pairs']['mcp_servers.retrieval.enabled_tools']), ['allowed', 'second_tool'])
+        self.assertTrue(all(value['rejected']))
+        self.assertIn('shell_tool', value['args'])
+
+    def test_onboarding_failure_stops_assignment(self):
+        record = Record()
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {'evidence_root': tmp, 'assignment': 'example', 'identity': {}, 'budgets': {'display_bytes': 8192},
+                      'freeze': {}, 'coordinator_session': 'coordinator', 'enabled_tools': ['allowed'],
+                      'native_url_env': 'FIXTURE_NATIVE_URL'}
+            config_path = Path(tmp) / 'config.json'
+            config_path.write_text(json.dumps(config))
+            with patch('sys.argv', ['isolated_solver.py', '--config', str(config_path), '--capture', str(Path(tmp) / 'capture')]), \
+                    patch.object(solver, 'validate_execution_config', return_value={}), \
+                    patch.object(solver, 'validate_environment_bindings'), \
+                    patch.object(solver.RunRecord, 'create', return_value=record), \
+                    patch.object(solver, 'NativeHTTP'), \
+                    patch.object(solver, 'NativeBroker') as broker_class, \
+                    patch.dict(os.environ, {'FIXTURE_NATIVE_URL': 'http://127.0.0.1/mcp'}):
+                broker_class.return_value.onboard.side_effect = ValueError('native identity drift')
+                with self.assertRaisesRegex(ValueError, 'native identity drift'):
+                    solver.main()
+        self.assertEqual(record.stop_reason, 'ValueError')
+
+    def test_observed_native_identity_checks_full_catalog_after_capture(self):
+        catalog = {'tools': [{'name': 'allowed', 'inputSchema': {}},
+                             {'name': 'forbidden', 'inputSchema': {}}]}
+        identity = {'server_info': {'name': 'synthetic'},
+                    'catalog_sha256': solver.digest(solver.canonical(catalog))}
+        broker = solver.NativeBroker(Native(), Record(), ['allowed'], identity)
+        broker.onboard()
+        for changed in (dict(identity, server_info={'name': 'changed'}),
+                        dict(identity, catalog_sha256=solver.digest(solver.canonical(
+                            {'tools': catalog['tools'][:1]})))):
+            record = Record()
+            broker = solver.NativeBroker(Native(), record, ['allowed'], changed)
+            with self.assertRaisesRegex(ValueError, 'native identity'):
+                broker.onboard()
+            self.assertEqual(len(record.responses), 3)
+            self.assertIn(b'forbidden', record.responses[-1][1])
+            self.assertIsNone(broker.catalog)
+
+    def test_observed_provider_requires_completed_identity_and_checks_every_event(self):
+        receipt = {'status': 200, 'content_type': 'text/event-stream', 'transport_complete': True}
+        def body(events):
+            return b''.join(b'data: ' + solver.canonical(event) + b'\n\n' for event in events)
+        created = {'type': 'response.created', 'response': {'status': 'in_progress', 'model': 'frozen'}}
+        completed = {'type': 'response.completed', 'response': {'status': 'completed', 'model': 'frozen'}}
+        solver.validate_provider_identity(body([created, completed]), receipt, ['frozen'])
+        solver.validate_provider_identity(solver.canonical(completed['response']),
+                                          dict(receipt, content_type='application/json'), ['frozen'])
+        for events in ([dict(created, response={'model': 'drifted'}), completed],
+                       [created],
+                       [created, dict(completed, response={'status': 'completed'})],
+                       [created, dict(completed, response={'status': 'failed', 'model': 'frozen'})],
+                       [dict(created, response={'model': 17}), completed]):
+            with self.assertRaises(ValueError):
+                solver.validate_provider_identity(body(events), receipt, ['frozen'])
+        with self.assertRaises(ValueError):
+            solver.validate_provider_identity(b'not JSON', dict(receipt, content_type='application/json'), ['frozen'])
+        solver.validate_provider_identity(b'{"error":{"message":"retry"}}',
+                                          dict(receipt, status=429, content_type='application/json'), ['frozen'])
+        with self.assertRaisesRegex(ValueError, 'differs'):
+            solver.validate_provider_identity(b'{"model":"drifted","status":"failed"}',
+                                              dict(receipt, status=400, content_type='application/json'), ['frozen'])
+        with self.assertRaisesRegex(ValueError, 'differs'):
+            solver.validate_provider_identity(body([dict(created, response={'model': 'drifted'})]) + b'data: broken\n\n',
+                                              dict(receipt, status=400), ['frozen'])
+
+    def test_provider_drift_raw_capture_precedes_rejection_and_no_reply(self):
+        class Process:
+            def __init__(self, message):
+                read_fd, write_fd = os.pipe()
+                os.write(write_fd, solver.canonical(message) + b'\n')
+                os.close(write_fd)
+                self.stdout = os.fdopen(read_fd, 'rb')
+                self.stdin = io.BytesIO()
+                self.code = None
+            def poll(self):
+                return self.code
+            def terminate(self):
+                self.code = -15
+            def wait(self, timeout):
+                return self.code
+        request = {'model': 'frozen', 'reasoning': {'effort': 'high'}}
+        message = {'channel': 'provider', 'id': '1', 'method': 'POST', 'path': '/v1/responses',
+                   'body_base64': base64.b64encode(solver.canonical(request)).decode()}
+        process = Process(message)
+        raw = b'{"model":"drifted","status":"completed"}'
+        receipt = {'status': 200, 'content_type': 'application/json',
+                   'transport_complete': True, 'body_bytes_observed': len(raw)}
+        config = {'image': 'sha256:' + 'a' * 64, 'model': 'frozen', 'reasoning_effort': 'high',
+                  'prompt': 'metadata probe', 'enabled_tools': ['allowed'], 'timeout_seconds': 30,
+                  'provider_url_env': 'FIXTURE_URL', 'provider_token_env': 'FIXTURE_TOKEN',
+                  '_observed_identities': {'model': {'returned_models': ['frozen']}}}
+        record = Record()
+        try:
+            with tempfile.TemporaryDirectory() as tmp, \
+                    patch.object(solver.subprocess, 'Popen', return_value=process), \
+                    patch.object(solver, 'provider_exchange', return_value=(raw, receipt)), \
+                    patch.dict(os.environ, {'FIXTURE_URL': 'https://example.invalid', 'FIXTURE_TOKEN': 'private'}):
+                root = Path(tmp) / 'capture'
+                with self.assertRaisesRegex(ValueError, 'differs'):
+                    solver.run_container(config, root, record=record)
+                self.assertEqual((root / 'provider-0001.response.raw').read_bytes(), raw)
+                self.assertEqual(json.loads((root / 'provider-0001.receipt.json').read_text()), receipt)
+                self.assertFalse(json.loads((root / 'inventory.json').read_text())['complete'])
+                self.assertEqual(record.stop_reason, 'ValueError')
+                self.assertEqual(len(process.stdin.getvalue().splitlines()), 1)
+        finally:
+            process.stdout.close()
+
     def test_container_has_no_host_mount_or_network(self):
         command = solver.container_command('sha256:' + 'a' * 64)
         self.assertEqual(command[command.index('--network') + 1], 'none')
@@ -185,11 +324,67 @@ class ControllerTests(unittest.TestCase):
                 'image': frozen['isolation']['image_sha256'], 'prompt': 'fixture prompt\n',
                 'budgets': budgets, 'enabled_tools': ['allowed'], 'timeout_seconds': 600}
             solver.validate_execution_config(root, config)
+            config['_observed_identities'] = {'model': {'returned_models': ['forged']}}
+            solver.validate_execution_config(root, config)
+            self.assertNotIn('_observed_identities', config)
             for key in ('calls', 'response_bytes', 'display_bytes', 'assignment_seconds'):
                 changed = deepcopy(config)
                 changed['budgets'][key] += 1
                 with self.assertRaises(ValueError):
                     solver.validate_execution_config(root, changed)
+
+            def retain(name, value):
+                (root / name).write_bytes(solver.canonical(value))
+                return reference(root, name)
+            limits = ['Service and model revisions cannot be reproduced exactly.']
+            frozen['provenance'] = {'mode': 'observed-service-v1', 'reproducibility_limits': limits,
+                'authorization': retain('authorization.json', {'schema': 'observed-authorization-v1',
+                    'mode': 'observed-service-v1', 'authorized_by': 'user', 'decision': 'Use observed service identities.',
+                    'requirements': ['isolation', 'budgets', 'raw-capture', 'independent-scoring'],
+                    'reproducibility_limits': limits})}
+            native_exchanges = []
+            native = Native()
+            for ordinal, request in enumerate(({'jsonrpc': '2.0', 'id': 1, 'method': 'initialize'},
+                                               {'jsonrpc': '2.0', 'method': 'notifications/initialized'},
+                                               {'jsonrpc': '2.0', 'id': 3, 'method': 'tools/list'}), 1):
+                _, body, receipt = native.exchange(request)
+                response_name = 'native-%d.response.raw' % ordinal
+                (root / response_name).write_bytes(body)
+                native_exchanges.append({'request': retain('native-%d.request.json' % ordinal, request),
+                                         'response': reference(root, response_name),
+                                         'receipt': retain('native-%d.receipt.json' % ordinal, receipt)})
+            frozen['product'] = {'endpoint_sha256': 'a' * 64,
+                'observation': retain('product-observation.json', {'schema': 'observed-product-v1',
+                    'observed_utc': '2026-10-05T00:00:00Z', 'endpoint_sha256': 'a' * 64,
+                    'server_info': {'name': 'synthetic'},
+                    'catalog_sha256': solver.digest(solver.canonical(json.loads(body)['result'])),
+                    'native_exchanges': native_exchanges, 'immutable_serving_identity_verified': False,
+                    'runtime_dependency_closure_verified': False})}
+            frozen['model']['provider_base_url_sha256'] = 'b' * 64
+            model_response = {'model': 'synthetic', 'status': 'completed'}
+            frozen['model']['observation'] = retain('model-observation.json', {
+                'schema': 'observed-model-v1', 'observed_utc': '2026-10-05T00:00:00Z',
+                'requested_alias': 'synthetic', 'provider_base_url_sha256': 'b' * 64,
+                'settings_sha256': solver.digest(solver.canonical(frozen['model']['settings'])),
+                'returned_models': ['synthetic'], 'immutable_revision_verified': False,
+                'request': retain('model-request.json', dict(settings, input=[])),
+                'response': retain('model-response.json', model_response),
+                'receipt': retain('model-receipt.json', {'status': 200, 'transport_complete': True,
+                    'body_bytes_observed': len(solver.canonical(model_response))})})
+            frozen['runners']['provenance.py'] = solver.digest(Path(solver.__file__).with_name('provenance.py').read_bytes())
+            (root / 'freeze.json').write_bytes(solver.canonical(frozen))
+            config['freeze'] = reference(root, 'freeze.json')
+            config['_observed_identities'] = {'model': {'returned_models': ['forged']}}
+            solver.validate_execution_config(root, config)
+            self.assertEqual(config['_observed_identities']['model']['returned_models'], ['synthetic'])
+            frozen['runners']['provenance.py'] = '0' * 64
+            (root / 'freeze.json').write_bytes(solver.canonical(frozen))
+            config['freeze'] = reference(root, 'freeze.json')
+            with self.assertRaisesRegex(ValueError, 'executing runner differs'):
+                solver.validate_execution_config(root, config)
+            (root / 'model-response.json').write_bytes(b'{"model":"forged","status":"completed"}')
+            with self.assertRaisesRegex(ValueError, 'observed provenance is invalid'):
+                solver.validate_execution_config(root, config)
 
     def test_provider_extra_settings_and_endpoint_substitution_rejected(self):
         value = {'model': 'synthetic', 'reasoning': {'effort': 'high'}, 'store': False,

@@ -7,6 +7,10 @@ import sys
 import tempfile
 import unittest
 
+import provenance
+from run_record import read_ref
+from test_provenance import observed_fixture
+
 spec = importlib.util.spec_from_file_location("compare", Path(__file__).with_name("compare.py"))
 c = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(c)
@@ -69,6 +73,51 @@ class CompareTests(unittest.TestCase):
         self.assertEqual(a["paired_task_count"], 1)
         self.assertEqual(a["arms"][0]["strict_successes"], 1)
         self.assertEqual(a["paired_tasks"][0]["correctness_delta"], 0)
+
+    def observed_arm(self, number):
+        arm = self.arms[number]
+        frozen = observed_fixture(self.ref)
+        arm['freeze'] = self.ref(frozen)
+        task = arm['tasks'][0]
+        accounting = json.loads((self.root / task['accounting']['path']).read_text())
+        accounting.update(freeze_sha256=arm['freeze']['sha256'],
+                          provenance=provenance.identity_binding(self.root, frozen, read_ref))
+        task['accounting'] = self.ref(accounting)
+        return frozen
+
+    def test_observed_provenance_is_separate_from_coverage_and_scoring(self):
+        self.observed_arm(0)
+        self.observed_arm(1)
+        report = self.run_compare()
+        self.assertEqual(report['classification'], 'complete paired coverage')
+        self.assertEqual(report['provenance_classification'], 'observed-service comparison')
+        self.assertEqual(report['arms'][0]['strict_successes'], 1)
+        self.assertFalse(report['arms'][0]['provenance']['identities']['model']['immutable_revision_verified'])
+        self.assertIn('Serving image and runtime closure are unverified.', report['limitations'])
+
+    def test_mixed_provenance_disclosed_and_missing_or_forged_binding_rejected(self):
+        self.observed_arm(0)
+        self.assertEqual(self.run_compare()['provenance_classification'], 'mixed provenance policies')
+        original = copy.deepcopy(self.arms)
+        for binding in (None, {'policy': 'immutable-v1'}, {'policy': 'observed-service-v1'}):
+            self.arms = copy.deepcopy(original)
+            self.edit('accounting', lambda a: a.update(provenance=binding))
+            with self.assertRaises(c.Invalid):
+                self.run_compare()
+
+    def test_unknown_provenance_and_false_immutable_claim_rejected(self):
+        frozen = self.observed_arm(0)
+        frozen['provenance']['mode'] = 'unknown'
+        self.arms[0]['freeze'] = self.ref(frozen)
+        with self.assertRaises(c.Invalid):
+            self.run_compare()
+        frozen = self.observed_arm(0)
+        observation = json.loads((self.root / frozen['model']['observation']['path']).read_text())
+        observation['immutable_revision_verified'] = True
+        frozen['model']['observation'] = self.ref(observation)
+        self.arms[0]['freeze'] = self.ref(frozen)
+        with self.assertRaises(c.Invalid):
+            self.run_compare()
 
     def test_missing_arm_setup_does_not_score(self):
         self.arms[1]["setup"] = self.ref({"ready": False})

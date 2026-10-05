@@ -10,6 +10,9 @@ import math
 import re
 from pathlib import Path
 
+import provenance
+from run_record import read_ref
+
 
 class Invalid(ValueError):
     pass
@@ -86,7 +89,15 @@ def compare(contract, arms, root):
         names.add(arm["name"])
         require(arm["contract_sha256"] == contract_hash, "arm contract mismatch")
         require(arm["native"] is True, "non-native arm cannot enter native comparison")
-        ev.read(arm["freeze"], False)
+        frozen = ev.read(arm["freeze"])
+        try:
+            policy = provenance.mode(frozen)
+            blockers = provenance.validate(root, frozen, read_ref)
+            require(not blockers, '; '.join(blockers))
+            binding = provenance.identity_binding(root, frozen, read_ref)
+            identities = provenance.observations(root, frozen, read_ref) if policy == provenance.OBSERVED else None
+        except (ValueError, TypeError, KeyError, OSError) as exc:
+            raise Invalid('invalid arm provenance: ' + str(exc)) from exc
         setup = ev.read(arm["setup"])
         require(type(setup["ready"]) is bool, "invalid setup readiness")
         records = unique(arm["tasks"], "id", "arm tasks")
@@ -114,6 +125,9 @@ def compare(contract, arms, root):
             require(audit["task"] == ident and audit["contract_sha256"] == contract_hash,
                     "accounting identity mismatch")
             require(audit["freeze_sha256"] == arm["freeze"]["sha256"], "product changed during arm")
+            if policy == provenance.OBSERVED:
+                require(audit.get('provenance') == binding,
+                        'accounting provenance differs from hash-checked frozen observations')
             require(audit["prompt_sha256"] == task["prompt"]["sha256"], "task prompt mismatch")
             calls = number(audit["calls"], "calls", True)
             observed = number(audit["response_bytes_observed"], "observed bytes", True)
@@ -163,7 +177,11 @@ def compare(contract, arms, root):
             rows.append(row)
         eligible = [r for r in rows if r["eligible"]]
         assigned = [r for r in rows if r["assigned"]]
+        arm_provenance = dict(binding)
+        if identities is not None:
+            arm_provenance['identities'] = identities
         reports.append({"name": arm["name"], "setup_ready": setup["ready"], "tasks": rows,
+                        "provenance": arm_provenance,
                         "planned_tasks": len(rows), "planned_atoms": sum(r["atoms"] for r in rows),
                         "assigned_tasks": len(assigned), "assigned_atoms": sum(r["atoms"] for r in assigned),
                         "eligible_tasks": len(eligible), "eligible_atoms": sum(r["atoms"] for r in eligible),
@@ -180,13 +198,20 @@ def compare(contract, arms, root):
                            **{key + "_delta": left[key] - right[key] for key in
                               ("correctness", "evidence", "calls", "response_bytes_observed", "assignment_seconds")},
                            "strict_success_delta": int(left["strict_success"]) - int(right["strict_success"])})
+    policies = {r['provenance']['policy'] for r in reports}
+    provenance_classification = ('observed-service comparison' if policies == {provenance.OBSERVED} else
+                                 'immutable identity policy' if policies == {provenance.IMMUTABLE} else
+                                 'mixed provenance policies')
+    limits = list(dict.fromkeys(limit for r in reports for limit in
+                               r['provenance'].get('reproducibility_limits', [])))
     return {"schema": "native-pair-report-v1", "contract_sha256": contract_hash,
+            "provenance_classification": provenance_classification,
             "classification": "complete paired coverage" if len(paired) == len(tasks) else "incomplete paired coverage",
             "arms": reports, "paired_tasks": paired, "paired_task_count": len(paired),
             "planned_task_count": len(tasks), "delta_direction": reports[0]["name"] + " minus " + reports[1]["name"],
             "limitations": ["Evidence hashes bind supplied records, not their truth; independent audits remain required.",
                             "No significance test or competitive-win inference; subset deltas are conditional.",
-                            "Model tokens and OS isolation are not measured."]}
+                            "Model tokens and OS isolation are not measured."] + limits}
 
 
 def main():

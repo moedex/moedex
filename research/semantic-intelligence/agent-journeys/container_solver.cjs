@@ -18,6 +18,7 @@ let child;
 let servers = [];
 let deadline;
 let requestTimeout = 60000;
+let input;
 const pending = new Map();
 
 function emit(value) { process.stdout.write(JSON.stringify(value) + '\n'); }
@@ -84,7 +85,12 @@ function listen(server) {
   });
 }
 function toml(value) { return JSON.stringify(value); }
+function validTools(tools) {
+  return Array.isArray(tools) && tools.length > 0 && new Set(tools).size === tools.length &&
+    tools.every(name => typeof name === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(name));
+}
 function configArgs(config, providerPort, mcpPort) {
+  if (!validTools(config.enabled_tools)) throw new Error('invalid_start_config');
   const pairs = {
     model_provider: 'recording_bridge',
     model_reasoning_effort: config.reasoning_effort,
@@ -106,6 +112,11 @@ function configArgs(config, providerPort, mcpPort) {
     'mcp_servers.retrieval.tool_timeout_sec': Math.max(1, Math.ceil(requestTimeout / 1000)),
     tool_output_token_limit: config.tool_output_token_limit || 65536,
   };
+  // The coordinator freezes this native roster. Approve exactly those tools so
+  // tools with absent read-only annotations can run under approval_policy=never.
+  for (const name of config.enabled_tools) {
+    pairs[`mcp_servers.retrieval.tools.${name}.approval_mode`] = 'approve';
+  }
   const args = [];
   for (const [key, value] of Object.entries(pairs)) args.push('-c', `${key}=${toml(value)}`);
   // Code Mode host supplies this model's tool wrapper. Filesystem and network
@@ -126,7 +137,7 @@ async function start(config) {
   started = true;
   if (!config || typeof config.model !== 'string' || !config.model ||
       typeof config.reasoning_effort !== 'string' || typeof config.prompt !== 'string' ||
-      !Array.isArray(config.enabled_tools) || config.enabled_tools.some(x => typeof x !== 'string') ||
+      !validTools(config.enabled_tools) ||
       !Number.isInteger(config.timeout_ms) || config.timeout_ms < 1 || config.timeout_ms > 3600000) {
     throw new Error('invalid_start_config');
   }
@@ -199,16 +210,19 @@ function respond(message) {
   waiting.response.end(body);
 }
 
-const input = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
-input.on('line', line => {
-  if (line.length > MAX_MESSAGE_BYTES) { stop(1, 'host_message_too_large'); return; }
-  let message;
-  try { message = JSON.parse(line); }
-  catch { stop(1, 'invalid_host_json'); return; }
-  if (message.channel === 'start') start(message.config).catch(error => stop(1, error.message === 'duplicate_start' || error.message === 'invalid_start_config' ? error.message : 'container_start_error'));
-  else if (message.channel === 'response') {
-    try { respond(message); } catch (error) { stop(1, error.message); }
-  } else stop(1, 'unknown_host_channel');
-});
-input.on('close', () => { if (!ending) stop(1, 'host_input_closed'); });
-process.on('SIGTERM', () => stop(1, 'container_terminated'));
+if (require.main === module) {
+  input = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
+  input.on('line', line => {
+    if (line.length > MAX_MESSAGE_BYTES) { stop(1, 'host_message_too_large'); return; }
+    let message;
+    try { message = JSON.parse(line); }
+    catch { stop(1, 'invalid_host_json'); return; }
+    if (message.channel === 'start') start(message.config).catch(error => stop(1, error.message === 'duplicate_start' || error.message === 'invalid_start_config' ? error.message : 'container_start_error'));
+    else if (message.channel === 'response') {
+      try { respond(message); } catch (error) { stop(1, error.message); }
+    } else stop(1, 'unknown_host_channel');
+  });
+  input.on('close', () => { if (!ending) stop(1, 'host_input_closed'); });
+  process.on('SIGTERM', () => stop(1, 'container_terminated'));
+}
+module.exports = { configArgs, validTools };

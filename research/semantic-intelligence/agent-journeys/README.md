@@ -105,3 +105,9 @@ from scores. Paired deltas use only mutually eligible tasks and never infer a wi
 See [input format and interpretation](COMPARISON.md). This is an offline report
 validator, not a service launcher, blind solver or replacement for independent
 raw-evidence audits. Existing frozen results are not rewritten.
+
+New runs default to immutable model/product provenance. An explicitly authorized
+[`observed-service-v1` policy](COMPARISON.md#explicit-observed-service-provenance)
+records the available service/model identities and reproducibility limits while
+retaining isolation, budgets, raw capture and independent review. Reports keep
+provenance separate from paired coverage and answer quality.
