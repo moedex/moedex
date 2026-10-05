@@ -92,9 +92,8 @@ func discoverManagedSources(root string) ([]RepoSource, error) {
 	if err != nil {
 		return nil, err
 	}
-	if cat.Host != catalog.DefaultHost {
-		return nil, fmt.Errorf("managed corpus host %q does not match pinned host %q", cat.Host, catalog.DefaultHost)
-	}
+	// Local ingestion uses the validated acquisition marker's host. The lock
+	// must match that host; the example default is not an indexing allowlist.
 	lock, err := catalog.LoadLock(root, cat.Host)
 	if err != nil {
 		return nil, err

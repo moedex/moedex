@@ -104,6 +104,40 @@ func TestDiscoverSourcesManagedMissingAndCorruptLockFailClosed(t *testing.T) {
 	})
 }
 
+func TestDiscoverSourcesManagedConfiguredHost(t *testing.T) {
+	root, _ := managedSourceFixture(t)
+	const host = "gitlab.company.example"
+	cat, err := corpus.LoadCatalog(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lock, err := corpus.LoadLock(root, cat.Host)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cat.Host = host
+	if err := corpus.WriteCatalog(root, cat); err != nil {
+		t.Fatal(err)
+	}
+	// The marker alone must not admit a lock acquired from another host.
+	if _, err := DiscoverSources(root); err == nil || !strings.Contains(err.Error(), "does not match pinned host") {
+		t.Fatalf("mismatched lock error = %v, want host rejection", err)
+	}
+	for i := range lock.Projects {
+		lock.Projects[i].CloneURL = "git@" + host + ":" + lock.Projects[i].PathWithNamespace + ".git"
+	}
+	if err := corpus.WriteLock(root, host, lock); err != nil {
+		t.Fatal(err)
+	}
+	sources, err := DiscoverSources(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sources) != 2 || sources[0].Namespace != "group-a/same" || !sources[0].Managed {
+		t.Fatalf("configured-host source identity = %+v", sources)
+	}
+}
+
 func managedSourceFixture(t *testing.T) (string, map[int64]string) {
 	t.Helper()
 	if _, err := exec.LookPath("git"); err != nil {
