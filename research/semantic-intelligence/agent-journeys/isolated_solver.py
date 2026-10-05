@@ -21,6 +21,7 @@ import subprocess
 import time
 import urllib.parse
 
+import contract as native_contract
 from native_http import NativeHTTP
 from journey_clock import monotonic
 from run_record import RunRecord, _new_file, canonical, digest, read_ref, reference
@@ -315,13 +316,12 @@ def validate_execution_config(root, config):
     """Bind ALL task budgets, identity and executing code to frozen bytes."""
     frozen = json.loads(read_ref(root, config['freeze']))
     contract = json.loads(read_ref(root, frozen['contract']))
-    tasks = [t for t in contract['tasks'] if t['id'] == config['identity']['task']]
-    if len(tasks) != 1:
+    tasks = native_contract.validate(contract, lambda ref: read_ref(root, ref))
+    if config['identity']['task'] not in tasks:
         raise ValueError('assigned task missing from frozen contract')
-    task = tasks[0]
+    task = tasks[config['identity']['task']]
     prompt = read_ref(root, task['prompt'])
-    if (contract.get('schema') != 'native-pair-v1' or
-            digest(canonical(contract)) != config['identity']['contract_sha256'] or
+    if (digest(canonical(contract)) != config['identity']['contract_sha256'] or
             task['prompt']['sha256'] != config['identity']['prompt_sha256'] or
             prompt != config['prompt'].encode() or
             config['budgets'] != contract['budgets'] or
@@ -338,7 +338,8 @@ def validate_execution_config(root, config):
     if set(fields) != expected or fields['model'] != config['model'] or fields['reasoning'].get('effort') != config['reasoning_effort']:
         raise ValueError('complete frozen provider request settings required')
     config['provider_fields'] = fields
-    runner_names = ['isolated_solver.py', 'run_record.py', 'native_http.py', 'journey_clock.py']
+    runner_names = ['isolated_solver.py', 'run_record.py', 'native_http.py', 'journey_clock.py',
+                    'contract.py', 'compare.py']
     config.pop('_observed_identities', None)
     if provenance.mode(frozen) == 'observed-service-v1':
         blockers = provenance.validate(root, frozen, read_ref)

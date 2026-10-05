@@ -7,9 +7,9 @@ import argparse
 import hashlib
 import json
 import math
-import re
 from pathlib import Path
 
+import contract as native_contract
 import provenance
 from run_record import read_ref
 
@@ -65,22 +65,12 @@ class Evidence:
 
 def compare(contract, arms, root):
     ev = Evidence(root)
-    require(contract["schema"] == "native-pair-v1", "unknown contract schema")
     require(len(arms) == 2, "exactly two arms required")
-    require(isinstance(contract["corpus"]["commit"], str) and
-            re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", contract["corpus"]["commit"]) and
-            contract["corpus"]["repository"], "unpinned corpus")
-    for ref in (contract["corpus"]["manifest"], contract["rubric"], contract["protocol"]):
-        ev.read(ref, False)
-    tasks = unique(contract["tasks"], "id", "contract tasks")
-    require(tasks, "empty task roster")
-    for task in tasks.values():
-        ev.read(task["prompt"], False)
-        require(task["atoms"] and len(set(task["atoms"])) == len(task["atoms"]), "invalid atom roster")
-        require(all(isinstance(a, str) and a for a in task["atoms"]), "invalid atom identity")
+    try:
+        tasks = native_contract.validate(contract, lambda ref: ev.read(ref, False))
+    except (ValueError, TypeError, KeyError, OSError) as exc:
+        raise Invalid('invalid contract: ' + str(exc)) from exc
     budget = contract["budgets"]
-    for key in ("calls", "response_bytes", "assignment_seconds", "display_bytes"):
-        require(number(budget[key], key, key != "assignment_seconds") > 0, "zero budget")
     contract_hash = digest(canonical(contract))
     names = set()
     reports = []

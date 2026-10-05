@@ -306,7 +306,13 @@ console.log(JSON.stringify({pairs, rejected, args}));
             from run_record import reference
             budgets = {'calls': 24, 'response_bytes': 262144, 'display_bytes': 8192, 'assignment_seconds': 600}
             prompt_ref = reference(root, 'prompt.txt')
-            contract = {'schema': 'native-pair-v1', 'tasks': [{'id': 'example', 'prompt': prompt_ref}], 'budgets': budgets}
+            (root / 'manifest.json').write_bytes(b'{"files":[]}')
+            contract = {'schema': 'native-pair-v1',
+                        'corpus': {'repository': 'https://example.test/api', 'commit': 'a' * 40,
+                                   'manifest': reference(root, 'manifest.json')},
+                        'rubric': reference(root, 'manifest.json'), 'protocol': reference(root, 'manifest.json'),
+                        'tasks': [{'id': 'example', 'prompt': prompt_ref, 'atoms': ['example.1']}],
+                        'budgets': budgets}
             (root / 'contract.json').write_bytes(solver.canonical(contract))
             settings = {'model': 'synthetic', 'reasoning': {'effort': 'high'}, 'tool_choice': 'auto',
                         'parallel_tool_calls': False, 'text': {'verbosity': 'low'},
@@ -316,7 +322,8 @@ console.log(JSON.stringify({pairs, rejected, args}));
                       'model': {'requested_alias': 'synthetic', 'settings': {'reasoning_effort': 'high', 'reasoning_summary': 'none', 'provider_fields': settings}},
                       'native_allowed_tools': ['allowed'],
                       'runners': {n: solver.digest(Path(solver.__file__).with_name(n).read_bytes())
-                                  for n in ('isolated_solver.py', 'run_record.py', 'native_http.py', 'journey_clock.py')}}
+                                  for n in ('isolated_solver.py', 'run_record.py', 'native_http.py', 'journey_clock.py',
+                                            'contract.py', 'compare.py')}}
             (root / 'freeze.json').write_bytes(solver.canonical(frozen))
             config = {'freeze': reference(root, 'freeze.json'), 'identity': {
                 'task': 'example', 'arm': 'a', 'contract_sha256': solver.digest(solver.canonical(contract)),
@@ -385,6 +392,70 @@ console.log(JSON.stringify({pairs, rejected, args}));
             (root / 'model-response.json').write_bytes(b'{"model":"forged","status":"completed"}')
             with self.assertRaisesRegex(ValueError, 'observed provenance is invalid'):
                 solver.validate_execution_config(root, config)
+
+    def test_v2_execution_checks_all_sources_task_scope_and_frozen_validator(self):
+        from run_record import reference
+        from test_contract import fixture
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            contract = fixture(root)
+            settings = {'model': 'synthetic', 'reasoning': {'effort': 'high'}, 'tool_choice': 'auto',
+                        'parallel_tool_calls': False, 'text': {'verbosity': 'low'},
+                        'store': False, 'stream': True, 'include': ['reasoning.encrypted_content']}
+            frozen = {'arm': 'a', 'isolation': {'image_sha256': 'sha256:' + 'a' * 64},
+                      'model': {'requested_alias': 'synthetic', 'settings': {'reasoning_effort': 'high',
+                                'reasoning_summary': 'none', 'provider_fields': settings}},
+                      'native_allowed_tools': ['allowed'],
+                      'runners': {name: solver.digest(Path(solver.__file__).with_name(name).read_bytes())
+                                  for name in ('isolated_solver.py', 'run_record.py', 'native_http.py',
+                                               'journey_clock.py', 'contract.py', 'compare.py')}}
+            config = {'identity': {'task': 'example', 'arm': 'a',
+                                  'contract_sha256': solver.digest(solver.canonical(contract)),
+                                  'prompt_sha256': contract['tasks'][0]['prompt']['sha256']},
+                      'model': 'synthetic', 'reasoning_effort': 'high',
+                      'image': frozen['isolation']['image_sha256'], 'prompt': 'fixture prompt\n',
+                      'budgets': contract['budgets'], 'enabled_tools': ['allowed'], 'timeout_seconds': 600}
+            def freeze():
+                (root / 'contract.json').write_bytes(solver.canonical(contract))
+                frozen['contract'] = reference(root, 'contract.json')
+                (root / 'freeze.json').write_bytes(solver.canonical(frozen))
+                config['freeze'] = reference(root, 'freeze.json')
+            freeze()
+            solver.validate_execution_config(root, config)
+            original = deepcopy(contract)
+            for scope in ([], ['https://example.test/unknown']):
+                contract['tasks'][0]['repositories'] = scope
+                freeze()
+                with self.assertRaisesRegex(ValueError, 'task repository scope'):
+                    solver.validate_execution_config(root, config)
+            contract = deepcopy(original)
+            contract['tasks'][0]['repositories'].pop()
+            freeze()
+            with self.assertRaisesRegex(ValueError, 'execution configuration differs'):
+                solver.validate_execution_config(root, config)
+            contract = deepcopy(original)
+            contract['corpus']['repositories'][1]['commit'] = 'c' * 40
+            freeze()
+            with self.assertRaisesRegex(ValueError, 'execution configuration differs'):
+                solver.validate_execution_config(root, config)
+            contract = deepcopy(original)
+            freeze()
+            manifest = root / contract['corpus']['repositories'][1]['manifest']['path']
+            raw = manifest.read_bytes()
+            manifest.write_bytes(raw + b' ')
+            with self.assertRaisesRegex(ValueError, 'reference digest mismatch'):
+                solver.validate_execution_config(root, config)
+            manifest.write_bytes(raw)
+            for name in ('contract.py', 'compare.py'):
+                expected = frozen['runners'][name]
+                for wrong in (None, '0' * 64):
+                    frozen['runners'][name] = wrong
+                    freeze()
+                    with self.subTest(name=name, wrong=wrong), self.assertRaisesRegex(ValueError, 'executing runner differs'):
+                        solver.validate_execution_config(root, config)
+                frozen['runners'][name] = expected
+            freeze()
+            solver.validate_execution_config(root, config)
 
     def test_provider_extra_settings_and_endpoint_substitution_rejected(self):
         value = {'model': 'synthetic', 'reasoning': {'effort': 'high'}, 'store': False,
