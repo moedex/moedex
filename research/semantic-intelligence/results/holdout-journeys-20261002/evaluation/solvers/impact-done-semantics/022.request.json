@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":22,"method":"tools/call","params":{"name":"read_source","arguments":{"repo":"CleanArchitecture","path":"src/Web/Program.cs","format":"text"}}}

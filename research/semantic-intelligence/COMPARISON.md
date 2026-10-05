@@ -125,35 +125,6 @@ construction accumulates documents in memory, so bounded importer streaming does
 not imply bounded upstream compiler memory.
 [Command implementation](https://github.com/sourcegraph/scip-dotnet/blob/v0.2.14/ScipDotnet/IndexCommandHandler.cs)
 
-## CodeGraph comparison from the local reference
-
-CodeGraph's C# pipeline genuinely opens an MSBuild solution, obtains compilations
-and semantic models, and resolves invocation symbols. Its walker records a
-resolved `CALLS` edge from the enclosing scope to the method display string, with
-separate syntax fallback for unresolved calls. This is substantially stronger
-than Moedex's syntax name matching for compiler-resolvable targets.
-
-Evidence in `.references/CodeGraph`:
-
-- `src/TC.CodeGraphApi.Extractors.CSharp/SolutionAnalyzer.cs:47`, `:56`, `:91`:
-  solution, compilation and semantic-model acquisition.
-- `src/TC.CodeGraphApi.Extractors.CSharp/CodeGraphSyntaxWalker.cs:312`, `:405`:
-  declaration names and invocation binding.
-- `src/TC.CodeGraphApi.Models/GraphNode.cs`: node identity combines the repository
-  project string with `QualifiedName`; `DotnetProject` is separate metadata.
-
-The general call path uses `ToDisplayString()` without normalizing through
-`OriginalDefinition` or `ReducedFrom`. The representation also does not separate
-qualified symbol, build context and source occurrence as ADR 0026 requires. These
-are source-based reasons to test constructed generic methods, extension methods,
-partial declarations and same-name projects; they are not a reproduced claim
-that every such query fails.
-
-The decision gate remains reproducible evidence: resolved bindings, exact source
-occurrences, explicit incomplete analysis, context-sensitive IDs and clean-build
-equivalence after source or dependency changes. Availability of either compiler
-pipeline does not satisfy those gates by itself.
-
 ## Measured descriptor controls
 
 The local control run at

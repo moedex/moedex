@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-25
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 The parity gate ([0003](./0003-cox-reduction-ripgrep-parity.md)) proved moedex *correct* but exposed a brutal latency tail. The seeded 1000-query battery on the 953.6 MB corpus measured p50 **10.4 ms** but **p95 15.3 s** (max 39.0 s). The tail was dominated by case-insensitive queries (bucket `h`): the fold-safe fix for the parity bug forced every `(?i)` literal to degrade to `match: All` and then re-scan content with RE2 — a `(?i)` query matching 5 lines took 11 s while its case-sensitive twin took ~5.7 ms, a ~2000× gap. Sub-trigram literals and weak regex (anchors, broad classes) had the same disease: a correct-but-`All` candidate set followed by an O(corpus) content scan.
@@ -25,7 +25,9 @@ Close the gap with two co-dependent techniques plus intra-query parallelism, all
 - A native SIMD verify kernel could shave the inherent scans, but profiling shows the tail is scan-bound, not intersection-bound — deferred ([0013](./0013-pure-go-defer-simd.md)).
 
 ## Evidence
-Full-corpus battery (953.6 MB, 60,883 files, 1000 queries), baseline → final: overall **p95 15.3 s → 1.443 s** (2.7×), p50 10.4 ms → 179 ms (battery-skew; single-query serving stays sub-second), max 39.0 s → 12.7 s. Bucket `h` (case-insensitive) **p95 8.149 s → 2.255 s** (3.6×), p50 → 0.679 s. Worst individual `h` queries: `refreshtoken|strumae` (689 matches) 21.6 s → 2.255 s (9.5×); `LinesView|Computes` (293 matches) 19.7 s → 2.254 s (8.7×). The parity gate stayed **GREEN throughout** (AC-D3 1000/1000, AC-D4 0), with a 200-case fuzz differential and a 200-repo real-ripgrep parity slice confirming soundness.
+
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 [0002](./0002-positional-trigram-core-byte-offsets.md), [0003](./0003-cox-reduction-ripgrep-parity.md), [0005](./0005-mmap-compact-postings.md), [0013](./0013-pure-go-defer-simd.md).

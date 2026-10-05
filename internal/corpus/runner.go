@@ -1,6 +1,6 @@
 // Package corpus owns moedex's corpus acquisition and freshness: the setup
 // experience that, on a fresh machine, checks for the glab CLI, helps the
-// operator authenticate to TurnCommerce's internal GitLab ONLY, and clones every
+// operator authenticate to configured's internal GitLab ONLY, and clones every
 // project their access allows into the live corpus that the engine then indexes
 // and keeps fresh.
 //
@@ -17,7 +17,7 @@
 // tests exercise them with a fake instead of a real glab/git/network. Only
 // ExecRunner actually launches subprocesses.
 //
-// The whole package is pinned to a single host (DefaultHost) — it never
+// The whole package is pinned to a single configured host per operation — it never
 // authenticates to or clones from anywhere else.
 package corpus
 

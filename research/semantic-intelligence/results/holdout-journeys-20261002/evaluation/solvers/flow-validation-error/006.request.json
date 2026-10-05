@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"read_source","arguments":{"repo":"CleanArchitecture","path":"src/Application/Common/Exceptions/ValidationException.cs","start_line":1,"end_line":22}}}

@@ -280,12 +280,24 @@ moedex semantic dependencies pack \
 
 Add `--dependency-bundle /scratch/new-bundle` to the capture command, retaining
 `--restore-offline`. The runner verifies and copies the complete manifest into
-its private cache, keeps cleared feeds, and records `dependency_bundle_sha256`
-in the result and artifact contexts. Missing packages or cache/manifest mutation
+its private cache, uses that cache as the explicit local NuGet source, and records
+`dependency_bundle_sha256` in the result and artifact contexts. Missing packages or cache/manifest mutation
 fail the capture. Keep the bundle and the retained capture workspace for audit;
 the latter also contains `dependency-manifest.json`. See
 [ADR 0033](../../docs/adr/0033-offline-compiler-dependency-bundles.md) for limits and
 the distinction between cleared feeds and OS network isolation.
+
+Floating versions require a feed lookup even when a matching package is cached.
+The verified bundle supplies that local lookup; ambient and network sources stay
+cleared. An absent version fails rather than fetching a new package. Without a
+bundle, the explicit source is an empty private directory. The pinned SDK may
+also supply its own local library packs.
+
+Run `test_floating_dependencies.py` with `--moedex`, `--dotnet`, `--sdk-path`,
+`--worker`, and a fresh `--output-dir` to verify this boundary with the real SDK.
+It creates a synthetic local package, captures a matching floating version, and
+checks that an unavailable range and an omitted bundle leave no artifact or
+workspace. No external package feed is needed.
 
 If a pinned SDK fails in NuGet static-graph restore,
 `--restore-standard-evaluation` explicitly selects standard MSBuild evaluation

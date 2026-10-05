@@ -1,1 +1,0 @@
-Trace AddEventAttendee consumption through validation to RegistrationValidated publication. Cite the interface/implementation step and state what execution is not proven.

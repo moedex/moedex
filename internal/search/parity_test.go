@@ -78,7 +78,7 @@ func TestParitySynthetic(t *testing.T) {
 		}
 		return p
 	}
-	write("a.cs", "namespace TC.SslApi;\npublic class SslService {\n  public string Token;\n  void get() {}\n}\n")
+	write("a.cs", "namespace Example.SslApi;\npublic class SslService {\n  public string Token;\n  void get() {}\n}\n")
 	write("b.cs", "using System;\nusing System.Text;\nclass Other { get; set; }\n")
 	write("unicode.txt", "let prix = café_au_lait;\nΣumма = Δ + ß\nplain ascii line\n")
 	// Two byte-identical files exercising the dedup-expand path.
@@ -96,15 +96,23 @@ func TestParityCorpus(t *testing.T) {
 	if err != nil {
 		t.Skip("no home dir")
 	}
-	base := filepath.Join(home, "TCGitlab")
+	base := os.Getenv("MOEDEX_CORPUS")
+	if base == "" {
+		base = filepath.Join(home, ".moedex-managed")
+	}
 	if _, err := os.Stat(base); err != nil {
-		t.Skip("corpus not present at ~/TCGitlab")
+		t.Skip("corpus not present at ~/.moedex-managed")
 	}
 
-	// Eyeball-scale repo first (PushApi, 18 files), then the primary (SslApi).
-	repos := []string{
-		filepath.Join(base, "Services.Registrar", "TC.PushApi"),
-		filepath.Join(base, "Services.Registrar", "TC.SslApi"),
+	repos, err := ingest.DiscoverRepos(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(repos) == 0 {
+		t.Skip("no repositories in configured corpus")
+	}
+	if len(repos) > 2 {
+		repos = repos[:2]
 	}
 	ix := index.New()
 	var files []string

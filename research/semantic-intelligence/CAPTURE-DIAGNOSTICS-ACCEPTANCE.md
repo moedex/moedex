@@ -93,7 +93,7 @@ and all 637 files in the prior holdout archive remain unchanged.
   setup, denied transport, existing-run rejection and malformed protocol controls.
 - No GPU, subagents, product deployment, or paired CodeGraph execution was used.
 
-See the [sealed evidence manifest](results/capture-diagnostics-20261002/result.json)
+See the sealed evidence manifest (archival evidence maintained separately)
 and [journey setup instructions](agent-journeys/README.md). The previous
 [source-only holdout result](HOLDOUT-CLEANARCHITECTURE-ACCEPTANCE.md) is unchanged.
 A fresh independently reviewed holdout still follows compiler readiness; this

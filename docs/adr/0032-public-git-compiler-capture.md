@@ -39,9 +39,5 @@ The existing package-free, empty-feed restore remains the execution contract.
 This change does not acquire SDKs or dependencies. Roslyn's original SDK/Arcade
 requirements still need a separate reproducible dependency-staging design.
 
-The original CodeGraph abstractions source fixture passed public Git capture,
-all ten frozen binding labels, unmanaged snapshot attachment, and executable MCP
-constructor lookup. The expected remote in this disposable fixture is
-`https://example.com/codegraph-fixture.git`; it is deliberately not presented as
-an upstream acquisition. See [real-project acceptance](../../research/semantic-intelligence/REAL-PROJECT-ACCEPTANCE.md)
-and [Roslyn compiler acceptance](../../research/semantic-intelligence/ROSLYN-COMPILER-ACCEPTANCE.md).
+Public capture is checked with synthetic fixtures and original public sources.
+See [Roslyn compiler acceptance](../../research/semantic-intelligence/ROSLYN-COMPILER-ACCEPTANCE.md).

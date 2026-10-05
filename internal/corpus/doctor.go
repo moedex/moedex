@@ -129,7 +129,7 @@ func Doctor(ctx context.Context, r Runner, cfg Config) Report {
 				Name:   "GitLab host/VPN reachable",
 				Status: StatusFail,
 				Detail: detail,
-				Fix:    "connect the TC VPN, then re-run `moedex-corpus doctor`",
+				Fix:    "connect the required network, then re-run `moedex-corpus doctor`",
 			})
 		}
 	}

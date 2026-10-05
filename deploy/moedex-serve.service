@@ -19,7 +19,7 @@
 
 [Unit]
 Description=moedex warm retrieval daemon (HTTP)
-Documentation=https://gitlab.tcdevops.com/Zak/moedex
+Documentation=https://github.com/moedex/moedex
 After=network-online.target
 Wants=network-online.target
 

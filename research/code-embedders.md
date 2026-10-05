@@ -137,7 +137,7 @@ loads an arbitrary HF encoder export from disk via
 - `MOEDEX_CODE_TOKENIZER` → path to `tokenizer.json` (HF tokenizers format)
 - `MOEDEX_CODE_DIM` → hidden size (768 / 1024 / 2048)
 - `ONNXRUNTIME_LIB_PATH` → `libonnxruntime.dylib`
-- the gold corpus present (`MOEDEX_CORPUS_ROOT` or `~/TCGitlab`)
+- the gold corpus present (`MOEDEX_CORPUS_ROOT` or `~/.moedex-managed`)
 
 > Input-name note: the harness passes `["input_ids","attention_mask"]`. Granite
 > (ModernBERT) and the bundled DistilRoBERTa both match this. A **BERT-style**
@@ -251,10 +251,10 @@ reason to prefer an encoder if the encoder is "good enough."
   cosine cost proportionally. RAM is not the constraint, but query latency on the
   full corpus is — note it when comparing a 2048-d model that "wins" by a hair.
 - **The no-labeled-data ceiling still binds (same as the reranker doc).** We can
-  only *prove* a win on a ~36-query single-judge answerable gold + 6 synonym-gap
+  only *prove* a win on a externally configured answerable and synonym-gap
   queries. That is enough to reject a model that regresses and to rank-order two
   candidates, but **not** enough to certify a published quality claim. A model can
-  look better on 6 NL queries by luck. Mitigations: report the agent-NL split
+  look better on a small NL stratum by luck. Mitigations: report the agent-NL split
   separately (the harness already does), require the margin to exceed the
   per-query swing the gate documents (~`denseSlack` 0.04), and treat the result as
   "promote to default, keep watching" rather than "settled."
@@ -286,4 +286,4 @@ reason to prefer an encoder if the encoder is "good enough."
 - [internal/embed/onnx.go (in-repo)](../internal/embed/onnx.go) — `NewONNXEmbedderFromFiles(runtimePath, modelPath, tokenizerPath, inputNames, dim, maxSeq)`; output must be `last_hidden_state [batch,seq,dim]`; mean-pool + L2 norm; UTF-8/CFML tokenizer hardening. Verified 2026-06-24.
 - [internal/embed/embed.go (in-repo)](../internal/embed/embed.go) — `Embedder` interface; `NewHTTPEmbedder(baseURL, model)` POSTs OpenAI-style `/embeddings`; flat brute-force cosine `Store`. Verified 2026-06-24.
 - [internal/eval/gold_onnx_test.go (in-repo)](../internal/eval/gold_onnx_test.go) — `TestCorpusCodeModelMeasurement` loads disk export via env `MOEDEX_CODE_MODEL`/`_TOKENIZER`/`_DIM` + `ONNXRUNTIME_LIB_PATH`, inputs `["input_ids","attention_mask"]`, maxSeq 256, dim default 768; reports lexical vs +code-dense vs full-hybrid. Verified 2026-06-24.
-- [research/learned-reranker.md (in-repo)](./learned-reranker.md) — companion doc; dense arm is gated/complementary, no-labels ceiling, ~36-query gold + agent-NL split; structure mirrored here. 2026-06-22.
+- [research/learned-reranker.md (in-repo)](./learned-reranker.md) — companion doc; dense arm is gated/complementary, no-labels ceiling, external gold and agent-NL split; structure mirrored here. 2026-06-22.

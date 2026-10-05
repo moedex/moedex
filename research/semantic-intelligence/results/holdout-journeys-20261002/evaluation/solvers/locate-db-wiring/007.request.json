@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"read_source","arguments":{"repo":"CleanArchitecture","path":"src/Infrastructure/Data/Interceptors/AuditableEntityInterceptor.cs","start_line":9,"end_line":70}}}

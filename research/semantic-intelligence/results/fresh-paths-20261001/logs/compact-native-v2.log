@@ -1,5 +1,0 @@
-# moedex/internal/semanticimport_test [moedex/internal/semanticimport.test]
-internal/semanticimport/default_forwarding_public_test.go:182:39: undefined: oldOffset
-internal/semanticimport/default_forwarding_public_test.go:182:50: undefined: oldID
-FAIL	moedex/internal/semanticimport [build failed]
-FAIL

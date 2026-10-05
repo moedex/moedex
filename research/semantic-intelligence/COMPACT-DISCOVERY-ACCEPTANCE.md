@@ -7,7 +7,7 @@ the flag does not describe compiler or LSP support. `read_source` now accepts
 source bytes, line ranges and provenance as its default numbered presentation.
 
 See [ADR0062](../../docs/adr/0062-source-discovery-capabilities.md) and the
-[regression manifest](results/compact-discovery-20261001/result.json).
+regression manifest (archival evidence maintained separately).
 
 Full Go tests, vet and focused MCP/source-tool race checks pass. Capability tests
 cover source-only operation, loading a graph on reload, failed reload retention

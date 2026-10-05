@@ -1,1 +1,0 @@
-Trace a submitted registration from the HTTP action to the recorded RegistrationSubmitted publisher and notification consumer. Explain where interface dispatch remains a static candidate.

@@ -9,7 +9,7 @@ import (
 
 // A realistic CFML include mixing tag UDFs, a cfscript UDF, page JavaScript (a
 // trap the extractor must NOT pick up), and a component. Modeled on the
-// hugedomains _inc/*.cfm shape: <cffunction name="..."> tag functions.
+// catalog _inc/*.cfm shape: <cffunction name="..."> tag functions.
 var cfSrc = []byte(`<cfcomponent displayname="OrderService" output="false">
 
 <cffunction name="voidTransaction" access="public" output="false" returntype="numeric">

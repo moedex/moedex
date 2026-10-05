@@ -2,7 +2,7 @@ package parity
 
 // Freshness: shard-level partial re-index.
 //
-// A full Build() over the ~8GB / 484-repo corpus interleaves multiple repos
+// A full Build() over the multi-repository corpus interleaves multiple repos
 // into each content-sized shard (DefaultShardBytes ≈ 150MB) and persists no
 // repo→shard mapping. That makes per-repo incremental re-indexing intractable:
 // a single repo's blobs can be spread across several shards, and several repos

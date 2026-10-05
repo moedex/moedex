@@ -101,7 +101,7 @@ func TestNeverUnderApproximates(t *testing.T) {
 	}
 	corpus := []string{
 		"public class SslService {",
-		"  namespace TC.SslApi.Internal;",
+		"  namespace Example.SslApi.Internal;",
 		"    int x; get; set;",
 		"Token token = new Token();",
 		"the color is grey today",

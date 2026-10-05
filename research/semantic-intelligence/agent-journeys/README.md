@@ -25,10 +25,17 @@ setup artifacts and this onboarding policy before future scored execution.
 For new scored runs, use `view.py` in place of direct `browse.py` commands.
 After setup succeeds, the coordinator writes `RUN/assignment.json` containing
 `deadline_monotonic` (assignment start plus 600 seconds, on the same host).
+Use `journey_clock.monotonic()` from this directory to mint that value, and freeze
+`journey_clock.py` alongside the client and browser scripts. On macOS Python 3.9,
+the standard `time.monotonic()` origin is process-relative; persisted deadlines
+and call-ledger elapsed times would otherwise reset in each new CLI process.
+The shared helper uses the system uptime clock on that runtime, and the standard
+system-wide monotonic clock on newer Python. Existing archives remain unchanged;
+do not resume an old run under a different clock implementation.
 The wrapper records exact stdout/stderr, arguments, timestamps and hashes under
 `RUN/views`, including every initialization-instruction page. It rejects display
 cap overrides and applies the remaining assignment deadline to each subprocess.
-Freeze all four scripts. This logs supervised access; it does not provide OS
+Freeze all five scripts. This logs supervised access; it does not provide OS
 isolation or prevent a solver bypassing the wrapper.
 
 Legacy coordinator setup (retained for old frozen protocols only):

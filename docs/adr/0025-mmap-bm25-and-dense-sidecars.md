@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-04
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 ADR 0005 moved positional postings off the heap and named what it did not fix:
@@ -89,66 +89,8 @@ of parsing them.
 
 ## Evidence
 
-Serving heap, real corpus (56,978 blobs, 17.6M distinct terms, 40.6M postings,
-953,451 dense chunks):
-
-| component | before | after |
-|---|---:|---:|
-| BM25 token index | 4,678 MB | ~0 MB (measured −1.6 MB, below GC noise) |
-| dense embedding store | 2,866 MB | 50.9 MB |
-| blob content | 866 MB | 866 MB (out of scope) |
-| `lineStarts` | 254 MB | 254 MB (out of scope) |
-| symbol index | 84 MB | 84 MB (out of scope) |
-| **total live heap** | **8,748 MB** | **~1,255 MB** |
-
-Index build, same corpus, output byte-identical in every configuration. "Peak
-heap" below is **total** process peak heap, which includes ~1,579 MB of corpus
-blob content already resident before `Build` is called — `Build`'s own
-contribution above that baseline is smaller and is what the spec's ~1.7 GB
-projection was actually estimating (see refutation 1):
-
-| builder | wall | peak heap (total) | max RSS |
-|---|---:|---:|---:|
-| original map-of-maps | 56s | 11,281 MB | 12.86 GB |
-| sort-based (mid-project) | 4m23s | 7,544 MB | 8.78 GB |
-| final (dense per-blob scratch) | 37.0s | 7,223 MB | 7.91 GB |
-
-int8 quantization (opt-in, not the default), measured over 40 real queries drawn
-from the corpus: file 2,975 MB → 782 MB (3.80x smaller), recall@10 0.9500,
-rank-1 agreement 1.0000, mean scan 37 ms (f32) vs 38 ms (int8) — 0.97x, no
-speedup.
-
-**Three refutations, recorded because this repo's ADRs keep what measurement
-disproved, not just what it confirmed. All three were projections in the spec
-that this project's own measurement overturned:**
-
-1. *The spec projected a build peak of ~1.7 GB — measuring `Build`'s own
-   contribution above the resident corpus baseline, not total process heap.
-   That contribution came in at 5,965 MB on the sort-based builder where this
-   was first measured — 3.5x off — and still 5,644 MB (3.3x off) on the final,
-   shipped builder.* The arithmetic omitted the CSR output arrays coexisting
-   with the build inputs, append-doubling transients, and underestimated the
-   17.6M-entry dictionary.
-2. *The record sort was never the bottleneck.* A counting scatter replacing the
-   40.6M-record comparison sort measured neutral. A CPU profile then showed the
-   real cause: `Build` reused one `perBlob` map across blobs, and a Go map never
-   returns capacity — `clear` keeps the Swiss table
-   ([golang/go#70617](https://github.com/golang/go/issues/70617), still open) and
-   `range` walks the whole table. One blob holds 11,018,072 distinct terms — 63%
-   of the corpus vocabulary — sizing that table to ~16.7M slots permanently, so
-   all 56,977 other blobs paid a full-table walk. `range perBlob` was 172.68s of
-   232.51s profiled samples (74.3%); the sort was 1.88%.
-3. *int8 does not make the scan faster.* The spec projected ~4x on the reasoning
-   that the scan is memory-bandwidth-bound. Measured: 0.97x. `scoreAgainst`'s int8
-   path converts each int8 to float32 per element, doing the same FP work as f32
-   plus a conversion. A genuinely faster path needs an integer dot product against
-   a quantized query — a different design that would compound quantization error.
-
-**Finding, not a defect:** the dominant lever on build memory is GC headroom, not
-the algorithm. `GOGC=25` alone takes build peak to 4,974 MB and max RSS to
-6.39 GB, at about 12% more wall time. This stays out of scope for code — a
-library must not set global GC policy — but an operator should know it is
-available.
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 [0005](./0005-mmap-compact-postings.md) (the precedent; its own Negative section

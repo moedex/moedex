@@ -12,6 +12,8 @@ import sys
 import time
 import urllib.parse
 
+from journey_clock import monotonic
+
 MAX_CALLS = 24
 MAX_RESPONSE_BYTES = 131072
 MAX_SECONDS = 600
@@ -86,7 +88,7 @@ def locked(directory):
 
 def http_exchange(endpoint, request, timeout):
     url = urllib.parse.urlsplit(endpoint)
-    deadline = time.monotonic()+timeout
+    deadline = monotonic()+timeout
     connection = http.client.HTTPConnection(url.hostname, url.port, timeout=timeout)
     try:
         connection.request('POST', url.path, request, {'Content-Type': 'application/json',
@@ -95,7 +97,7 @@ def http_exchange(endpoint, request, timeout):
         response = connection.getresponse()
         chunks, size = [], 0
         while size <= TRANSPORT_CAP:
-            remaining = deadline-time.monotonic()
+            remaining = deadline-monotonic()
             if remaining <= 0:
                 raise TimeoutError('absolute response deadline exceeded')
             sock.settimeout(remaining)
@@ -109,7 +111,7 @@ def http_exchange(endpoint, request, timeout):
         connection.close()
 
 
-def request(directory, method, params, exchange=http_exchange, now=time.monotonic):
+def request(directory, method, params, exchange=http_exchange, now=monotonic):
     if method not in ('tools/list', 'tools/call'):
         raise ValueError('only tools/list and tools/call are permitted')
     if not isinstance(params, dict):

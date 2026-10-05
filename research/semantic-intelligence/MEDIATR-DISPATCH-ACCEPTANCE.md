@@ -79,7 +79,7 @@ Final artifact SHA256:
 - eShopOnWeb: `579894dc5e24c30ea8f36ff4978f13bc98692e3fcc399ffcfd8c4d661168c8f9`.
 - ForkJoint: `796dd83d2ced6cf7044573a2e15d40ed0f2b81d01d067ec84d82194e8051db53`.
 
-See [result.json](results/mediatr-dispatch-20261001/result.json) for hashed source
+See result.json (archival evidence maintained separately) for hashed source
 snapshots, commands, logs, native captures and public requests/responses. Large
 artifacts, corpora and binaries remain local. Test servers were stopped.
 

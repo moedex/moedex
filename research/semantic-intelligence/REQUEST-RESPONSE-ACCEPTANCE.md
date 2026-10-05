@@ -64,7 +64,7 @@ Final artifact SHA256:
 - ForkJoint: `0b9692b9d92debf2b85e87c869333a0af948185b1a79f2340b6eadda9e0f33c4`.
 - eShopOnWeb: `9f064e726eb0548736ed62dcaa6c1cb332cf5362c22cc52eab7a858bab17caea`.
 
-See [result.json](results/request-response-20261001/result.json) for source
+See result.json (archival evidence maintained separately) for source
 snapshots, commands, native captures and public requests/responses. Large corpora,
 artifacts, dependencies and binaries remain local. Temporary servers were stopped.
 

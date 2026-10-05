@@ -10,7 +10,7 @@ import (
 // the C#/TS/CF extractors it favors precision over completeness and never errors.
 //
 // It covers the CREATE forms that name a reusable, file-level object in the
-// TurnCommerce mysql-scripts corpus:
+// configured mysql-scripts corpus:
 //
 //   - CREATE [DEFINER=..] PROCEDURE|FUNCTION name (..)  -> Func
 //   - CREATE [..] TABLE|VIEW|TRIGGER|EVENT name         -> Type

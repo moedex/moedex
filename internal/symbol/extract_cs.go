@@ -4,7 +4,7 @@ import "regexp"
 
 // CSharpExtractor extracts C# type and method definitions with a dependency-free
 // regex/byte scan (no Roslyn, no cgo, no third-party). It is best-effort: it
-// favors precision on the common shapes seen in the TurnCommerce corpus
+// favors precision on the common shapes seen in the configured corpus
 // (public/internal classes, interfaces, structs, enums, records, and method
 // declarations) over completeness. On anything it can't confidently match it
 // emits fewer symbols rather than wrong ones, and it always returns a nil error.
@@ -125,7 +125,7 @@ var csControlKeywords = map[string]bool{
 //
 // Each emitted a bogus Method definition AND suppressed the real reference
 // (csReferencesFromDefs skips offsets a definition claimed). Measured on the
-// TurnCommerce corpus (491 repos), the shapes above accounted for 72,255
+// configured corpus (491 repos), the shapes above accounted for 72,255
 // spurious definitions — 29% of every definition in the corpus. Examples:
 // ArgumentException reported 785 "definitions" across 88 repos (now 0, all 900
 // occurrences being references), and a single generated file of

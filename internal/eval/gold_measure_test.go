@@ -256,46 +256,29 @@ func queryReport(rep Report, query string) QueryReport {
 	return QueryReport{}
 }
 
-// TestTCSslApiMeasurement runs the verified C# gold against the real corpus when
-// present, for a real-world lexical baseline. Skips cleanly when absent.
-func TestTCSslApiMeasurement(t *testing.T) {
+// TestSeedCorpusMeasurement runs external seed labels against an opted-in repo.
+func TestSeedCorpusMeasurement(t *testing.T) {
 	dir := os.Getenv("MOEDEX_EVAL_CORPUS")
-	if dir == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			t.Skipf("no home dir: %v", err)
-		}
-		dir = filepath.Join(home, "TCGitlab", "Services.Registrar", "TC.SslApi")
+	if dir == "" || os.Getenv("MOEDEX_EVAL_DATASET") == "" {
+		t.Skip("set MOEDEX_EVAL_CORPUS and MOEDEX_EVAL_DATASET")
 	}
-	if _, err := os.Stat(dir); err != nil {
-		t.Skipf("corpus absent at %s", dir)
+	gold := SeedCorpusGold()
+	if len(gold) == 0 {
+		t.Fatal("external dataset lacks seed labels")
 	}
-
-	ix, n, err := BuildIndexFromCorpus("TC.SslApi", dir)
+	ix, n, err := BuildIndexFromCorpus(filepath.Base(dir), dir)
 	if err != nil {
-		t.Skipf("ingest failed (not a git repo?): %v", err)
+		t.Fatal(err)
 	}
 	if n == 0 {
 		t.Skip("corpus has no indexable files")
 	}
-	t.Logf("indexed %d files from %s", n, dir)
-
-	const k, topK = 5, 20
-	rep, err := NewRunner(ix).Evaluate(context.Background(), TCSslApiGold(), k, topK)
+	rep, err := NewRunner(ix).Evaluate(context.Background(), gold, 5, 20)
 	if err != nil {
 		t.Fatal(err)
 	}
-	logReport(t, "TC.SslApi (real C# corpus) / lexical", rep)
-
-	// Observational floor on MRR, NOT recall@k. This hand-authored gold is
-	// sparse (a few labeled files per query) over a 144-file corpus where many
-	// unlabeled files also match, so recall@5 structurally under-measures —
-	// unlabeled-but-relevant files crowd out the labeled ones in the top k. MRR
-	// only needs the first relevant hit anywhere in the list, so it is the more
-	// honest signal until a complete/pooled gold set exists (future work).
-	// (Also surfaced here: a tokenizer asymmetry — query "reissue" does not match
-	// the identifier "ReIssue" which splits into re+issue. See findings.)
-	if rep.MeanMRR < 0.25 {
-		t.Errorf("real-corpus MeanMRR = %.3f, want >= 0.25 (first relevant should usually appear)", rep.MeanMRR)
+	logReport(t, "external seed corpus / lexical", rep)
+	if rep.MeanMRR < corpusThreshold("minObservedMRR") {
+		t.Errorf("seed MeanMRR below configured floor: %.3f", rep.MeanMRR)
 	}
 }

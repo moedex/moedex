@@ -584,7 +584,7 @@ type structuredBlock struct {
 	BlobSHA string `json:"blob_sha"`
 	Repo    string `json:"repo"`
 	// PathWithNamespace is the repo's full GitLab namespace path (e.g.
-	// "Services.Domains/TC.MarketplaceApi"), recovered from abs_path relative to
+	// "services/Example.MarketplaceApi"), recovered from abs_path relative to
 	// the corpus root. It is what an agent needs to actually clone the repo; Repo
 	// (the bare leaf) is kept for back-compat. Omitted when the corpus root is
 	// unknown or abs_path doesn't fall under it (never fabricated).

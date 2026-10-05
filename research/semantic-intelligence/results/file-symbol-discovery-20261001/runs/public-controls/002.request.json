@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"compiler_symbols","arguments":{"repo":"Sample-Outbox","path":"src/Sample.Components/Services/IRegistrationValidationService.cs","query":"absent_unique_72933"}}}

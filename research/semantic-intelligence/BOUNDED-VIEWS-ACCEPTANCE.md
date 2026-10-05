@@ -32,4 +32,4 @@ successful paging. Future trial instructions must explicitly require opening
 relevant schemas, interpreting partial views and inspecting cited evidence.
 
 See [browser instructions](agent-journeys/README.md#bounded-browser-for-future-runs)
-and [validation archive](results/bounded-views-20261002/result.json).
+and validation archive (archival evidence maintained separately).

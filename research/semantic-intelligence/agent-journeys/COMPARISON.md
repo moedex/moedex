@@ -47,6 +47,12 @@ capabilities, source revision, and all runner/auditor script hashes. Different
 products naturally have different manifests. No per-task product substitution is
 allowed. Preserve failures and retire tuned corpora to development evidence.
 
+For logged CLI journeys, mint assignment deadlines with
+`journey_clock.monotonic()` and freeze `journey_clock.py` with the other runner
+scripts. This keeps persisted call and assignment budgets on the same system
+clock across processes, including macOS Python 3.9. Do not resume historical
+runs using a different clock implementation.
+
 The script checks referenced bytes and declared identities. It does **not** infer
 that a manifest is exhaustive or that a rubric's declared atom roster faithfully
 represents its text. Independent pre-launch review must check those semantics.

@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-24
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 
@@ -138,10 +138,8 @@ change requires a corpus reindex or graph rebuild.
 
 ## Evidence
 
-Contract tests exercise both protocol eras, current request metadata, cache hints,
-SDK clients over stdio and Streamable HTTP, cancellation, non-batching, all 19 output
-schemas, deterministic hashes, unreadable navigation paths, and paused rank/graph
-reload races.
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 

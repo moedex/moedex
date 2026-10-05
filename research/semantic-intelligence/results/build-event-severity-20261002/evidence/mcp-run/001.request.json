@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"compiler_symbols","arguments":{"repo":"CleanArchitecture","path":"src/Application/TodoItems/Commands/UpdateTodoItem/UpdateTodoItem.cs","query":"UpdateTodoItemCommandHandler","limit":20}}}

@@ -1,1 +1,0 @@
-Inspect the recorded handler correspondence and keyed configuration for OrderStatusChangedToShippedIntegrationEvent

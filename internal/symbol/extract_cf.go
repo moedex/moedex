@@ -4,7 +4,7 @@ import "regexp"
 
 // CFExtractor extracts ColdFusion (CFML) definitions with a dependency-free
 // regex/byte scan (no cfparser, no cgo, no third-party). CFML is a tag/script
-// hybrid; this covers the shapes that dominate the TurnCommerce hugedomains app:
+// hybrid; this covers the shapes that dominate the configured catalog app:
 //
 //   - <cffunction name="x" ...> ... </cffunction>   -> Func   (tag UDF)
 //   - <cfcomponent name=|displayname="x"> ...        -> Type

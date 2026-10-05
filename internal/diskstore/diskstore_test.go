@@ -89,22 +89,21 @@ func TestRoundTripSynthetic(t *testing.T) {
 	assertRoundTrip(t, ix)
 }
 
-func TestRoundTripRegistrar(t *testing.T) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Skipf("no home dir: %v", err)
+func TestRoundTripConfiguredCorpus(t *testing.T) {
+	dir := os.Getenv("MOEDEX_EVAL_CORPUS")
+	if dir == "" {
+		t.Skip("set MOEDEX_EVAL_CORPUS to a local repository")
 	}
-	dir := filepath.Join(home, "TCGitlab", "Services.Registrar", "TC.SslApi")
 	if _, err := os.Stat(dir); err != nil {
-		t.Skipf("registrar repo not present at %s: %v", dir, err)
+		t.Skipf("configured repo not present at %s: %v", dir, err)
 	}
 
-	files, err := ingest.Repo("TC.SslApi", dir)
+	files, err := ingest.Repo(filepath.Base(dir), dir)
 	if err != nil {
 		t.Skipf("ingest.Repo failed (not a git repo?): %v", err)
 	}
 	if len(files) == 0 {
-		t.Skip("registrar repo has no indexable files")
+		t.Skip("configured repo has no indexable files")
 	}
 
 	ix := index.New()

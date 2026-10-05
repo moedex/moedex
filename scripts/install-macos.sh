@@ -117,7 +117,7 @@ esac
 # --- 2b. initialize only a new/empty managed corpus ---
 if [ "$CORPUS_NEEDS_INIT" = 1 ]; then
   if [ "$DRY_RUN" = 1 ]; then
-    log "[dry-run] would initialize managed corpus at $CORPUS (requires active TC VPN, glab auth, and Git transport)"
+    log "[dry-run] would initialize managed corpus at $CORPUS (requires network, glab auth, and Git transport)"
   else
     [ -x "${CORPUS_INIT[0]}" ] || die "corpus command not found at ${CORPUS_INIT[0]} after install"
     have glab || die "glab is required to initialize the managed corpus"
@@ -172,6 +172,8 @@ install_agent() {
     -e "s|@SHARD_DIR@|$SHARD_DIR|g" -e "s|@ONNX_LIB@|$ONNX_LIB|g" \
     -e "s|@LSP_WORKSPACE_DIR@|$LSP_WORKSPACE_DIR|g" \
     -e "s|@ONNX_INTRA_THREADS@|$ONNX_INTRA_THREADS|g" \
+    -e "s|@GITLAB_HOST@|${MOEDEX_GITLAB_HOST:-}|g" \
+    -e "s|@CORPUS_GROUPS@|${MOEDEX_CORPUS_GROUPS:-}|g" \
     -e "s|@ONNX_INTER_THREADS@|$ONNX_INTER_THREADS|g" "$src")"
   domain="gui/$(id -u)"
   changed=1

@@ -74,7 +74,7 @@ Final artifact SHA256:
 - ForkJoint: `16fb2cc29b91ef88bfdc3e49729073cc6a043afa52437c270a37f99deb077a98`.
 - eShopOnWeb: `e806bfdd740b44ae014a2d9fb590ebdc2bb89c7f6d94cecd9e58421b646e6633`.
 
-See [result.json](results/endpoint-mapping-20261001/result.json) for hashed source
+See result.json (archival evidence maintained separately) for hashed source
 snapshots, commands, logs, native captures and public requests/responses. Large
 artifacts, corpora, dependencies and binaries remain local. Test servers stopped.
 

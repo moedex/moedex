@@ -1,4 +1,0 @@
-=== RUN   TestPinnedRoslynGraphLiteralDefinitions
-    public_roslyn_test.go:71: nodes=2215076 logical_edges=182844081 stored_records=6619555 target_sets=69394 distinct Main definitions including source=43; quoted anchor excluded and sibling confidence retained
---- PASS: TestPinnedRoslynGraphLiteralDefinitions (0.73s)
-PASS

@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-25
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 The research pass named the **absence of a first-class agent/RAG context API the biggest gap in Zoekt's original design.** The implicit assumption there is "a human reads the results"; moedex's primary consumer is an LLM agent. Evidence: with good oracle context GPT-4o gained +27.4% on SWE-Bench, but real systems are bottlenecked on *both* ends — retrievers fail to fetch useful context and generators fail to use raw hits. Handing an agent a flat list of grep lines wastes its context window on duplication and half-functions.
@@ -24,7 +24,9 @@ Expose the index as an **agent tool**, not a grep server: return **ranked, dedup
 - Block quality is bounded by the symbol layer's coverage ([0008](./0008-polyglot-symbol-sidecar.md)); on a miss the heuristic can over- or under-scope a block.
 
 ## Evidence
-The single-repo call chain (`cmd/moedex-mcp`) and the whole-corpus chain (`moedex-serve -mcp` → `server.RankCorpus` implementing `mcp.ContextSearcher`) both serve `search_context` over stdio. The MCP path is hardened: 30 s per-call timeout, 8-way concurrency, 1 MiB message / 8 KiB query caps, panic recovery (`internal/mcp`, `hardening_test.go`). The UDCG (distraction-aware) metric was added precisely to measure whether returned context is dense with relevant blocks rather than padded with distractors ([0014](./0014-eval-harness-gold-gate.md)).
+
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 [0006](./0006-rrf-hybrid-ranking.md), [0008](./0008-polyglot-symbol-sidecar.md), [0010](./0010-warm-serving-spine.md), [0014](./0014-eval-harness-gold-gate.md), [0022](./0022-mcp-sdk-contract-and-snapshot-identity.md).

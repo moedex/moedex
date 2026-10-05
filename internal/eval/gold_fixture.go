@@ -3,7 +3,7 @@ package eval
 import "moedex/internal/ingest"
 
 // This fixture is a deliberately MULTI-LANGUAGE corpus — Go, C#, SQL,
-// TypeScript, YAML — mirroring TurnCommerce's actual polyglot stack rather than
+// TypeScript, YAML — mirroring configured's actual polyglot stack rather than
 // a C#-only monoculture. It is hermetic (in-memory, no external corpus) so the
 // ranking measurement runs anywhere and is reproducible.
 //
@@ -64,7 +64,7 @@ func Authenticate(user, secret string) (token string, err error) {
 }
 `),
 		// --- C# (no Go symbols → lexical only) ---
-		file("Models/RefundOrder.cs", `namespace TC.Billing.Models
+		file("Models/RefundOrder.cs", `namespace Example.Billing.Models
 {
     // Request to refund an existing order.
     public class RefundOrder
@@ -73,7 +73,7 @@ func Authenticate(user, secret string) (token string, err error) {
     }
 }
 `),
-		file("Services/SslOrderService.cs", `namespace TC.Ssl
+		file("Services/SslOrderService.cs", `namespace Example.Ssl
 {
     public class SslOrderService
     {

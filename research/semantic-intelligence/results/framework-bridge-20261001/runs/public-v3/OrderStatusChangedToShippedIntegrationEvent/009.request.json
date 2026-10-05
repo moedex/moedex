@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"compiler_binding_at","arguments":{"repo":"eShop","path":"src/Webhooks.API/Extensions/Extensions.cs","byte_offset":863,"context_id":"context:9c03d15bebad0688284294984804e589ab24269ca6cc71088c1596a194d70223","raw_sha256":"978b4e1bbd0146ed43f9db92dda29c599a8685e0f4efcec4102e713c0ac7faeb"}}}

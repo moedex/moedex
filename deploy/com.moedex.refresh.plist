@@ -31,6 +31,10 @@
 
   <key>EnvironmentVariables</key>
   <dict>
+    <key>MOEDEX_GITLAB_HOST</key>
+    <string>@GITLAB_HOST@</string>
+    <key>MOEDEX_CORPUS_GROUPS</key>
+    <string>@CORPUS_GROUPS@</string>
     <key>REFRESH_SYNC</key>
     <string>1</string>
     <key>MOEDEX_CORPUS</key>

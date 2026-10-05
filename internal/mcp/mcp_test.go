@@ -236,13 +236,13 @@ func TestStructuredBlockCarriesPathWithNamespace(t *testing.T) {
 	// abs_path = <root>/<namespace>/<rel_path>. With the corpus root known, the
 	// emitted structured block must carry the FULL namespace (so an agent can
 	// clone the repo), while keeping the leaf `repo` field for back-compat.
-	root := "/corpus/TCGitlab"
+	root := "/corpus/.moedex-managed"
 	fs := &fakeSearcher{win: contextwin.ContextWindow{
 		Blocks: []contextwin.ContextBlock{{
 			Blob:    7,
-			Repo:    "TC.MarketplaceApi", // leaf only (the bug's symptom)
+			Repo:    "Example.MarketplaceApi", // leaf only (the bug's symptom)
 			RelPath: "src/Api/Handler.cs",
-			AbsPath: "/corpus/TCGitlab/Services.Domains/TC.MarketplaceApi/src/Api/Handler.cs",
+			AbsPath: "/corpus/.moedex-managed/services/Example.MarketplaceApi/src/Api/Handler.cs",
 			Text:    "class Handler {}\n",
 		}},
 	}}
@@ -258,15 +258,15 @@ func TestStructuredBlockCarriesPathWithNamespace(t *testing.T) {
 	sc := res["structuredContent"].(map[string]interface{})
 	blk := sc["blocks"].([]interface{})[0].(map[string]interface{})
 
-	if got := blk["repo"].(string); got != "TC.MarketplaceApi" {
-		t.Errorf("repo (leaf, back-compat) = %q, want %q", got, "TC.MarketplaceApi")
+	if got := blk["repo"].(string); got != "Example.MarketplaceApi" {
+		t.Errorf("repo (leaf, back-compat) = %q, want %q", got, "Example.MarketplaceApi")
 	}
 	pwn, ok := blk["path_with_namespace"].(string)
 	if !ok {
 		t.Fatalf("structured block missing path_with_namespace field; block=%+v", blk)
 	}
-	if pwn != "Services.Domains/TC.MarketplaceApi" {
-		t.Errorf("path_with_namespace = %q, want %q", pwn, "Services.Domains/TC.MarketplaceApi")
+	if pwn != "services/Example.MarketplaceApi" {
+		t.Errorf("path_with_namespace = %q, want %q", pwn, "services/Example.MarketplaceApi")
 	}
 }
 
@@ -298,19 +298,19 @@ func TestDeriveNamespace(t *testing.T) {
 	cases := []struct {
 		name, root, abs, rel, want string
 	}{
-		{"multi-level namespace", "/c/TCGitlab",
-			"/c/TCGitlab/Services.Domains/TC.MarketplaceApi/src/Foo.cs", "src/Foo.cs",
-			"Services.Domains/TC.MarketplaceApi"},
-		{"single-level namespace", "/c/TCGitlab",
-			"/c/TCGitlab/Solo/main.go", "main.go", "Solo"},
-		{"trailing-slash root tolerated", "/c/TCGitlab/",
-			"/c/TCGitlab/Grp/Repo/x.go", "x.go", "Grp/Repo"},
-		{"abs not under root -> empty", "/c/TCGitlab",
+		{"multi-level namespace", "/c/.moedex-managed",
+			"/c/.moedex-managed/services/Example.MarketplaceApi/src/Foo.cs", "src/Foo.cs",
+			"services/Example.MarketplaceApi"},
+		{"single-level namespace", "/c/.moedex-managed",
+			"/c/.moedex-managed/Solo/main.go", "main.go", "Solo"},
+		{"trailing-slash root tolerated", "/c/.moedex-managed/",
+			"/c/.moedex-managed/Grp/Repo/x.go", "x.go", "Grp/Repo"},
+		{"abs not under root -> empty", "/c/.moedex-managed",
 			"/other/Repo/x.go", "x.go", ""},
 		{"no root -> empty", "",
-			"/c/TCGitlab/Grp/Repo/x.go", "x.go", ""},
-		{"rel not a suffix of abs -> empty", "/c/TCGitlab",
-			"/c/TCGitlab/Grp/Repo/x.go", "totally/different.go", ""},
+			"/c/.moedex-managed/Grp/Repo/x.go", "x.go", ""},
+		{"rel not a suffix of abs -> empty", "/c/.moedex-managed",
+			"/c/.moedex-managed/Grp/Repo/x.go", "totally/different.go", ""},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

@@ -79,7 +79,7 @@ func (*lookupError) Error() string { return "executable not found" }
 
 func TestParseProjects_ConcatenatedArrays(t *testing.T) {
 	// glab --paginate emits one array per page, back-to-back with no separator.
-	in := `[{"path_with_namespace":"Services.Payment/A","ssh_url_to_repo":"git@h:Services.Payment/A.git","default_branch":"main"}]` +
+	in := `[{"path_with_namespace":"services/A","ssh_url_to_repo":"git@h:services/A.git","default_branch":"main"}]` +
 		`[{"path_with_namespace":"Libraries.Common/B","ssh_url_to_repo":"git@h:Libraries.Common/B.git","default_branch":"master"},` +
 		`{"path_with_namespace":"","ssh_url_to_repo":"git@h:junk.git"}]`
 	got, err := ParseProjects(strings.NewReader(in))
@@ -89,7 +89,7 @@ func TestParseProjects_ConcatenatedArrays(t *testing.T) {
 	if len(got) != 2 {
 		t.Fatalf("want 2 projects (empty-path entry skipped), got %d: %+v", len(got), got)
 	}
-	if got[0].PathWithNamespace != "Services.Payment/A" || got[1].DefaultBranch != "master" {
+	if got[0].PathWithNamespace != "services/A" || got[1].DefaultBranch != "master" {
 		t.Fatalf("parsed fields wrong: %+v", got)
 	}
 }
@@ -107,7 +107,7 @@ func TestParseProjects_SingleArray(t *testing.T) {
 
 func TestTopLevelGroup(t *testing.T) {
 	cases := map[string]string{
-		"Services.Payment/TC.BillingApi": "Services.Payment",
+		"services/Example.BillingApi":    "services",
 		"Libraries.Common/sub/deep/Repo": "Libraries.Common",
 		"NoSlash":                        "NoSlash",
 	}
@@ -120,16 +120,16 @@ func TestTopLevelGroup(t *testing.T) {
 
 func TestFilterByGroups(t *testing.T) {
 	projects := []Project{
-		{PathWithNamespace: "Services.Payment/A"},
+		{PathWithNamespace: "services/A"},
 		{PathWithNamespace: "Zak/scratch"},
 		{PathWithNamespace: "Libraries.Common/B"},
 		{PathWithNamespace: "ai/experiment"},
 	}
-	got := FilterByGroups(projects, []string{"Services.Payment", "Libraries.Common"})
+	got := FilterByGroups(projects, []string{"services", "Libraries.Common"})
 	if len(got) != 2 {
 		t.Fatalf("want 2 kept, got %d: %+v", len(got), got)
 	}
-	if got[0].PathWithNamespace != "Services.Payment/A" || got[1].PathWithNamespace != "Libraries.Common/B" {
+	if got[0].PathWithNamespace != "services/A" || got[1].PathWithNamespace != "Libraries.Common/B" {
 		t.Fatalf("filtered set wrong (order should be preserved): %+v", got)
 	}
 	// Empty allowlist = no filter.
@@ -139,9 +139,9 @@ func TestFilterByGroups(t *testing.T) {
 }
 
 func TestParseGroups(t *testing.T) {
-	in := "# header comment\n\n  Services.Payment  \nLibraries.Common\n# another\nServices.Payment\nansible\n"
+	in := "# header comment\n\n  services  \nLibraries.Common\n# another\nservices\nansible\n"
 	got := ParseGroups(strings.NewReader(in))
-	want := []string{"Libraries.Common", "Services.Payment", "ansible"} // sorted, de-duped, trimmed
+	want := []string{"Libraries.Common", "ansible", "services"} // sorted, de-duped, trimmed
 	if len(got) != len(want) {
 		t.Fatalf("want %v, got %v", want, got)
 	}
@@ -157,7 +157,7 @@ func TestParseGroups(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestDoctor_AllGood(t *testing.T) {
-	projectsJSON := `[{"path_with_namespace":"Services.Payment/A","ssh_url_to_repo":"git@h:Services.Payment/A.git","default_branch":"main"}]`
+	projectsJSON := `[{"path_with_namespace":"services/A","ssh_url_to_repo":"git@h:services/A.git","default_branch":"main"}]`
 	r := fakeRunner{
 		paths: map[string]string{"glab": "/usr/bin/glab", "git": "/usr/bin/git"},
 		runs: map[string]Result{
@@ -166,7 +166,7 @@ func TestDoctor_AllGood(t *testing.T) {
 			"glab api --hostname": {Stdout: []byte(projectsJSON)},
 		},
 	}
-	cfg := Config{Host: DefaultHost, Root: "/corpus", Groups: []string{"Services.Payment"}}
+	cfg := Config{Host: DefaultHost, Root: "/corpus", Groups: []string{"services"}}
 	rep := Doctor(context.Background(), r, cfg)
 	if !rep.OK() {
 		t.Fatalf("expected OK report, got %+v", rep)
@@ -417,15 +417,15 @@ func findCheck(t *testing.T, checks []Check, name string) Check {
 func TestCloneArgs(t *testing.T) {
 	cfg := Config{Host: DefaultHost, Root: "/corpus"}
 	p := Project{
-		PathWithNamespace: "Services.Payment/TC.BillingApi",
-		SSHURL:            "git@" + DefaultHost + ":Services.Payment/TC.BillingApi.git",
+		PathWithNamespace: "services/Example.BillingApi",
+		SSHURL:            "git@" + DefaultHost + ":services/Example.BillingApi.git",
 		DefaultBranch:     "main",
 	}
 	dest, args, err := CloneArgs(cfg, p)
 	if err != nil {
 		t.Fatalf("CloneArgs: %v", err)
 	}
-	wantDest := filepath.Join("/corpus", "Services.Payment", "TC.BillingApi")
+	wantDest := filepath.Join("/corpus", "services", "Example.BillingApi")
 	if dest != wantDest {
 		t.Fatalf("dest = %q, want %q", dest, wantDest)
 	}
@@ -819,19 +819,19 @@ func TestPruneOne_RejectsPathTraversal(t *testing.T) {
 }
 
 func TestDefaultGroupsEmbedded(t *testing.T) {
-	g := DefaultGroups()
-	if len(g) < 50 {
-		t.Fatalf("built-in allowlist looks too small (%d) — embed broken?", len(g))
+	if g := DefaultGroups(); len(g) != 0 {
+		t.Fatalf("private defaults must not be embedded: %v", g)
 	}
-	// Spot-check a couple of known TurnCommerce groups and sortedness.
-	set := map[string]bool{}
-	for _, x := range g {
-		set[x] = true
+}
+
+func TestConfiguredHost(t *testing.T) {
+	t.Setenv("MOEDEX_GITLAB_HOST", "gitlab.customer.example")
+	if got := ConfiguredHost(); got != "gitlab.customer.example" {
+		t.Fatalf("configured host = %q", got)
 	}
-	for _, want := range []string{"Services.Payment", "Libraries.Common", "Products.NameBright"} {
-		if !set[want] {
-			t.Errorf("built-in allowlist missing %q", want)
-		}
+	t.Setenv("MOEDEX_GITLAB_HOST", "")
+	if got := ConfiguredHost(); got != DefaultHost {
+		t.Fatalf("default host = %q", got)
 	}
 }
 
@@ -849,27 +849,27 @@ func envHas(env []string, kv string) bool {
 // ---------------------------------------------------------------------------
 
 func TestReconcile(t *testing.T) {
-	allow := []string{"Services.Payment", "Libraries.Common"}
+	allow := []string{"services", "Libraries.Common"}
 	projects := []Project{
-		{PathWithNamespace: "Services.Payment/A"},   // present locally → update
-		{PathWithNamespace: "Services.Payment/NEW"}, // not local → clone
-		{PathWithNamespace: "Libraries.Common/B"},   // present locally → update
+		{PathWithNamespace: "services/A"},         // present locally → update
+		{PathWithNamespace: "services/NEW"},       // not local → clone
+		{PathWithNamespace: "Libraries.Common/B"}, // present locally → update
 	}
 	local := []string{
-		"Services.Payment/A",
+		"services/A",
 		"Libraries.Common/B",
-		"Services.Payment/GONE", // in scope, not enumerated → missing
-		"old-svn-repos/legacy",  // OUT of scope (group not allowed) → ignored, never pruned
+		"services/GONE",        // in scope, not enumerated → missing
+		"old-svn-repos/legacy", // OUT of scope (group not allowed) → ignored, never pruned
 	}
 	plan := Reconcile(projects, local, allow)
 
-	if got := pathsOf(plan.ToClone); !eq(got, []string{"Services.Payment/NEW"}) {
+	if got := pathsOf(plan.ToClone); !eq(got, []string{"services/NEW"}) {
 		t.Errorf("ToClone = %v", got)
 	}
-	if got := pathsOf(plan.ToUpdate); !eq(got, []string{"Libraries.Common/B", "Services.Payment/A"}) {
+	if got := pathsOf(plan.ToUpdate); !eq(got, []string{"Libraries.Common/B", "services/A"}) {
 		t.Errorf("ToUpdate = %v", got)
 	}
-	if !eq(plan.Missing, []string{"Services.Payment/GONE"}) {
+	if !eq(plan.Missing, []string{"services/GONE"}) {
 		t.Errorf("Missing = %v (out-of-scope repo must NOT be flagged)", plan.Missing)
 	}
 }
@@ -879,7 +879,7 @@ func TestReconcile_EmptyAllowlistNeverPrunes(t *testing.T) {
 	// definition, so none of them may be flagged Missing — empty allow must mean
 	// "nothing is in scope," not "everything is in scope."
 	local := []string{
-		"Services.Payment/A",
+		"services/A",
 		"old-svn-repos/legacy",
 	}
 	plan := Reconcile(nil, local, nil)

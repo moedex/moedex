@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_context","arguments":{"repo":"Sample-Outbox","query":"RegistrationController","top_k":5,"token_budget":2200}}}

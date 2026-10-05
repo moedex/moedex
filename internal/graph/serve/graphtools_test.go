@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -185,6 +186,85 @@ func TestTraceCallsReturnsCallersAndCalleesUpToHops(t *testing.T) {
 		if node.Hops != wantHop {
 			t.Errorf("%s hops = %d, want %d", node.Symbol, node.Hops, wantHop)
 		}
+	}
+}
+
+func TestTraceCallsSelectsRootsByExactRepositoryAndPath(t *testing.T) {
+	dir := t.TempDir()
+	ix := index.New()
+	files := []struct{ repo, path, sha, content string }{
+		{"app/a", "src/root.go", "root-a", "package a\nfunc Create() { Shared() }\n"},
+		{"app/a", "src/other.go", "other-a", "package other\nfunc Create() { Shared() }\n"},
+		{"app/b", "src/root.go", "root-b", "package b\nfunc Create() { Shared() }\n"},
+		{"library", "shared.go", "shared", "package library\nfunc Shared() {}\n"},
+		// One content-addressed node can legitimately have several repo locations.
+		{"mirror", "copy.go", "root-a", "package a\nfunc Create() { Shared() }\n"},
+	}
+	b := diskgraph.NewBuilder()
+	shared := diskgraph.Key{BlobSHA: "shared", SymbolOffset: uint64(strings.Index(files[3].content, "Shared"))}
+	for _, f := range files {
+		ix.AddFile(f.repo, f.path, filepath.Join(dir, f.repo, f.path), f.sha, []byte(f.content))
+		if f.sha == "shared" || f.repo == "mirror" {
+			continue
+		}
+		key := diskgraph.Key{BlobSHA: f.sha, SymbolOffset: uint64(strings.Index(f.content, "Create"))}
+		if err := b.AddEdge(key, diskgraph.Edge{
+			Type: diskgraph.EdgeCalls, TargetBlob: shared.BlobSHA, TargetOffset: shared.SymbolOffset,
+			Confidence: graph.Pattern,
+			Evidence:   graph.Evidence{BlobSHA: f.sha, ByteOffset: uint64(strings.Index(f.content, "Shared")), ByteLength: 6},
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := diskstore.Save(ix, filepath.Join(dir, "shard-0000.idx")); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.Save(GraphPath(dir)); err != nil {
+		t.Fatal(err)
+	}
+	tools, err := OpenGraphTools(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = tools.Close() })
+	tool := graphHandler(t, tools, "trace_calls")
+	for _, tc := range []struct {
+		args  string
+		roots []string
+	}{
+		{`{"symbol":"Create"}`, []string{"other-a", "root-a", "root-b"}},
+		{`{"symbol":"Create","repo":"app/a"}`, []string{"other-a", "root-a"}},
+		{`{"symbol":"Create","repo":"app/a","path":"src/root.go"}`, []string{"root-a"}},
+		{`{"symbol":"Create","repo":"mirror","path":"copy.go"}`, []string{"root-a"}},
+		{`{"symbol":"Create","repo":"app"}`, nil},
+		{`{"symbol":"Create","repo":"app/a","path":"root.go"}`, nil},
+	} {
+		t.Run(tc.args, func(t *testing.T) {
+			result, _ := callGraphTool(t, tool, tc.args)
+			var args struct{ Repo, Path string }
+			if err := json.Unmarshal([]byte(tc.args), &args); err != nil {
+				t.Fatal(err)
+			}
+			if result.Repo != args.Repo || result.Path != args.Path {
+				t.Fatalf("root selectors not echoed: %+v", result)
+			}
+			var roots []string
+			crossRepo := false
+			for _, n := range result.Nodes {
+				if n.Hops == 0 {
+					roots = append(roots, n.BlobSHA)
+				} else if n.BlobSHA == "shared" {
+					crossRepo = true
+				}
+			}
+			sort.Strings(roots)
+			if !reflect.DeepEqual(roots, tc.roots) {
+				t.Fatalf("roots = %v, want %v", roots, tc.roots)
+			}
+			if len(tc.roots) > 0 && !crossRepo {
+				t.Fatal("root selection removed the cross-repository callee")
+			}
+		})
 	}
 }
 
@@ -516,6 +596,9 @@ func TestGraphToolInputValidation(t *testing.T) {
 		{"trace_calls", `{"symbol":"Root","hops":11}`},
 		{"trace_calls", `{"symbol":"Root","extra":true}`},
 		{"trace_calls", `{"symbol":"Root","min_confidence":"candidate"}`},
+		{"trace_calls", `{"symbol":"Root","repo":""}`},
+		{"trace_calls", `{"symbol":"Root","path":"root.go"}`},
+		{"trace_calls", `{"symbol":"Root","repo":"fixture","path":""}`},
 		{"trace_consumers", `null`},
 		{"trace_consumers", `{"name":" "}`},
 		{"impact_analysis", `{}`},

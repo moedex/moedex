@@ -107,7 +107,7 @@ open and constructed generic targets, runtime table names, callback table
 configuration, and private messaging wrappers. Absence of a fact is not proof
 that the behavior is absent.
 
-CodeGraph's private `TC.Common.TcServiceStack.Queue` wrapper is not treated as
+A private messaging wrapper is not treated as
 MassTransit merely because it has a method named `Publish`. This fixture is
 generated source against real frameworks; it is not held-out application quality,
 whole-CodeGraph coverage, or a competitive superiority result. Large Roslyn graph

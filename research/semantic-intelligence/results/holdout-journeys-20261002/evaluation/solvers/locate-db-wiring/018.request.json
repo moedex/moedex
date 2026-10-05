@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":18,"method":"tools/call","params":{"name":"read_source","arguments":{"repo":"CleanArchitecture","path":"src/Shared/Services.cs","start_line":23,"end_line":28}}}

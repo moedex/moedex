@@ -1,1 +1,0 @@
-Explain how registration submission configures a registration-email action and where that email message is consumed. Separate state-machine configuration from proof of delivery.

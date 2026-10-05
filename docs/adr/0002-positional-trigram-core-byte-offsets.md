@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-25
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 The initial deep-research pass on a fresh-from-scratch Zoekt concluded: **keep the engine, replace the chassis.** The positional-trigram core is the part of Zoekt that aged well — n=3 is the proven sweet spot ("too few distinct 2-grams, too many distinct 4-grams"), and storing each trigram's offset lets a substring query intersect a small number of posting lists and verify positional distance rather than scan every file. That research also surfaced a correction: **Zoekt stores rune offsets, not byte offsets** — a clean-room build gets to choose. The durable design lineage and primary sources are summarized in [`ARCHITECTURE.md`](../../ARCHITECTURE.md#design-lineage).
@@ -24,7 +24,9 @@ Adopt **positional trigrams (n=3)** as the retrieval primitive, and store **byte
 - A trigram floor: literals shorter than 3 bytes have no trigram to intersect and degrade to a scan (a known latency tail — [0012](./0012-search-latency-positional-verify.md)).
 
 ## Evidence
-Cox's Linux-kernel example narrowed 36,972 files → 25 (~100×, 1.96 s → 0.01 s) using exactly this reduction. The byte-offset choice is what lets the `internal/search` verify stage and the full-corpus parity harness ([0003](./0003-cox-reduction-ripgrep-parity.md)) compare matches against ripgrep at `(file, line)` granularity byte-for-byte. The research run adversarially **refuted** "bigrams can beat trigrams for regex" (1-2) and the "FM-index is only 44% of corpus" claim (0-3), leaving n=3 trigrams the evidence-backed choice.
+
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 [0003](./0003-cox-reduction-ripgrep-parity.md), [0005](./0005-mmap-compact-postings.md), [0012](./0012-search-latency-positional-verify.md).

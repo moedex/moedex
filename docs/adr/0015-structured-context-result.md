@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-26
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 [0009](./0009-agent-context-api.md) made `search_context` return human-readable
@@ -99,12 +99,9 @@ fusion needs per-arm agreement signal from moedex specifically.
   consumers must treat 0 as "arm absent," not "cosine 0."
 
 ## Evidence
-Current flattening: `callTool` → `formatWindow` returns a single text blob
-(`internal/mcp/mcp.go:414, 428-443`). Dropped provenance: `RankedResult` holds
-`Lexical`/`Dense` (`internal/rank/rank.go:32-39`) but `ContextBlock` keeps only
-`Score` (`internal/contextwin/contextwin.go:43-58`). MCP already lets a tool
-result carry both `content` and `structuredContent`, so the addition is
-backward-compatible by construction.
+
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 [0009](./0009-agent-context-api.md) (extends its output contract),

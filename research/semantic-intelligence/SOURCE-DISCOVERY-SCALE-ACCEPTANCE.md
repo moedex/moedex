@@ -82,6 +82,6 @@ independent journey tasks retain their unexecuted status.
 
 Full Go tests, vet, build, focused MCP/graph/serving race tests, and twelve Python
 client/offset tests pass. The live test server was stopped cleanly. See the
-[frozen protocol and evidence manifest](results/source-discovery-scale-20261001/result.json),
+frozen protocol and evidence manifest (archival evidence maintained separately),
 the [resource probe](../../internal/app/servecmd/source_scale_test.go), and the
 [public workflow runner](agent-journeys/check_discovery_workflow.py).

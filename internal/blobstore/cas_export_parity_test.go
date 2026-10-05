@@ -22,7 +22,7 @@ package blobstore
 //
 // GATING (mirrors internal/search.TestParityCorpus): skipped unless a corpus is
 // present. By default it runs a SMALL repo subset so it is a fast local gate; the
-// orchestrator runs the FULL ~/TCGitlab corpus by setting the env vars in the one
+// orchestrator runs the FULL ~/.moedex-managed corpus by setting the env vars in the one
 // documented command at the bottom of this file.
 
 import (
@@ -490,7 +490,7 @@ type loc struct {
 }
 
 // corpusRoot resolves the corpus to gate on. MOEDEX_CAS_PARITY_CORPUS overrides;
-// otherwise ~/TCGitlab (the standing mirror). Returns "" (=> skip) if absent.
+// otherwise ~/.moedex-managed (the standing mirror). Returns "" (=> skip) if absent.
 func corpusRoot(t *testing.T) string {
 	t.Helper()
 	if r := os.Getenv("MOEDEX_CAS_PARITY_CORPUS"); r != "" {
@@ -500,7 +500,7 @@ func corpusRoot(t *testing.T) string {
 	if err != nil {
 		return ""
 	}
-	root := filepath.Join(home, "TCGitlab")
+	root := filepath.Join(home, ".moedex-managed")
 	if _, err := os.Stat(root); err != nil {
 		return ""
 	}
@@ -535,7 +535,7 @@ func shardBytes() int64 {
 //
 // Run it on the full corpus with the single documented command:
 //
-//	MOEDEX_CAS_PARITY_CORPUS=$HOME/TCGitlab MOEDEX_CAS_PARITY_MAXREPOS=0 \
+//	MOEDEX_CAS_PARITY_CORPUS=$HOME/.moedex-managed MOEDEX_CAS_PARITY_MAXREPOS=0 \
 //	  go test -count=1 -timeout 0 -run TestCASExportParityCorpus ./internal/blobstore/
 //
 // (No env vars => small ~3-repo subset, the fast local validation.)
@@ -548,7 +548,7 @@ func TestCASExportParityCorpus(t *testing.T) {
 	}
 	root := corpusRoot(t)
 	if root == "" {
-		t.Skip("corpus not present (set MOEDEX_CAS_PARITY_CORPUS or populate ~/TCGitlab)")
+		t.Skip("corpus not present (set MOEDEX_CAS_PARITY_CORPUS or populate ~/.moedex-managed)")
 	}
 
 	// Pin both builders to the SAME repo set. We discover the corpus' repos once

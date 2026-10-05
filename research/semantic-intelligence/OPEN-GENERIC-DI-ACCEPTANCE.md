@@ -62,10 +62,10 @@ keep that distinction testable. Existing concrete DI rules remain unchanged.
 - Both frozen applications retain their commits, tracked source bytes and source
   gold. All public anchors resolve; prior observations remain present.
 
-Evidence: [manifest](results/open-generic-di-20261001/result.json),
-[template navigation](results/open-generic-di-20261001/public/navigation/report.json),
-[eShopOnWeb observations](results/open-generic-di-20261001/public/eShopOnWeb-public/report.json),
-[ForkJoint observations](results/open-generic-di-20261001/public/ForkJoint-public/report.json).
+Evidence: manifest (archival evidence maintained separately),
+template navigation (archival evidence maintained separately),
+eShopOnWeb observations (archival evidence maintained separately),
+ForkJoint observations (archival evidence maintained separately).
 The archive retains source snapshots, native streams, capture metadata, validation
 logs and public requests/responses. Previous milestone archives remain unchanged.
 Corpora, dependency caches, binaries and generated indices stay local.

@@ -113,7 +113,7 @@ this repository makes it development evidence; use a fresh holdout for subsequen
 generalization claims. A paired native CodeGraph run remains necessary for a
 competitive claim.
 
-The [immutable evidence manifest](results/holdout-journeys-20261002/result.json)
+The immutable evidence manifest (archival evidence maintained separately)
 contains the final adjudicated result, source review/amendments, failed capture
 logs, executed protocol, six attempts, six independent answer reviews, coordinator
 scores, displayed pages, raw requests/responses, audits and validation scripts.

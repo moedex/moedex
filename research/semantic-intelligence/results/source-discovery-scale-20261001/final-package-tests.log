@@ -1,6 +1,0 @@
-# ./internal/app/servecmd
-open /Users/zakkeown/Library/Caches/go-build/a3/a31f3bc6f7d979fa164e8fb1980f7d4d7ef95ef8d05af7a5a8091dce0565be13-d: operation not permitted
-FAIL	./internal/app/servecmd [setup failed]
-ok  	moedex/internal/mcp	1.667s
-ok  	moedex/internal/graph/serve	6.736s
-FAIL

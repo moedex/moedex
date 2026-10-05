@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-25
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 Two things needed real symbol boundaries: context assembly ([0009](./0009-agent-context-api.md)) was scoping blocks with a brace/indent heuristic that the package itself called "honestly approximate," and the ranker ([0006](./0006-rrf-hybrid-ranking.md)) wanted a symbol-name arm. The research note ([`research/symbol-layer.md`](../../research/symbol-layer.md)) split the conflated question: *enclosing-symbol scoping* (function/class ranges, syntactic, no cross-file resolution) is separate from *go-to-def/find-references* (cross-file, typechecker-grade, can lag). It recommended a precomputed, ingest-only symbol model that keeps the engine pure-Go — running any heavy parser out-of-process at index time rather than linking it into the binary.
@@ -26,7 +26,9 @@ Build a **polyglot syntactic symbol layer** (`internal/symbol`) that emits a **p
 - Deeper/semantic symbols (tree-sitter `tags.scm`, more languages) remain on the table per the research note, not built.
 
 ## Evidence
-The symbol arm fires across the polyglot corpus (Go/C#/TS/SQL/CFML), each extractor with tests; the gold gate fails if the symbol arm attaches to zero blobs. Concrete wins from adding extractors: the ColdFusion extractor moved the "void transaction" gold query NDCG **0.689 → 0.964**; the symbol and path arms together measured complementary (production NDCG 0.93 ≫ either alone, [0006](./0006-rrf-hybrid-ranking.md)).
+
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 [0001](./0001-single-node-scope-pure-go-default.md), [0006](./0006-rrf-hybrid-ranking.md), [0009](./0009-agent-context-api.md).

@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"read_source","arguments":{"repo":"CleanArchitecture","path":"src/Application/TodoLists/Commands/UpdateTodoList/UpdateTodoListCommandValidator.cs","start_line":13,"end_line":27}}}

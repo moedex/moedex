@@ -1,1 +1,0 @@
-Find the compiler-selected default body for ProductPriceChangedIntegrationEventHandler and inspect its forwarding boundary.

@@ -7,10 +7,10 @@ Every external dependency in this codebase is an **out-of-process CLI, local HTT
 ## APIs & External Services
 
 **Source control / corpus acquisition (subprocess only):**
-- **GitLab — `gitlab.tcdevops.com`** — the corpus source. Project enumeration goes through the `glab` CLI, never a linked API client.
+- **GitLab — `gitlab.example.com`** — the corpus source. Project enumeration goes through the `glab` CLI, never a linked API client.
   - SDK/Client: none. `internal/corpus/enumerate.go:114` shells `glab api --hostname <host> --paginate ...`; the response is parsed by `ParseProjects` (`internal/corpus/enumerate.go:53`).
-  - Auth: delegated entirely to `glab`. `internal/corpus/doctor.go:94` runs `glab auth status --hostname <host>`; the remediation it prints is `glab auth login --hostname gitlab.tcdevops.com`. `GITLAB_TOKEN` is the non-interactive alternative (glab reads it) — documented in `deploy/moedex-serve.env.example`.
-  - Host scope is fixed: `internal/corpus/defaults.go` + `internal/corpus/config.go` scope acquisition to `gitlab.tcdevops.com` only. The curated group allowlist ships as `internal/corpus/default_groups.txt`.
+  - Auth: delegated entirely to `glab`. `internal/corpus/doctor.go:94` runs `glab auth status --hostname <host>`; the remediation it prints is `glab auth login --hostname gitlab.example.com`. `GITLAB_TOKEN` is the non-interactive alternative (glab reads it) — documented in `deploy/moedex-serve.env.example`.
+  - Host scope is fixed: `internal/corpus/defaults.go` + `internal/corpus/config.go` scope acquisition to `gitlab.example.com` only. The curated group allowlist ships as `internal/corpus/default_groups.txt`.
   - **Boundary invariant:** `internal/corpus` is the only package that shells out to `glab`/`git` for acquisition, and it is never imported by the engine or the daemon. All external process invocation funnels through `internal/corpus/runner.go:90` (`Runner.Run` → `exec.CommandContext`), which tests replace with a fake.
 - **Git CLI** — read-only working-tree ingestion and build stamping.
   - `internal/ingest/ingest.go:58` — `git -C <dir> rev-parse HEAD`
@@ -124,7 +124,7 @@ Every external dependency in this codebase is an **out-of-process CLI, local HTT
 
 **Scheduled refresh:**
 - Linux — enable exactly ONE of `moedex-sync.timer` (hourly; pulls from GitLab, re-indexes, reloads — needs network + glab + SSH) or `moedex-refresh.timer` (reindex only from an already-updated local corpus, no network). `moedex-sync.timer` uses `OnCalendar=hourly`, `RandomizedDelaySec=300`, `Persistent=true`.
-- macOS — `com.moedex.refresh` launchd agent at 14:10 local, chosen because the TC VPN session times out after 12 hours and an operator is likelier to be connected then.
+- macOS — `com.moedex.refresh` launchd agent at 14:10 local, chosen because the required network session times out after 12 hours and an operator is likelier to be connected then.
 - Reload is SIGHUP → warm hot-swap with no dropped requests (`systemctl reload moedex-serve`, or `launchctl kill -HUP gui/$(id -u)/com.moedex.serve`). SIGINT/SIGTERM does a 5s graceful drain.
 
 ## Environment Configuration

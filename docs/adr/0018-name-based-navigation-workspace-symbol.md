@@ -6,7 +6,7 @@
   for a Protostar Serena-replacement; the position tools
   ([0017](./0017-lsp-navigation-and-the-serena-boundary.md)) are the other half.
 - **Date:** 2026-07-01
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 
@@ -97,12 +97,8 @@ name-based tools carry name+kind (that is the output half of the fix).
 
 ## Evidence
 
-- The generic request primitive (`LSP.call`) and the `locationQuery` wrapper already exist
-  (`internal/navigate/lsp.go`), so the two methods are additive, not a client rewrite. The position
-  tools are registered in `cmd/moedex-serve/nav_lsp.go`; the new tools register the same way.
-- The bidirectional mismatch and the "blocked on moedex" finding are recorded in Protostar ADR 0002
-  (2026-07-01 amendment); the Protostar position-native core that these tools complete is built and
-  tested (`moedex-nav.ts` / `moedex-nav.test.ts`).
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 

@@ -1,9 +1,0 @@
-{
-  "frozen_before_native_output_inspection": true,
-  "at_utc": "2026-10-01T17:14:31.633286+00:00",
-  "files": {
-    "research/semantic-intelligence/score-codegraph-component.py": "014d50299badf88429adf02a71cffb25583744dde78796c140cc41c8c11ad1b8",
-    "research/semantic-intelligence/test_score_codegraph_component.py": "af32f26d1e68a1c30b480e0714df4b160c8b6d5c5f84ed657621e05a551cea30"
-  },
-  "synthetic_tests_passed": 9
-}

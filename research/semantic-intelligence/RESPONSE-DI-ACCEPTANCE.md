@@ -74,7 +74,7 @@ Final artifacts:
 - ForkJoint: `21c8e07824aae6a98c33757831db398690eb9c6541cb38993db69b24721f8380`.
 - eShopOnWeb: `13533bf1e20e2d05660a1ca19daff7bda6b23c4eae8c0b2eeb25f03b557f9755`.
 
-See [result.json](results/response-di-20261001/result.json) for source snapshots,
+See result.json (archival evidence maintained separately) for source snapshots,
 commands, validation logs, native fixtures and public requests/responses. Large
 artifacts, dependencies, corpus checkouts and binaries stay in `.local/response-di`
 or their previously retained locations.

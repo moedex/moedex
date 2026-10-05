@@ -64,7 +64,7 @@ Unchanged refresh completed in 18.327 seconds at 2,302,955,192 bytes sampled
 peak footprint, preserving generation 1, graph bytes, cluster sidecar bytes,
 and every logical count. The previous slice recorded 107.429 seconds.
 
-The [machine-readable result](results/roslyn-extraction-20261001/result.json)
+The machine-readable result (archival evidence maintained separately)
 links through recorded evidence hashes to all six guarded runs, response hashes,
 profiles, frozen extractor, source/binary fingerprints, and artifact comparisons.
 Full unit/vet/race/tagged validation commands are also recorded in the result.

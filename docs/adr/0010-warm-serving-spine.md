@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-25
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 The one-shot CLIs (`moedex`, `moedex-mcp`) rebuild an index per invocation — fine for a single repo, fatal for whole-corpus latency: re-ingesting and re-indexing 5.2 GB on every query is a non-starter, and rebuilding the BM25 token index + 5-language symbol layer on every boot/reload defeats the point of a warm process. Production for moedex means an operator can build a shard set once and run a warm daemon that answers with zero cold-start — on a trusted internal network, so the bar is "good enough for a trusted-network internal tool," not internet-facing SaaS.
@@ -27,7 +27,9 @@ Split offline build from online serving. `cmd/moedex-index` produces/refreshes a
 - The dense embedder for `-mcp` is chosen at boot (`-embed auto|onnx|http|none`); changing it is a restart/reload, not a runtime toggle.
 
 ## Evidence
-SIGHUP hot-reload tested (`reload_test.go`) and validated under load: 400 concurrent requests across a live shard swap returned **0 non-200s** ([0011](./0011-shard-level-freshness.md)). Served-mode resident set ≈ 3.79 GB on the 5.2 GB corpus with warm grep p95 563 ms ([0001](./0001-single-node-scope-pure-go-default.md), [0005](./0005-mmap-compact-postings.md)). MCP hardening covered by `hardening_test.go`.
+
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 [0004](./0004-content-addressable-blob-store.md), [0005](./0005-mmap-compact-postings.md), [0009](./0009-agent-context-api.md), [0011](./0011-shard-level-freshness.md).

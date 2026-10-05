@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":17,"method":"tools/call","params":{"name":"search_context","arguments":{"query":"const string Database","repo":"CleanArchitecture","path_prefix":"src/Shared","top_k":1,"token_budget":500,"graph_depth":0}}}

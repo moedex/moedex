@@ -63,10 +63,10 @@ navigation exposes its declarations for inspection.
 - Frozen commits, tracked source bytes and gold remain unchanged. All previous
   observations persist and the routing-slip observation is the sole addition.
 
-Evidence: [manifest](results/routing-slip-20261001/result.json),
-[public navigation](results/routing-slip-20261001/public/navigation/report.json),
-[eShopOnWeb observations](results/routing-slip-20261001/public/eShopOnWeb-public/report.json),
-[ForkJoint observations](results/routing-slip-20261001/public/ForkJoint-public/report.json).
+Evidence: manifest (archival evidence maintained separately),
+public navigation (archival evidence maintained separately),
+eShopOnWeb observations (archival evidence maintained separately),
+ForkJoint observations (archival evidence maintained separately).
 The archive preserves final sources, native streams, public requests/responses,
 capture metadata and validation logs. Older milestone archives remain unchanged;
 large caches, binaries, corpora and generated indices stay local.

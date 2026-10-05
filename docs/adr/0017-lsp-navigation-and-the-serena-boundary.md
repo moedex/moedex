@@ -15,7 +15,7 @@
   server-free and always runs. This is still a `Proposed` decision: the engineering proof exists, but
   the strategic move (retiring the Serena seam in Protostar) is not taken here.
 - **Date:** 2026-06-29
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 
@@ -71,16 +71,13 @@ to its language's server by extension. The language servers stay **external bina
 linked or imported** — the registry only knows how to launch them, and a server absent on a given
 machine skips gracefully (LookPath).
 
-The registry was sized against the **actual TurnCommerce corpus**, not a guess (an earlier pass
-shipped python/rust on assumption — rust has *zero* files in the corpus). By file count the corpus is
-~60% **C#**, then TypeScript/JS, HTML, SQL, ColdFusion, and the Angular front-ends' SCSS — the same
-languages moedex's existing symbol extractors ([0008](./0008-polyglot-symbol-sidecar.md)) already
-target (Go/C#/TS/SQL/CFML). Shipped entries and their **honest navigation capability**:
+The registry provides explicit capabilities for supported languages.
+Shipped entries and their navigation capability:
 
 | Language | Server | def | refs/impl | Notes |
 |---|---|---|---|---|
 | go | gopls | ✓ | ✓ | the original spike |
-| csharp | csharp-ls | ✓ | ✓ | ~60% of corpus; the load-bearing entry |
+| csharp | csharp-ls | ✓ | ✓ | compiler-backed navigation |
 | typescript (+js) | typescript-language-server `--stdio` | ✓ | ✓ | also serves `.js`/`.jsx` |
 | css/scss/less | vscode-css-language-server `--stdio` | ✓ | ✓ | strongest of the "extra" servers |
 | cfml | cflsp (built from softwareCobbler/cfc) | ✓ | — | definition only; needs `initializationOptions.config` |
@@ -213,16 +210,8 @@ sync rather than only full-text.
 
 ## Evidence
 
-- The default build has no go-to-def / find-references — stated in [0008](./0008-polyglot-symbol-sidecar.md)
-  ("No go-to-def / find-references … cross-file reference graph (SCIP-grade) is deliberately
-  deferred"). The symbol layer is syntactic name+offset extraction, mostly regex/byte scanners. The
-  `internal/navigate` arm adds these behind `-tags lsp` only; the pure-Go default is unchanged
-  (the arm pulls no new `go.mod` dependency and language servers stay external binaries on PATH).
-- Content identity is git blob SHA ([0004](./0004-content-addressable-blob-store.md)); freshness is
-  shard-level off a git-HEAD manifest ([0011](./0011-shard-level-freshness.md)) — committed-corpus,
-  not live-tree.
-- Serena-over-`codebase-memory-mcp` selection on concurrency safety under parallel lanes is recorded
-  in Protostar's DESIGN §12 (2026-06-17) and ADR 0002.
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 

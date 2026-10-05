@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-25
-- **Context owner:** moedex (TurnCommerce)
+- **Context owner:** moedex
 
 ## Context
 The hybrid-ranking verdict ([0006](./0006-rrf-hybrid-ranking.md)) wants a dense semantic arm. But Sourcegraph **deprecated OpenAI embeddings for Cody** over privacy (code leaving to a third party), freshness complexity, and cost beyond ~100k repos — so the research read is "embeddings are *one arm of a local hybrid*, not the default semantic bet, and never sent off-box." Meanwhile the project's identity is a pure-Go, zero-required-dependency build ([0001](./0001-single-node-scope-pure-go-default.md)); a dense arm that drags in an ML runtime and a tokenizer by default would break that.
@@ -27,7 +27,9 @@ Make the dense arm **optional and local**, behind the `embed.Embedder` interface
 - The bundled embedder is a ~2021 model; choosing a better one is real quality headroom, gated on a bigger eval set ([0014](./0014-eval-harness-gold-gate.md)).
 
 ## Evidence
-The default `go build ./...` links zero ML deps (confirmed by `go.mod`: the onnx modules are pulled only under `-tags onnx`). Boot embeddings are persisted (`corpus-embeddings.store`) and fingerprint-validated so a stale cache rebuilds rather than silently serving wrong vectors. On the synonym-gap/agent-NL gold stratum the dense arm lifts recall ~0.08 → 0.50 and adds +0.21 NDCG — the signal that justified keeping it (gated, [0006](./0006-rrf-hybrid-ranking.md)).
+
+Colocated tests cover the implementation contracts. Corpus-specific evaluation
+records and calibrated gates are maintained outside the public repository.
 
 ## Related
 [0001](./0001-single-node-scope-pure-go-default.md), [0006](./0006-rrf-hybrid-ranking.md), [0014](./0014-eval-harness-gold-gate.md).

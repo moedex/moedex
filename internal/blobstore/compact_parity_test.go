@@ -11,7 +11,7 @@ package blobstore
 // under=0, over=0, compacted!=pre=0, compacted!=direct=0. Reuses the parity-gate
 // pattern (parity.Generate + server.Corpus + the rg-oracle / rg-error quirk-skip)
 // from cas_export_parity_test.go / refresh_deduped_parity_test.go. Self-contained:
-// builds a multi-repo git fixture so it runs in CI without ~/TCGitlab.
+// builds a multi-repo git fixture so it runs in CI without ~/.moedex-managed.
 
 import (
 	"context"

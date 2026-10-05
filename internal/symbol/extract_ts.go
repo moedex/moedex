@@ -4,7 +4,7 @@ import "regexp"
 
 // TSExtractor extracts TypeScript definitions with a dependency-free regex/byte
 // scan (no tsc, no tree-sitter, no cgo). Like CSharpExtractor it is best-effort
-// and never errors. It covers the shapes that dominate the TurnCommerce Angular
+// and never errors. It covers the shapes that dominate the configured Angular
 // front end:
 //
 //   - class            -> Type   (decorators like @Injectable() are skipped over)
@@ -63,7 +63,7 @@ var tsMethodSkip = map[string]bool{
 //
 // tsMethodRe's only structural guard was the leading indent, which a call
 // statement satisfies just as well as a class member — so every bare indented
-// call read as a method definition. On the TurnCommerce corpus that made the
+// call read as a method definition. On the configured corpus that made the
 // test-framework and RxJS globals the most-"defined" symbols anywhere:
 // `expect(` 7,801 definitions, `it(` 5,151, plus describe/beforeEach/mergeMap/map.
 //

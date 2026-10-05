@@ -16,7 +16,7 @@ tests pass. The public HTTP check reads Worker lines 60–78 and verifies explic
 labels for the scoped service at 62 and consumer pairing at 77. Search responses
 carry numbered text with unchanged structured blocks. A complete source read
 preserves the BOM-sensitive bytes used for compiler hash matching. Evidence is in
-the [scripted regression manifest](results/citation-lines-20261001/result.json).
+the scripted regression manifest (archival evidence maintained separately).
 
 Numbering affects only readable text. `search_context(format="structured")`
 continues to return a compact summary plus unnumbered structured blocks. Text
