@@ -61,6 +61,7 @@ These ADRs capture the architectural decisions behind moedex, a clean-room, sing
 | [0063](./0063-native-build-diagnostic-severity.md) | Native build diagnostic severity | Accepted |
 | [0064](./0064-project-built-analyzer-preparation.md) | Project-built analyzer preparation | Accepted |
 | [0065](./0065-compact-semantic-artifacts.md) | Bounded compact semantic artifact envelopes | Accepted |
+| [0066](./0066-context-selected-compiler-call-tracing.md) | Context-selected compiler call tracing | Accepted |
 
 **Companion docs**: [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) (what the code is today),
 [`../plans/`](../plans/) (implementation plans for proposed decisions),

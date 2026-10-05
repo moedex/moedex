@@ -26,6 +26,8 @@ func (x *Index) validate(e Expected, max int64) error {
 		count, size = contractSectionCount, contractHeaderSize
 	case 4:
 		count, size = implementationSectionCount, implementationHeaderSize
+	case 5:
+		count, size = interfaceSectionCount, interfaceHeaderSize
 	case Version:
 	default:
 		return bad()
@@ -226,7 +228,10 @@ func (x *Index) validate(e Expected, max int64) error {
 	if err := x.validateImplementationFacts(); err != nil {
 		return err
 	}
-	return x.validateInterfacePostings()
+	if err := x.validateInterfacePostings(); err != nil {
+		return err
+	}
+	return x.validateCallerPostings()
 }
 
 func (x *Index) memberKey(row uint64) [4]uint64 {

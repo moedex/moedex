@@ -179,3 +179,20 @@ This preserves v5 layout and older evidence. The observation exposes a cast
 obligation and closed target through existing compiler tools; it does not extend
 the ordinary `compiler_contract_paths` hop model. See
 [ADR 0049](../../docs/adr/0049-bounded-default-interface-forwarding.md).
+
+Version 6 adds `compiler_trace_calls` with exact method IDs and explicit context
+selection. Discover IDs/contexts through `compiler_symbols` or
+`compiler_binding_at`, then select `direction` (inbound/outbound/both), `depth`
+(1–8, default 1) and `limit` (1–100 call-site witnesses, default 20). This
+traverses recorded resolved method invocations, keeps static interface targets,
+retains cycle edges and distinguishes qualified homonyms and overloads. The
+outbound directory costs eight bytes per owned invocation; v1–v5 remain readable
+and require rebuilding from the complete admitted artifact for this capability.
+The 10,000-row and 2 MiB bounds cover the whole traversal, with explicit truncation.
+MCP also caps the serialized response at 64 KiB by trimming whole trailing edges.
+Each witness includes source/context/commit and compiler provenance. Selected
+projects are a union of observations, not proof of a compatible build or runtime
+path. Nested lambda/local fallback owners, method groups, object creation and
+unresolved calls are excluded. Missing records are not absence. Existing
+`trace_calls` retains confidence-scored graph candidates. See
+[ADR 0066](../../docs/adr/0066-context-selected-compiler-call-tracing.md).

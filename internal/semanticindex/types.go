@@ -4,7 +4,7 @@ package semanticindex
 import "moedex/internal/semantic"
 
 const Format = "moedex.semantic-index"
-const Version = 5
+const Version = 6
 const MaxBytes int64 = 128 << 20
 const MaxResults = 100
 
