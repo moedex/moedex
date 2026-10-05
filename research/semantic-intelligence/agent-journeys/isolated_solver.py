@@ -400,10 +400,18 @@ def run_container(config, directory, broker=None, record=None, probe=False):
     command[2:2] = ['--cidfile', str(cidfile)]
     capture.retain('container-command.json', canonical(command) + b'\n')
     timeout = config.get('timeout_seconds', 600)
-    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or timeout <= 0:
-        raise ValueError('positive finite assignment timeout required')
+    if (isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or
+            not math.isfinite(timeout) or timeout <= 0 or timeout > 3600):
+        raise ValueError('positive finite assignment timeout of at most one hour required')
     started, seen, exit_code, complete = time.monotonic(), set(), None, False
     submitted_answer_sha256 = None
+    def remaining_seconds():
+        remaining = timeout - (time.monotonic() - started)
+        if record is not None:
+            remaining = min(remaining, record.remaining_seconds())
+        if remaining <= 0:
+            raise TimeoutError()
+        return remaining
     def interrupted(signum, frame):
         raise InterruptedError('controller interrupted')
     previous_sigterm = signal.signal(signal.SIGTERM, interrupted)
@@ -413,18 +421,22 @@ def run_container(config, directory, broker=None, record=None, probe=False):
         selector.register(process.stdout, selectors.EVENT_READ)
         buffer = b''
         def reply(message):
+            # A buffered provider response may finish after the bridge's
+            # assignment deadline. Retain it, but never write a late reply.
+            remaining_seconds()
             process.stdin.write(canonical(message) + b'\n')
             process.stdin.flush()
         try:
             start = {k: config[k] for k in ('model', 'reasoning_effort', 'prompt', 'enabled_tools')}
-            start['timeout_ms'] = int(min(timeout, record.remaining_seconds() if record is not None else timeout) * 1000)
+            start['timeout_ms'] = int(remaining_seconds() * 1000)
+            if start['timeout_ms'] < 1:
+                raise TimeoutError()
+            # The relay buffers whole exchanges, including provider SSE. Its
+            # timeout must allow the same remaining budget as the controller.
+            start['exchange_timeout_ms'] = start['timeout_ms']
             reply({'channel': 'start', 'config': start})
             while exit_code is None:
-                remaining = timeout - (time.monotonic() - started)
-                if record is not None:
-                    remaining = min(remaining, record.remaining_seconds())
-                if remaining <= 0:
-                    raise TimeoutError()
+                remaining = remaining_seconds()
                 ready = selector.select(min(remaining, 1))
                 if not ready:
                     if process.poll() is not None:
@@ -462,7 +474,7 @@ def run_container(config, directory, broker=None, record=None, probe=False):
                             else:
                                 body, receipt = provider_exchange(os.environ[config['provider_url_env']],
                                                                   os.environ[config['provider_token_env']], raw,
-                                                                  min(timeout - (time.monotonic() - started), record.remaining_seconds()))
+                                                                  remaining_seconds())
                         else:
                             if probe:
                                 result = mock_mcp(value, config['enabled_tools'])

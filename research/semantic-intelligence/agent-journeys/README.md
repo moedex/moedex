@@ -114,3 +114,11 @@ New runs default to immutable model/product provenance. An explicitly authorized
 records the available service/model identities and reproducibility limits while
 retaining isolation, budgets, raw capture and independent review. Reports keep
 provenance separate from paired coverage and answer quality.
+
+The isolated controller buffers complete provider and MCP responses before
+relaying them. Each relay uses the remaining assignment deadline, including for
+long provider SSE responses; there is no separate implicit 60-second limit.
+Assignments are capped at one hour. Direct bridge callers may specify a shorter
+positive integer `exchange_timeout_ms`. A response completed after assignment
+expiry is retained locally but is never sent back to the solver. Rebuild the
+immutable solver image to apply bridge changes to future runs.
