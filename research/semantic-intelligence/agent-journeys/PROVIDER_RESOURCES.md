@@ -20,7 +20,18 @@ to one isolated assignment. It adds no provider calls and performs no retries.
 ```
 
 Freeze the same `max_output_tokens` in the model settings' exact `provider_fields`
-contract. The host retains the original CLI request and injects this fixed field
+contract. For new freezes, generate exactly one solver-facing instruction line
+with `provider_resources.prompt_instructions(policy)` and include it in the
+task prompt before freezing its hash. Execution admission now checks that line
+against the frozen policy, rejecting missing, duplicate or stale instructions
+before dispatch. Render all byte counts as decimal bytes and observed token
+thresholds from the policy; keep per-response output distinct from cumulative
+observed output. The example values above are illustrative, not defaults.
+Historical frozen controllers and prompts remain unchanged; do not substitute
+this controller into an existing run. Freeze the changed runner and resource
+module together for any future execution.
+
+The host retains the original CLI request and injects this fixed field
 when absent, retaining the exact upstream request separately. An explicitly
 different value stops before dispatch. All other frozen provider settings remain
 validated against the upstream body. Count and individual/cumulative request-body

@@ -27,7 +27,8 @@ from journey_clock import monotonic
 from run_record import RunRecord, _new_file, canonical, digest, read_ref, reference
 import provenance
 from native_scope import NativeScope, ScopeViolation
-from provider_resources import ProviderResources, validate_policy as validate_provider_resources
+from provider_resources import (ProviderResources, validate_policy as validate_provider_resources,
+                                validate_prompt_instructions)
 
 
 IMAGE = re.compile(r'^sha256:[0-9a-f]{64}$')
@@ -394,6 +395,7 @@ def validate_execution_config(root, config):
         raise ValueError('provider resource configuration differs from frozen policy')
     if resources is not None:
         resources = validate_provider_resources(resources)
+        validate_prompt_instructions(config['prompt'], resources)
         expected.add('max_output_tokens')
         if type(fields.get('max_output_tokens')) is not int or fields['max_output_tokens'] != resources['max_output_tokens']:
             raise ValueError('frozen provider output limit differs from resource policy')

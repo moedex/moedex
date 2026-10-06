@@ -23,6 +23,7 @@ LIMITATION = ('Provider usage is reported after dispatch, not authenticated bill
               'unknown usage is never zero and stops further dispatch. Body ceilings '
               'bound retained decoded bytes with at most one overflow sentinel byte. '
               'No monetary ceiling or pre-dispatch cumulative token guarantee is established.')
+INSTRUCTION_PREFIX = 'Provider resource ceilings:'
 
 
 def canonical(value):
@@ -55,6 +56,28 @@ def validate_policy(policy):
     if policy['max_output_tokens'] < 16 or max(policy['max_request_bytes'], policy['max_response_bytes']) > 64 << 20:
         raise ValueError('provider limits outside supported transport range')
     return deepcopy(policy)
+
+
+def prompt_instructions(policy):
+    """Render the solver-facing limits from the same typed enforcement policy."""
+    p = validate_policy(policy)
+    return (f"{INSTRUCTION_PREFIX} {p['max_requests']} requests; "
+            f"{p['max_request_bytes']} bytes per request; {p['max_response_bytes']} bytes per response; "
+            f"{p['max_total_request_bytes']} cumulative request bytes; "
+            f"{p['max_total_response_bytes']} cumulative response bytes; "
+            f"observed {p['max_observed_input_tokens']} input tokens and "
+            f"{p['max_observed_output_tokens']} output tokens stop further dispatch. "
+            f"Fixed per-request max_output_tokens {p['max_output_tokens']}. "
+            "Observed usage is reported after response; one in-flight request may cross a threshold. "
+            "Unknown usage stops further dispatch. These are not hard cumulative billing quotas.")
+
+
+def validate_prompt_instructions(prompt, policy):
+    if type(prompt) is not str:
+        raise ValueError('provider prompt must be text')
+    lines = [line for line in prompt.splitlines() if INSTRUCTION_PREFIX in line]
+    if lines != [prompt_instructions(policy)]:
+        raise ValueError('provider prompt resource instructions differ from frozen policy')
 
 
 def terminal_usage(body, receipt):

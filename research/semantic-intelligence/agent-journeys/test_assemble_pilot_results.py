@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Synthetic-only assembly tests. All fixtures live in disposable local directories."""
 import contextlib
+import base64
 import copy
 import hashlib
 import importlib.util
@@ -174,8 +175,162 @@ class AssemblyTests(unittest.TestCase):
         value.update(updates)
         return self.replace(name, value)
 
-    def run_assembly(self, selection_ref=None):
-        return assembly.assemble(self.root, self.packet_ref, self.access_ref, self.harness_ref, self.schema_sha, selection_ref)
+    def run_assembly(self, selection_ref=None, history_ref=None):
+        return assembly.assemble(self.root, self.packet_ref, self.access_ref, self.harness_ref,
+                                 self.schema_sha, selection_ref, history_ref)
+
+    def history_manifest(self):
+        originals = [assembly.ref_for(self.root, 'reviews/attempt-source/' + slot['assignment'] + '.json')
+                     for slot in self.slots]
+        receipt = {'schema': 'fresh-pilot-semantic-reviewer-history-attestation-v1',
+                   'reviewer_id': 'synthetic-fresh-source-reviewer', 'packet': self.packet_ref,
+                   'review_history': dict.fromkeys(assembly.HISTORY_FLAGS, True),
+                   'original_review_refs': originals, 'disclosure': 'Synthetic explicit author declaration.',
+                   'original_decision': 'Fresh history attested.', 'observed_utc': '2026-10-06T00:00:00+00:00'}
+        ref = self.replace('reviews/history/synthetic.json', receipt)
+        return self.replace('reviews/source-history-manifest.json', {
+            'schema': 'broader-pilot-source-history-manifest-v1', 'packet': self.packet_ref, 'attestations': [ref]})
+
+    def test_root_relative_answer_is_confined_and_retains_exact_original(self):
+        path = self.name + '/events/000001.json'
+        value = self.data(path)
+        value['answer']['path'] = self.name + '/' + value['answer']['path']
+        self.replace(path, value)
+        final, _, _ = assembly.terminal_evidence(self.root, self.slot)
+        self.assertEqual(final['path'], self.name + '/blobs/000001.answer')
+        for path_value in ('../foreign.answer', 'blobs/../assignment.json', 'B-task-00-r01/blobs/000001.answer',
+                           self.name + '/assignment.json', '/tmp/answer'):
+            with self.subTest(path=path_value):
+                value['answer']['path'] = path_value
+                self.replace(path, value)
+                with self.assertRaises(ValueError):
+                    assembly.terminal_evidence(self.root, self.slot)
+
+    def journal_selector(self, channel='answer', owner=None):
+        final = self.data('reviews/attempt-source/' + self.name + '.json')['final']
+        raw = assembly.read_ref(self.root, final)
+        path = 'captures/' + (owner or self.name) + '/events.jsonl'
+        self.replace(path, {'channel': channel, 'body_base64': base64.b64encode(raw).decode()})
+        return {'path': path, 'sha256': final['sha256'], 'line': 1, 'field': 'body_base64'}
+
+    def test_journal_final_selector_preserves_body_and_file_hash_domains(self):
+        selector = self.journal_selector()
+        source_ref = self.change_source(final=selector)
+        source, fields, refs = assembly.review_artifact(self.root, self.name, 'source', self.slot,
+            {s['solver_id'] for s in self.slots}, {}, self.data(source_ref['path'])['evidence_refs'][-1])
+        self.assertEqual(source['final'], selector)
+        self.assertIn(assembly.ref_for(self.root, selector['path']), refs)
+        self.assertEqual(fields['artifact'], source_ref)
+        for change in ({'line': 2}, {'line': True}, {'sha256': '0' * 64}, {'field': 'body'}, {'path': None}):
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                assembly.selected_body(self.root, dict(selector, **change))
+
+    def test_journal_final_cannot_select_foreign_or_nonfinal_body(self):
+        final = self.data('reviews/attempt-source/' + self.name + '.json')['final']
+        for selector in (self.journal_selector(channel='final'), self.journal_selector(owner='B-task-00-r01')):
+            self.change_source(final=selector)
+            with self.assertRaises(ValueError):
+                assembly.review_artifact(self.root, self.name, 'source', self.slot,
+                    {s['solver_id'] for s in self.slots}, {}, final)
+
+    def test_byte_descriptors_require_exact_integer_length_and_known_keys(self):
+        ref = self.machine_ref
+        size = len(assembly.read_ref(self.root, ref))
+        self.assertEqual(assembly.references(self.root, dict(ref, bytes=size)), [ref])
+        for extras in ({'bytes': True}, {'bytes': size + 1}, {'bytes': size, 'unknown': True}, {'unknown': 1}):
+            with self.subTest(extras=extras), self.assertRaises(ValueError):
+                assembly.references(self.root, dict(ref, **extras))
+
+    def test_hash_bound_history_attestation_retains_narrative_and_grouped_findings(self):
+        original = self.change_source(review_history='Original narrative must remain unchanged.',
+                                      material_claims_and_citations={'groups': [{'label': 'unchanged'}]})
+        manifest = self.history_manifest()
+        before = assembly.read_ref(self.root, original)
+        result, audit = self.run_assembly(history_ref=manifest)
+        self.assertEqual(assembly.read_ref(self.root, original), before)
+        self.assertEqual(audit['source_history_manifest'], manifest)
+        self.assertIn('source_history_attestation', audit['attempts'][0])
+        self.assertEqual(result['attempts'][0]['source_review']['criteria'], dict.fromkeys(CRITERIA, True))
+
+    def test_history_manifest_rejects_missing_changed_foreign_or_duplicate_originals(self):
+        manifest_ref = self.history_manifest()
+        manifest = self.data(manifest_ref['path']);ref = manifest['attestations'][0];original = self.data(ref['path'])
+        for mode in ('missing', 'changed', 'foreign', 'duplicate', 'solver', 'packet', 'false_flag'):
+            value = copy.deepcopy(original)
+            if mode == 'missing': value['original_review_refs'].pop()
+            if mode == 'changed': value['original_review_refs'][0]['sha256'] = '0' * 64
+            if mode == 'foreign': value['original_review_refs'][0] = self.machine_ref
+            if mode == 'duplicate': value['original_review_refs'].append(value['original_review_refs'][0])
+            if mode == 'solver': value['reviewer_id'] = self.slot['solver_id']
+            if mode == 'packet': value['packet'] = self.machine_ref
+            if mode == 'false_flag': value['review_history']['no_task_authorship'] = False
+            manifest['attestations'] = [self.replace(ref['path'], value)]
+            changed_ref = self.replace(manifest_ref['path'], manifest)
+            with self.subTest(mode=mode), self.assertRaises(ValueError):
+                assembly.source_history_attestations(self.root, changed_ref, self.packet_ref,
+                                                     self.slots, {s['solver_id'] for s in self.slots})
+
+    def test_history_attestation_cannot_override_false_original_flags(self):
+        self.change_source(review_history=dict.fromkeys(assembly.HISTORY_FLAGS, False))
+        with self.assertRaisesRegex(ValueError, 'contradicts'):
+            self.run_assembly(history_ref=self.history_manifest())
+
+    def test_duplicate_history_author_rejected(self):
+        ref = self.history_manifest();value = self.data(ref['path']);value['attestations'] *= 2
+        changed_ref = self.replace(ref['path'], value)
+        with self.assertRaisesRegex(ValueError, 'duplicate/solver'):
+            assembly.source_history_attestations(self.root, changed_ref, self.packet_ref,
+                                                 self.slots, {s['solver_id'] for s in self.slots})
+
+    def test_source_omission_hash_is_never_interpreted_as_archive_file_hash(self):
+        value = {'repository': 'synthetic-repository', 'path': 'src/example.cs', 'source_line': 3,
+                 'body_field': 'source', 'native_ordinal': 2, 'utf8_bytes': 12, 'sha256': '1' * 64}
+        self.assertEqual(assembly.references(self.root, value), [])
+        self.assertEqual(assembly.references(self.root, dict(value, display_line_offset=0)), [])
+        for updates in ({'sha256': 'unknown'}, {'source_line': True}, {'path': '../file'},
+                        {'display_line_offset': -1}, {'unknown': True}):
+            with self.subTest(updates=updates), self.assertRaises(ValueError):
+                assembly.references(self.root, dict(value, **updates))
+
+    def test_sensitive_safe_manual_diagnostics_preserve_original_flags_and_refs(self):
+        path = 'reviews/attempt-raw/' + self.name + '.json'
+        raw = self.data(path)
+        safe = {'authorization': self.machine_ref, 'helper': self.machine_ref, 'omitted_line_displays': [],
+                'original_bytes_mechanically_verified': True, 'sensitive_literal_values_directly_read': False,
+                'dependent_raw_fact_limit': 'No original decisions depend on omitted literals.'}
+        raw['manual_review']['sensitive_safe_representation'] = safe
+        original = self.replace(path, raw)
+        result, audit = self.run_assembly()
+        self.assertEqual(result['attempts'][0]['raw_review']['artifact'], original)
+        self.assertIn(self.machine_ref, audit['attempts'][0]['raw_evidence_refs'])
+        for updates in ({'original_bytes_mechanically_verified': False},
+                        {'sensitive_literal_values_directly_read': 'false'}, {'unknown': True}):
+            raw['manual_review']['sensitive_safe_representation'] = dict(safe, **updates)
+            self.replace(path, raw)
+            with self.subTest(updates=updates), self.assertRaises(ValueError):
+                self.run_assembly()
+
+    def test_manual_diagnostics_cannot_replace_required_checks_or_add_unknown_fields(self):
+        path = 'reviews/attempt-raw/' + self.name + '.json'
+        original = self.data(path)
+        for key, value in (('unknown', True), ('sensitive_literal_values_directly_read', 'false'),
+                           ('omitted_context_lines', {}), ('raw_body_review_representation', '')):
+            raw = copy.deepcopy(original);raw['manual_review'][key] = value
+            self.replace(path, raw)
+            with self.subTest(key=key), self.assertRaises(ValueError): self.run_assembly()
+
+    def test_nonterminal_client_error_and_opaque_diagnostics_are_retained(self):
+        path = 'reviews/attempt-raw/' + self.name + '.json';raw = self.data(path)
+        error = {'captured_host_native_call_present': False, 'exact_cause': 'unestablished',
+                 'preceding_provider_ordinal': 2, 'provider_following_request': self.machine_ref, 'terminal_stop': False}
+        raw['manual_review'].update(nonterminal_client_error=error, diagnostics={'original_metadata': 'unchanged'})
+        original = self.replace(path, raw);result, audit = self.run_assembly()
+        self.assertEqual(result['attempts'][0]['outcome'], 'answered')
+        self.assertEqual(result['attempts'][0]['raw_review']['artifact'], original)
+        self.assertIn(self.machine_ref, audit['attempts'][0]['raw_evidence_refs'])
+        for updates in ({'terminal_stop': True}, {'preceding_provider_ordinal': True}, {'unknown': True}):
+            raw['manual_review']['nonterminal_client_error'] = dict(error, **updates);self.replace(path, raw)
+            with self.subTest(updates=updates), self.assertRaises(ValueError): self.run_assembly()
 
     def make_selection(self):
         """Create a neutral legacy-format original and an explicitly approved v4."""
