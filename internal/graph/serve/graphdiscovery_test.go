@@ -1,17 +1,27 @@
 package graphserve
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
+	"moedex/internal/contextwin"
 	"moedex/internal/diskstore"
 	"moedex/internal/graph"
 	"moedex/internal/graph/diskgraph"
 	"moedex/internal/index"
+	"moedex/internal/ingest"
+	"moedex/internal/mcp"
+	"moedex/internal/rank"
 )
 
 // buildDiscoveryFixture creates a temp shard dir with two repos, a few files,
@@ -257,7 +267,7 @@ func TestReadSourceCitationTextPreservesStructuredContent(t *testing.T) {
 	if err := json.Unmarshal(raw, &source); err != nil {
 		t.Fatal(err)
 	}
-	if source.Content != "\ntype Service struct{}" || source.StartLine != 2 || source.EndLine != 3 || source.BlobSHA != "sha-e" {
+	if source.Content != "\ntype Service struct{}\n" || source.StartLine != 2 || source.EndLine != 3 || source.BlobSHA != "sha-e" {
 		t.Fatalf("structured source or provenance changed: %+v", source)
 	}
 	text := result["content"].([]interface{})[0].(map[string]interface{})["text"].(string)
@@ -288,6 +298,202 @@ func TestReadSourceCompactPresentation(t *testing.T) {
 		if got["isError"] != true {
 			t.Fatalf("expected invalid arguments for %s: %+v", args, got)
 		}
+	}
+}
+
+func buildSourceLineFixture(t *testing.T, raw, indexed []byte) (*GraphToolset, *index.Index) {
+	t.Helper()
+	dir := t.TempDir()
+	ix := index.New()
+	ix.AddFile("sample", "sample.txt", filepath.Join(dir, "sample.txt"), diskstore.GitBlobSHA1(raw), indexed)
+	if err := diskstore.Save(ix, filepath.Join(dir, "000.idx")); err != nil {
+		t.Fatal(err)
+	}
+	tools, err := OpenSourceTools(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { tools.Close() })
+	return tools, ix
+}
+
+func decodeSourceResult(t *testing.T, result map[string]interface{}) sourceResult {
+	t.Helper()
+	if result["isError"] == true {
+		t.Fatalf("unexpected read_source error: %+v", result)
+	}
+	raw, err := json.Marshal(result["structuredContent"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	var source sourceResult
+	if err := json.Unmarshal(raw, &source); err != nil {
+		t.Fatal(err)
+	}
+	return source
+}
+
+func TestReadSourcePhysicalLines(t *testing.T) {
+	for _, tc := range []struct {
+		name, content, last string
+		lines               int
+	}{
+		{"ten CRLF lines", "one\r\ntwo\r\nthree\r\nfour\r\nfive\r\nsix\r\nseven\r\neight\r\nnine\r\nten\r\n", "ten\r\n", 10},
+		{"terminal LF", "first\nlast\n", "last\n", 2},
+		{"unterminated LF", "first\nlast", "last", 2},
+		{"interior blank", "first\n\nlast\n", "last\n", 3},
+		{"physical blank last", "first\n\n", "\n", 2},
+		{"single blank line", "\n", "\n", 1},
+		{"empty", "", "", 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tools, ix := buildSourceLineFixture(t, []byte(tc.content), []byte(tc.content))
+			for _, format := range []string{"text", "structured"} {
+				result := callTool(t, tools, "read_source", fmt.Sprintf(`{"path":"sample.txt","format":%q}`, format))
+				source := decodeSourceResult(t, result)
+				start := 1
+				if tc.lines == 0 {
+					start = 0
+				}
+				if source.Content != tc.content || source.Lines != tc.lines || source.StartLine != start || source.EndLine != tc.lines || source.Truncated || source.BlobSHA != diskstore.GitBlobSHA1([]byte(tc.content)) {
+					t.Fatalf("incorrect full physical source: %+v", source)
+				}
+				if format == "text" {
+					text := result["content"].([]interface{})[0].(map[string]interface{})["text"].(string)
+					if strings.Contains(text, fmt.Sprintf("\n%d |", tc.lines+1)) {
+						t.Fatalf("numbered nonexistent source line: %q", text)
+					}
+				}
+			}
+			if tc.lines == 0 {
+				result := callTool(t, tools, "read_source", `{"path":"sample.txt","start_line":2}`)
+				if result["isError"] != true {
+					t.Fatalf("start beyond empty content must fail: %+v", result)
+				}
+			} else {
+				// LineOf for an actual final byte agrees with physical citation
+				// bounds. Do not reinterpret the index's EOF offset sentinel.
+				if got := ix.Blob(0).LineOf(len(tc.content) - 1); got != tc.lines {
+					t.Fatalf("index last-byte line = %d, want %d", got, tc.lines)
+				}
+				for _, end := range []int{tc.lines, tc.lines + 1} {
+					result := callTool(t, tools, "read_source", fmt.Sprintf(`{"path":"sample.txt","start_line":%d,"end_line":%d}`, tc.lines, end))
+					source := decodeSourceResult(t, result)
+					if source.StartLine != tc.lines || source.EndLine != tc.lines || source.Content != tc.last || source.Truncated {
+						t.Fatalf("incorrect EOF selection/clamping: %+v", source)
+					}
+				}
+				result := callTool(t, tools, "read_source", fmt.Sprintf(`{"path":"sample.txt","start_line":%d}`, tc.lines+1))
+				if result["isError"] != true {
+					t.Fatalf("EOF+1 start must fail: %+v", result)
+				}
+			}
+			if tc.name == "interior blank" {
+				source := decodeSourceResult(t, callTool(t, tools, "read_source", `{"path":"sample.txt","start_line":2,"end_line":2}`))
+				if source.Content != "\n" || source.StartLine != 2 || source.EndLine != 2 || !source.Truncated {
+					t.Fatalf("blank line lost its terminator or coordinates: %+v", source)
+				}
+			}
+			assertSearchSourceLineAgreement(t, tools, ix, tc.content, tc.lines)
+		})
+	}
+}
+
+// Exercise context assembly and both MCP presentations against the same
+// indexed bytes. Search context retains its existing final-LF presentation
+// convention; read_source must return the exact source bytes instead.
+func assertSearchSourceLineAgreement(t *testing.T, tools *GraphToolset, ix *index.Index, content string, lines int) {
+	t.Helper()
+	window := contextwin.Assemble(ix, []rank.RankedResult{{
+		Blob: 0, Files: ix.Blob(0).Files, Score: 1,
+		LineSpans: []rank.LineSpan{{StartLine: 1, EndLine: max(1, lines)}},
+	}}, contextwin.Options{TokenBudget: 1000})
+	handler := mcp.NewServer(staticContextSearcher{window: window}, mcp.WithTools(tools.Tools()...)).HTTPHandler()
+	for _, format := range []string{"text", "structured"} {
+		request := fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_context","arguments":{"query":"sample","format":%q}}}`, format)
+		req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(request))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("search_context status = %d: %s", rec.Code, rec.Body.String())
+		}
+		var response struct {
+			Result struct {
+				StructuredContent struct {
+					Blocks []struct {
+						StartLine int    `json:"start_line"`
+						EndLine   int    `json:"end_line"`
+						Text      string `json:"text"`
+						BlobSHA   string `json:"blob_sha"`
+					} `json:"blocks"`
+				} `json:"structuredContent"`
+			} `json:"result"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+			t.Fatal(err)
+		}
+		blocks := response.Result.StructuredContent.Blocks
+		if lines == 0 {
+			if len(blocks) != 0 {
+				t.Fatalf("empty source produced citeable search blocks: %+v", blocks)
+			}
+			continue
+		}
+		if len(blocks) != 1 {
+			t.Fatalf("expected one search block: %+v", blocks)
+		}
+		block := blocks[0]
+		source := decodeSourceResult(t, callTool(t, tools, "read_source", fmt.Sprintf(`{"path":"sample.txt","start_line":%d,"end_line":%d}`, block.StartLine, block.EndLine)))
+		wantSearch := content
+		if !strings.HasSuffix(wantSearch, "\n") {
+			wantSearch += "\n"
+		}
+		if block.StartLine != 1 || block.EndLine != lines || block.Text != wantSearch || block.BlobSHA != source.BlobSHA || source.Content != content || source.EndLine != block.EndLine {
+			t.Fatalf("search/read_source physical bounds or bytes disagree: block=%+v source=%+v", block, source)
+		}
+	}
+}
+
+func TestReadSourceBOMIngest(t *testing.T) {
+	dir := t.TempDir()
+	const content = "first\r\nlast\r\n"
+	raw := append([]byte{0xef, 0xbb, 0xbf}, []byte(content)...)
+	if err := os.WriteFile(filepath.Join(dir, "sample.txt"), raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"init", "--quiet"}, {"add", "sample.txt"}} {
+		cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, out)
+		}
+	}
+	files, err := ingest.Repo("sample", dir)
+	if err != nil || len(files) != 1 {
+		t.Fatalf("ingest: files=%+v err=%v", files, err)
+	}
+	file := files[0]
+	if !bytes.Equal(file.Content, []byte(content)) || file.SHA != diskstore.GitBlobSHA1(raw) || file.SHA == diskstore.GitBlobSHA1(file.Content) {
+		t.Fatalf("BOM ingest bytes or raw blob identity changed: %+v", file)
+	}
+	tools, ix := buildSourceLineFixture(t, raw, file.Content)
+	source := decodeSourceResult(t, callTool(t, tools, "read_source", `{"path":"sample.txt"}`))
+	if source.Content != content || source.Lines != 2 || source.EndLine != 2 || source.BlobSHA != file.SHA {
+		t.Fatalf("read_source changed indexed BOM policy or blob identity: %+v", source)
+	}
+	assertSearchSourceLineAgreement(t, tools, ix, content, 2)
+}
+
+func TestReadSourceLineLimitRetainsTerminator(t *testing.T) {
+	content := strings.Repeat("line\r\n", maxReadSourceLines+1)
+	tools, _ := buildSourceLineFixture(t, []byte(content), []byte(content))
+	source := decodeSourceResult(t, callTool(t, tools, "read_source", `{"path":"sample.txt"}`))
+	if source.Lines != maxReadSourceLines+1 || source.EndLine != maxReadSourceLines || !source.Truncated || source.Content != strings.Repeat("line\r\n", maxReadSourceLines) {
+		t.Fatalf("incorrect tool-bound source bytes or lines: %+v", source)
+	}
+	last := decodeSourceResult(t, callTool(t, tools, "read_source", fmt.Sprintf(`{"path":"sample.txt","start_line":%d}`, maxReadSourceLines+1)))
+	if last.EndLine != maxReadSourceLines+1 || last.Content != "line\r\n" || last.Truncated {
+		t.Fatalf("incorrect final page: %+v", last)
 	}
 }
 

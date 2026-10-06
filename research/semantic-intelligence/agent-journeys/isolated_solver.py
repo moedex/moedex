@@ -59,6 +59,17 @@ def bounded_response(response, cap):
     return result
 
 
+def present_response(response, cap, presentation_mode=None):
+    """Shared deterministic delivery/replay transform, after scope validation."""
+    if presentation_mode is None:
+        return bounded_response(response, cap)
+    if presentation_mode != 'single-source-v1':
+        raise ValueError('unsupported presentation mode')
+    from solver_workflow import single_source
+    presented = single_source(response, cap)
+    return presented if presented is not None else bounded_response(response, cap)
+
+
 def container_command(image):
     if not isinstance(image, str) or not IMAGE.fullmatch(image):
         raise ValueError('solver image must be an immutable local image ID')
@@ -193,7 +204,8 @@ def validate_provider_identity(body, receipt, expected_models):
 
 class NativeBroker:
     """Serve only the frozen native tool roster, retaining full native onboarding."""
-    def __init__(self, client, record, allowed_tools, observed_product=None, source_scope=None):
+    def __init__(self, client, record, allowed_tools, observed_product=None, source_scope=None,
+                 presentation_mode=None):
         if not allowed_tools or len(set(allowed_tools)) != len(allowed_tools):
             raise ValueError('unique nonempty native allowlist required')
         self.client, self.record, self.allowed = client, record, set(allowed_tools)
@@ -201,6 +213,11 @@ class NativeBroker:
         self.display_cap = 8192
         self.observed_product = observed_product
         self.source_scope = source_scope
+        if presentation_mode not in (None, 'single-source-v1'):
+            raise ValueError('unsupported presentation mode')
+        if presentation_mode is not None and source_scope is None:
+            raise ValueError('single-source presentation requires validated source scope')
+        self.presentation_mode = presentation_mode
         if source_scope is not None and source_scope.allowed != self.allowed:
             raise ValueError('scope policy and native allowlist differ')
         self.last_response_sha256 = None
@@ -302,11 +319,13 @@ class NativeBroker:
                     'registered_nodes': len(self.source_scope.nodes), 'registered_cursors': len(self.source_scope.cursors)}
             # Full native response remains in raw evidence. The entire model-visible
             # envelope (including JSON-RPC/MCP wrappers) is subject to the display cap.
-            response = bounded_response(response, self.display_cap)
+            response = present_response(response, self.display_cap, self.presentation_mode)
             raw = canonical(response)
             if policy_receipt is None:
                 self.record.display(raw)
             else:
+                if self.presentation_mode is not None:
+                    policy_receipt['presentation_mode'] = self.presentation_mode
                 policy_receipt['display_sha256'] = digest(raw)
                 self.record.display(raw, scope_policy=policy_receipt)
             return response
@@ -405,6 +424,15 @@ def validate_execution_config(root, config):
     config['provider_fields'] = fields
     runner_names = ['isolated_solver.py', 'run_record.py', 'native_http.py', 'journey_clock.py',
                     'contract.py', 'compare.py']
+    config.pop('_presentation_mode', None)
+    presentation_mode = frozen.get('presentation_mode')
+    if config.get('presentation_mode') != presentation_mode or presentation_mode not in (None, 'single-source-v1'):
+        raise ValueError('presentation mode differs from freeze or is unsupported')
+    if presentation_mode is not None:
+        if 'source_scope_policy' not in frozen:
+            raise ValueError('single-source presentation requires frozen source scope')
+        config['_presentation_mode'] = presentation_mode
+        runner_names.append('solver_workflow.py')
     config.pop('_source_scope', None)
     if 'source_scope_policy' in frozen or 'source_scope_policy' in config:
         if config.get('source_scope_policy') != frozen.get('source_scope_policy'):
@@ -711,7 +739,8 @@ def main():
                                         os.environ[config['native_token_env']] if config.get('native_token_env') else None),
                               record, config['enabled_tools'],
                               config.get('_observed_identities', {}).get('product'),
-                              source_scope=config.get('_source_scope'))
+                              source_scope=config.get('_source_scope'),
+                              presentation_mode=config.get('_presentation_mode'))
         broker.display_cap = config['budgets']['display_bytes']
         try:
             broker.onboard()

@@ -3,6 +3,10 @@
 New isolated freezes can opt into [provider resource stops](PROVIDER_RESOURCES.md),
 with exact original/upstream capture and independent raw-ledger replay.
 
+New solver workflows can use the [requirement and citation preflight](SOLVER_WORKFLOW.md)
+and freeze single-source bounded presentation. The offline checker reports
+declared coverage and displayed-source bounds separately from semantic correctness.
+
 Manual launchers can use the [execution guard](EXECUTION_GUARD.md) for prospective
 schedule wall-time, retained-archive and free-space stopping. It preserves a
 single deadline across startup and waves and reports fixed safe failure reasons.

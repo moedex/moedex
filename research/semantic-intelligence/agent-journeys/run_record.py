@@ -328,6 +328,11 @@ class RunRecord:
     def display(self, raw, scope_policy=None):
         with self._locked() as (assignment, state, elapsed):
             self._active(assignment, state, elapsed)
+            frozen = json.loads(read_ref(self.root, assignment['freeze']))
+            mode = frozen.get('presentation_mode')
+            if (mode not in (None, 'single-source-v1') or
+                    (scope_policy or {}).get('presentation_mode') != mode):
+                raise ValueError('display presentation mode differs from freeze')
             if len(raw) > assignment['budgets']['display_bytes']:
                 raise ValueError('complete display envelope exceeds budget')
             ref = self._blob(state, 'display', raw)
@@ -469,6 +474,9 @@ def audit(root, assignment):
                 result['max_display_bytes'] = max(result['max_display_bytes'], len(display))
                 if 'scope_policy' in event:
                     decision = json.loads(get('scope_policy'))
+                    if (frozen.get('presentation_mode') not in (None, 'single-source-v1') or
+                            decision.get('presentation_mode') != frozen.get('presentation_mode')):
+                        raise ValueError('display presentation mode differs from freeze')
                     if (decision.get('schema') != 'native-scope-decision-v1' or
                             scope_policy_sha256 is None or decision.get('policy_sha256') != scope_policy_sha256 or
                             type(decision.get('accepted')) is not bool or
