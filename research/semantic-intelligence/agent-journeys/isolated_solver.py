@@ -407,8 +407,11 @@ def validate_execution_config(root, config):
     if 'source_scope_policy' in frozen or 'source_scope_policy' in config:
         if config.get('source_scope_policy') != frozen.get('source_scope_policy'):
             raise ValueError('execution scope policy differs from freeze')
-        scope = NativeScope(json.loads(read_ref(root, frozen['source_scope_policy'])),
-                            policy_sha256=frozen['source_scope_policy']['sha256'])
+        scope_policy = json.loads(read_ref(root, frozen['source_scope_policy']))
+        compiler_inputs = ({name: read_ref(root, ref) for name, ref in scope_policy['compiler_admission'].items()
+                            if name != 'schema'} if 'compiler_admission' in scope_policy else None)
+        scope = NativeScope(scope_policy, policy_sha256=frozen['source_scope_policy']['sha256'],
+                            compiler_inputs=compiler_inputs)
         sources = contract['corpus']['repositories'] if contract['schema'] == 'native-pair-v2' else [contract['corpus']]
         pins = {row['repository']: row['commit'] for row in sources}
         if (scope.allowed != set(config['enabled_tools']) or set(scope.projects) != set(pins) or

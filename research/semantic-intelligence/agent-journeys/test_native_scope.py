@@ -465,4 +465,237 @@ class BrokerScopeTests(unittest.TestCase):
         self.assertEqual(set(config['_source_scope'].projects), {'example/api','example/library'})
 
 
+
+def compiler_fixture():
+    p = policy('moedex-index-v1')
+    p['allowed_tools'] += sorted(ns.COMPILER_TOOLS)
+    p['projects'][0]['files']['src/Api.csproj'] = 'e' * 40
+    ids = {key: key + ':' + str(n) * 64 for n, key in enumerate(('snapshot', 'context', 'source', 'symbol', 'occurrence', 'binding'), 1)}
+    manifest = {'schema': 'frozen-compiler-artifact-metadata-v1',
+                'identity': {'snapshot_id': 'frozen', 'artifact_sha256': '1'*64, 'corpus_fingerprint': '2'*64},
+                'snapshots': {ids['snapshot']: {'id': ids['snapshot'], 'repo': 'example/api', 'commit': 'a'*40}},
+                'contexts': {ids['context']: {'id': ids['context'], 'snapshot_id': ids['snapshot'],
+                             'project': 'src/Api.csproj', 'status': 'complete', 'source_ids': [ids['source']]}},
+                'sources': {ids['source']: {'id': ids['source'], 'snapshot_id': ids['snapshot'], 'path': 'src/api.cs',
+                            'generated': False, 'raw_sha256': '3'*64, 'byte_size': 30}},
+                'symbols': {ids['symbol']: {'id': ids['symbol'], 'key': {'language': 'csharp',
+                            'namespace_kind': 'project', 'namespace': 'example/api/src/Api.csproj',
+                            'descriptor': 'T:Api', 'descriptor_kind': 'documentation_comment_id'}}},
+                'occurrences': {ids['occurrence']: {'id': ids['occurrence'], 'context_id': ids['context'],
+                               'source_id': ids['source'], 'kind': 'declaration', 'role': 'declaration', 'offset': 6, 'length': 3}},
+                'bindings': {ids['binding']: {'id': ids['binding'], 'occurrence_id': ids['occurrence'],
+                             'status': 'resolved', 'symbol_id': ids['symbol'], 'method': 'roslyn-semantic-model',
+                             'extractor': 'msbuild-roslyn', 'extractor_version': '21'}}}
+    def scalar(kind): return {'type': kind}
+    def obj(properties, required=None):
+        return {'type': 'object', 'additionalProperties': False, 'properties': properties,
+                'required': list(properties) if required is None else required}
+    def array(items): return {'type': 'array', 'items': items}
+    string, integer, flag = scalar('string'), scalar('integer'), scalar('boolean')
+    symbol = obj(dict.fromkeys(('id', 'language', 'namespace_kind', 'namespace', 'descriptor', 'descriptor_kind'), string))
+    binding_fields = dict.fromkeys(('occurrence_id', 'binding_status', 'reference_kind', 'role', 'repo', 'path',
+                                    'raw_sha256', 'source_id', 'source_snapshot_id', 'context_id', 'project',
+                                    'method', 'extractor', 'extractor_version'), string)
+    binding_fields.update(generated=flag, byte_offset=integer, byte_length=integer, symbol=symbol, candidates=array(symbol))
+    binding = obj(binding_fields)
+    context = obj(dict(dict.fromkeys(('context_id', 'project', 'repo', 'path', 'raw_sha256'), string), generated=flag))
+    output = obj({'status': string, 'evidence': string, 'snapshot_id': string, 'artifact_sha256': string,
+                  'results': array(binding), 'contexts': array(context), 'truncated': flag})
+    schemas = {'tools': []}
+    for name in sorted(ns.COMPILER_TOOLS):
+        props = {'repo': string, 'path': string, 'byte_offset': integer, 'context_id': string, 'raw_sha256': string,
+                 'symbol_id': string, 'context_ids': array(string)}
+        required = ['repo', 'path'] if name == 'compiler_symbols' else ['symbol_id']
+        if name == 'compiler_binding_at': required = ['repo', 'path', 'byte_offset']
+        schemas['tools'].append({'name': name, 'inputSchema': obj(props, required), 'outputSchema': output})
+    served = {'schema': 'actual-served-source-map-v1', 'files': [{'repository': 'example/api', 'path': 'src/api.cs',
+               'key': 'b'*40, 'raw_sha256': '3'*64}]}
+    data = {'manifest': manifest, 'schemas': schemas, 'served_sources': served}
+    def freeze():
+        inputs = {name: ns.canonical(value) for name, value in data.items()}
+        p['compiler_admission'] = {'schema': 'frozen-compiler-admission-v1', **{
+            name: {'path': 'frozen/' + name + '.json', 'sha256': ns.hashlib.sha256(raw).hexdigest()}
+            for name, raw in inputs.items()}}
+        return ns.NativeScope(p, compiler_inputs=inputs)
+    return p, data, ids, freeze
+
+
+def compiler_reply(scope, ids, results=True):
+    row = scope._compiler_binding(ids['occurrence'])
+    data = {'status': 'ok' if results else 'no_recorded_declaration', 'evidence': 'recorded-compiler-context',
+            'snapshot_id': 'frozen', 'artifact_sha256': '1'*64, 'results': [row] if results else [],
+            'contexts': [], 'truncated': False}
+    return {'jsonrpc': '2.0', 'id': 1, 'result': {'structuredContent': data,
+            '_meta': {'dev.moedex/snapshot': {'cacheable': False}}, 'content': []}}
+
+
+class CompilerScopeTests(unittest.TestCase):
+    def setUp(self):
+        self.policy, self.data, self.ids, self.freeze = compiler_fixture()
+        self.scope = self.freeze()
+        self.params = {'name': 'compiler_symbols', 'arguments': {'repo': 'example/api', 'path': 'src/api.cs'}}
+
+    def accept(self, reply=None, params=None):
+        return self.scope.accept(reply or compiler_reply(self.scope, self.ids), self.scope.prepare(params or self.params))
+
+    def test_compiler_catalog_uses_issued_symbol_context_guidance(self):
+        tools = [deepcopy(self.scope.compiler_tools[name]) if name in ns.COMPILER_TOOLS else
+                 {'name': name, 'inputSchema': {'properties': {}}} for name in self.scope.allowed]
+        catalog = {row['name']: row for row in self.scope.catalog(tools)}
+        self.assertIn('Symbol and context IDs', catalog['compiler_symbols']['description'])
+        self.assertNotIn('Use format=json', catalog['compiler_symbols']['description'])
+        self.assertIn('Use format=json', catalog['read_source']['description'])
+
+    def test_exact_recorded_binding_and_empty_result_admitted(self):
+        self.accept(compiler_reply(self.scope, self.ids, False))
+        self.assertFalse(self.scope.compiler_symbols)
+        result = self.accept()['result']['structuredContent']
+        self.assertEqual(result['results'][0]['project'], 'src/Api.csproj')
+        self.assertIn(self.ids['symbol'], self.scope.compiler_symbols)
+        self.assertIn(self.ids['context'], self.scope.compiler_contexts)
+        self.scope.prepare({'name': 'compiler_definitions', 'arguments': {'symbol_id': self.ids['symbol'],
+                            'context_id': self.ids['context']}})
+
+    def test_compiler_snapshot_waiver_is_explicit_and_backend_specific(self):
+        p = deepcopy(self.policy); p.pop('compiler_admission')
+        scope = ns.NativeScope(p)
+        with self.assertRaises(ns.ScopeViolation):
+            scope.accept(compiler_reply(self.scope, self.ids), scope.prepare(self.params))
+        p['backend'] = 'codegraph-v1'; p['allowed_tools'] = ['codegraph_search']; p['corpus_fingerprint'] = None
+        p['compiler_admission'] = self.policy['compiler_admission']
+        with self.assertRaises(ns.ScopeViolation): ns.NativeScope(p, compiler_inputs={})
+        value = compiler_reply(self.scope, self.ids)
+        value['result']['_meta']['dev.moedex/snapshot']['cacheable'] = True
+        with self.assertRaises(ns.ScopeViolation): self.accept(value)
+
+    def test_tampered_identity_and_records_rejected_without_selector_registration(self):
+        for key in ('snapshot_id', 'artifact_sha256'):
+            reply = compiler_reply(self.scope, self.ids); reply['result']['structuredContent'][key] = 'changed'
+            with self.assertRaises(ns.ScopeViolation): self.accept(reply)
+        for key in ('context_id', 'project', 'repo', 'path', 'raw_sha256', 'source_id', 'source_snapshot_id',
+                    'occurrence_id', 'binding_status', 'reference_kind', 'method', 'extractor_version'):
+            reply = compiler_reply(self.scope, self.ids); reply['result']['structuredContent']['results'][0][key] = 'changed'
+            with self.subTest(key=key), self.assertRaises(ns.ScopeViolation): self.accept(reply)
+        for key in ('byte_offset', 'byte_length'):
+            reply = compiler_reply(self.scope, self.ids); reply['result']['structuredContent']['results'][0][key] += 1
+            with self.assertRaises(ns.ScopeViolation): self.accept(reply)
+        reply = compiler_reply(self.scope, self.ids)
+        reply['result']['structuredContent']['results'][0]['symbol']['descriptor'] = 'Changed'
+        with self.assertRaises(ns.ScopeViolation): self.accept(reply)
+        self.assertEqual((self.scope.compiler_symbols, self.scope.compiler_contexts), (set(), set()))
+
+    def test_unknown_fields_and_source_bodies_cannot_escape(self):
+        for key in ('content', 'source_body', 'diagnostics'):
+            reply = compiler_reply(self.scope, self.ids)
+            reply['result']['structuredContent']['results'][0][key] = 'unapproved'
+            with self.assertRaises(ns.ScopeViolation): self.accept(reply)
+        reply = compiler_reply(self.scope, self.ids); reply['result']['structuredContent']['extra'] = 'unapproved'
+        with self.assertRaises(ns.ScopeViolation): self.accept(reply)
+
+    def test_unissued_selectors_and_untracked_paths_rejected(self):
+        for args in ({'symbol_id': self.ids['symbol']}, {'symbol_id': self.ids['symbol'], 'context_id': self.ids['context']}):
+            with self.assertRaises(ns.ScopeViolation):
+                self.scope.prepare({'name': 'compiler_definitions', 'arguments': args})
+        for repo, path in (('example/outside', 'src/api.cs'), ('example/api', 'obj/Generated.cs')):
+            with self.assertRaises(ns.ScopeViolation):
+                self.scope.prepare({'name': 'compiler_symbols', 'arguments': {'repo': repo, 'path': path}})
+
+    def test_exact_hash_bound_inputs_required(self):
+        inputs = {name: ns.canonical(value) for name, value in self.data.items()}
+        for name in inputs:
+            altered = dict(inputs); altered[name] += b' '
+            with self.assertRaises(ns.ScopeViolation): ns.NativeScope(self.policy, compiler_inputs=altered)
+        with self.assertRaises(ns.ScopeViolation): ns.NativeScope(self.policy)
+
+    def test_frozen_raw_hash_still_requires_approved_served_file(self):
+        self.data['manifest']['sources'][self.ids['source']]['raw_sha256'] = '4'*64
+        scope = self.freeze()
+        with self.assertRaises(ns.ScopeViolation): scope._compiler_binding(self.ids['occurrence'])
+        self.data['manifest']['sources'][self.ids['source']]['raw_sha256'] = '3'*64
+        self.policy['projects'][0]['files'].pop('src/api.cs')
+        with self.assertRaises(ns.ScopeViolation): self.freeze()
+
+    def test_generated_metadata_never_adds_source_body_scope(self):
+        source = self.data['manifest']['sources'][self.ids['source']]
+        source.update(generated=True, path='obj/Generated.cs')
+        context = self.data['manifest']['contexts'][self.ids['context']]
+        context.update(extractor='msbuild-roslyn', extractor_version='21', input_fingerprint='4'*64,
+                       capture=json.dumps({'repo': 'example/api', 'project': 'src/Api.csproj', 'sources': [
+                           {'path': source['path'], 'sha256': source['raw_sha256'], 'byte_size': 30, 'generated': True}]}))
+        scope = self.freeze()
+        self.assertTrue(scope._compiler_binding(self.ids['occurrence'])['generated'])
+        with self.assertRaises(ns.ScopeViolation):
+            scope.prepare({'name': 'compiler_symbols', 'arguments': {'repo': 'example/api', 'path': source['path']}})
+        context['capture'] = '{}'; scope = self.freeze()
+        with self.assertRaises(ns.ScopeViolation): scope._compiler_binding(self.ids['occurrence'])
+
+    def test_native_matched_fact_projection_and_cross_fact_tamper(self):
+        manifest = self.data['manifest']
+        binding = manifest['bindings'][self.ids['binding']]
+        binding['domain_facts'] = [
+            {'kind': 'message_publish', 'rule': 'framework-v1', 'evidence_scope': 'compile_time',
+             'targets': [{'role': 'message', 'symbol_id': self.ids['symbol']}]},
+            {'kind': 'message_consume', 'rule': 'framework-v1', 'evidence_scope': 'compile_time',
+             'targets': [{'role': 'message', 'symbol_id': self.ids['symbol']}]},
+        ]
+        scope = self.freeze()
+        row = scope._compiler_binding(self.ids['occurrence'])
+        first, second = row['domain_facts']
+        row['domain_facts'] = [first]
+        path = {'contract': scope._compiler_symbol(self.ids['symbol']), 'matched_roles': ['message'],
+                'fact': first, 'source': row}
+        context = {'tool': 'compiler_contract_impact', 'project': None,
+                   'compiler_selected': {self.ids['context']}, 'arguments': {'symbol_id': self.ids['symbol']}}
+        scope._compiler_walk(path, context, set(), set())
+        scope._compiler_relations(path, context['arguments'])
+        altered = deepcopy(path); altered['source']['domain_facts'] = [second]
+        with self.assertRaises(ns.ScopeViolation): scope._compiler_walk(altered, context, set(), set())
+        altered = deepcopy(path); altered['matched_roles'] = ['other']
+        with self.assertRaises(ns.ScopeViolation): scope._compiler_relations(altered, context['arguments'])
+
+    def test_context_choices_are_exact_and_selected_contexts_stay_local(self):
+        value = compiler_reply(self.scope, self.ids, False)
+        value['result']['structuredContent']['contexts'] = [
+            {'generated': False, 'context_id': self.ids['context'], 'project': 'src/Api.csproj',
+             'repo': 'example/api', 'path': 'src/api.cs', 'raw_sha256': '3'*64}]
+        self.accept(value)
+        self.assertIn(self.ids['context'], self.scope.compiler_contexts)
+        changed = deepcopy(value); changed['result']['structuredContent']['contexts'][0]['raw_sha256'] = '4'*64
+        with self.assertRaises(ns.ScopeViolation): self.accept(changed)
+
+    def test_definition_symbol_and_descriptor_query_join(self):
+        self.accept()
+        row = self.scope._compiler_binding(self.ids['occurrence'])
+        context = {'tool': 'compiler_definitions', 'project': None,
+                   'compiler_selected': set(), 'arguments': {'symbol_id': self.ids['symbol']}}
+        self.scope._compiler_walk(row, context, set(), set())
+        context['arguments']['symbol_id'] = 'symbol:' + '7'*64
+        with self.assertRaises(ns.ScopeViolation): self.scope._compiler_walk(row, context, set(), set())
+        context.update(tool='compiler_symbols', arguments={'query': 'T:Api'})
+        self.scope._compiler_walk(row, context, set(), set())
+        context['arguments']['query'] = 'T:api'
+        with self.assertRaises(ns.ScopeViolation): self.scope._compiler_walk(row, context, set(), set())
+
+    def test_contract_definition_joins_queried_symbol(self):
+        row = self.scope._compiler_binding(self.ids['occurrence'])
+        location = {k: row[k] for k in ('occurrence_id', 'source_id', 'path', 'raw_sha256', 'byte_offset',
+                    'byte_length', 'generated', 'reference_kind', 'role', 'binding_status',
+                    'method', 'extractor', 'extractor_version')}
+        definition = {k: row[k] for k in ('context_id', 'repo', 'project', 'source_snapshot_id')}
+        definition['source'] = location
+        self.scope._compiler_relations(definition, {'symbol_id': self.ids['symbol']})
+        with self.assertRaises(ns.ScopeViolation):
+            self.scope._compiler_relations(definition, {'symbol_id': 'symbol:' + '7'*64})
+
+    def test_assignment_local_selectors_are_transactional(self):
+        reply = compiler_reply(self.scope, self.ids)
+        bad = deepcopy(reply['result']['structuredContent']['results'][0]); bad['raw_sha256'] = '4'*64
+        reply['result']['structuredContent']['results'].append(bad)
+        with self.assertRaises(ns.ScopeViolation): self.accept(reply)
+        self.assertFalse(self.scope.compiler_symbols); self.assertFalse(self.scope.compiler_contexts)
+        self.accept()
+        fresh = self.freeze()
+        with self.assertRaises(ns.ScopeViolation):
+            fresh.prepare({'name': 'compiler_definitions', 'arguments': {'symbol_id': self.ids['symbol']}})
+
 if __name__=='__main__':unittest.main()
