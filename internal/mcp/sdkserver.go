@@ -27,6 +27,8 @@ const serverInstructions = "Use compiler_trace_calls with exact method IDs and e
 	"Check list_repos.graph_available before graph traversal; false leaves source discovery available and says nothing about compiler or LSP support. " +
 	"Clients reading structuredContent can request format=structured on search_context and read_source to avoid duplicate source in the text fallback. " +
 	"Text source excerpts number lines for citations; cite relevant lines and verify narrow ranges with read_source. Structured source text remains unnumbered for hash and compiler-offset verification. " +
+	"Track requirements from the user's request and review relevant success, rejection, cancellation, and failure terminal paths before answering; explicitly mark unresolved requirements or paths when evidence is unavailable. Source presence alone does not establish that a requirement is answered. " +
+	"Maintain a claim-specific citation ledger binding repository, path, blob or snapshot identity, and the complete displayed line span. Clipped or unavailable tails are not citation evidence. Keep interface declarations and implementation bodies in separate claims, and verify each citation against its own source. Range and identity checks do not certify semantic support. " +
 	"Pattern is the default graph-confidence floor; request a different min_confidence only when needed. " +
 	"Before composing graph results from multiple calls, compare corpus_fingerprint, graph_generation, and graph_build_id in dev.moedex/snapshot. " +
 	"Prefer returned blob_sha values for content-level cache keys. " +
