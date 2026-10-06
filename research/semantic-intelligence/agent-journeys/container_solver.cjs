@@ -138,10 +138,12 @@ async function start(config) {
   if (!config || typeof config.model !== 'string' || !config.model ||
       typeof config.reasoning_effort !== 'string' || typeof config.prompt !== 'string' ||
       !validTools(config.enabled_tools) ||
-      !Number.isInteger(config.timeout_ms) || config.timeout_ms < 1 || config.timeout_ms > 3600000) {
+      !Number.isInteger(config.timeout_ms) || config.timeout_ms < 1 || config.timeout_ms > 3600000 ||
+      (config.exchange_timeout_ms !== undefined &&
+       (!Number.isInteger(config.exchange_timeout_ms) || config.exchange_timeout_ms < 1 || config.exchange_timeout_ms > 3600000))) {
     throw new Error('invalid_start_config');
   }
-  requestTimeout = Math.min(config.timeout_ms, Number.isInteger(config.exchange_timeout_ms) && config.exchange_timeout_ms > 0 ? config.exchange_timeout_ms : 60000);
+  requestTimeout = Math.min(config.timeout_ms, config.exchange_timeout_ms ?? config.timeout_ms);
   const provider = relay('provider');
   const mcp = relay('mcp');
   servers = [provider, mcp];

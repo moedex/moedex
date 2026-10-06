@@ -74,7 +74,7 @@ comparison-harness:
         - research/semantic-intelligence/agent-journeys/**/*
         - .gitlab-ci.yml
   before_script:
-    - apt-get update -qq && apt-get install -y -qq python3
+    - apt-get update -qq && apt-get install -y -qq python3 nodejs
   script:
     - python3 -m unittest discover -s research/semantic-intelligence/agent-journeys -p 'test_*.py' -v
 
