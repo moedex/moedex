@@ -89,6 +89,40 @@ class ScopeTests(unittest.TestCase):
                 value=policy();mutate(value)
                 with self.assertRaises(ns.ScopeViolation):ns.NativeScope(value)
 
+    def test_metadata_only_projects_require_explicit_empty_manifest_and_withhold_source(self):
+        for backend in ('codegraph-v1', 'moedex-index-v1'):
+            frozen=policy(backend);frozen['projects'][0].update(files={},metadata_only=True)
+            scope=ns.NativeScope(frozen)
+            self.assertEqual(scope.project('Example.Api'),'example/api')
+            if backend=='codegraph-v1':
+                with self.assertRaises(ns.ScopeViolation):
+                    scope.accept(envelope(),scope.prepare(request()))
+                metadata=envelope(data={'projects':[{'repoUrl':'https://gitlab.example.com/example/api',
+                                                     'commitSha':'a'*40}]},projects=[])
+                visible=scope.accept(metadata,scope.prepare({'name':'codegraph_search','arguments':{'scope':'projects'}}))
+                self.assertEqual(visible['result']['structuredContent']['result']['projects'][0]['project'],'example/api')
+                for response, params in ((source('blocked-cursor'),request('graph_source',filePath='src/api.cs')),
+                                          (envelope('graph_trace',{'root':node(),'entries':[]}),request('graph_trace',operation='call_path'))):
+                    with self.assertRaises(ns.ScopeViolation):scope.accept(response,scope.prepare(params))
+                    self.assertFalse(scope.nodes);self.assertFalse(scope.cursors);self.assertIsNone(scope.revision)
+            else:
+                repos={'jsonrpc':'2.0','id':1,'result':{'structuredContent':{'repos':[{'name':'example/api'},{'name':'example/library'}]},
+                       '_meta':{'dev.moedex/snapshot':{'cacheable':True,'corpus_fingerprint':'f'*64}}}}
+                visible=scope.accept(repos,scope.prepare({'name':'list_repos','arguments':{}}))
+                self.assertEqual(len(visible['result']['structuredContent']['repos']),2)
+                for tool in ('read_source','search_context'):
+                    data={'repo':'example/api','path':'src/api.cs','blob_sha':'b'*40,'content':'withheld'}
+                    response={'jsonrpc':'2.0','id':1,'result':{'structuredContent':data,
+                              '_meta':{'dev.moedex/snapshot':{'cacheable':True,'corpus_fingerprint':'f'*64}}}}
+                    with self.assertRaises(ns.ScopeViolation):scope.accept(response,scope.prepare({'name':tool,'arguments':{'repo':'Example.Api'}}))
+                    self.assertFalse(scope.nodes);self.assertFalse(scope.cursors)
+            for mutation in (lambda p:p['projects'][0].pop('metadata_only'),
+                             lambda p:p['projects'][0].update(metadata_only=False),
+                             lambda p:p['projects'][0].update(metadata_only=1),
+                             lambda p:p['projects'][0].update(files={'src/api.cs':'b'*40})):
+                invalid=deepcopy(frozen);mutation(invalid)
+                with self.assertRaises(ns.ScopeViolation):ns.NativeScope(invalid)
+
     def test_outside_and_unissued_request_selectors_rejected(self):
         for args in ({'project':'outside'},{'nodeId':99},{'cursor':'invented'},{'project':'Example.Api','nodeId':99},
                      {'project':'Example.Api','format':'markdown'}):

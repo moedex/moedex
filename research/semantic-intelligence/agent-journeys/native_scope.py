@@ -68,7 +68,8 @@ class NativeScope:
         self.projects, self.aliases, self.urls = {}, {}, {}
         require(type(policy['projects']) is list and policy['projects'], 'missing_scope_projects')
         for row in policy['projects']:
-            require(type(row) is dict and set(row) == {'repository', 'url', 'commit', 'aliases', 'files'}, 'invalid_scope_project')
+            require(type(row) is dict and set(row) in ({'repository', 'url', 'commit', 'aliases', 'files'},
+                    {'repository', 'url', 'commit', 'aliases', 'files', 'metadata_only'}), 'invalid_scope_project')
             repository = row['repository']
             require(type(repository) is str and repository, 'invalid_scope_repository')
             if repository.startswith('https://'):
@@ -83,7 +84,10 @@ class NativeScope:
                     not url.query and not url.fragment and row['url'] not in self.urls, 'invalid_scope_url')
             require(type(row['aliases']) is list and all(type(a) is str and a and a == a.strip()
                     for a in row['aliases']) and len(set(row['aliases'])) == len(row['aliases']), 'invalid_scope_aliases')
-            require(type(row['files']) is dict and row['files'], 'missing_source_manifest')
+            require(type(row['files']) is dict and (bool(row['files']) or row.get('metadata_only') is True),
+                    'missing_source_manifest')
+            require('metadata_only' not in row or (row['metadata_only'] is True and not row['files']),
+                    'invalid_metadata_only_project')
             for path, blob in row['files'].items():
                 relative_file(path)
                 require(type(blob) is str and PIN.fullmatch(blob), 'invalid_source_blob')
