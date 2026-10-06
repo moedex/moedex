@@ -84,7 +84,8 @@ The source review's explicit review_history object is:
   {"no_task_authorship":true,
    "no_prospective_source_or_gold_review":true,
    "no_feedback_to_solver":true}
-Required_claims and material_claims_and_citations are lists of original findings;
+Required_claims is a list; material_claims_and_citations may be a list or a grouped
+dictionary of original findings. Both representations remain in the original file;
 the helper does not translate labels into criteria. No-final applicability requires
 all five declared source success criteria false. False completeness/integrity
 declarations from an actual completed review are retained as readiness diagnostics.
@@ -113,6 +114,61 @@ file presented as retained evidence. Raw machine_review has exactly this shape:
    "assignment":<this raw review's exact assignment name>}
 Missing, different, or extra selectors are rejected; the tool does not infer a
 selector or change machine findings. The final all360 raw audit remains separate.
+
+Manual flags and notes remain mandatory. Original diagnostics may additionally
+use sensitive_literal_values_directly_read (boolean), sensitive_literal_omissions,
+omitted_context_lines or sensitive_literal_display_omissions (lists), and
+all_retained_provider_native_bodies_read_basis, raw_body_review_representation or
+sensitive_literal_representation_limitation (nonempty text). A typed optional
+sensitive_safe_representation object has exactly authorization/helper file refs,
+omitted_line_displays:list, original_bytes_mechanically_verified:boolean,
+sensitive_literal_values_directly_read:boolean and dependent_raw_fact_limit:text.
+Complete safe reviews require original_bytes_mechanically_verified:true. These
+diagnostics never replace the required flags or change declared outcomes.
+Other original metadata may use a diagnostics object; it is retained as opaque
+diagnostics, with nested file refs hash-checked and no semantic inference.
+The optional nonterminal_client_error object has exactly
+captured_host_native_call_present:boolean, exact_cause:nonempty text,
+preceding_provider_ordinal:positive integer, provider_following_request:file ref,
+terminal_stop:false. It preserves journey errors without relabeling outcomes.
+
+A source omission descriptor has exactly repository, path, source_line,
+body_field, native_ordinal, utf8_bytes and sha256, optionally display_line_offset.
+Its hash identifies omitted source text, not an archive file. The helper validates
+its shape, normalized repository-relative path, hash syntax and positive integer
+locations/length (nonnegative display offset), preserving it in the original
+review. It does not authenticate the omitted source bytes or turn this descriptor
+into a file evidence ref. Exact file joins still require canonical file refs.
+
+Recorded answer references may be root relative (<assignment>/blobs/<file>) or
+ledger local (blobs/<file>); both must resolve inside the assignment's own blobs.
+Source finals may also use an exact journal selector:
+  {path:"captures/<assignment>/events.jsonl",sha256:<decoded body hash>,
+   field:"body_base64",line:<positive integer>}
+The selected event must be from the own journal, have channel answer, and decode
+to exactly the recorded answer bytes. Its SHA256 hashes the decoded body, not
+the journal file. The manifest retains the original selector through its review
+artifact and records canonical journal-file and answer-file refs separately.
+Evidence refs may include these selectors or exact {path,sha256,bytes} file
+descriptors; bytes must be an integer equal to actual file length. Extra keys,
+invalid encoding, changed hashes, foreign finals, and nonfinal events are rejected.
+
+Legacy narrative history requires an explicit hash-bound author attestation;
+the helper never infers fresh history from prose. Supply both:
+  --source-history-manifest reviews/source-history-manifest.json
+  --source-history-manifest-sha256 <exact manifest SHA256>
+Manifest fields are exactly schema:"broader-pilot-source-history-manifest-v1",
+packet:{path,sha256}, attestations:[{path,sha256},...]. Each receipt has exactly
+schema:"fresh-pilot-semantic-reviewer-history-attestation-v1", reviewer_id,
+packet:{path,sha256}, review_history:<the three true booleans above>,
+original_review_refs:[{path,sha256},...], disclosure:<nonempty text>,
+original_decision:<nonempty>, observed_utc:<ISO UTC ending Z or +00:00>.
+The author must be distinct from all solvers. Every receipt binds exactly all
+original source reviews by that author in the packet, with no duplicate or
+foreign originals/authors. A receipt cannot override false original history
+flags. All original findings and history remain unchanged. The manifest retains
+the explicit history manifest and each applicable receipt; these bindings do
+not authenticate authorship or resolve disclosed exposure incidents.
 
 No-assignment launch/process failures require actual intent/result records, a
 closed independently confirmed non-success classification, false capture

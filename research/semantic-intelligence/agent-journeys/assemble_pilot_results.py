@@ -6,7 +6,9 @@ References to such evidence are hash-checked as opaque bytes only. Immutable
 original review files remain authoritative; this tool never edits input files.
 """
 import argparse
+import base64
 import copy
+from datetime import datetime
 import hashlib
 import json
 import math
@@ -25,6 +27,13 @@ RAW_FIELDS = {'reviewer_id', 'independent', 'complete', 'task_sha256', 'final_sh
               'capture_integrity', 'classification_confirmed'}
 SOURCE_FIELDS = {'reviewer_id', 'independent', 'complete', 'task_sha256', 'final_sha256', 'criteria'}
 TERMINAL_REVIEW_STATUSES = {'closed', 'complete', 'completed', 'reviewed', 'final', 'finalized', 'sealed'}
+HISTORY_FLAGS = {'no_task_authorship', 'no_prospective_source_or_gold_review', 'no_feedback_to_solver'}
+OMISSION_FIELDS = {'repository', 'path', 'source_line', 'body_field', 'native_ordinal', 'utf8_bytes', 'sha256'}
+MANUAL_DIAGNOSTICS = {'sensitive_safe_representation', 'sensitive_literal_values_directly_read',
+                      'all_retained_provider_native_bodies_read_basis', 'sensitive_literal_omissions',
+                      'omitted_context_lines', 'raw_body_review_representation',
+                      'sensitive_literal_display_omissions', 'sensitive_literal_representation_limitation',
+                      'nonterminal_client_error', 'diagnostics'}
 
 
 def require(condition, message):
@@ -87,15 +96,67 @@ def ref_for(root, name):
     return ref
 
 
+def selected_body(root, value):
+    """Verify a journal selector as opaque bytes, with an explicit hash domain."""
+    require(type(value) is dict and set(value) == {'path', 'sha256', 'field', 'line'},
+            'exact journal body selector required')
+    require(type(value['path']) is str, 'body selector path must be text')
+    parts = PurePosixPath(value['path']).parts
+    require(len(parts) == 3 and parts[0] == 'captures' and NAME.fullmatch(parts[1]) and
+            parts[2] == 'events.jsonl', 'body selector must name an owned capture journal')
+    require(value['field'] == 'body_base64' and type(value['line']) is int and value['line'] > 0,
+            'positive journal line and body_base64 selector required')
+    require(type(value['sha256']) is str and SHA.fullmatch(value['sha256']), 'invalid body SHA256')
+    artifact = ref_for(root, value['path'])
+    lines = read_ref(root, artifact).splitlines()
+    require(value['line'] <= len(lines), 'selected journal line is absent')
+    event = load(lines[value['line'] - 1])
+    require(type(event) is dict and type(event.get('body_base64')) is str, 'selected body is absent')
+    try:
+        raw = base64.b64decode(event['body_base64'], validate=True)
+    except (ValueError, TypeError):
+        raise ValueError('invalid selected body encoding') from None
+    require(sha(raw) == value['sha256'], 'selected body hash mismatch')
+    return raw, artifact, event.get('channel')
+
+
 def references(root, value, own_path=None):
     """Validate exact file references recursively; retain findings without rewriting."""
     refs = []
     if type(value) is dict:
+        if OMISSION_FIELDS <= set(value):
+            # This exact typed descriptor hashes omitted source text, not a
+            # root-relative file. The independent raw receipt owns its meaning.
+            require(set(value) in (OMISSION_FIELDS, OMISSION_FIELDS | {'display_line_offset'}),
+                    'unknown source omission descriptor fields')
+            for key in ('repository', 'path', 'body_field'):
+                nonempty(value[key], 'source omission ' + key)
+            path = PurePosixPath(value['path'])
+            require(not path.is_absolute() and '..' not in path.parts and
+                    path.as_posix() == value['path'] and '\\' not in value['path'],
+                    'normalized repository source omission path required')
+            require(type(value['sha256']) is str and SHA.fullmatch(value['sha256']),
+                    'source omission hash required')
+            for key in ('source_line', 'native_ordinal', 'utf8_bytes'):
+                require(type(value[key]) is int and value[key] > 0, 'positive source omission ' + key)
+            if 'display_line_offset' in value:
+                require(type(value['display_line_offset']) is int and value['display_line_offset'] >= 0,
+                        'nonnegative source omission display offset required')
+            return refs
         if 'path' in value and 'sha256' in value:
-            require(set(value) == {'path', 'sha256'}, 'file reference has extra fields')
             require(value['path'] != own_path, 'review artifact must not reference/hash itself')
-            read_ref(root, value)
-            refs.append(copy.deepcopy(value))
+            if set(value) == {'path', 'sha256', 'field', 'line'}:
+                _, artifact, _ = selected_body(root, value)
+                refs.append(artifact)
+            else:
+                require(set(value) in ({'path', 'sha256'}, {'path', 'sha256', 'bytes'}),
+                        'file reference has extra fields')
+                artifact = {key: value[key] for key in ('path', 'sha256')}
+                raw = read_ref(root, artifact)
+                if 'bytes' in value:
+                    require(type(value['bytes']) is int and value['bytes'] == len(raw),
+                            'file reference byte length mismatch')
+                refs.append(artifact)
         else:
             for item in value.values():
                 refs.extend(references(root, item, own_path))
@@ -273,10 +334,18 @@ def review_artifact(root, name, kind, slot, solvers, binding_refs, expected_fina
             name + ': review identity/independence differs')
     require(type(fields['complete']) is bool, name + ': evidence completeness must be explicit')
     final_sha = expected_final['sha256'] if expected_final else None
+    supplied_final = value.get('final')
+    final_matches = supplied_final == expected_final
+    if kind == 'source' and expected_final and type(supplied_final) is dict and set(supplied_final) == {'path', 'sha256', 'field', 'line'}:
+        body, _, channel = selected_body(root, supplied_final)
+        final_matches = (supplied_final['path'] == slot['capture'] + '/events.jsonl' and channel == 'answer' and
+                         body == read_ref(root, expected_final))
     require(fields['task_sha256'] == slot['task_sha256'] and fields['final_sha256'] == final_sha and
-            value.get('final') == expected_final, name + ': exact task/final review join differs')
+            final_matches, name + ': exact task/final review join differs')
     require(type(value.get('evidence_refs')) in (list, dict), name + ': exact review evidence refs required')
     refs = references(root, value, ref['path'])
+    if expected_final and supplied_final != expected_final:
+        refs.append(copy.deepcopy(expected_final))  # Exact byte equality above; never a replacement answer.
     for label, required_ref in binding_refs.items():
         has_ref(refs, required_ref, label)
     if expected_final:
@@ -332,9 +401,14 @@ def terminal_evidence(root, slot):
             if event.get('event') == 'answer':
                 answer = event.get('answer')
                 require(type(answer) is dict and set(answer) == {'path', 'sha256'}, name + ': invalid own answer reference')
-                # A ledger-local reference is rooted under this assignment, never another slot.
-                local(local(root, name), answer['path'])
-                final = {'path': name + '/' + answer['path'], 'sha256': answer['sha256']}
+                # Recorders may retain root-relative or ledger-local references.
+                # Both forms must stay within this assignment's blob directory.
+                path = answer['path']
+                require(type(path) is str, name + ': invalid answer path')
+                path = path if path.startswith(name + '/') else name + '/' + path
+                local(root, path)
+                require(path.startswith(name + '/blobs/'), name + ': answer is outside own blobs')
+                final = {'path': path, 'sha256': answer['sha256']}
                 read_ref(root, final)
                 refs['final answer event'] = event_ref
     inventory_path = local(root, slot['capture'] + '/inventory.json')
@@ -345,7 +419,61 @@ def terminal_evidence(root, slot):
     return final, refs, diagnostics
 
 
-def assemble(root, packet_ref, access_ref, harness_ref, schema_sha256, raw_selection_ref=None):
+def source_history_attestations(root, manifest_ref, packet_ref, slots, solvers):
+    """Bind explicit author declarations to original files; never infer history."""
+    if manifest_ref is None:
+        return {}
+    manifest = load(read_ref(root, manifest_ref))
+    require(type(manifest) is dict and set(manifest) == {'schema', 'packet', 'attestations'} and
+            manifest['schema'] == 'broader-pilot-source-history-manifest-v1' and
+            manifest['packet'] == packet_ref, 'exact packet-bound source history manifest required')
+    refs = manifest['attestations']
+    require(type(refs) is list and refs, 'explicit nonempty source history attestations required')
+    result, authors = {}, set()
+    originals = {}
+    for slot in slots:
+        ref = ref_for(root, 'reviews/attempt-source/' + slot['assignment'] + '.json')
+        value = load(read_ref(root, ref))
+        originals[ref['path']] = (ref, value.get('reviewer_id'))
+    for ref in refs:
+        value = load(read_ref(root, ref))
+        require(type(value) is dict and set(value) == {'schema', 'reviewer_id', 'packet', 'review_history',
+                                                     'original_review_refs', 'disclosure', 'original_decision', 'observed_utc'} and
+                value['schema'] == 'fresh-pilot-semantic-reviewer-history-attestation-v1',
+                'exact semantic reviewer history attestation required')
+        author = value['reviewer_id']
+        nonempty(author, 'history attestation author')
+        require(author not in authors and author not in solvers and value['packet'] == packet_ref,
+                'duplicate/solver author or foreign history packet')
+        history = value['review_history']
+        require(type(history) is dict and set(history) == HISTORY_FLAGS and
+                all(history[key] is True for key in HISTORY_FLAGS), 'explicit fresh history flags required')
+        nonempty(value['disclosure'], 'history disclosure')
+        require(bool(value['original_decision']), 'original history decision required')
+        timestamp = value['observed_utc']
+        require(type(timestamp) is str and 'T' in timestamp and timestamp.endswith(('Z', '+00:00')),
+                'history attestation UTC required')
+        observed = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+        require(observed.tzinfo is not None and observed.utcoffset().total_seconds() == 0,
+                'history attestation UTC required')
+        declared = value['original_review_refs']
+        require(type(declared) is list and declared, 'explicit original review refs required')
+        paths = set()
+        for original in declared:
+            read_ref(root, original)
+            path = original['path']
+            require(path not in paths and path in originals and
+                    originals[path] == (original, author), 'duplicate/foreign/changed history original review')
+            paths.add(path)
+        require(paths == {path for path, (_, reviewer) in originals.items() if reviewer == author},
+                'history attestation must cover exactly the author original review roster')
+        for path in paths:
+            result[path] = copy.deepcopy(ref)
+        authors.add(author)
+    return result
+
+
+def assemble(root, packet_ref, access_ref, harness_ref, schema_sha256, raw_selection_ref=None, history_manifest_ref=None):
     root = Path(root).resolve()
     schema_ref = {'path': SCHEMA_PATH, 'sha256': schema_sha256}
     schema_raw = read_ref(root, schema_ref)
@@ -391,6 +519,7 @@ def assemble(root, packet_ref, access_ref, harness_ref, schema_sha256, raw_selec
         names.add(name); solvers.add(slot['solver_id']); slot_keys.add(key)
     require(slot_keys == planned, 'missing planned slots; no fabricated failures')
     raw_selections = raw_review_selections(root, raw_selection_ref, packet_ref, packet, slots, solvers)
+    history_attestations = source_history_attestations(root, history_manifest_ref, packet_ref, slots, solvers)
     access, access_evidence = declaration(root, access_ref, 'equal-access', packet_ref, packet, solvers)
     harness, harness_evidence = declaration(root, harness_ref, 'shared-harness', packet_ref, packet, solvers)
     results = {'schema': 'broader-claim-results-v1', 'plan_sha256': schema.digest(plan),
@@ -420,8 +549,41 @@ def assemble(root, packet_ref, access_ref, harness_ref, schema_sha256, raw_selec
         manual_flags = {'all_retained_provider_native_bodies_read', 'all_terminal_failed_partial_late_bodies_read',
                         'identity_image_settings_isolation_verified', 'no_feedback_to_solver',
                         'raw_scope_display_and_selector_replay_verified', 'resource_and_relay_decisions_verified'}
-        require(set(manual) == manual_flags | {'notes'} and all(type(manual[field]) is bool for field in manual_flags),
+        require(manual_flags | {'notes'} <= set(manual) <= manual_flags | {'notes'} | MANUAL_DIAGNOSTICS and
+                all(type(manual[field]) is bool for field in manual_flags),
                 name + ': complete explicit raw manual declarations required')
+        for key in MANUAL_DIAGNOSTICS & set(manual):
+            if key == 'sensitive_literal_values_directly_read':
+                require(type(manual[key]) is bool, name + ': explicit literal-read declaration required')
+            elif key in {'sensitive_literal_omissions', 'omitted_context_lines', 'sensitive_literal_display_omissions'}:
+                require(type(manual[key]) is list, name + ': original omission list required')
+            elif key == 'sensitive_safe_representation':
+                safe = manual[key]
+                require(type(safe) is dict and set(safe) == {'authorization', 'helper', 'omitted_line_displays',
+                    'original_bytes_mechanically_verified', 'sensitive_literal_values_directly_read', 'dependent_raw_fact_limit'},
+                    name + ': exact sensitive-safe representation required')
+                read_ref(root, safe['authorization']); read_ref(root, safe['helper'])
+                require(type(safe['omitted_line_displays']) is list and
+                        type(safe['sensitive_literal_values_directly_read']) is bool and
+                        type(safe['original_bytes_mechanically_verified']) is bool,
+                        name + ': explicit safe representation declarations required')
+                require(not raw_fields['complete'] or safe['original_bytes_mechanically_verified'] is True,
+                        name + ': complete safe review requires original byte verification')
+                nonempty(safe['dependent_raw_fact_limit'], name + ' safe representation limitation')
+            elif key == 'nonterminal_client_error':
+                error = manual[key]
+                require(type(error) is dict and set(error) == {'captured_host_native_call_present', 'exact_cause',
+                    'preceding_provider_ordinal', 'provider_following_request', 'terminal_stop'},
+                    name + ': exact nonterminal client error diagnostic required')
+                require(type(error['captured_host_native_call_present']) is bool and error['terminal_stop'] is False and
+                        type(error['preceding_provider_ordinal']) is int and error['preceding_provider_ordinal'] > 0,
+                        name + ': explicit nonterminal client error metadata required')
+                nonempty(error['exact_cause'], name + ' original client error cause')
+                read_ref(root, error['provider_following_request'])
+            elif key == 'diagnostics':
+                require(type(manual[key]) is dict, name + ': original diagnostic object required')
+            else:
+                nonempty(manual[key], name + ' original manual diagnostic')
         require(not raw_fields['complete'] or all(manual[field] for field in manual_flags),
                 name + ': complete raw review contradicts an unverified mandatory manual check')
         nonempty(manual['notes'], name + ' raw manual limitations')
@@ -447,12 +609,16 @@ def assemble(root, packet_ref, access_ref, harness_ref, schema_sha256, raw_selec
         source, source_fields, source_refs = review_artifact(root, name, 'source', slot, solvers, bindings, final)
         require(source['reviewer_id'] != raw['reviewer_id'], name + ': raw and semantic reviewers must be independent')
         history = source.get('review_history')
-        require(type(history) is dict and history.get('no_task_authorship') is True and
-                history.get('no_prospective_source_or_gold_review') is True and history.get('no_feedback_to_solver') is True,
+        attestation = history_attestations.get(source_fields['artifact']['path'])
+        if type(history) is dict:
+            require(all(history.get(key) is True for key in HISTORY_FLAGS),
+                    name + ': source history contradicts fresh semantic reviewer history requirements')
+        require((type(history) is dict and all(history.get(key) is True for key in HISTORY_FLAGS)) or
+                attestation is not None,
                 name + ': explicit fresh semantic reviewer history required')
         applicability = 'final_reviewed' if final else 'no_final'
         require(source.get('applicability') == applicability, name + ': source applicability differs from recorded final')
-        require(type(source.get('required_claims')) is list and type(source.get('material_claims_and_citations')) is list,
+        require(type(source.get('required_claims')) is list and type(source.get('material_claims_and_citations')) in (list, dict),
                 name + ': original per-claim source findings must be retained')
         nonempty(source.get('limitations'), name + ' source limitations')
         require(type(source_fields['criteria']) is dict and set(source_fields['criteria']) == schema.CRITERIA and
@@ -475,6 +641,8 @@ def assemble(root, packet_ref, access_ref, harness_ref, schema_sha256, raw_selec
                           raw_original_decision=copy.deepcopy(raw['original_decision']),
                           source_original_decision=copy.deepcopy(source['original_decision']),
                           raw_evidence_refs=raw_refs, source_evidence_refs=source_refs)
+        if attestation is not None:
+            diagnostic['source_history_attestation'] = attestation
         if name in raw_selections:
             diagnostic['raw_review_selection'] = copy.deepcopy(raw_selections[name])
         audit.append(diagnostic)
@@ -498,6 +666,7 @@ def assemble(root, packet_ref, access_ref, harness_ref, schema_sha256, raw_selec
                 'assembler_code_sha256': sha(Path(__file__).read_bytes()),
                 'equal_access_declaration': access_ref, 'shared_harness_declaration': harness_ref,
                 'raw_review_selection': raw_selection_ref,
+                'source_history_manifest': history_manifest_ref,
                 'planned_attempts': 360, 'assembled_attempts': len(results['attempts']),
                 'review_readiness_reasons': sorted(set(readiness)), 'attempt_outcomes': counts,
                 'attempts': audit,
@@ -514,12 +683,16 @@ def main(argv=None):
     parser.add_argument('--schema-sha256', required=True)
     parser.add_argument('--raw-review-selection', help='explicit independently approved mechanical correction manifest')
     parser.add_argument('--raw-review-selection-sha256', help='exact selection manifest file SHA256')
+    parser.add_argument('--source-history-manifest', help='explicit author attestations bound to original source reviews')
+    parser.add_argument('--source-history-manifest-sha256', help='exact source history manifest file SHA256')
     parser.add_argument('--output', required=True, help='new root-relative results path')
     parser.add_argument('--manifest-output', required=True, help='new root-relative preservation manifest path')
     args = parser.parse_args(argv)
     try:
         require((args.raw_review_selection is None) == (args.raw_review_selection_sha256 is None),
                 'raw-review selection path and SHA256 must be supplied together')
+        require((args.source_history_manifest is None) == (args.source_history_manifest_sha256 is None),
+                'source history manifest path and SHA256 must be supplied together')
         root = Path(args.root).resolve()
         output, manifest_path = local(root, args.output), local(root, args.manifest_output)
         require(output != manifest_path and not output.exists() and not manifest_path.exists(),
@@ -528,7 +701,9 @@ def main(argv=None):
                                     {'path': args.equal_access, 'sha256': args.equal_access_sha256},
                                     {'path': args.shared_harness, 'sha256': args.shared_harness_sha256}, args.schema_sha256,
                                     {'path': args.raw_review_selection, 'sha256': args.raw_review_selection_sha256}
-                                    if args.raw_review_selection is not None else None)
+                                    if args.raw_review_selection is not None else None,
+                                    {'path': args.source_history_manifest, 'sha256': args.source_history_manifest_sha256}
+                                    if args.source_history_manifest is not None else None)
         payload = json.dumps(result, sort_keys=True, indent=2, ensure_ascii=False, allow_nan=False).encode() + b'\n'
         manifest['results'] = {'path': args.output, 'sha256': sha(payload)}
         manifest_payload = json.dumps(manifest, sort_keys=True, indent=2, ensure_ascii=False, allow_nan=False).encode() + b'\n'

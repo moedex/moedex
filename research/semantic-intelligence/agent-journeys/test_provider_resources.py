@@ -63,6 +63,20 @@ def archive(root, tracker, requests=1, body=None, meta=None):
 
 
 class ResourceTests(unittest.TestCase):
+    def test_solver_instructions_derive_every_limit_and_reject_stale_or_duplicate_lines(self):
+        limits = policy(max_observed_input_tokens=1000000, max_observed_output_tokens=32000)
+        text = resource.prompt_instructions(limits)
+        self.assertIn('observed 1000000 input tokens and 32000 output tokens', text)
+        self.assertIn('max_output_tokens 16000', text)
+        resource.validate_prompt_instructions('Task.\n' + text + '\nEnd.', limits)
+        for key in resource.FIELDS - {'schema'}:
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                resource.validate_prompt_instructions(text, dict(limits, **{key: limits[key] + 1}))
+        for prompt in ('Task.', text + '\n' + text, text.replace('1000000', '200000'),
+                       text + ' Contradictory suffix.', '  ' + text, None):
+            with self.subTest(prompt=prompt), self.assertRaises(ValueError):
+                resource.validate_prompt_instructions(prompt, limits)
+
     def test_policy_and_strict_json_reject_ambiguous_limits(self):
         for changes in ({'max_requests': True}, {'max_requests': 0}, {'max_output_tokens': 15},
                         {'max_response_bytes': (64 << 20) + 1}, {'unknown': 1}):
@@ -339,6 +353,18 @@ class ResourceControllerTests(unittest.TestCase):
             check()
             self.assertNotIn('_provider_resources', config)
             frozen['provider_resources'] = policy()
+            with self.assertRaisesRegex(ValueError, 'prompt resource instructions'):
+                check()
+
+            def set_prompt(text):
+                retain(root, contract['tasks'][0]['prompt']['path'], text.encode())
+                contract['tasks'][0]['prompt'] = reference(root, contract['tasks'][0]['prompt']['path'])
+                retain(root, 'contract.json', solver.canonical(contract))
+                frozen['contract'] = reference(root, 'contract.json')
+                config['prompt'] = text
+                config['identity']['prompt_sha256'] = contract['tasks'][0]['prompt']['sha256']
+                config['identity']['contract_sha256'] = solver.digest(solver.canonical(contract))
+            set_prompt('fixture prompt\n' + resource.prompt_instructions(policy()) + '\n')
             with self.assertRaisesRegex(ValueError, 'output limit'):
                 check()
             settings['max_output_tokens'] = 16000
@@ -347,6 +373,12 @@ class ResourceControllerTests(unittest.TestCase):
             frozen['runners']['provider_resources.py'] = solver.digest(Path(resource.__file__).read_bytes())
             check()
             self.assertEqual(config['_provider_resources'], policy())
+            for wrong_prompt in ('fixture prompt\n', resource.prompt_instructions(policy(max_requests=129)),
+                                 resource.prompt_instructions(policy()) + '\n' + resource.prompt_instructions(policy())):
+                set_prompt(wrong_prompt)
+                with self.assertRaisesRegex(ValueError, 'prompt resource instructions'):
+                    check()
+            set_prompt('fixture prompt\n' + resource.prompt_instructions(policy()) + '\n')
             config['provider_resources'] = policy(max_requests=129)
             with self.assertRaisesRegex(ValueError, 'differs from frozen policy'):
                 check()
