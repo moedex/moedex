@@ -535,6 +535,10 @@ class NativeScope:
         require(type(value) is str and value in self.aliases, 'project_outside_frozen_scope')
         return self.aliases[value]
 
+    def presentation_format(self, tool):
+        return 'structured' if (self.backend == 'moedex-index-v1' and
+                                tool in ('search_context', 'read_source')) else 'json'
+
     def catalog(self, tools):
         require({tool['name'] for tool in tools} == self.allowed, 'catalog_scope_roster_mismatch')
         result = deepcopy(tools)
@@ -545,10 +549,14 @@ class NativeScope:
                 'Unknown or unproven provenance is replaced with a recoverable scope error. ') + (
                 'Historical compiler metadata requires the exact frozen artifact; generated bodies are unavailable. '
                 'Symbol and context IDs must come from this assignment\'s accepted replies.' if compiler else
-                'Use format=json. Node IDs and cursors must come from this assignment\'s accepted replies.')
+                'Node IDs and cursors must come from this assignment\'s accepted replies.')
             properties = tool.setdefault('inputSchema', {}).setdefault('properties', {})
             if 'format' in properties:
-                properties['format'] = dict(properties['format'], default='json', enum=['json'])
+                presentation = self.presentation_format(tool['name'])
+                require('enum' not in properties['format'] or presentation in properties['format']['enum'],
+                        'unsupported_structured_presentation')
+                properties['format'] = dict(properties['format'], default=presentation, enum=[presentation])
+                tool['description'] += f' Use format={presentation}.'
         return result
 
     def prepare(self, params):
@@ -556,13 +564,17 @@ class NativeScope:
         require(params.get('name') in self.allowed, 'tool_outside_source_scope')
         args = params.get('arguments', {})
         require(type(args) is dict, 'invalid_tool_arguments')
-        require(args.get('format', 'json') == 'json', 'structured_format_required')
+        presentation = self.presentation_format(params['name'])
+        require(args.get('format', presentation) == presentation, 'structured_format_required')
         context = {'tool': params['name'], 'project': None, 'metadata': False}
         if self.backend == 'moedex-index-v1':
             if context['tool'] in COMPILER_TOOLS and self.compiler is not None:
                 return self._prepare_compiler(args, context)
             if args.get('repo') is not None:
                 context['project'] = self.project(args['repo'])
+            if context['tool'] == 'list_repos':
+                require(type(args.get('filter', '')) is str, 'invalid_repository_filter')
+                context['repository_filter'] = args.get('filter', '')
             return context
         tool = params['name']
         if tool == 'codegraph_search' and args.get('scope') == 'projects':
@@ -591,7 +603,7 @@ class NativeScope:
     def error(request_id):
         # Never quote a rejected request, native error or outside project name.
         return {'jsonrpc': '2.0', 'id': request_id, 'result': {'isError': True,
-                'content': [{'type': 'text', 'text': 'Source scope policy blocked this exchange. Use an approved project, JSON format, and selectors issued in this assignment.'}]}}
+                'content': [{'type': 'text', 'text': 'Source scope policy blocked this exchange. Use an approved project, the format advertised in the tool catalog, and selectors issued in this assignment.'}]}}
 
     def _structured(self, response):
         require(type(response) is dict and 'error' not in response and type(response.get('result')) is dict,
@@ -922,8 +934,14 @@ class NativeScope:
                 require(type(data.get('repos')) is list, 'unrecognized_repo_catalog')
                 identities = [self.project(row.get('name')) for row in data['repos'] if isinstance(row, dict)]
                 required = {name for name, project in self.projects.items() if not project.get('metadata_only')}
-                require(len(identities) == len(data['repos']) and required <= set(identities) <= set(self.projects) and
+                repository_filter = context['repository_filter']
+                require(len(identities) == len(data['repos']) and set(identities) <= set(self.projects) and
                         len(set(identities)) == len(identities), 'physical_index_scope_mismatch')
+                if repository_filter:
+                    require(all(repository_filter.lower() in row['name'].lower() for row in data['repos']),
+                            'repository_filter_mismatch')
+                else:
+                    require(required <= set(identities), 'physical_index_scope_mismatch')
             if context['tool'] == 'read_source':
                 repository = self.project(data.get('repo'))
                 require(repository == context['project'], 'source_selector_provenance_mismatch')

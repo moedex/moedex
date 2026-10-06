@@ -311,6 +311,51 @@ class ScopeTests(unittest.TestCase):
         value['result']['structuredContent']['blob_sha']='e'*40
         with self.assertRaises(ns.ScopeViolation):self.accept(value,{'name':'read_source','arguments':{'repo':'Example.Api'}})
 
+    def test_moedex_catalog_uses_native_structured_presentation(self):
+        scope = ns.NativeScope(policy('moedex-index-v1'))
+        tools = [{'name': name, 'inputSchema': {'properties': {
+            'format': {'type': 'string', 'enum': ['text', 'structured']}}}}
+            if name != 'list_repos' else {'name': name, 'inputSchema': {'properties': {}}}
+            for name in scope.allowed]
+        original = deepcopy(tools)
+        catalog = {row['name']: row for row in scope.catalog(tools)}
+        self.assertEqual(tools, original)
+        for name in ('search_context', 'read_source'):
+            self.assertEqual(catalog[name]['inputSchema']['properties']['format']['enum'], ['structured'])
+            self.assertIn('Use format=structured', catalog[name]['description'])
+            scope.prepare({'name': name, 'arguments': {'repo': 'Example.Api', 'format': 'structured'}})
+            scope.prepare({'name': name, 'arguments': {'repo': 'Example.Api'}})
+            for invalid in ('json', 'text', None):
+                with self.assertRaises(ns.ScopeViolation):
+                    scope.prepare({'name': name, 'arguments': {'format': invalid}})
+        self.assertNotIn('Use format=', catalog['list_repos']['description'])
+        # An incompatible native schema must fail onboarding, before a solver starts.
+        for row in tools:
+            if row['name'] == 'search_context':
+                row['inputSchema']['properties']['format'] = {'enum': ['text']}
+        with self.assertRaises(ns.ScopeViolation): scope.catalog(tools)
+
+    def test_filtered_repository_catalog_retains_pin_and_membership_checks(self):
+        scope = ns.NativeScope(policy('moedex-index-v1'))
+        def response(names):
+            return {'jsonrpc': '2.0', 'id': 1, 'result': {
+                'structuredContent': {'repos': [{'name': name} for name in names]},
+                '_meta': {'dev.moedex/snapshot': {'cacheable': True, 'corpus_fingerprint': 'f'*64}}}}
+        params = {'name': 'list_repos', 'arguments': {'filter': 'API'}}
+        scope.accept(response(['example/api']), scope.prepare(params))
+        scope.accept(response([]), scope.prepare({'name': 'list_repos', 'arguments': {'filter': 'missing'}}))
+        for names in (['outside/api'], ['example/api', 'example/api'], ['example/library']):
+            with self.assertRaises(ns.ScopeViolation): scope.accept(response(names), scope.prepare(params))
+        for args in ({}, {'filter': ''}):
+            with self.assertRaises(ns.ScopeViolation):
+                scope.accept(response(['example/api']), scope.prepare({'name': 'list_repos', 'arguments': args}))
+        for invalid in (None, 1, ['api']):
+            with self.assertRaises(ns.ScopeViolation):
+                scope.prepare({'name': 'list_repos', 'arguments': {'filter': invalid}})
+        wrong_pin = response(['example/api'])
+        wrong_pin['result']['_meta']['dev.moedex/snapshot']['corpus_fingerprint'] = 'e'*64
+        with self.assertRaises(ns.ScopeViolation): scope.accept(wrong_pin, scope.prepare(params))
+
 
 class FakeNative:
     timeout=30
@@ -544,7 +589,7 @@ class CompilerScopeTests(unittest.TestCase):
         catalog = {row['name']: row for row in self.scope.catalog(tools)}
         self.assertIn('Symbol and context IDs', catalog['compiler_symbols']['description'])
         self.assertNotIn('Use format=json', catalog['compiler_symbols']['description'])
-        self.assertIn('Use format=json', catalog['read_source']['description'])
+        self.assertNotIn('Use format=', catalog['read_source']['description'])
 
     def test_exact_recorded_binding_and_empty_result_admitted(self):
         self.accept(compiler_reply(self.scope, self.ids, False))

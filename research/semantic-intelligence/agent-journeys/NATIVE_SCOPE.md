@@ -44,11 +44,17 @@ The coordinator must independently verify source manifests, access, source pins,
 server identity and deployment. Native structured provenance is a server
 assertion; this module does not authenticate it. A Moedex deployment must contain
 only the approved physical background corpus, including every derived graph or
-compiler artifact. The exact repository catalog must match the policy roster.
+compiler artifact. An unfiltered repository catalog must match the policy roster.
+Filtered catalogs may return a unique pinned subset or an empty result; every
+returned repository must match the requested case-insensitive substring.
 
 ## Model boundary and accounting
 
-Only JSON format is admitted. Requests naming outside repositories, unissued
+The catalog advertises each tool's native structured presentation: `json` for
+CodeGraph and `structured` for Moedex `search_context` and `read_source`. The
+adapter rejects incompatible advertised format enums before solving starts.
+Omitting the format remains supported because native structured content is
+validated independently of the text fallback. Requests naming outside repositories, unissued
 node IDs or cursors are denied before product dispatch. A denied intent consumes
 one native call attempt and zero native response bytes. Dispatched responses are
 retained in full and charged in full even when provenance fails. The model gets
