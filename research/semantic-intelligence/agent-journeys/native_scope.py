@@ -497,7 +497,8 @@ class NativeScope:
             if context['tool'] == 'list_repos':
                 require(type(data.get('repos')) is list, 'unrecognized_repo_catalog')
                 identities = [self.project(row.get('name')) for row in data['repos'] if isinstance(row, dict)]
-                require(len(identities) == len(data['repos']) and set(identities) == set(self.projects) and
+                required = {name for name, project in self.projects.items() if not project.get('metadata_only')}
+                require(len(identities) == len(data['repos']) and required <= set(identities) <= set(self.projects) and
                         len(set(identities)) == len(identities), 'physical_index_scope_mismatch')
             if context['tool'] == 'read_source':
                 repository = self.project(data.get('repo'))

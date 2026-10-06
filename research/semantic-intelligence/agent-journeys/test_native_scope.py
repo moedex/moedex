@@ -110,6 +110,12 @@ class ScopeTests(unittest.TestCase):
                        '_meta':{'dev.moedex/snapshot':{'cacheable':True,'corpus_fingerprint':'f'*64}}}}
                 visible=scope.accept(repos,scope.prepare({'name':'list_repos','arguments':{}}))
                 self.assertEqual(len(visible['result']['structuredContent']['repos']),2)
+                optional=deepcopy(repos);optional['result']['structuredContent']['repos']=[{'name':'example/library'}]
+                scope.accept(optional,scope.prepare({'name':'list_repos','arguments':{}}))
+                for invalid_repos in ([{'name':'example/api'}], [{'name':'example/library'},{'name':'example/library'}],
+                                      [{'name':'example/library'},{'name':'outside'}]):
+                    invalid=deepcopy(repos);invalid['result']['structuredContent']['repos']=invalid_repos
+                    with self.assertRaises(ns.ScopeViolation):scope.accept(invalid,scope.prepare({'name':'list_repos','arguments':{}}))
                 for tool in ('read_source','search_context'):
                     data={'repo':'example/api','path':'src/api.cs','blob_sha':'b'*40,'content':'withheld'}
                     response={'jsonrpc':'2.0','id':1,'result':{'structuredContent':data,
