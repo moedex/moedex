@@ -16,10 +16,15 @@ func TestSourceLineCitations(t *testing.T) {
 		want       string
 	}{
 		{"registration after blank", "\nAddScoped<I, C>();\n", 61, 62, "61 | \n62 | AddScoped<I, C>();\n"},
-		{"explicit trailing empty line", "x\n", 4, 5, "4 | x\n5 | \n"},
+		{"terminal LF is not an extra line", "x\n", 4, 5, "4 | x\n"},
+		{"terminal CRLF is not an extra line", "x\r\n", 4, 5, "4 | x\n"},
+		{"unterminated final line", "x", 4, 4, "4 | x\n"},
+		{"physical blank final line", "x\n\n", 4, 5, "4 | x\n5 | \n"},
+		{"standalone CR is source text", "x\r", 4, 4, "4 | x\r\n"},
 		{"CRLF and unicode", "α\r\n\r\nβ", 7, 9, "7 | α\n8 | \n9 | β\n"},
 		{"clipped last line", "first\npar", 20, 25, "20 | first\n21 | par\n"},
-		{"empty file", "", 1, 1, "1 | \n"},
+		{"empty file", "", 1, 1, ""},
+		{"empty file has no citations", "", 0, 0, ""},
 		{"unknown coordinates", "x\n", 0, 0, "x\n"},
 		{"inconsistent provider", "x\ny", 1, 1, "x\ny"},
 	} {

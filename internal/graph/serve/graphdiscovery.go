@@ -65,7 +65,7 @@ func (t *discoveryTool) Descriptor() map[string]interface{} {
 		description = "Describe the loaded graph snapshot: generation, corpus fingerprint, build ID, node kind counts, edge type counts, and totals. Use its identity fields for downstream cache keys."
 		schema["properties"] = map[string]interface{}{}
 	case "read_source":
-		description = "Read indexed source content by repository and path, with optional start_line/end_line. Text presentation numbers lines for precise citations; structuredContent.content preserves unnumbered indexed text. Use narrow ranges to verify citations. Never hash numbered presentation text or derive compiler offsets from it. Ingest removes a leading UTF8 BOM; before deriving compiler byte offsets, verify complete structuredContent.content against the selected compiler context's raw_sha256, including a possible BOM."
+		description = "Read indexed source content by repository and path, with optional start_line/end_line. Text presentation numbers physical source lines for precise citations; structuredContent.content preserves selected indexed bytes, including original line terminators. A terminal newline adds no extra line; an empty file returns lines, start_line and end_line of 0. Use narrow ranges to verify citations. Never hash numbered presentation text or derive compiler offsets from it. Ingest removes a leading UTF8 BOM; before deriving compiler byte offsets, verify complete structuredContent.content against the selected compiler context's raw_sha256, including a possible BOM."
 		schema["properties"] = map[string]interface{}{
 			"format": map[string]interface{}{
 				"type": "string", "enum": []string{"text", "structured"},
@@ -83,11 +83,11 @@ func (t *discoveryTool) Descriptor() map[string]interface{} {
 			},
 			"start_line": map[string]interface{}{
 				"type": "integer", "minimum": 1,
-				"description": "Optional first 1-based line to return (default 1).",
+				"description": "Optional first 1-based line to return (default 1). A start beyond the last physical line is invalid; an empty file permits the default start of 1.",
 			},
 			"end_line": map[string]interface{}{
 				"type": "integer", "minimum": 1,
-				"description": "Optional inclusive final line; omitted reads to the file or tool limit.",
+				"description": "Optional inclusive final line, clamped to the file or 500-line tool limit; omitted reads to that limit.",
 			},
 		}
 		schema["required"] = []string{"path"}
@@ -414,21 +414,33 @@ func (s *graphSnapshot) readSource(repo, path string, startLine, endLine int, fo
 		return s.errorResult("not_found", fmt.Sprintf("file not found: %s", path)), nil
 	}
 
-	lines := bytes.Split(blob.Content, []byte("\n"))
+	// Keep each physical line's original terminator. Splitting after LF lets
+	// ranges retain exact indexed bytes, including CRLF and a terminal LF,
+	// without treating the trailing split sentinel as a citeable source line.
+	lines := bytes.SplitAfter(blob.Content, []byte{'\n'})
+	if len(lines[len(lines)-1]) == 0 {
+		lines = lines[:len(lines)-1]
+	}
 	totalLines := len(lines)
 
-	if startLine > totalLines {
+	if startLine > max(1, totalLines) {
 		return s.errorResult("invalid_arguments", fmt.Sprintf("start_line %d exceeds file length (%d lines)", startLine, totalLines), blob.SHA), nil
 	}
-	// Bound by remaining file lines before adding, avoiding integer overflow
-	// for large caller-supplied start_line values.
-	limit := startLine + min(maxReadSourceLines-1, totalLines-startLine)
-	if endLine <= 0 || endLine > limit {
-		endLine = limit
+	content := ""
+	if totalLines == 0 {
+		// Empty content has no source line to cite, even though the default
+		// request starts at 1.
+		startLine, endLine = 0, 0
+	} else {
+		// Bound by remaining file lines before adding, avoiding integer overflow
+		// for large caller-supplied start_line values.
+		limit := startLine + min(maxReadSourceLines-1, totalLines-startLine)
+		if endLine <= 0 || endLine > limit {
+			endLine = limit
+		}
+		content = string(bytes.Join(lines[startLine-1:endLine], nil))
 	}
 
-	selected := lines[startLine-1 : endLine]
-	content := string(bytes.Join(selected, []byte("\n")))
 	truncated := endLine < totalLines
 
 	r := sourceResult{
