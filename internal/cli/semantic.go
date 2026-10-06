@@ -57,6 +57,7 @@ func newSemanticCommand() *cobra.Command {
 	captureCommand.Flags().StringVar(&captureOpts.Output, "output", "", "new validated artifact file; must not already exist")
 	captureCommand.Flags().BoolVar(&captureOpts.RestoreOffline, "restore-offline", false, "explicitly permit restore with cleared feeds and only SDK or supplied bundle packages")
 	captureCommand.Flags().BoolVar(&captureOpts.RestoreStandardEvaluation, "restore-standard-evaluation", false, "opt out of static-graph restore evaluation for this invocation; does not edit source configuration")
+	captureCommand.Flags().BoolVar(&captureOpts.RestoreToolCacheMetadata, "restore-tool-cache-metadata", false, "Record bounded generated NuGet tool-cache JSON changes; keep package payloads immutable")
 	captureCommand.Flags().DurationVar(&captureOpts.Timeout, "timeout", semanticcmd.DefaultCaptureTimeout, "deadline for the entire capture")
 	for _, name := range []string{"repo", "project", "framework", "dotnet", "worker", "sdk-path", "workspace", "output", "restore-offline"} {
 		_ = captureCommand.MarkFlagRequired(name)

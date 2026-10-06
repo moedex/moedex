@@ -27,6 +27,8 @@ type CaptureSummary struct {
 	DependencyBundleSHA256    string `json:"dependency_bundle_sha256,omitempty"`
 	RestoreStandardEvaluation bool   `json:"restore_standard_evaluation,omitempty"`
 	DependencyByteLimit       int64  `json:"dependency_byte_limit"`
+	ToolCacheReceipt          string `json:"tool_cache_receipt,omitempty"`
+	ToolCacheReceiptSHA256    string `json:"tool_cache_receipt_sha256,omitempty"`
 }
 
 // Capture delegates projection, bounded process execution, validation and
@@ -50,6 +52,7 @@ func Capture(ctx context.Context, opts CaptureOptions) (CaptureSummary, error) {
 		DependencyBundleSHA256:    result.DependencyBundleSHA256,
 		RestoreStandardEvaluation: result.RestoreStandardEvaluation,
 		DependencyByteLimit:       result.DependencyByteLimit,
+		ToolCacheReceipt:          result.ToolCacheReceipt, ToolCacheReceiptSHA256: result.ToolCacheReceiptSHA256,
 	}, nil
 }
 
