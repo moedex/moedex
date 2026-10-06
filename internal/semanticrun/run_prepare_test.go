@@ -30,6 +30,25 @@ printf worker-after-preparation >&2; exit 9
 	}
 }
 
+func TestCaptureAvoidsVerbosePreparationOverflow(t *testing.T) {
+	o, _ := captureFixture(t, `
+case "$2" in
+-target:Restore|-target:ResolveReferences)
+ quiet=false
+ for arg do if [ "$arg" = '-verbosity:minimal' ]; then quiet=true; fi; done
+ # Default MSBuild output can contain a compiler command for every referenced
+ # project; model that noise crossing the unchanged one-MiB process ceiling.
+ if [ "$quiet" = false ]; then dd if=/dev/zero bs=2097152 count=1 2>/dev/null; fi
+ exit 0 ;;
+esac
+printf worker-after-quiet-preparation >&2; exit 9
+`)
+	_, err := Capture(context.Background(), o)
+	if err == nil || !strings.Contains(err.Error(), "worker-after-quiet-preparation") {
+		t.Fatalf("verbose preparation overflow: %v", err)
+	}
+}
+
 func TestCaptureRejectsPreparationFailureOrMutation(t *testing.T) {
 	for _, tc := range []struct{ name, body, want string }{
 		{"build-error", "printf analyzer-build-failed >&2; exit 7", "project reference preparation"},

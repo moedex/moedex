@@ -238,7 +238,7 @@ func Capture(ctx context.Context, o Options) (result Result, err error) {
 	// Restore the declared project graph without a global TargetFramework: that
 	// would force the entry framework onto netstandard analyzer projects too.
 	// Reference preparation and extraction still select the requested entry TFM.
-	restore := []string{filepath.Join(o.SDKPath, "MSBuild.dll"), "-target:Restore", filepath.Join(p.Root, filepath.FromSlash(o.Project)), "-nologo", "-p:RestoreConfigFile=" + config, "-p:RestorePackagesPath=" + filepath.Join(o.Workspace, "packages"), "-p:RestoreSources=" + restoreSource, "-p:RestoreDisableParallel=true", "-p:NuGetAudit=false", "-p:Configuration=" + o.Configuration}
+	restore := []string{filepath.Join(o.SDKPath, "MSBuild.dll"), "-target:Restore", filepath.Join(p.Root, filepath.FromSlash(o.Project)), "-nologo", "-verbosity:minimal", "-p:RestoreConfigFile=" + config, "-p:RestorePackagesPath=" + filepath.Join(o.Workspace, "packages"), "-p:RestoreSources=" + restoreSource, "-p:RestoreDisableParallel=true", "-p:NuGetAudit=false", "-p:Configuration=" + o.Configuration}
 	env = append(env, "MSBuildSDKsPath="+filepath.Join(o.SDKPath, "Sdks"))
 	if o.RestoreStandardEvaluation {
 		restore = append(restore, "-p:RestoreUseStaticGraphEvaluation=false")
@@ -260,7 +260,7 @@ func Capture(ctx context.Context, o Options) (result Result, err error) {
 	// Let the selected SDK resolve/build references in the private projection,
 	// including their own framework negotiation and custom output paths. Never
 	// borrow bin/obj files from the caller's checkout or guess analyzer paths.
-	prepare := []string{filepath.Join(o.SDKPath, "MSBuild.dll"), "-target:ResolveReferences", filepath.Join(p.Root, filepath.FromSlash(o.Project)), "-nologo", "-maxcpucount:1", "-nodeReuse:false", "-p:BuildProjectReferences=true", "-p:UseSharedCompilation=false", "-p:TargetFramework=" + o.Framework, "-p:Configuration=" + o.Configuration, "-p:RestoreConfigFile=" + config, "-p:RestorePackagesPath=" + filepath.Join(o.Workspace, "packages"), "-p:RestoreSources=" + restoreSource, "-p:NuGetAudit=false"}
+	prepare := []string{filepath.Join(o.SDKPath, "MSBuild.dll"), "-target:ResolveReferences", filepath.Join(p.Root, filepath.FromSlash(o.Project)), "-nologo", "-verbosity:minimal", "-maxcpucount:1", "-nodeReuse:false", "-p:BuildProjectReferences=true", "-p:UseSharedCompilation=false", "-p:TargetFramework=" + o.Framework, "-p:Configuration=" + o.Configuration, "-p:RestoreConfigFile=" + config, "-p:RestorePackagesPath=" + filepath.Join(o.Workspace, "packages"), "-p:RestoreSources=" + restoreSource, "-p:NuGetAudit=false"}
 	prepared, err := RunProcess(ctx, ProcessSpec{Executable: pinnedDotnet, Args: prepare, Dir: p.Root, Env: env, StdoutLimit: 1 << 20, StderrLimit: 64 << 10})
 	if err != nil {
 		return result, captureProcessError("project reference preparation", err, append(prepared.Stdout, prepared.Stderr...))
