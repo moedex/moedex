@@ -13,6 +13,8 @@ import sys
 
 
 PRESENTATION = 'single-source-v1'
+REFERENCE_MODE = 'broker-ordinal-v1'
+REFERENCE_KEY = 'dev.moedex/presentation-reference'
 FALLBACK = 'Validated data is in structuredContent. Source appears once; use a client that exposes structuredContent.'
 
 
@@ -43,6 +45,78 @@ def strict_json(raw):
     return json.loads(raw, object_pairs_hook=unique, parse_constant=invalid)
 
 
+def presentation_reference(ordinal):
+    if type(ordinal) is not int or ordinal < 1:
+        raise ValueError('positive native ordinal required for presentation reference')
+    return {'mode': REFERENCE_MODE, 'id': 'display-' + str(ordinal)}
+
+
+def reference_notice(reference):
+    return 'Presentation reference: ' + reference['id'] + '. Cite presentation_id for this excerpt; the offline checker resolves its exact recorded hash.'
+
+
+def stamp_reference(response, ordinal):
+    visible = deepcopy(response)
+    result = visible.get('result')
+    if not isinstance(result, dict) or result.get('isError') or 'error' in visible:
+        raise ValueError('presentation references require a successful scope-accepted reply')
+    reference = presentation_reference(ordinal)
+    result.setdefault('_meta', {})[REFERENCE_KEY] = reference
+    result.setdefault('content', []).append({'type': 'text', 'text': reference_notice(reference)})
+    return visible
+
+
+def reference_from_response(response):
+    if not isinstance(response, dict):
+        raise ValueError('presentation envelope must be an object')
+    result = response.get('result', {})
+    if not isinstance(result, dict):
+        raise ValueError('invalid presentation result')
+    meta = result.get('_meta', {})
+    if not isinstance(meta, dict):
+        raise ValueError('invalid presentation metadata')
+    reference = meta.get(REFERENCE_KEY)
+    if reference is None:
+        return None
+    if (not isinstance(reference, dict) or set(reference) != {'mode', 'id'} or
+            reference.get('mode') != REFERENCE_MODE or not isinstance(reference.get('id'), str)):
+        raise ValueError('invalid presentation reference')
+    number = reference['id'][8:]
+    if not number.isascii() or not number.isdecimal() or number.startswith('0') or reference['id'] != 'display-' + number:
+        raise ValueError('invalid presentation reference ID')
+    return reference
+
+
+def validate_recorded_reference(raw, decision, mode):
+    """Bind reference mode/ordinal to the exact presentation recording."""
+    if mode not in (None, REFERENCE_MODE) or decision.get('citation_reference_mode') != mode:
+        raise ValueError('citation reference mode differs from freeze')
+    expected = presentation_reference(decision.get('ordinal')) if mode and decision.get('accepted') is True else None
+    if decision.get('presentation_id') != (expected['id'] if expected else None):
+        raise ValueError('citation reference differs from accepted native ordinal')
+    if mode is None:
+        return
+    response = strict_json(raw)
+    actual = reference_from_response(response)
+    if decision.get('accepted') is False and not ('error' in response or response.get('result', {}).get('isError')):
+        raise ValueError('denied scope presentation must retain error signaling')
+    if actual == expected:
+        return
+    # The historical bounded prefix fallback discards parsed source/metadata.
+    # Its prefix is never registered as a citeable presentation reference.
+    result = response.get('result', {})
+    content = result.get('content', [])
+    if expected and actual is None and 'structuredContent' not in result and len(content) == 1:
+        try:
+            payload = strict_json(content[0]['text'])
+            if (payload.get('truncated_display') is True and type(payload.get('native_envelope_bytes')) is int and
+                    isinstance(payload.get('prefix'), str)):
+                return
+        except (ValueError, KeyError, TypeError, AttributeError):
+            pass
+    raise ValueError('recorded presentation reference differs from scope decision')
+
+
 def source_records(data):
     """Recognize source-bearing shapes only, never declaration metadata alone."""
     if not isinstance(data, dict):
@@ -68,7 +142,9 @@ def single_source(response, cap):
     result = visible.get('result')
     if not isinstance(result, dict) or not isinstance(result.get('structuredContent'), dict):
         return None
-    result['content'] = [{'type': 'text', 'text': FALLBACK}]
+    reference = reference_from_response(visible)
+    fallback = FALLBACK + (' ' + reference_notice(reference) if reference else '')
+    result['content'] = [{'type': 'text', 'text': fallback}]
     records = source_records(result['structuredContent'])
     info = {'mode': PRESENTATION, 'validated_envelope_sha256': sha(raw),
             'validated_envelope_bytes': len(raw), 'truncated_display': False,
@@ -106,7 +182,9 @@ def single_source(response, cap):
     return visible
 
 
-def prepare(request, inventory):
+def prepare(request, inventory, citation_reference_mode=None):
+    if citation_reference_mode not in (None, REFERENCE_MODE):
+        raise ValueError('unsupported citation reference mode')
     if not isinstance(request, str) or not request or not isinstance(inventory, list) or not inventory:
         raise ValueError('nonempty user request and inventory required')
     seen = set()
@@ -119,7 +197,7 @@ def prepare(request, inventory):
                 request[row['start']:row['end']] != row['quote']):
             raise ValueError('inventory must have unique IDs and exact user-request character spans')
         seen.add(row['id'])
-    return {'schema': 'solver-workflow-v1', 'request': request,
+    plan = {'schema': 'solver-workflow-v1', 'request': request,
             'request_sha256': sha(request.encode()), 'inventory': inventory,
             'instructions': (
                 'Answer the user request. Track every inventory item, including terminal paths explicitly requested. '
@@ -137,6 +215,14 @@ def prepare(request, inventory):
                 'in separate claims. Check every claim citation against its own file/blob and narrow shown range. '
                 'Source presence and this mechanical check do not establish semantic correctness. '
                 'Review the inventory against the full user request; anchored items may still omit a requested obligation.')}
+    if citation_reference_mode:
+        plan['citation_reference_mode'] = citation_reference_mode
+        plan['instructions'] = plan['instructions'].replace(
+            'display_sha256, repo, path, blob_sha, start_line, end_line, and source_role.',
+            'presentation_id copied from a broker notice (or exact display_sha256 when independently known), '
+            'repo, path, blob_sha, start_line, end_line, and source_role. '
+            'Do not calculate hashes of unknown JSON-RPC/MCP wrappers. The offline checker resolves presentation IDs.')
+    return plan
 
 
 def shown_sources(response):
@@ -176,21 +262,32 @@ def shown_sources(response):
 
 def check(plan, answer, displays):
     """Report declared completeness and mechanical citation validity separately."""
-    expected = prepare(plan['request'], plan['inventory'])
+    expected = prepare(plan['request'], plan['inventory'], plan.get('citation_reference_mode'))
     if plan != expected:
         raise ValueError('plan bytes/anchors or generated instructions differ')
     errors, unresolved, claims = [], [], {}
     if not isinstance(answer, dict):
         raise ValueError('answer must be an object')
-    evidence = {}
+    evidence, references, ambiguous, resolved = {}, {}, set(), []
     for raw in displays:
         try:
             response = strict_json(raw)
             if not isinstance(response, dict):
                 raise ValueError('display must be an object')
-            evidence[sha(raw)] = shown_sources(response)
+            exact_hash = sha(raw)
+            evidence[exact_hash] = shown_sources(response)
+            reference = reference_from_response(response)
+            if reference and not response.get('result', {}).get('isError') and 'error' not in response:
+                identity = reference['id']
+                if identity in references and references[identity] != exact_hash:
+                    ambiguous.add(identity)
+                else:
+                    references[identity] = exact_hash
         except (ValueError, TypeError, KeyError):
             errors.append('invalid display JSON or source shape')
+    for identity in sorted(ambiguous):
+        references.pop(identity, None)
+        errors.append('ambiguous presentation ID: ' + identity)
     rows = answer.get('claims', [])
     if not isinstance(rows, list):
         raise ValueError('claims must be a list')
@@ -215,18 +312,27 @@ def check(plan, answer, displays):
                 errors.append(f'{cid}: citations or unresolved_reason required')
             else:
                 unresolved.append(cid)
-        for cite in citations:
+        for index, cite in enumerate(citations):
             if not isinstance(cite, dict):
                 errors.append(f'{cid}: citation must be an object')
                 continue
             start, end = cite.get('start_line'), cite.get('end_line')
             identity = (cite.get('repo'), cite.get('path'), cite.get('blob_sha'))
+            presentation_id = cite.get('presentation_id')
+            exact_hash = cite.get('display_sha256')
+            locator_valid = True
+            if 'presentation_id' in cite:
+                mapped = references.get(presentation_id) if isinstance(presentation_id, str) else None
+                locator_valid = mapped is not None and ('display_sha256' not in cite or exact_hash == mapped)
+                exact_hash = mapped
             valid = (type(start) is int and type(end) is int and 1 <= start <= end and
-                     isinstance(cite.get('display_sha256'), str) and cite.get('source_role') == role and any(identity == source and
+                     locator_valid and isinstance(exact_hash, str) and cite.get('source_role') == role and any(identity == source and
                      end - start + 1 <= len(numbers) and all(n in numbers for n in range(start, end + 1))
-                     for source, numbers in evidence.get(cite.get('display_sha256'), [])))
+                     for source, numbers in evidence.get(exact_hash, [])))
             if not valid:
                 errors.append(f'{cid}: citation identity, role or displayed range invalid')
+            else:
+                resolved.append({'claim_id': cid, 'citation_index': index, 'display_sha256': exact_hash})
     inventory = {row['id']: row['kind'] for row in plan['inventory']}
     seen = set()
     def status(row, label):
@@ -276,6 +382,7 @@ def check(plan, answer, displays):
     errors.extend(f'{rid}: missing requirement disposition' for rid in sorted(set(inventory) - seen))
     return {'schema': 'solver-workflow-check-v1', 'mechanically_valid': not errors,
             'declared_complete': not errors and not unresolved, 'unresolved': unresolved, 'errors': errors,
+            'presentation_hashes': references, 'resolved_citations': resolved,
             'semantic_correctness': 'not assessed', 'inventory_completeness': 'requires user/solver review',
             'source_visibility': 'provided presentation envelopes; client delivery/rendering/consumption not assessed'}
 
@@ -305,6 +412,7 @@ def main():
     prep = sub.add_parser('prepare')
     prep.add_argument('--request', type=Path, required=True)
     prep.add_argument('--inventory', type=Path, required=True)
+    prep.add_argument('--citation-reference-mode', choices=[REFERENCE_MODE])
     verify = sub.add_parser('check')
     verify.add_argument('--plan', type=Path, required=True)
     verify.add_argument('--answer', type=Path, required=True)
@@ -315,7 +423,7 @@ def main():
     args = parser.parse_args()
     try:
         if args.command == 'prepare':
-            value = prepare(args.request.read_text(), strict_json(args.inventory.read_bytes()))
+            value = prepare(args.request.read_text(), strict_json(args.inventory.read_bytes()), args.citation_reference_mode)
         else:
             if bool(args.record_root) != bool(args.assignment):
                 raise ValueError('--record-root and --assignment must be used together')

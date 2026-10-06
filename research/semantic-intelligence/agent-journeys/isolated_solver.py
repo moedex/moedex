@@ -59,8 +59,13 @@ def bounded_response(response, cap):
     return result
 
 
-def present_response(response, cap, presentation_mode=None):
+def present_response(response, cap, presentation_mode=None, citation_reference_mode=None, ordinal=None):
     """Shared deterministic delivery/replay transform, after scope validation."""
+    if citation_reference_mode is not None:
+        from solver_workflow import REFERENCE_MODE, stamp_reference
+        if citation_reference_mode != REFERENCE_MODE:
+            raise ValueError('unsupported citation reference mode')
+        response = stamp_reference(response, ordinal)
     if presentation_mode is None:
         return bounded_response(response, cap)
     if presentation_mode != 'single-source-v1':
@@ -205,7 +210,7 @@ def validate_provider_identity(body, receipt, expected_models):
 class NativeBroker:
     """Serve only the frozen native tool roster, retaining full native onboarding."""
     def __init__(self, client, record, allowed_tools, observed_product=None, source_scope=None,
-                 presentation_mode=None):
+                 presentation_mode=None, citation_reference_mode=None):
         if not allowed_tools or len(set(allowed_tools)) != len(allowed_tools):
             raise ValueError('unique nonempty native allowlist required')
         self.client, self.record, self.allowed = client, record, set(allowed_tools)
@@ -218,6 +223,11 @@ class NativeBroker:
         if presentation_mode is not None and source_scope is None:
             raise ValueError('single-source presentation requires validated source scope')
         self.presentation_mode = presentation_mode
+        if citation_reference_mode not in (None, 'broker-ordinal-v1'):
+            raise ValueError('unsupported citation reference mode')
+        if citation_reference_mode is not None and source_scope is None:
+            raise ValueError('citation references require validated source scope')
+        self.citation_reference_mode = citation_reference_mode
         if source_scope is not None and source_scope.allowed != self.allowed:
             raise ValueError('scope policy and native allowlist differ')
         self.last_response_sha256 = None
@@ -319,13 +329,19 @@ class NativeBroker:
                     'registered_nodes': len(self.source_scope.nodes), 'registered_cursors': len(self.source_scope.cursors)}
             # Full native response remains in raw evidence. The entire model-visible
             # envelope (including JSON-RPC/MCP wrappers) is subject to the display cap.
-            response = present_response(response, self.display_cap, self.presentation_mode)
+            reference_mode = self.citation_reference_mode if policy_receipt and policy_receipt['accepted'] else None
+            response = present_response(response, self.display_cap, self.presentation_mode,
+                                        reference_mode, self.last_ordinal)
             raw = canonical(response)
             if policy_receipt is None:
                 self.record.display(raw)
             else:
                 if self.presentation_mode is not None:
                     policy_receipt['presentation_mode'] = self.presentation_mode
+                if self.citation_reference_mode is not None:
+                    policy_receipt['citation_reference_mode'] = self.citation_reference_mode
+                    if policy_receipt['accepted']:
+                        policy_receipt['presentation_id'] = 'display-' + str(self.last_ordinal)
                 policy_receipt['display_sha256'] = digest(raw)
                 self.record.display(raw, scope_policy=policy_receipt)
             return response
@@ -432,6 +448,16 @@ def validate_execution_config(root, config):
         if 'source_scope_policy' not in frozen:
             raise ValueError('single-source presentation requires frozen source scope')
         config['_presentation_mode'] = presentation_mode
+    config.pop('_citation_reference_mode', None)
+    citation_reference_mode = frozen.get('citation_reference_mode')
+    if (config.get('citation_reference_mode') != citation_reference_mode or
+            citation_reference_mode not in (None, 'broker-ordinal-v1')):
+        raise ValueError('citation reference mode differs from freeze or is unsupported')
+    if citation_reference_mode is not None:
+        if 'source_scope_policy' not in frozen:
+            raise ValueError('citation references require frozen source scope')
+        config['_citation_reference_mode'] = citation_reference_mode
+    if presentation_mode is not None or citation_reference_mode is not None:
         runner_names.append('solver_workflow.py')
     config.pop('_source_scope', None)
     if 'source_scope_policy' in frozen or 'source_scope_policy' in config:
@@ -740,7 +766,8 @@ def main():
                               record, config['enabled_tools'],
                               config.get('_observed_identities', {}).get('product'),
                               source_scope=config.get('_source_scope'),
-                              presentation_mode=config.get('_presentation_mode'))
+                              presentation_mode=config.get('_presentation_mode'),
+                              citation_reference_mode=config.get('_citation_reference_mode'))
         broker.display_cap = config['budgets']['display_bytes']
         try:
             broker.onboard()

@@ -160,6 +160,9 @@ def freeze_gate(root, manifest):
     evidence(manifest.get('auditor'), 'prehashed auditor')
     if manifest.get('source_scope_policy') is not None:
         evidence(manifest.get('source_scope_review'), 'source scope review')
+    if manifest.get('citation_reference_mode') is not None:
+        require(manifest['citation_reference_mode'] == 'broker-ordinal-v1', 'unsupported citation reference mode')
+        require(manifest.get('source_scope_policy') is not None, 'citation references require source scope policy')
     return errors
 
 
@@ -333,6 +336,11 @@ class RunRecord:
             if (mode not in (None, 'single-source-v1') or
                     (scope_policy or {}).get('presentation_mode') != mode):
                 raise ValueError('display presentation mode differs from freeze')
+            reference_mode = frozen.get('citation_reference_mode')
+            if (reference_mode is not None or (scope_policy or {}).get('citation_reference_mode') is not None or
+                    (scope_policy or {}).get('presentation_id') is not None):
+                from solver_workflow import validate_recorded_reference
+                validate_recorded_reference(raw, scope_policy or {}, reference_mode)
             if len(raw) > assignment['budgets']['display_bytes']:
                 raise ValueError('complete display envelope exceeds budget')
             ref = self._blob(state, 'display', raw)
@@ -477,6 +485,11 @@ def audit(root, assignment):
                     if (frozen.get('presentation_mode') not in (None, 'single-source-v1') or
                             decision.get('presentation_mode') != frozen.get('presentation_mode')):
                         raise ValueError('display presentation mode differs from freeze')
+                    reference_mode = frozen.get('citation_reference_mode')
+                    if (reference_mode is not None or decision.get('citation_reference_mode') is not None or
+                            decision.get('presentation_id') is not None):
+                        from solver_workflow import validate_recorded_reference
+                        validate_recorded_reference(display, decision, reference_mode)
                     if (decision.get('schema') != 'native-scope-decision-v1' or
                             scope_policy_sha256 is None or decision.get('policy_sha256') != scope_policy_sha256 or
                             type(decision.get('accepted')) is not bool or

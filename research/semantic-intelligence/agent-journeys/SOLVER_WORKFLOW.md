@@ -40,12 +40,67 @@ paths were found or that the explanation is correct.
 
 Each claim has `id`, `text`, `source_role` (`interface`, `implementation`, or
 `other`) and `citations`, or an `unresolved_reason`. Each citation binds
+either `presentation_id` from an opt-in broker notice or an independently known
 `display_sha256` (SHA-256 of the exact presentation envelope bytes), `repo`, `path`,
 `blob_sha`, `start_line`, `end_line`, and `source_role`. Line ranges are inclusive.
 Keep interface declarations and implementation bodies in separate claims and
 perform narrow declaration reads before labeling their roles. The checker
 compares role labels for consistency; it does **not** classify source semantics
 or detect two matching but mistaken role labels.
+
+## Solver-visible citation references
+
+For new runs, set `citation_reference_mode="broker-ordinal-v1"` in both the freeze
+and execution config. This option requires the existing validated frozen
+`source_scope_policy`. Freeze the exact SHA-256 of `solver_workflow.py` in the
+`runners` map even when `presentation_mode` is absent. Reference and compact
+presentation modes are independent; absent reference mode preserves prior
+presentation bytes. Existing exact-hash citations remain accepted.
+
+Prepare the opt-in instructions with:
+
+```sh
+python3 -B solver_workflow.py prepare --request request.txt --inventory inventory.json \
+  --citation-reference-mode broker-ordinal-v1 > plan.json
+```
+
+Each scope-accepted tool reply gets an outer
+`_meta["dev.moedex/presentation-reference"]` object such as
+`{"mode":"broker-ordinal-v1","id":"display-4"}` and a short text notice exposing
+that ID. The ID uses the native attempt ordinal within this assignment, including
+prior onboarding or denied attempts. Copy the visible ID into the claim's
+`presentation_id`. The solver does not need to reconstruct or hash invisible
+JSON-RPC/MCP wrappers. The compact display's `validated_envelope_sha256` identifies
+an intermediate envelope and is **not** the final recorded presentation hash.
+
+The offline checker resolves IDs only from the supplied exact presentation
+envelopes. `presentation_hashes` reports ID-to-exact-byte-hash mappings, and
+`resolved_citations` reports the hash used for each mechanically valid citation.
+The original answer is left intact. Identical byte duplicates are permitted;
+the same ID attached to distinct byte hashes is ambiguous and fails the check.
+When a citation includes both locators, they must resolve to the same hash.
+Unknown IDs, malformed reference metadata, wrong source identity, and ranges
+outside complete visible lines fail closed. Scope-denied/error replies and
+unparsed prefix fallbacks provide no reference-based source credit.
+
+The reference notice is stamped after scope acceptance and before display
+capping. It appears in both legacy and compact text channels when the parsed
+reply fits. The complete envelope still obeys its original display cap; adding
+the notice may reduce available source space. An oversized legacy envelope can
+become an unparsed prefix with no citeable ID or source; request a narrower range.
+The scope decision records the reference mode and accepted ordinal ID, and
+recording preflight and audit check them against the freeze and presentation.
+Public replay uses `present_response(response, cap, presentation_mode,
+citation_reference_mode, ordinal)` only after scope acceptance. Denied/error
+replay passes no reference mode, while its receipt retains the frozen mode with
+no ID. No reference mode retains the original replay signature and behavior.
+
+Reference IDs do not authenticate arbitrary `--display` files. Those files are
+still assumed to be exact client presentation bytes supplied by a trusted caller.
+Use `--record-root` for audited recorded presentations. Neither path establishes
+relay completion, model consumption, or semantic support. This is a prospective
+generic usability option; historical frozen workflows and pilot evidence are
+unchanged, and these synthetic validations provide no comparison-score evidence.
 
 For recorded broker presentations, use the audited recording:
 
@@ -123,5 +178,5 @@ answers. Keep the mode opt-in until a separately authorized client compatibility
 check establishes that behavior. No SDK or model configuration changes are made.
 
 ```sh
-python3 -B -m unittest test_solver_workflow test_native_scope test_isolated_solver
+python3 -B -m unittest test_citation_references test_solver_workflow test_native_scope test_isolated_solver
 ```
