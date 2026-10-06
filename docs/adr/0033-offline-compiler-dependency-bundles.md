@@ -65,3 +65,22 @@ Tests cover deterministic packing, bounds, destination ownership, file and
 manifest tampering, private-cache forwarding, context identity and round trips.
 The selected real Roslyn project's acquisition and acceptance evidence is tracked
 in [Roslyn compiler acceptance](../../research/semantic-intelligence/ROSLYN-COMPILER-ACCEPTANCE.md).
+
+The explicit `--restore-tool-cache-metadata` option permits path-dependent NuGet
+JSON in a frozen `.tools/<package>/<version>/<framework>` directory to change
+during restore and reference preparation. Only existing `project.assets.json`
+and `<package>.nuget.cache` entries qualify; the exact matching package archive
+and nuspec must also be in the immutable bundle. Records must remain regular,
+nonexecutable JSON objects with the expected NuGet schema version, at most
+16 MiB each, within the original dependency byte budget. No other entries may
+change, appear or disappear. The default remains strict.
+
+The canonical bundle always verifies against its original manifest. The staged
+copy keeps a separate adopted map and is verified strictly after preparation
+and worker execution. A sibling `<output>.dependency-tool-cache.json` receipt
+records both phases and the exact before/after paths, sizes and SHA-256 values,
+together with the original bundle digest and completion or failure status.
+Failed captures retain this receipt while removing their temporary workspace;
+success summaries include its path and digest. Treat it as capture evidence
+when recording or moving artifacts. The option changes no source pins, package
+payload checks, toolchain selection or process output limits.

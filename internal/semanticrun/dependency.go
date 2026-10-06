@@ -105,6 +105,8 @@ type DependencyBundle struct {
 	Root             string
 	canonical, owned string
 	files            map[string]DependencyFile
+	stagedFiles      map[string]DependencyFile
+	maxBytes         int64
 }
 
 // StageDependencyBundle creates destination exclusively. Its parent must exist.
@@ -144,7 +146,7 @@ func StageDependencyBundle(ctx context.Context, o DependencyBundleOptions, desti
 	if err != nil || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))) {
 		return nil, fmt.Errorf("semanticrun: dependency destination must be outside bundle")
 	}
-	b := &DependencyBundle{Root: destination, canonical: canonical, files: make(map[string]DependencyFile, len(o.Files))}
+	b := &DependencyBundle{Root: destination, canonical: canonical, files: make(map[string]DependencyFile, len(o.Files)), maxBytes: o.MaxBytes}
 	var total int64
 	for _, f := range o.Files {
 		digest, e := hex.DecodeString(f.SHA256)
@@ -186,6 +188,7 @@ func StageDependencyBundle(ctx context.Context, o DependencyBundleOptions, desti
 			return nil, err
 		}
 	}
+	b.stagedFiles = cloneDependencies(b.files)
 	if err = b.Verify(ctx); err != nil {
 		return nil, err
 	}
@@ -245,6 +248,10 @@ func copyDependency(ctx context.Context, source *os.Root, entry DependencyFile, 
 }
 
 func (b *DependencyBundle) verifyDirectory(ctx context.Context, directory string) error {
+	return b.verifyFiles(ctx, directory, b.files)
+}
+
+func (b *DependencyBundle) verifyFiles(ctx context.Context, directory string, files map[string]DependencyFile) error {
 	r, err := os.OpenRoot(directory)
 	if err != nil {
 		return err
@@ -269,7 +276,7 @@ func (b *DependencyBundle) verifyDirectory(ctx context.Context, directory string
 		if !d.Type().IsRegular() {
 			return fmt.Errorf("semanticrun: nonregular dependency %q", name)
 		}
-		entry, ok := b.files[name]
+		entry, ok := files[name]
 		if !ok {
 			return fmt.Errorf("semanticrun: unlisted dependency %q", name)
 		}
@@ -299,7 +306,7 @@ func (b *DependencyBundle) verifyDirectory(ctx context.Context, directory string
 	if err != nil {
 		return err
 	}
-	if seen != len(b.files) {
+	if seen != len(files) {
 		return fmt.Errorf("semanticrun: missing dependency files")
 	}
 	return nil
@@ -314,7 +321,7 @@ func (b *DependencyBundle) Verify(ctx context.Context) error {
 	if err := b.verifyDirectory(ctx, b.canonical); err != nil {
 		return err
 	}
-	return b.verifyDirectory(ctx, b.owned)
+	return b.verifyFiles(ctx, b.owned, b.stagedFiles)
 }
 
 func (b *DependencyBundle) Close() error {

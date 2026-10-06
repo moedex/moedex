@@ -158,6 +158,8 @@ def freeze_gate(root, manifest):
         except (ValueError, OSError, TypeError):
             errors.append('runtime dependency closure manifest invalid')
     evidence(manifest.get('auditor'), 'prehashed auditor')
+    if manifest.get('source_scope_policy') is not None:
+        evidence(manifest.get('source_scope_review'), 'source scope review')
     return errors
 
 
@@ -323,13 +325,16 @@ class RunRecord:
             self._complete_record(assignment, event, reason)
             return raw_ref
 
-    def display(self, raw):
+    def display(self, raw, scope_policy=None):
         with self._locked() as (assignment, state, elapsed):
             self._active(assignment, state, elapsed)
             if len(raw) > assignment['budgets']['display_bytes']:
                 raise ValueError('complete display envelope exceeds budget')
             ref = self._blob(state, 'display', raw)
-            event = self._event(state, elapsed, 'display', display=ref)
+            values = {'display': ref}
+            if scope_policy is not None:
+                values['scope_policy'] = self._blob(state, 'scope-policy', canonical(scope_policy) + b'\n')
+            event = self._event(state, elapsed, 'display', **values)
             if self._complete_record(assignment, event):
                 raise RuntimeError('assignment deadline exceeded while recording display')
             return ref
@@ -399,6 +404,10 @@ def audit(root, assignment):
         if value['schema'] != 'native-run-record-v1' or value['assignment'] != assignment:
             raise ValueError('assignment identity mismatch')
         frozen = json.loads(read_ref(root, value['freeze']))
+        scope_policy_sha256 = None
+        if frozen.get('source_scope_policy') is not None:
+            read_ref(root, frozen['source_scope_policy'])
+            scope_policy_sha256 = frozen['source_scope_policy']['sha256']
         result['eligibility_blockers'] = freeze_gate(root, frozen)
         if value['launch_blockers'] != result['eligibility_blockers']:
             raise ValueError('launch gate record mismatch')
@@ -407,7 +416,7 @@ def audit(root, assignment):
         last_hash = digest(assignment_file.read_bytes())
         # Assignment hash anchors the event chain; empty ledger retains it too.
         result['last_event_sha256'] = last_hash
-        used = set()
+        used, responses = set(), {}
         for number, path in enumerate(sorted((directory / 'events').iterdir()), 1):
             if path.name != '%06d.json' % number:
                 raise ValueError('event sequence missing or unexpected file')
@@ -444,6 +453,7 @@ def audit(root, assignment):
                 if result['pending_call'] != event['ordinal']:
                     raise ValueError('response without pending attempt')
                 body, receipt = get('response'), json.loads(get('receipt'))
+                responses[event['ordinal']] = digest(body)
                 if type(receipt.get('body_bytes_observed')) is not int or receipt['body_bytes_observed'] != len(body) or type(receipt.get('transport_complete')) is not bool:
                     raise ValueError('response receipt mismatch')
                 result['response_bytes_observed'] += len(body)
@@ -455,7 +465,20 @@ def audit(root, assignment):
             elif kind == 'display':
                 if result['pending_call'] is not None:
                     raise ValueError('display during pending call')
-                result['max_display_bytes'] = max(result['max_display_bytes'], len(get('display')))
+                display = get('display')
+                result['max_display_bytes'] = max(result['max_display_bytes'], len(display))
+                if 'scope_policy' in event:
+                    decision = json.loads(get('scope_policy'))
+                    if (decision.get('schema') != 'native-scope-decision-v1' or
+                            scope_policy_sha256 is None or decision.get('policy_sha256') != scope_policy_sha256 or
+                            type(decision.get('accepted')) is not bool or
+                            type(decision.get('native_dispatched')) is not bool or
+                            decision.get('native_response_sha256') != responses.get(decision.get('ordinal')) or
+                            decision.get('display_sha256') != digest(display)):
+                        raise ValueError('scope policy decision binding mismatch')
+                    result.setdefault('scope_policy_decisions', []).append(decision)
+                elif frozen.get('source_scope_policy') is not None:
+                    raise ValueError('scoped native display missing policy decision')
                 result['pending_record'] = {'kind': kind, 'sequence': number, 'stop_reason': None}
             elif kind in ('attempt_commit', 'response_commit', 'display_commit'):
                 pending = result['pending_record']

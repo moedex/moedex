@@ -24,17 +24,19 @@ type Options struct {
 	Dotnet, Worker, SDKPath, Workspace, Output           string
 	RestoreOffline                                       bool
 	RestoreStandardEvaluation                            bool
+	RestoreToolCacheMetadata                             bool
 	Timeout                                              time.Duration
 }
 
 type Result struct {
-	WorkerByteLimit                       int64
-	Artifact                              *semantic.Artifact
-	Path, Workspace, Repo, Commit, Origin string
-	ProjectID                             int64
-	DependencyBundleSHA256                string
-	RestoreStandardEvaluation             bool
-	DependencyByteLimit                   int64
+	WorkerByteLimit                          int64
+	Artifact                                 *semantic.Artifact
+	Path, Workspace, Repo, Commit, Origin    string
+	ProjectID                                int64
+	DependencyBundleSHA256                   string
+	RestoreStandardEvaluation                bool
+	DependencyByteLimit                      int64
+	ToolCacheReceipt, ToolCacheReceiptSHA256 string
 }
 
 // Capture executes trusted MSBuild code in a private, exact-commit projection.
@@ -91,7 +93,11 @@ func Capture(ctx context.Context, o Options) (result Result, err error) {
 	if strings.ContainsAny(o.Workspace, ";,\r\n\x00") {
 		return result, fmt.Errorf("semantic capture: workspace contains MSBuild property separators")
 	}
-	for _, p := range []string{o.Output, o.Workspace} {
+	destinations := []string{o.Output, o.Workspace}
+	if o.RestoreToolCacheMetadata {
+		destinations = append(destinations, o.Output+".dependency-tool-cache.json")
+	}
+	for _, p := range destinations {
 		if _, e := os.Lstat(p); !os.IsNotExist(e) {
 			return result, fmt.Errorf("semantic capture: destination must be new: %s", p)
 		}
@@ -163,6 +169,32 @@ func Capture(ctx context.Context, o Options) (result Result, err error) {
 	var bundle *DependencyBundle
 	var bundleSHA string
 	var manifestPath string
+	var cacheReceiptPath, cacheReceiptSHA string
+	cacheReceipt := toolCacheReceipt{Schema: "moedex.nuget-tool-cache-v1", Status: "started", Observations: []ToolCacheObservation{}}
+	writeCacheReceipt := func() error {
+		if cacheReceiptPath == "" {
+			return nil
+		}
+		raw, e := json.MarshalIndent(cacheReceipt, "", "  ")
+		if e != nil {
+			return e
+		}
+		raw = append(raw, '\n')
+		if e = os.WriteFile(cacheReceiptPath, raw, 0600); e != nil {
+			return e
+		}
+		cacheReceiptSHA = sha(raw)
+		return nil
+	}
+	defer func() {
+		if err != nil && cacheReceiptPath != "" {
+			cacheReceipt.Status = "failed"
+			cacheReceipt.Error = err.Error()
+			if e := writeCacheReceipt(); e != nil {
+				err = fmt.Errorf("%w; tool cache failure receipt: %v", err, e)
+			}
+		}
+	}()
 	if o.DependencyBundle != "" {
 		manifestPath = filepath.Join(o.DependencyBundle, "manifest.json")
 		manifest, raw, e := readCaptureDependencyManifest(manifestPath)
@@ -177,6 +209,36 @@ func Capture(ctx context.Context, o Options) (result Result, err error) {
 		if err = os.WriteFile(filepath.Join(o.Workspace, "dependency-manifest.json"), raw, 0600); err != nil {
 			return result, err
 		}
+	}
+	if o.RestoreToolCacheMetadata {
+		if bundle == nil {
+			return result, fmt.Errorf("semantic capture: tool cache metadata requires dependency bundle")
+		}
+		cacheReceiptPath = o.Output + ".dependency-tool-cache.json"
+		f, e := os.OpenFile(cacheReceiptPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+		if e != nil {
+			cacheReceiptPath = ""
+			return result, e
+		}
+		if e = f.Close(); e != nil {
+			return result, e
+		}
+		cacheReceipt.OriginalBundleSHA256 = bundleSHA
+		if err = writeCacheReceipt(); err != nil {
+			return result, err
+		}
+	}
+	adoptCache := func(phase string) error {
+		if !o.RestoreToolCacheMetadata {
+			return nil
+		}
+		observations, e := bundle.adoptToolCache(ctx, phase)
+		cacheReceipt.Observations = append(cacheReceipt.Observations, observations...)
+		if e != nil {
+			cacheReceipt.ValidationErrors = append(cacheReceipt.ValidationErrors, phase+": "+e.Error())
+			return e
+		}
+		return writeCacheReceipt()
 	}
 	verifyBundle := func() error {
 		if bundle == nil {
@@ -238,7 +300,7 @@ func Capture(ctx context.Context, o Options) (result Result, err error) {
 	// Restore the declared project graph without a global TargetFramework: that
 	// would force the entry framework onto netstandard analyzer projects too.
 	// Reference preparation and extraction still select the requested entry TFM.
-	restore := []string{filepath.Join(o.SDKPath, "MSBuild.dll"), "-target:Restore", filepath.Join(p.Root, filepath.FromSlash(o.Project)), "-nologo", "-p:RestoreConfigFile=" + config, "-p:RestorePackagesPath=" + filepath.Join(o.Workspace, "packages"), "-p:RestoreSources=" + restoreSource, "-p:RestoreDisableParallel=true", "-p:NuGetAudit=false", "-p:Configuration=" + o.Configuration}
+	restore := []string{filepath.Join(o.SDKPath, "MSBuild.dll"), "-target:Restore", filepath.Join(p.Root, filepath.FromSlash(o.Project)), "-nologo", "-verbosity:minimal", "-p:RestoreConfigFile=" + config, "-p:RestorePackagesPath=" + filepath.Join(o.Workspace, "packages"), "-p:RestoreSources=" + restoreSource, "-p:RestoreDisableParallel=true", "-p:NuGetAudit=false", "-p:Configuration=" + o.Configuration}
 	env = append(env, "MSBuildSDKsPath="+filepath.Join(o.SDKPath, "Sdks"))
 	if o.RestoreStandardEvaluation {
 		restore = append(restore, "-p:RestoreUseStaticGraphEvaluation=false")
@@ -246,9 +308,13 @@ func Capture(ctx context.Context, o Options) (result Result, err error) {
 	if err = verifyBundle(); err != nil {
 		return result, err
 	}
-	restored, err := RunProcess(ctx, ProcessSpec{Executable: pinnedDotnet, Args: restore, Dir: p.Root, Env: env, StdoutLimit: 1 << 20, StderrLimit: 64 << 10})
-	if err != nil {
-		return result, captureProcessError("offline restore", err, append(restored.Stdout, restored.Stderr...))
+	restored, restoreErr := RunProcess(ctx, ProcessSpec{Executable: pinnedDotnet, Args: restore, Dir: p.Root, Env: env, StdoutLimit: 1 << 20, StderrLimit: 64 << 10})
+	cacheErr := adoptCache("restore")
+	if restoreErr != nil {
+		return result, captureProcessError("offline restore", restoreErr, append(restored.Stdout, restored.Stderr...))
+	}
+	if cacheErr != nil {
+		return result, cacheErr
 	}
 	if err = p.Verify(ctx); err != nil {
 		return result, err
@@ -260,10 +326,14 @@ func Capture(ctx context.Context, o Options) (result Result, err error) {
 	// Let the selected SDK resolve/build references in the private projection,
 	// including their own framework negotiation and custom output paths. Never
 	// borrow bin/obj files from the caller's checkout or guess analyzer paths.
-	prepare := []string{filepath.Join(o.SDKPath, "MSBuild.dll"), "-target:ResolveReferences", filepath.Join(p.Root, filepath.FromSlash(o.Project)), "-nologo", "-maxcpucount:1", "-nodeReuse:false", "-p:BuildProjectReferences=true", "-p:UseSharedCompilation=false", "-p:TargetFramework=" + o.Framework, "-p:Configuration=" + o.Configuration, "-p:RestoreConfigFile=" + config, "-p:RestorePackagesPath=" + filepath.Join(o.Workspace, "packages"), "-p:RestoreSources=" + restoreSource, "-p:NuGetAudit=false"}
-	prepared, err := RunProcess(ctx, ProcessSpec{Executable: pinnedDotnet, Args: prepare, Dir: p.Root, Env: env, StdoutLimit: 1 << 20, StderrLimit: 64 << 10})
-	if err != nil {
-		return result, captureProcessError("project reference preparation", err, append(prepared.Stdout, prepared.Stderr...))
+	prepare := []string{filepath.Join(o.SDKPath, "MSBuild.dll"), "-target:ResolveReferences", filepath.Join(p.Root, filepath.FromSlash(o.Project)), "-nologo", "-verbosity:minimal", "-maxcpucount:1", "-nodeReuse:false", "-p:BuildProjectReferences=true", "-p:UseSharedCompilation=false", "-p:TargetFramework=" + o.Framework, "-p:Configuration=" + o.Configuration, "-p:RestoreConfigFile=" + config, "-p:RestorePackagesPath=" + filepath.Join(o.Workspace, "packages"), "-p:RestoreSources=" + restoreSource, "-p:NuGetAudit=false"}
+	prepared, prepareErr := RunProcess(ctx, ProcessSpec{Executable: pinnedDotnet, Args: prepare, Dir: p.Root, Env: env, StdoutLimit: 1 << 20, StderrLimit: 64 << 10})
+	cacheErr = adoptCache("resolve-references")
+	if prepareErr != nil {
+		return result, captureProcessError("project reference preparation", prepareErr, append(prepared.Stdout, prepared.Stderr...))
+	}
+	if cacheErr != nil {
+		return result, cacheErr
 	}
 	if err = p.Verify(ctx); err != nil {
 		return result, err
@@ -295,10 +365,14 @@ func Capture(ctx context.Context, o Options) (result Result, err error) {
 	if err = verifyBundle(); err != nil {
 		return result, err
 	}
+	cacheReceipt.Status = "complete"
+	if err = writeCacheReceipt(); err != nil {
+		return result, err
+	}
 	if err = semantic.Write(o.Output, a); err != nil {
 		return result, err
 	}
-	return Result{WorkerByteLimit: workerLimit, Artifact: a, Path: o.Output, Workspace: p.Root, Repo: p.Repo, Commit: p.Commit, Origin: p.Origin, ProjectID: p.ProjectID, DependencyBundleSHA256: bundleSHA, RestoreStandardEvaluation: o.RestoreStandardEvaluation, DependencyByteLimit: dependencyLimit}, nil
+	return Result{WorkerByteLimit: workerLimit, Artifact: a, Path: o.Output, Workspace: p.Root, Repo: p.Repo, Commit: p.Commit, Origin: p.Origin, ProjectID: p.ProjectID, DependencyBundleSHA256: bundleSHA, RestoreStandardEvaluation: o.RestoreStandardEvaluation, DependencyByteLimit: dependencyLimit, ToolCacheReceipt: cacheReceiptPath, ToolCacheReceiptSHA256: cacheReceiptSHA}, nil
 }
 
 // Worker stdout contains source records, so failures report only its diagnostic

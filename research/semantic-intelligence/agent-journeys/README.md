@@ -1,5 +1,20 @@
 # Logged native MCP journeys
 
+New isolated freezes can opt into [provider resource stops](PROVIDER_RESOURCES.md),
+with exact original/upstream capture and independent raw-ledger replay.
+
+Manual launchers can use the [execution guard](EXECUTION_GUARD.md) for prospective
+schedule wall-time, retained-archive and free-space stopping. It preserves a
+single deadline across startup and waves and reports fixed safe failure reasons.
+
+The [owned runtime](OWNED_RUNTIME.md) starts one daemon behind an unreaped
+guardian, bounds health probes, and retains separate shutdown evidence.
+
+The [owned wave driver](OWNED_WAVES.md) combines that guard with a ready
+launcher-owned runtime, retains actual results for a fixed schedule, and stops
+owned runner descendants before advancing to another wave. Driver coverage and
+runtime shutdown remain separately checked receipt claims.
+
 For new protocols, run native setup **before assignment**, in the same network
 permission context the solver will use. This checks loopback access, negotiates
 Moedex's stateless compatibility protocol, sends the initialized notification,
@@ -129,3 +144,10 @@ Assignments are capped at one hour. Direct bridge callers may specify a shorter
 positive integer `exchange_timeout_ms`. A response completed after assignment
 expiry is retained locally but is never sent back to the solver. Rebuild the
 immutable solver image to apply bridge changes to future runs.
+
+Future isolated comparisons can enable a [frozen native source scope](NATIVE_SCOPE.md)
+to admit only the complete shared background corpus at approved pins. The broker
+records recoverable provenance denials, raw response costs and assignment-local
+selector state before showing native structured results to the solver.
+
+See [OWNED_CONTAINERS.md](OWNED_CONTAINERS.md) for exact captured-container cleanup after controller termination.

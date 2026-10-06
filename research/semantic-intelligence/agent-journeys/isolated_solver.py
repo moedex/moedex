@@ -26,6 +26,8 @@ from native_http import NativeHTTP
 from journey_clock import monotonic
 from run_record import RunRecord, _new_file, canonical, digest, read_ref, reference
 import provenance
+from native_scope import NativeScope, ScopeViolation
+from provider_resources import ProviderResources, validate_policy as validate_provider_resources
 
 
 IMAGE = re.compile(r'^sha256:[0-9a-f]{64}$')
@@ -190,22 +192,29 @@ def validate_provider_identity(body, receipt, expected_models):
 
 class NativeBroker:
     """Serve only the frozen native tool roster, retaining full native onboarding."""
-    def __init__(self, client, record, allowed_tools, observed_product=None):
+    def __init__(self, client, record, allowed_tools, observed_product=None, source_scope=None):
         if not allowed_tools or len(set(allowed_tools)) != len(allowed_tools):
             raise ValueError('unique nonempty native allowlist required')
         self.client, self.record, self.allowed = client, record, set(allowed_tools)
         self.catalog = None
         self.display_cap = 8192
         self.observed_product = observed_product
+        self.source_scope = source_scope
+        if source_scope is not None and source_scope.allowed != self.allowed:
+            raise ValueError('scope policy and native allowlist differ')
+        self.last_response_sha256 = None
+        self.last_ordinal = None
 
     def exchange(self, request):
         request_bytes = json.dumps(request, separators=(',', ':')).encode()
         ordinal = self.record.begin_call(request_bytes)
+        self.last_ordinal = ordinal
         self.client.timeout = min(self.client.timeout, self.record.remaining_seconds())
         returned, body, receipt = self.client.exchange(request)
         if returned != request_bytes:
             raise ValueError('native transport changed request bytes')
         self.record.finish_call(ordinal, body, receipt)
+        self.last_response_sha256 = digest(body)
         if request.get('method') == 'notifications/initialized':
             if not receipt['transport_complete'] or receipt['status'] not in (200, 202, 204):
                 raise ValueError('native notification failed')
@@ -230,6 +239,8 @@ class NativeBroker:
                     digest(canonical(catalog['result'])) != self.observed_product['catalog_sha256']):
                 raise ValueError('native identity differs from frozen observation')
         self.catalog = [t for t in tools if t['name'] in self.allowed]
+        if self.source_scope is not None:
+            self.catalog = self.source_scope.catalog(self.catalog)
         return response['result']
 
     def handle(self, request):
@@ -246,15 +257,57 @@ class NativeBroker:
             result = {'tools': self.catalog}
         elif method == 'tools/call':
             params = request.get('params', {})
-            if params.get('name') not in self.allowed:
+            if self.source_scope is None and params.get('name') not in self.allowed:
                 raise ValueError('native tool outside frozen allowlist')
-            response = self.exchange({'jsonrpc': '2.0', 'id': request_id,
-                                      'method': 'tools/call', 'params': params})
+            native_request = {'jsonrpc': '2.0', 'id': request_id, 'method': 'tools/call', 'params': params}
+            policy_receipt = None
+            if self.source_scope is None:
+                response = self.exchange(native_request)
+            else:
+                context, reason = None, None
+                try:
+                    context = self.source_scope.prepare(params)
+                except (ScopeViolation, ValueError, TypeError, KeyError):
+                    reason = 'request_provenance_not_admitted'
+                if reason is not None:
+                    # Charge the denied intent as one attempt, with zero native
+                    # response bytes. No product request is dispatched.
+                    self.last_ordinal = self.record.begin_call(json.dumps(native_request, separators=(',', ':')).encode())
+                    self.record.finish_call(self.last_ordinal, b'', {
+                        'transport_complete': True, 'body_bytes_observed': 0,
+                        'native_dispatched': False, 'scope_policy_blocked': True})
+                    self.last_response_sha256 = digest(b'')
+                    response = self.source_scope.error(request_id)
+                else:
+                    try:
+                        response = self.exchange(native_request)
+                    except (ValueError, TypeError, KeyError):
+                        reason = 'response_provenance_not_admitted'
+                        response = self.source_scope.error(request_id)
+                    # A late/crossing response is already retained and charged;
+                    # do not validate/register selectors or display it late.
+                    self.record.remaining_seconds()
+                    if reason is None:
+                        try:
+                            response = self.source_scope.accept(response, context)
+                        except (ScopeViolation, ValueError, TypeError, KeyError):
+                            reason = 'response_provenance_not_admitted'
+                            response = self.source_scope.error(request_id)
+                policy_receipt = {'schema': 'native-scope-decision-v1',
+                    'policy_sha256': self.source_scope.policy_sha256,
+                    'accepted': reason is None, 'reason': reason, 'native_dispatched': context is not None,
+                    'ordinal': self.last_ordinal, 'native_response_sha256': self.last_response_sha256,
+                    'graph_revision': self.source_scope.revision,
+                    'registered_nodes': len(self.source_scope.nodes), 'registered_cursors': len(self.source_scope.cursors)}
             # Full native response remains in raw evidence. The entire model-visible
             # envelope (including JSON-RPC/MCP wrappers) is subject to the display cap.
             response = bounded_response(response, self.display_cap)
             raw = canonical(response)
-            self.record.display(raw)
+            if policy_receipt is None:
+                self.record.display(raw)
+            else:
+                policy_receipt['display_sha256'] = digest(raw)
+                self.record.display(raw, scope_policy=policy_receipt)
             return response
         elif method in ('resources/list', 'resources/templates/list', 'prompts/list'):
             result = {('resources' if method == 'resources/list' else
@@ -335,11 +388,39 @@ def validate_execution_config(root, config):
         raise ValueError('execution configuration differs from frozen task, budgets, model, image or native roster')
     fields = frozen['model']['settings'].get('provider_fields', {})
     expected = {'model', 'reasoning', 'tool_choice', 'parallel_tool_calls', 'text', 'store', 'stream', 'include'}
+    resources = frozen.get('provider_resources')
+    config.pop('_provider_resources', None)
+    if 'provider_resources' in config and config['provider_resources'] != resources:
+        raise ValueError('provider resource configuration differs from frozen policy')
+    if resources is not None:
+        resources = validate_provider_resources(resources)
+        expected.add('max_output_tokens')
+        if type(fields.get('max_output_tokens')) is not int or fields['max_output_tokens'] != resources['max_output_tokens']:
+            raise ValueError('frozen provider output limit differs from resource policy')
+        config['_provider_resources'] = resources
     if set(fields) != expected or fields['model'] != config['model'] or fields['reasoning'].get('effort') != config['reasoning_effort']:
         raise ValueError('complete frozen provider request settings required')
     config['provider_fields'] = fields
     runner_names = ['isolated_solver.py', 'run_record.py', 'native_http.py', 'journey_clock.py',
                     'contract.py', 'compare.py']
+    config.pop('_source_scope', None)
+    if 'source_scope_policy' in frozen or 'source_scope_policy' in config:
+        if config.get('source_scope_policy') != frozen.get('source_scope_policy'):
+            raise ValueError('execution scope policy differs from freeze')
+        scope_policy = json.loads(read_ref(root, frozen['source_scope_policy']))
+        compiler_inputs = ({name: read_ref(root, ref) for name, ref in scope_policy['compiler_admission'].items()
+                            if name != 'schema'} if 'compiler_admission' in scope_policy else None)
+        scope = NativeScope(scope_policy, policy_sha256=frozen['source_scope_policy']['sha256'],
+                            compiler_inputs=compiler_inputs)
+        sources = contract['corpus']['repositories'] if contract['schema'] == 'native-pair-v2' else [contract['corpus']]
+        pins = {row['repository']: row['commit'] for row in sources}
+        if (scope.allowed != set(config['enabled_tools']) or set(scope.projects) != set(pins) or
+                any(row['commit'] != pins[name] for name, row in scope.projects.items())):
+            raise ValueError('scope policy tools, background corpus roster or pins differ from contract')
+        config['_source_scope'] = scope
+        runner_names.append('native_scope.py')
+    if resources is not None:
+        runner_names.append('provider_resources.py')
     config.pop('_observed_identities', None)
     if provenance.mode(frozen) == 'observed-service-v1':
         blockers = provenance.validate(root, frozen, read_ref)
@@ -395,6 +476,11 @@ def run_container(config, directory, broker=None, record=None, probe=False):
     model correctness, or a verified immutable provider model revision.
     """
     capture = Capture(directory)
+    resources = None
+    if config.get('_provider_resources') is not None:
+        resources = ProviderResources(config['_provider_resources'],
+                                      emit=lambda event: capture.event({'channel': 'provider_resource', 'event': event}))
+        capture.retain('provider-resource-policy.json', canonical(resources.policy) + b'\n')
     command = container_command(config['image'])
     cidfile = capture.root / 'container.id'
     command[2:2] = ['--cidfile', str(cidfile)]
@@ -420,12 +506,22 @@ def run_container(config, directory, broker=None, record=None, probe=False):
         selector = selectors.DefaultSelector()
         selector.register(process.stdout, selectors.EVENT_READ)
         buffer = b''
+        reply_ordinal = 0
         def reply(message):
+            nonlocal reply_ordinal
             # A buffered provider response may finish after the bridge's
             # assignment deadline. Retain it, but never write a late reply.
             remaining_seconds()
-            process.stdin.write(canonical(message) + b'\n')
+            wire = canonical(message) + b'\n'
+            reply_ordinal += 1
+            binding = {'reply_ordinal': reply_ordinal, 'wire_sha256': digest(wire), 'wire_bytes': len(wire)}
+            # Persist the exact attempted relay bytes before writing. Missing
+            # commit means relay completion is unknown, never a proven nonrelay.
+            capture.event(dict(binding, channel='controller_reply', message=message))
+            if process.stdin.write(wire) != len(wire):
+                raise RuntimeError('incomplete controller relay write')
             process.stdin.flush()
+            capture.event(dict(binding, channel='controller_reply_commit'))
         try:
             start = {k: config[k] for k in ('model', 'reasoning_effort', 'prompt', 'enabled_tools')}
             start['timeout_ms'] = int(remaining_seconds() * 1000)
@@ -467,14 +563,20 @@ def run_container(config, directory, broker=None, record=None, probe=False):
                         raw, value = decode_message(message)
                         stem = capture.request(channel, raw)
                         if channel == 'provider':
+                            forwarded = raw
+                            if resources is not None:
+                                forwarded = resources.begin(stem, raw)
+                                capture.retain(stem + '.upstream-request.json', forwarded)
+                                value = json.loads(forwarded)
                             validate_provider_request(config, value)
                             if probe:
                                 body, receipt = probe_provider_response(config['model'], capture.ordinals['provider'])
                                 receipt['body_bytes_observed'] = len(body)
                             else:
                                 body, receipt = provider_exchange(os.environ[config['provider_url_env']],
-                                                                  os.environ[config['provider_token_env']], raw,
-                                                                  remaining_seconds())
+                                                                  os.environ[config['provider_token_env']], forwarded,
+                                                                  remaining_seconds(),
+                                                                  **({'cap': resources.transport_cap()} if resources is not None else {}))
                         else:
                             if probe:
                                 result = mock_mcp(value, config['enabled_tools'])
@@ -486,6 +588,8 @@ def run_container(config, directory, broker=None, record=None, probe=False):
                                        'transport_complete': True}
                         capture.retain(stem + '.response.raw', body)
                         capture.retain(stem + '.receipt.json', canonical(receipt) + b'\n')
+                        if channel == 'provider' and resources is not None:
+                            resources.finish(stem, body, receipt)
                         if channel == 'provider' and not probe and config.get('_observed_identities'):
                             validate_provider_identity(body, receipt,
                                                        config['_observed_identities']['model']['returned_models'])
@@ -558,6 +662,9 @@ def run_container(config, directory, broker=None, record=None, probe=False):
                 capture.event({'channel': 'cleanup_error', 'error_type': type(exc).__name__})
             finally:
                 signal.signal(signal.SIGTERM, previous_sigterm)
+                if resources is not None:
+                    resources.abort_pending()
+                    capture.retain('provider-resource-ledger.json', canonical(resources.summary()) + b'\n')
                 capture.finish(complete)
     return {'exit_code': exit_code, 'capture_complete': complete, 'probe': probe,
             'provider_requests': capture.ordinals.get('provider', 0),
@@ -601,7 +708,8 @@ def main():
         broker = NativeBroker(NativeHTTP(os.environ[config['native_url_env']],
                                         os.environ[config['native_token_env']] if config.get('native_token_env') else None),
                               record, config['enabled_tools'],
-                              config.get('_observed_identities', {}).get('product'))
+                              config.get('_observed_identities', {}).get('product'),
+                              source_scope=config.get('_source_scope'))
         broker.display_cap = config['budgets']['display_bytes']
         try:
             broker.onboard()
