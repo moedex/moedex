@@ -62,6 +62,14 @@ a fixed recoverable scope error without outside names, quoted arguments or
 native error prose. Late and budget-crossing replies cannot register selectors
 or be displayed.
 
+CodeGraph project discovery emits only approved URL and commit metadata. A row
+may name its recorded commit directly, or omit it when a cacheable, warning-free
+snapshot uniquely binds that exact project to its frozen commit. Explicit null,
+wrong or conflicting pins are rejected. This metadata projection does not mint
+selectors or update the assignment's source graph revision. Node-search `label`
+and string-encoded `exact` response filters must agree with the request, including
+the default `exact=false`; other provenance and tracked-file checks still apply.
+
 Every displayed native exchange has a hashed decision receipt bound to the
 policy file, response ordinal and raw hash, displayed bytes, revision and selector
 counts. Audits verify those bindings. Native Markdown is discarded and the

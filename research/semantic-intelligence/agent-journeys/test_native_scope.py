@@ -155,6 +155,86 @@ class ScopeTests(unittest.TestCase):
         with self.assertRaises(ns.ScopeViolation):
             self.accept(value,{'name':'codegraph_search','arguments':{'scope':'projects'}})
 
+    def test_metadata_missing_row_commit_uses_only_matching_snapshot_pin(self):
+        params = {'name': 'codegraph_search', 'arguments': {'scope': 'projects', 'namePattern': 'Example'}}
+        value = envelope(data={'projects': [{'repoUrl': 'https://gitlab.example.com/example/api',
+                                            'description': 'withheld', 'nodeId': 77}]})
+        visible = self.accept(value, params)['result']['structuredContent']
+        self.assertEqual(visible['result']['projects'], [{'project': 'example/api',
+            'repoUrl': 'https://gitlab.example.com/example/api', 'commitSha': 'a'*40}])
+        self.assertNotIn('withheld', json.dumps(visible))
+        self.assertFalse(self.scope.nodes); self.assertIsNone(self.scope.revision)
+        value['result']['structuredContent']['snapshot']['projects'][0]['project'] = 'example/api'
+        mirror(value)
+        self.accept(value, params)
+
+    def test_metadata_snapshot_fallback_rejects_unbound_and_conflicting_identities(self):
+        params = {'name': 'codegraph_search', 'arguments': {'scope': 'projects'}}
+        baseline = envelope(data={'projects': [{'repoUrl': 'https://gitlab.example.com/example/api'}]})
+        mutations = [lambda d: d['snapshot'].update(cacheable=False),
+                     lambda d: d['snapshot'].update(projects=[]),
+                     lambda d: d['snapshot'].pop('graphRevision'),
+                     lambda d: d['snapshot'].update(graphRevision=True),
+                     lambda d: d['snapshot']['projects'][0].update(project='Example.Library', commitSha='c'*40),
+                     lambda d: d['snapshot']['projects'][0].update(commitSha='e'*40),
+                     lambda d: d['snapshot']['projects'][0].update(commitSha=None),
+                     lambda d: d['snapshot']['projects'][0].update(unknown='withheld'),
+                     lambda d: d['snapshot']['projects'].append({'project': 'example/api', 'commitSha': 'a'*40}),
+                     lambda d: d.update(warnings=['partial_coverage']),
+                     lambda d: d['result']['projects'][0].update(commitSha=None),
+                     lambda d: d['result']['projects'][0].update(commitSha='e'*40),
+                     lambda d: d['result']['projects'][0].update(commitSha='a'*40, indexedCommitSha='e'*40),
+                     lambda d: d['result']['projects'].append({'repoUrl': 'https://gitlab.example.com/example/api'})]
+        for mutate in mutations:
+            value = deepcopy(baseline); mutate(value['result']['structuredContent']); mirror(value)
+            with self.subTest(mutation=mutate), self.assertRaises(ns.ScopeViolation): self.accept(value, params)
+            self.assertFalse(self.scope.nodes); self.assertIsNone(self.scope.revision)
+
+    def test_metadata_snapshot_fallback_filters_outside_rows_without_latching_revision(self):
+        self.accept()
+        value = envelope(data={'projects': [{'repoUrl': 'https://gitlab.example.com/example/api'},
+                         {'repoUrl': 'https://outside.example.com/private', 'nodeId': 90}]}, revision=99,
+                         projects=[{'project': 'Example.Api', 'commitSha': 'a'*40},
+                                   {'project': 'outside', 'commitSha': 'e'*40}])
+        visible = self.accept(value, {'name': 'codegraph_search', 'arguments': {'scope': 'projects'}})
+        self.assertNotIn('outside', json.dumps(visible)); self.assertNotIn('99', json.dumps(visible))
+        self.assertEqual(self.scope.revision, 7); self.assertEqual(set(self.scope.nodes), {1})
+
+    def test_metadata_projection_rejects_conflicting_declared_identity(self):
+        params = {'name': 'codegraph_search', 'arguments': {'scope': 'projects'}}
+        baseline = envelope(data={'projects': [{'repoUrl': 'https://gitlab.example.com/example/api',
+                                                'id': 'Example.Api', 'name': 'example/api'}]})
+        self.accept(baseline, params)
+        for changes in ({'repositoryUrl': 'https://gitlab.example.com/example/library'},
+                        {'repositoryUrl': 'https://outside.example.com/private'},
+                        {'repoUrl': {'body': 'withheld'}}, {'name': 'Example.Library'},
+                        {'id': 'unknown'}, {'project': 'Example.Library'}):
+            invalid = deepcopy(baseline)
+            invalid['result']['structuredContent']['result']['projects'][0].update(changes)
+            mirror(invalid)
+            with self.subTest(changes=changes), self.assertRaises(ns.ScopeViolation): self.accept(invalid, params)
+        baseline['result']['structuredContent']['result']['projects'][0]['repositoryUrl'] = 'https://gitlab.example.com/example/api'
+        mirror(baseline); self.accept(baseline, params)
+        self.assertFalse(self.scope.nodes); self.assertIsNone(self.scope.revision)
+
+    def test_search_label_and_exact_metadata_are_bound_to_request(self):
+        params = request(label='Method', exact=True)
+        value = envelope()
+        value['result']['structuredContent']['limits'] = {'filters': {
+            'project': 'Example.Api', 'label': 'Method', 'exact': 'true'}}
+        mirror(value); self.accept(value, params)
+        for key, incorrect in (('label', 'Class'), ('exact', 'false'), ('exact', True), ('label', {'body': 'withheld'})):
+            invalid = deepcopy(value)
+            invalid['result']['structuredContent']['limits']['filters'][key] = incorrect
+            mirror(invalid)
+            with self.subTest(key=key, value=incorrect), self.assertRaises(ns.ScopeViolation): self.accept(invalid, params)
+        with self.assertRaises(ns.ScopeViolation): self.accept(value, request())
+        for args in ({'exact': 'true'}, {'exact': 1}, {'label': ['Method']}):
+            with self.assertRaises(ns.ScopeViolation): self.scope.prepare(request(**args))
+        value['result']['structuredContent']['limits']['filters']['exact'] = 'false'
+        mirror(value); self.accept(value, request(label='Method', exact=False))
+        self.accept(value, request(label='Method'))
+
     def test_metadata_url_variants_require_explicit_frozen_alias(self):
         value=envelope(data={'projects':[{'repoUrl':'https://gitlab.example.com/example/api.git','commitSha':'a'*40}]},projects=[])
         params={'name':'codegraph_search','arguments':{'scope':'projects'}}

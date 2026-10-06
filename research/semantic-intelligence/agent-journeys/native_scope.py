@@ -582,6 +582,12 @@ class NativeScope:
                     'project_search_ignores_scope_argument')
             context['metadata'] = True
             return context
+        if tool == 'codegraph_search':
+            require(args.get('label') is None or type(args['label']) is str, 'invalid_label_filter')
+            require('exact' not in args or type(args['exact']) is bool, 'invalid_exact_filter')
+            context['search_filters'] = {'exact': args.get('exact', False)}
+            if args.get('label') is not None:
+                context['search_filters']['label'] = args['label']
         node, cursor, project = args.get('nodeId'), args.get('cursor'), args.get('project')
         if cursor is not None:
             require(tool == 'graph_source' and type(cursor) is str and cursor in self.cursors and
@@ -688,17 +694,59 @@ class NativeScope:
                         require(self.project(member) in bound, 'project_missing_snapshot_pin')
             self._walk(child, bound, nodes, trail + (key,))
 
+    def _metadata_snapshot_pins(self, data):
+        # A missing row pin can be supplied by a cacheable snapshot, but never
+        # by a guessed revision, a different project, or a partially bound row.
+        snapshot = data.get('snapshot')
+        require(type(snapshot) is dict and snapshot.get('cacheable') is True and
+                set(snapshot) <= {'graphRevision', 'projects', 'cacheable', 'resultDigest'} and
+                type(snapshot.get('graphRevision')) is int and snapshot['graphRevision'] >= 0 and
+                data.get('warnings', []) == [], 'unproven_project_metadata_snapshot')
+        if 'resultDigest' in snapshot:
+            require(type(snapshot['resultDigest']) is str and SHA.fullmatch(snapshot['resultDigest']),
+                    'invalid_result_digest')
+        require(type(snapshot.get('projects')) is list, 'missing_snapshot_projects')
+        pins, seen = {}, set()
+        for row in snapshot['projects']:
+            require(type(row) is dict and set(row) == {'project', 'commitSha'} and
+                    type(row['project']) is str and row['project'] and
+                    type(row['commitSha']) is str and PIN.fullmatch(row['commitSha']), 'invalid_snapshot_project')
+            repository = self.aliases.get(row['project'], row['project'])
+            require(repository not in seen, 'duplicate_snapshot_project')
+            seen.add(repository)
+            if repository in self.projects:
+                require(row['commitSha'] == self.projects[repository]['commit'], 'snapshot_pin_mismatch')
+                pins[repository] = row['commitSha']
+        return pins
+
     def _project_metadata(self, data):
         require(type(data.get('result')) is dict and type(data['result'].get('projects')) is list,
                 'unrecognized_project_metadata')
-        projects = []
+        projects, seen, snapshot_pins = [], set(), None
         for row in data['result']['projects']:
             require(type(row) is dict, 'invalid_project_metadata')
-            url = row.get('repoUrl', row.get('repositoryUrl'))
-            if url not in self.urls:
+            urls = [row[key] for key in ('repoUrl', 'repositoryUrl') if row.get(key) is not None]
+            require(all(type(url) is str for url in urls), 'invalid_project_metadata_url')
+            approved = {self.urls[url] for url in urls if url in self.urls}
+            if not approved:
                 continue
-            repository = self.urls[url]
-            commit = row.get('commitSha', row.get('indexedCommitSha'))
+            require(len(approved) == 1 and all(url in self.urls for url in urls),
+                    'conflicting_project_metadata_urls')
+            repository = approved.pop()
+            for key in PROJECT_KEYS | {'id', 'name'}:
+                if row.get(key) is not None:
+                    require(self.project(row[key]) == repository, 'conflicting_project_metadata_identity')
+            require(repository not in seen, 'duplicate_project_metadata')
+            seen.add(repository)
+            declared = [row[key] for key in ('commitSha', 'indexedCommitSha') if key in row]
+            if declared:
+                require(all(commit == self.projects[repository]['commit'] for commit in declared),
+                        'project_metadata_pin_mismatch')
+                commit = declared[0]
+            else:
+                if snapshot_pins is None:
+                    snapshot_pins = self._metadata_snapshot_pins(data)
+                commit = snapshot_pins.get(repository)
             require(commit == self.projects[repository]['commit'], 'project_metadata_pin_mismatch')
             projects.append({'project': repository, 'repoUrl': self.projects[repository]['url'], 'commitSha': commit})
         # No outside names, counts, free text or opaque selectors escape a
@@ -843,10 +891,18 @@ class NativeScope:
                 require(type(data['limits']['edgeTypes']) is list and all(type(v) is str for v in data['limits']['edgeTypes']), 'invalid_edge_types')
             if 'filters' in data['limits']:
                 filters = data['limits']['filters']
-                require(type(filters) is dict and set(filters) <= {'project', 'direction'}, 'unknown_filters_shape')
-                self._scalars(filters, strings=('project', 'direction'))
+                require(type(filters) is dict and set(filters) <= {'project', 'direction', 'label', 'exact'},
+                        'unknown_filters_shape')
+                self._scalars(filters, strings=('project', 'direction', 'label', 'exact'))
                 if filters.get('project') is not None:
                     require(self.project(filters['project']) == context['project'], 'filter_project_mismatch')
+                for key in ('label', 'exact'):
+                    if key not in filters:
+                        continue
+                    expected = context.get('search_filters', {}).get(key)
+                    if key == 'exact' and type(expected) is bool:
+                        expected = 'true' if expected else 'false'
+                    require(expected is not None and filters[key] == expected, 'search_filter_mismatch')
 
     def accept(self, response, context):
         data = self._structured(response)
