@@ -27,6 +27,7 @@ from journey_clock import monotonic
 from run_record import RunRecord, _new_file, canonical, digest, read_ref, reference
 import provenance
 from native_scope import NativeScope, ScopeViolation
+from provider_resources import ProviderResources, validate_policy as validate_provider_resources
 
 
 IMAGE = re.compile(r'^sha256:[0-9a-f]{64}$')
@@ -387,6 +388,16 @@ def validate_execution_config(root, config):
         raise ValueError('execution configuration differs from frozen task, budgets, model, image or native roster')
     fields = frozen['model']['settings'].get('provider_fields', {})
     expected = {'model', 'reasoning', 'tool_choice', 'parallel_tool_calls', 'text', 'store', 'stream', 'include'}
+    resources = frozen.get('provider_resources')
+    config.pop('_provider_resources', None)
+    if 'provider_resources' in config and config['provider_resources'] != resources:
+        raise ValueError('provider resource configuration differs from frozen policy')
+    if resources is not None:
+        resources = validate_provider_resources(resources)
+        expected.add('max_output_tokens')
+        if type(fields.get('max_output_tokens')) is not int or fields['max_output_tokens'] != resources['max_output_tokens']:
+            raise ValueError('frozen provider output limit differs from resource policy')
+        config['_provider_resources'] = resources
     if set(fields) != expected or fields['model'] != config['model'] or fields['reasoning'].get('effort') != config['reasoning_effort']:
         raise ValueError('complete frozen provider request settings required')
     config['provider_fields'] = fields
@@ -405,6 +416,8 @@ def validate_execution_config(root, config):
             raise ValueError('scope policy tools, background corpus roster or pins differ from contract')
         config['_source_scope'] = scope
         runner_names.append('native_scope.py')
+    if resources is not None:
+        runner_names.append('provider_resources.py')
     config.pop('_observed_identities', None)
     if provenance.mode(frozen) == 'observed-service-v1':
         blockers = provenance.validate(root, frozen, read_ref)
@@ -460,6 +473,11 @@ def run_container(config, directory, broker=None, record=None, probe=False):
     model correctness, or a verified immutable provider model revision.
     """
     capture = Capture(directory)
+    resources = None
+    if config.get('_provider_resources') is not None:
+        resources = ProviderResources(config['_provider_resources'],
+                                      emit=lambda event: capture.event({'channel': 'provider_resource', 'event': event}))
+        capture.retain('provider-resource-policy.json', canonical(resources.policy) + b'\n')
     command = container_command(config['image'])
     cidfile = capture.root / 'container.id'
     command[2:2] = ['--cidfile', str(cidfile)]
@@ -485,12 +503,22 @@ def run_container(config, directory, broker=None, record=None, probe=False):
         selector = selectors.DefaultSelector()
         selector.register(process.stdout, selectors.EVENT_READ)
         buffer = b''
+        reply_ordinal = 0
         def reply(message):
+            nonlocal reply_ordinal
             # A buffered provider response may finish after the bridge's
             # assignment deadline. Retain it, but never write a late reply.
             remaining_seconds()
-            process.stdin.write(canonical(message) + b'\n')
+            wire = canonical(message) + b'\n'
+            reply_ordinal += 1
+            binding = {'reply_ordinal': reply_ordinal, 'wire_sha256': digest(wire), 'wire_bytes': len(wire)}
+            # Persist the exact attempted relay bytes before writing. Missing
+            # commit means relay completion is unknown, never a proven nonrelay.
+            capture.event(dict(binding, channel='controller_reply', message=message))
+            if process.stdin.write(wire) != len(wire):
+                raise RuntimeError('incomplete controller relay write')
             process.stdin.flush()
+            capture.event(dict(binding, channel='controller_reply_commit'))
         try:
             start = {k: config[k] for k in ('model', 'reasoning_effort', 'prompt', 'enabled_tools')}
             start['timeout_ms'] = int(remaining_seconds() * 1000)
@@ -532,14 +560,20 @@ def run_container(config, directory, broker=None, record=None, probe=False):
                         raw, value = decode_message(message)
                         stem = capture.request(channel, raw)
                         if channel == 'provider':
+                            forwarded = raw
+                            if resources is not None:
+                                forwarded = resources.begin(stem, raw)
+                                capture.retain(stem + '.upstream-request.json', forwarded)
+                                value = json.loads(forwarded)
                             validate_provider_request(config, value)
                             if probe:
                                 body, receipt = probe_provider_response(config['model'], capture.ordinals['provider'])
                                 receipt['body_bytes_observed'] = len(body)
                             else:
                                 body, receipt = provider_exchange(os.environ[config['provider_url_env']],
-                                                                  os.environ[config['provider_token_env']], raw,
-                                                                  remaining_seconds())
+                                                                  os.environ[config['provider_token_env']], forwarded,
+                                                                  remaining_seconds(),
+                                                                  **({'cap': resources.transport_cap()} if resources is not None else {}))
                         else:
                             if probe:
                                 result = mock_mcp(value, config['enabled_tools'])
@@ -551,6 +585,8 @@ def run_container(config, directory, broker=None, record=None, probe=False):
                                        'transport_complete': True}
                         capture.retain(stem + '.response.raw', body)
                         capture.retain(stem + '.receipt.json', canonical(receipt) + b'\n')
+                        if channel == 'provider' and resources is not None:
+                            resources.finish(stem, body, receipt)
                         if channel == 'provider' and not probe and config.get('_observed_identities'):
                             validate_provider_identity(body, receipt,
                                                        config['_observed_identities']['model']['returned_models'])
@@ -623,6 +659,9 @@ def run_container(config, directory, broker=None, record=None, probe=False):
                 capture.event({'channel': 'cleanup_error', 'error_type': type(exc).__name__})
             finally:
                 signal.signal(signal.SIGTERM, previous_sigterm)
+                if resources is not None:
+                    resources.abort_pending()
+                    capture.retain('provider-resource-ledger.json', canonical(resources.summary()) + b'\n')
                 capture.finish(complete)
     return {'exit_code': exit_code, 'capture_complete': complete, 'probe': probe,
             'provider_requests': capture.ordinals.get('provider', 0),

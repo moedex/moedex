@@ -1,5 +1,8 @@
 # Logged native MCP journeys
 
+New isolated freezes can opt into [provider resource stops](PROVIDER_RESOURCES.md),
+with exact original/upstream capture and independent raw-ledger replay.
+
 For new protocols, run native setup **before assignment**, in the same network
 permission context the solver will use. This checks loopback access, negotiates
 Moedex's stateless compatibility protocol, sends the initialized notification,
