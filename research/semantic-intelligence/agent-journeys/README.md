@@ -129,3 +129,8 @@ Assignments are capped at one hour. Direct bridge callers may specify a shorter
 positive integer `exchange_timeout_ms`. A response completed after assignment
 expiry is retained locally but is never sent back to the solver. Rebuild the
 immutable solver image to apply bridge changes to future runs.
+
+Future isolated comparisons can enable a [frozen native source scope](NATIVE_SCOPE.md)
+to admit only the complete shared background corpus at approved pins. The broker
+records recoverable provenance denials, raw response costs and assignment-local
+selector state before showing native structured results to the solver.

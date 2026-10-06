@@ -26,6 +26,7 @@ from native_http import NativeHTTP
 from journey_clock import monotonic
 from run_record import RunRecord, _new_file, canonical, digest, read_ref, reference
 import provenance
+from native_scope import NativeScope, ScopeViolation
 
 
 IMAGE = re.compile(r'^sha256:[0-9a-f]{64}$')
@@ -190,22 +191,29 @@ def validate_provider_identity(body, receipt, expected_models):
 
 class NativeBroker:
     """Serve only the frozen native tool roster, retaining full native onboarding."""
-    def __init__(self, client, record, allowed_tools, observed_product=None):
+    def __init__(self, client, record, allowed_tools, observed_product=None, source_scope=None):
         if not allowed_tools or len(set(allowed_tools)) != len(allowed_tools):
             raise ValueError('unique nonempty native allowlist required')
         self.client, self.record, self.allowed = client, record, set(allowed_tools)
         self.catalog = None
         self.display_cap = 8192
         self.observed_product = observed_product
+        self.source_scope = source_scope
+        if source_scope is not None and source_scope.allowed != self.allowed:
+            raise ValueError('scope policy and native allowlist differ')
+        self.last_response_sha256 = None
+        self.last_ordinal = None
 
     def exchange(self, request):
         request_bytes = json.dumps(request, separators=(',', ':')).encode()
         ordinal = self.record.begin_call(request_bytes)
+        self.last_ordinal = ordinal
         self.client.timeout = min(self.client.timeout, self.record.remaining_seconds())
         returned, body, receipt = self.client.exchange(request)
         if returned != request_bytes:
             raise ValueError('native transport changed request bytes')
         self.record.finish_call(ordinal, body, receipt)
+        self.last_response_sha256 = digest(body)
         if request.get('method') == 'notifications/initialized':
             if not receipt['transport_complete'] or receipt['status'] not in (200, 202, 204):
                 raise ValueError('native notification failed')
@@ -230,6 +238,8 @@ class NativeBroker:
                     digest(canonical(catalog['result'])) != self.observed_product['catalog_sha256']):
                 raise ValueError('native identity differs from frozen observation')
         self.catalog = [t for t in tools if t['name'] in self.allowed]
+        if self.source_scope is not None:
+            self.catalog = self.source_scope.catalog(self.catalog)
         return response['result']
 
     def handle(self, request):
@@ -246,15 +256,57 @@ class NativeBroker:
             result = {'tools': self.catalog}
         elif method == 'tools/call':
             params = request.get('params', {})
-            if params.get('name') not in self.allowed:
+            if self.source_scope is None and params.get('name') not in self.allowed:
                 raise ValueError('native tool outside frozen allowlist')
-            response = self.exchange({'jsonrpc': '2.0', 'id': request_id,
-                                      'method': 'tools/call', 'params': params})
+            native_request = {'jsonrpc': '2.0', 'id': request_id, 'method': 'tools/call', 'params': params}
+            policy_receipt = None
+            if self.source_scope is None:
+                response = self.exchange(native_request)
+            else:
+                context, reason = None, None
+                try:
+                    context = self.source_scope.prepare(params)
+                except (ScopeViolation, ValueError, TypeError, KeyError):
+                    reason = 'request_provenance_not_admitted'
+                if reason is not None:
+                    # Charge the denied intent as one attempt, with zero native
+                    # response bytes. No product request is dispatched.
+                    self.last_ordinal = self.record.begin_call(json.dumps(native_request, separators=(',', ':')).encode())
+                    self.record.finish_call(self.last_ordinal, b'', {
+                        'transport_complete': True, 'body_bytes_observed': 0,
+                        'native_dispatched': False, 'scope_policy_blocked': True})
+                    self.last_response_sha256 = digest(b'')
+                    response = self.source_scope.error(request_id)
+                else:
+                    try:
+                        response = self.exchange(native_request)
+                    except (ValueError, TypeError, KeyError):
+                        reason = 'response_provenance_not_admitted'
+                        response = self.source_scope.error(request_id)
+                    # A late/crossing response is already retained and charged;
+                    # do not validate/register selectors or display it late.
+                    self.record.remaining_seconds()
+                    if reason is None:
+                        try:
+                            response = self.source_scope.accept(response, context)
+                        except (ScopeViolation, ValueError, TypeError, KeyError):
+                            reason = 'response_provenance_not_admitted'
+                            response = self.source_scope.error(request_id)
+                policy_receipt = {'schema': 'native-scope-decision-v1',
+                    'policy_sha256': self.source_scope.policy_sha256,
+                    'accepted': reason is None, 'reason': reason, 'native_dispatched': context is not None,
+                    'ordinal': self.last_ordinal, 'native_response_sha256': self.last_response_sha256,
+                    'graph_revision': self.source_scope.revision,
+                    'registered_nodes': len(self.source_scope.nodes), 'registered_cursors': len(self.source_scope.cursors)}
             # Full native response remains in raw evidence. The entire model-visible
             # envelope (including JSON-RPC/MCP wrappers) is subject to the display cap.
             response = bounded_response(response, self.display_cap)
             raw = canonical(response)
-            self.record.display(raw)
+            if policy_receipt is None:
+                self.record.display(raw)
+            else:
+                policy_receipt['display_sha256'] = digest(raw)
+                self.record.display(raw, scope_policy=policy_receipt)
             return response
         elif method in ('resources/list', 'resources/templates/list', 'prompts/list'):
             result = {('resources' if method == 'resources/list' else
@@ -340,6 +392,19 @@ def validate_execution_config(root, config):
     config['provider_fields'] = fields
     runner_names = ['isolated_solver.py', 'run_record.py', 'native_http.py', 'journey_clock.py',
                     'contract.py', 'compare.py']
+    config.pop('_source_scope', None)
+    if 'source_scope_policy' in frozen or 'source_scope_policy' in config:
+        if config.get('source_scope_policy') != frozen.get('source_scope_policy'):
+            raise ValueError('execution scope policy differs from freeze')
+        scope = NativeScope(json.loads(read_ref(root, frozen['source_scope_policy'])),
+                            policy_sha256=frozen['source_scope_policy']['sha256'])
+        sources = contract['corpus']['repositories'] if contract['schema'] == 'native-pair-v2' else [contract['corpus']]
+        pins = {row['repository']: row['commit'] for row in sources}
+        if (scope.allowed != set(config['enabled_tools']) or set(scope.projects) != set(pins) or
+                any(row['commit'] != pins[name] for name, row in scope.projects.items())):
+            raise ValueError('scope policy tools, background corpus roster or pins differ from contract')
+        config['_source_scope'] = scope
+        runner_names.append('native_scope.py')
     config.pop('_observed_identities', None)
     if provenance.mode(frozen) == 'observed-service-v1':
         blockers = provenance.validate(root, frozen, read_ref)
@@ -601,7 +666,8 @@ def main():
         broker = NativeBroker(NativeHTTP(os.environ[config['native_url_env']],
                                         os.environ[config['native_token_env']] if config.get('native_token_env') else None),
                               record, config['enabled_tools'],
-                              config.get('_observed_identities', {}).get('product'))
+                              config.get('_observed_identities', {}).get('product'),
+                              source_scope=config.get('_source_scope'))
         broker.display_cap = config['budgets']['display_bytes']
         try:
             broker.onboard()
