@@ -10,6 +10,10 @@ An independent opt-in broker reference mode exposes copyable presentation IDs
 that the checker resolves to exact recorded hashes without requiring the solver
 to hash unknown transport wrappers.
 
+Prospective studies can use [offline panel methods](PANEL_METHODS.md) to bind
+exposure-aware sampling and task-level uncertainty to a frozen policy. The
+methods contain no execution launcher and do not change existing broad-claim gates.
+
 Manual launchers can use the [execution guard](EXECUTION_GUARD.md) for prospective
 schedule wall-time, retained-archive and free-space stopping. It preserves a
 single deadline across startup and waves and reports fixed safe failure reasons.
