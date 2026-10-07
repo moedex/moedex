@@ -19,19 +19,22 @@ def validate_policy(policy):
     if (not isinstance(strata, list) or not strata or not all(isinstance(x, str) and x and "\0" not in x for x in strata) or len(set(strata)) != len(strata)):
         raise ValueError("strata schema")
     count = policy.get("tasks_per_stratum")
-    if type(count) is not int or count < 1 or policy.get("tasks") != count * len(strata):
+    if type(count) is not int or count < 1 or type(policy.get("tasks")) is not int or policy["tasks"] != count * len(strata):
         raise ValueError("task counts")
     repeats = policy.get("repeats")
     if not isinstance(repeats, list) or not repeats or any(type(x) is not int or x < 1 for x in repeats) or len(set(repeats)) != len(repeats):
         raise ValueError("repeat identities")
-    if policy.get("arms") != ["A", "B"] or policy.get("attempts") != policy["tasks"] * len(repeats) * 2:
+    if policy.get("arms") != ["A", "B"] or type(policy.get("attempts")) is not int or policy["attempts"] != policy["tasks"] * len(repeats) * 2:
         raise ValueError("matched arm counts")
     if (type(policy.get("alpha")) not in (int, float) or not 0 < policy["alpha"] < 1 or
         type(policy.get("margin")) not in (int, float) or not 0 < policy["margin"] < 1):
         raise ValueError("alpha/margin")
     if policy.get("optional_stopping") is not False or policy.get("stratum_claims") != "descriptive-only" or policy.get("estimand") != "fixed-panel-equal-task-mean":
         raise ValueError("unsupported inferential policy")
-    if not policy.get("exposure_required_scope") or policy.get("launch_authorized") is not False:
+    scope = policy.get("exposure_required_scope")
+    if (not isinstance(scope, list) or not scope or
+        not all(isinstance(x, str) and x and "\0" not in x for x in scope) or len(scope) != len(set(scope)) or
+        policy.get("launch_authorized") is not False):
         raise ValueError("explicit exposure scope/offline policy required")
     if policy.get("methods_module_sha256") != module_hash():
         raise ValueError("exact mechanism source hash changed")

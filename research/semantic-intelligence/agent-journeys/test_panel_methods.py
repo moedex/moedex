@@ -45,6 +45,22 @@ def analyze(p, rows, fault=False):
 
 
 class MethodsTests(unittest.TestCase):
+    def test_aggregate_counts_require_integers_and_scope_requires_unique_strings(self):
+        for key in ("tasks", "attempts"):
+            p = policy()
+            p[key] = float(p[key])
+            with self.assertRaisesRegex(ValueError, "counts"):
+                h.validate_policy(p)
+        p = policy()
+        p.update(strata=["only"], tasks_per_stratum=1, tasks=True, repeats=[1], attempts=2)
+        with self.assertRaisesRegex(ValueError, "task counts"):
+            h.validate_policy(p)
+        for scope in ("truthy-string", [], ["same", "same"], [""], ["nul\0scope"], [1], {"scope": True}):
+            p = policy()
+            p["exposure_required_scope"] = scope
+            with self.assertRaisesRegex(ValueError, "exposure scope"):
+                h.validate_policy(p)
+
     def test_exact_quota_reproducible_and_cell_allocation(self):
         p = panel()
         self.assertEqual(p, panel())
