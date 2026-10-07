@@ -14,6 +14,7 @@ import sys
 
 PRESENTATION = 'single-source-v1'
 REFERENCE_MODE = 'broker-ordinal-v1'
+LEDGER_MODE = 'explicit-gaps-v2'
 REFERENCE_KEY = 'dev.moedex/presentation-reference'
 FALLBACK = 'Validated data is in structuredContent. Source appears once; use a client that exposes structuredContent.'
 
@@ -182,7 +183,9 @@ def single_source(response, cap):
     return visible
 
 
-def prepare(request, inventory, citation_reference_mode=None):
+def prepare(request, inventory, citation_reference_mode=None, ledger_mode=None):
+    if ledger_mode not in (None, LEDGER_MODE):
+        raise ValueError('unsupported ledger mode')
     if citation_reference_mode not in (None, REFERENCE_MODE):
         raise ValueError('unsupported citation reference mode')
     if not isinstance(request, str) or not request or not isinstance(inventory, list) or not inventory:
@@ -222,6 +225,32 @@ def prepare(request, inventory, citation_reference_mode=None):
             'presentation_id copied from a broker notice (or exact display_sha256 when independently known), '
             'repo, path, blob_sha, start_line, end_line, and source_role. '
             'Do not calculate hashes of unknown JSON-RPC/MCP wrappers. The offline checker resolves presentation IDs.')
+    if ledger_mode:
+        plan['ledger_mode'] = ledger_mode
+        plan['instructions'] += (
+            ' Ledger mode explicit-gaps-v2: use status=partial with a nonempty reason when an item '
+            'has cited findings plus unavailable evidence; link both kinds of claims with claim_ids. '
+            'Partial items remain incomplete and grant no citation credit to unavailable claims. '
+            'Use unresolved for an entirely unavailable item, and addressed only when every linked '
+            'claim has valid citations. Do not label a requirement addressed merely because its '
+            'evidence limitation was explained. Static-only evidence cannot establish runtime outcomes. '
+            'Use source_role=other and citations=[] with unresolved_reason for an evidence limitation '
+            'or process statement that has no source support; never invent source citations for it. '
+            'Each citation must repeat the claim source_role exactly. Copy repo, path, blob_sha, '
+            'and inclusive complete-line bounds from that same displayed source record. '
+            'With nonempty terminal_paths, omit terminal_path_review or use '
+            '{"status":"reviewed","reason":"Relevant outcomes inventoried below"}; '
+            'not_applicable is allowed only with empty paths for ordinary requirements. '
+            'Example requirement with a gap: '
+            '{"id":"request-item","status":"partial","reason":"Runtime evidence unavailable",'
+            '"claim_ids":["source-fact","runtime-gap"],"terminal_paths":'
+            '[{"outcome":"runtime success","status":"unresolved","claim_ids":["runtime-gap"],'
+            '"reason":"No execution record supplied"}]}. '
+            'Example non-source claim: {"id":"runtime-gap","text":"Runtime success is unverified",'
+            '"source_role":"other","citations":[],"unresolved_reason":"No execution record supplied"}. '
+            'Before submission check that every claim_ids entry names an existing claim, every '
+            'addressed item links only cited claims, and every unresolved or partial item has a reason. '
+            'The examples show structure only; substitute actual request IDs and observed evidence.')
     return plan
 
 
@@ -262,7 +291,8 @@ def shown_sources(response):
 
 def check(plan, answer, displays):
     """Report declared completeness and mechanical citation validity separately."""
-    expected = prepare(plan['request'], plan['inventory'], plan.get('citation_reference_mode'))
+    expected = prepare(plan['request'], plan['inventory'], plan.get('citation_reference_mode'), plan.get('ledger_mode'))
+    explicit_gaps = plan.get('ledger_mode') == LEDGER_MODE
     if plan != expected:
         raise ValueError('plan bytes/anchors or generated instructions differ')
     errors, unresolved, claims = [], [], {}
@@ -343,9 +373,12 @@ def check(plan, answer, displays):
         if row.get('status') == 'addressed':
             if not refs or any(ref in unresolved for ref in refs):
                 errors.append(f'{label}: addressed item needs resolved cited claims')
-        elif row.get('status') == 'unresolved':
+        elif row.get('status') == 'unresolved' or (explicit_gaps and row.get('status') == 'partial'):
             if not isinstance(row.get('reason'), str) or not row['reason'].strip():
-                errors.append(f'{label}: unresolved reason required')
+                errors.append(f'{label}: {row.get("status") if explicit_gaps else "unresolved"} reason required')
+            if row.get('status') == 'partial' and not any(
+                    ref not in unresolved and claims[ref].get('citations') for ref in refs):
+                errors.append(f'{label}: partial item needs a cited finding (use unresolved when unavailable)')
             unresolved.append(label)
         else:
             errors.append(f'{label}: invalid status')
@@ -367,7 +400,10 @@ def check(plan, answer, displays):
         not_applicable = (isinstance(review, dict) and review.get('status') == 'not_applicable' and
                           isinstance(review.get('reason'), str) and bool(review['reason'].strip()) and
                           inventory[rid] == 'requirement')
-        if 'terminal_path_review' in row and (not not_applicable or paths):
+        reviewed = (explicit_gaps and isinstance(review, dict) and review.get('status') == 'reviewed' and
+                    isinstance(review.get('reason'), str) and bool(review['reason'].strip()) and
+                    isinstance(paths, list) and bool(paths))
+        if 'terminal_path_review' in row and not (not_applicable and not paths) and not reviewed:
             errors.append(f'{rid}: invalid not-applicable terminal path review')
         if not isinstance(paths, list) or (row.get('status') == 'addressed' and not paths and not not_applicable):
             errors.append(f'{rid}: terminal path review required (use unresolved when unavailable)')
@@ -413,6 +449,7 @@ def main():
     prep.add_argument('--request', type=Path, required=True)
     prep.add_argument('--inventory', type=Path, required=True)
     prep.add_argument('--citation-reference-mode', choices=[REFERENCE_MODE])
+    prep.add_argument('--ledger-mode', choices=[LEDGER_MODE])
     verify = sub.add_parser('check')
     verify.add_argument('--plan', type=Path, required=True)
     verify.add_argument('--answer', type=Path, required=True)
@@ -423,7 +460,7 @@ def main():
     args = parser.parse_args()
     try:
         if args.command == 'prepare':
-            value = prepare(args.request.read_text(), strict_json(args.inventory.read_bytes()), args.citation_reference_mode)
+            value = prepare(args.request.read_text(), strict_json(args.inventory.read_bytes()), args.citation_reference_mode, args.ledger_mode)
         else:
             if bool(args.record_root) != bool(args.assignment):
                 raise ValueError('--record-root and --assignment must be used together')
