@@ -85,6 +85,33 @@ The mode provides structural examples and a final consistency checklist, not
 hidden answers or automatic solver feedback. Synthetic tests establish schema
 behavior only; they do not establish better model compliance or retrieval quality.
 
+## Field-projection and negative-selection review
+
+When a request asks which fields a conversion selects or leaves out, compare
+the requested source declarations, destination declaration, and complete bounded
+conversion body. Keep destination assignments, transformations, fallback choices,
+and filtering predicates distinct. A field can affect whether a row is emitted
+without becoming a destination field. A similarly named field is not evidence
+that the conversion selects it.
+
+For example, in an invented conversion from `Input` to `Output`, `Output.Host`
+may select `Input.PrimaryHost`, leave `Input.BackupHost` unused, and depend on
+`Input.Enabled` in a guard. Record those three dispositions separately, citing
+the relevant declaration and implementation spans. To say a field is unused
+in this conversion, inspect its complete bounded body, including guards and
+helpers that might receive the field or entire input. If helper behavior, a
+clipped tail, or a source file is unavailable, mark that conclusion unresolved.
+Do not turn a missing search result into a repository-wide absence claim.
+
+Before submitting, reconcile each requested field or field category with the
+actual answer, not merely with retrieved source or an `addressed` ledger flag.
+An internal review table can list source field, destination or predicate use,
+selection/omission/unknown disposition, and citations. This is guidance for a
+source audit, not a new mandatory answer schema or automated completeness proof.
+Keep the scope anchored to the request; never add hidden expected field names
+to an inventory or comparative prompt. Independently check that every scored
+obligation is actually requested before freezing a new task.
+
 ## Solver-visible citation references
 
 For new runs, set `citation_reference_mode="broker-ordinal-v1"` in both the freeze
