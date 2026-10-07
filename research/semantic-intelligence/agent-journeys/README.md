@@ -6,6 +6,9 @@ with exact original/upstream capture and independent raw-ledger replay.
 New solver workflows can use the [requirement and citation preflight](SOLVER_WORKFLOW.md)
 and freeze single-source bounded presentation. The offline checker reports
 declared coverage and displayed-source bounds separately from semantic correctness.
+An independent opt-in broker reference mode exposes copyable presentation IDs
+that the checker resolves to exact recorded hashes without requiring the solver
+to hash unknown transport wrappers.
 
 Manual launchers can use the [execution guard](EXECUTION_GUARD.md) for prospective
 schedule wall-time, retained-archive and free-space stopping. It preserves a
