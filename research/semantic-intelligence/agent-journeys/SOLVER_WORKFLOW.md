@@ -48,6 +48,43 @@ perform narrow declaration reads before labeling their roles. The checker
 compares role labels for consistency; it does **not** classify source semantics
 or detect two matching but mistaken role labels.
 
+## Explicit evidence gaps
+
+For a new prompt, opt into the more explicit ledger instructions and dispositions:
+
+```sh
+python3 -B solver_workflow.py prepare --request request.txt --inventory inventory.json \
+  --citation-reference-mode broker-ordinal-v1 --ledger-mode explicit-gaps-v2 > plan.json
+```
+
+The generated plan binds the mode and instructions; freeze its exact bytes before
+execution. Plans without this option retain their original instructions and checks.
+Do not use a new plan to replace or rescore an existing frozen run.
+
+An item with cited findings and unavailable evidence may use `status=partial`,
+`claim_ids`, and a nonempty `reason`. It must link at least one cited finding.
+Partial requirements and terminal paths remain in `unresolved`, so they cannot
+produce `declared_complete=true`. An entirely unavailable item uses `unresolved`.
+`addressed` continues to require only resolved cited claims. Explaining why runtime
+evidence is unavailable does not establish a runtime result.
+
+A non-source evidence limitation or process statement uses `source_role=other`,
+empty `citations`, and `unresolved_reason`; it receives no source credit. A cited
+source claim must use the same role in each citation. Matching labels establish
+consistency only. Citation identity and complete visible line bounds remain strict
+for every claim, including those linked by partial items.
+
+With nonempty `terminal_paths`, a requirement may omit `terminal_path_review` or
+use `{"status":"reviewed","reason":"Relevant outcomes inventoried below"}`.
+A reviewed declaration needs both paths and a reason. `not_applicable` still
+requires empty paths and an ordinary requirement; explicitly requested terminal
+paths cannot use it. Unavailable outcomes remain unresolved, even when other
+outcomes have source evidence.
+
+The mode provides structural examples and a final consistency checklist, not
+hidden answers or automatic solver feedback. Synthetic tests establish schema
+behavior only; they do not establish better model compliance or retrieval quality.
+
 ## Solver-visible citation references
 
 For new runs, set `citation_reference_mode="broker-ordinal-v1"` in both the freeze

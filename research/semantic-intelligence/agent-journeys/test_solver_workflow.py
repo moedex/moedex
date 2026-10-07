@@ -52,6 +52,55 @@ class Workflow(unittest.TestCase):
         report = w.check(p, a, [raw]); self.assertTrue(report['mechanically_valid']); self.assertFalse(report['declared_complete'])
         del a['requirements'][0]['reason']; self.assertFalse(w.check(p, a, [raw])['mechanically_valid'])
 
+    def test_opt_in_partial_disposition_retains_gaps_without_source_credit(self):
+        raw = w.canonical(source()); a = answer(raw)
+        a['claims'].append({'id': 'gap', 'text': 'Execution unverified', 'source_role': 'other',
+                            'citations': [], 'unresolved_reason': 'No execution record'})
+        a['requirements'][0].update(status='partial', reason='Only static source available', claim_ids=['c1', 'gap'])
+        p = w.prepare(plan()['request'], plan()['inventory'], ledger_mode=w.LEDGER_MODE)
+        report = w.check(p, a, [raw])
+        self.assertTrue(report['mechanically_valid']); self.assertFalse(report['declared_complete'])
+        self.assertIn('gap', report['unresolved']); self.assertIn('worker', report['unresolved'])
+        self.assertEqual([r['claim_id'] for r in report['resolved_citations']], ['c1'])
+        self.assertFalse(w.check(plan(), a, [raw])['mechanically_valid'])
+        a['requirements'][0]['status'] = 'addressed'
+        self.assertFalse(w.check(p, a, [raw])['mechanically_valid'])
+        a['requirements'][0]['status'] = 'partial'; del a['requirements'][0]['reason']
+        self.assertFalse(w.check(p, a, [raw])['mechanically_valid'])
+
+    def test_partial_does_not_hide_bad_references_or_citations(self):
+        raw = w.canonical(source()); p = w.prepare(plan()['request'], plan()['inventory'], ledger_mode=w.LEDGER_MODE)
+        for refs in [[], ['unknown']]:
+            a = answer(raw); a['requirements'][0].update(status='partial', reason='Gap', claim_ids=refs)
+            self.assertFalse(w.check(p, a, [raw])['mechanically_valid'])
+        a = answer(raw); a['requirements'][0].update(status='partial', reason='Gap')
+        a['claims'][0]['citations'][0]['end_line'] = 999
+        self.assertFalse(w.check(p, a, [raw])['mechanically_valid'])
+        a = answer(raw); a['requirements'][0].update(status='partial', reason='Gap')
+        a['claims'][0].update(citations=[], unresolved_reason='No evidence')
+        self.assertFalse(w.check(p, a, [raw])['mechanically_valid'])
+
+    def test_reviewed_terminal_paths_are_explicit_and_only_opt_in(self):
+        raw = w.canonical(source()); a = answer(raw)
+        p = w.prepare(plan()['request'], plan()['inventory'], ledger_mode=w.LEDGER_MODE)
+        a['requirements'][0]['terminal_path_review'] = {'status': 'reviewed', 'reason': 'Outcomes inventoried'}
+        self.assertTrue(w.check(p, a, [raw])['mechanically_valid'])
+        self.assertFalse(w.check(plan(), a, [raw])['mechanically_valid'])
+        for review, paths in [({'status': 'reviewed', 'reason': ''}, a['requirements'][0]['terminal_paths']),
+                              ({'status': 'reviewed', 'reason': 'Reviewed'}, []),
+                              ({'status': 'not_applicable', 'reason': 'No flow'}, a['requirements'][0]['terminal_paths'])]:
+            a = answer(raw); a['requirements'][0].update(terminal_path_review=review, terminal_paths=paths)
+            self.assertFalse(w.check(p, a, [raw])['mechanically_valid'])
+
+    def test_new_plan_mode_and_guidance_are_hash_bound(self):
+        p = w.prepare(plan()['request'], plan()['inventory'], w.REFERENCE_MODE, w.LEDGER_MODE)
+        self.assertIn('presentation_id', p['instructions']); self.assertIn('status=partial', p['instructions'])
+        raw = w.canonical(source()); a = answer(raw)
+        self.assertTrue(w.check(p, a, [raw])['mechanically_valid'])
+        p['instructions'] += ' modified'
+        with self.assertRaises(ValueError): w.check(p, a, [raw])
+        with self.assertRaises(ValueError): w.prepare(plan()['request'], plan()['inventory'], ledger_mode='future')
+
     def test_terminal_paths_and_unresolved_claims(self):
         raw = w.canonical(source()); a = answer(raw)
         a['requirements'][0]['terminal_paths'] = []
@@ -134,6 +183,27 @@ class Workflow(unittest.TestCase):
         self.assertFalse(w.check(plan(), answer(raw), [b'{"result":{},"result":{}}'])['mechanically_valid'])
         with self.assertRaises(ValueError): w.strict_json(b'{"x":1,"x":2}')
         with self.assertRaises(ValueError): w.strict_json(b'{"x":NaN}')
+
+    def test_cli_explicit_gap_prompt_and_checker_agree(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); raw = w.canonical(source()); a = answer(raw)
+            a['claims'].append({'id': 'gap', 'text': 'No observed runtime execution', 'source_role': 'other',
+                                'citations': [], 'unresolved_reason': 'Only static source supplied'})
+            a['requirements'][0].update(status='partial', reason='Runtime not observed', claim_ids=['c1', 'gap'])
+            a['requirements'][0]['terminal_path_review'] = {'status': 'reviewed', 'reason': 'Paths listed below'}
+            for name, body in [('request', plan()['request'].encode()), ('inventory', w.canonical(plan()['inventory'])),
+                               ('answer', w.canonical(a)), ('display', raw)]: (root/name).write_bytes(body)
+            prepared = subprocess.run([sys.executable, '-B', w.__file__, 'prepare', '--request', str(root/'request'),
+                                       '--inventory', str(root/'inventory'), '--ledger-mode', w.LEDGER_MODE,
+                                       '--citation-reference-mode', w.REFERENCE_MODE], capture_output=True, check=True)
+            (root/'plan').write_bytes(prepared.stdout)
+            self.assertIn('status=partial', json.loads(prepared.stdout)['instructions'])
+            checked = subprocess.run([sys.executable, '-B', w.__file__, 'check', '--plan', str(root/'plan'),
+                                      '--answer', str(root/'answer'), '--display', str(root/'display')],
+                                     capture_output=True, check=True)
+            report = json.loads(checked.stdout)
+            self.assertTrue(report['mechanically_valid']); self.assertFalse(report['declared_complete'])
+            self.assertEqual([r['claim_id'] for r in report['resolved_citations']], ['c1'])
 
     def test_cli_prepare_check(self):
         with tempfile.TemporaryDirectory() as tmp:
